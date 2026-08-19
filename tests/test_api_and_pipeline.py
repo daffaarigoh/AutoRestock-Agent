@@ -11,8 +11,10 @@ from api.main import app
 
 def test_full_pipeline():
     client = TestClient(app)
+    client.post("/api/approval/reset")
     
     print("\n" + "=" * 80)
+
     print("🧪 RUNNING END-TO-END VERIFICATION TEST (APPROVE & REJECT)")
     print("=" * 80)
     

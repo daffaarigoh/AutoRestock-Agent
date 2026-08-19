@@ -3,33 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoRestock-Agent | Autonomous Procurement & Inventory AI</title>
+    <title>AutoRestock Agent | Autonomous Procurement & Inventory AI</title>
     <link rel="stylesheet" href="/static/css/dashboard.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <!-- Header Navbar -->
     <header class="navbar">
         <div class="brand">
-            <span class="brand-badge">AI PROCUREMENT</span>
-            <span>AutoRestock-Agent</span>
+            <div class="brand-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m7.5 4.27 9 5.15"/>
+                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                    <path d="m3.3 7 8.7 5 8.7-5"/>
+                    <path d="M12 22V12"/>
+                </svg>
+            </div>
+            <span class="brand-text">AutoRestock Agent</span>
+            <span class="brand-badge">Autonomous Procurement</span>
         </div>
         <div class="nav-status">
             <div class="status-pill">
                 <span class="pulse-dot"></span>
                 <span>Active Models: qwen-35b | nemotron-35 | ocr-lighton</span>
             </div>
-            <button id="btn-run-agent" class="btn btn-primary">⚡ Run Autonomous Restock</button>
+            <button id="btn-run-agent" class="btn btn-primary">Run Autonomous Restock</button>
         </div>
     </header>
 
-    <!-- Navigation Tabs -->
+    <!-- Navigation Tabs (Centered) -->
     <nav class="tabs-container">
-        <button class="tab-btn active" data-tab="tab-inventory">📦 Live Inventory</button>
-        <button class="tab-btn" data-tab="tab-ocr">📄 Document Ingestion (OCR)</button>
-        <button class="tab-btn" data-tab="tab-stream">⚡ Live Agent Console (SSE)</button>
-        <button class="tab-btn" data-tab="tab-pr">📑 Purchase Requisitions (Typst)</button>
+        <button class="tab-btn active" data-tab="tab-inventory">Live Inventory</button>
+        <button class="tab-btn" data-tab="tab-ocr">Document Ingestion (OCR)</button>
+        <button class="tab-btn" data-tab="tab-stream">Live Agent Console (SSE)</button>
+        <button class="tab-btn" data-tab="tab-pr">Purchase Requisitions</button>
     </nav>
 
     <!-- Main Content Panels -->
@@ -38,32 +48,53 @@
         <!-- TAB 1: Live Inventory Monitor -->
         <section id="tab-inventory" class="tab-panel active">
             <div class="grid-3">
-                <div class="card stat-card">
+                <div class="stat-card">
                     <div>
                         <div class="stat-label">Total SKU Dipantau</div>
                         <div class="stat-val" id="stat-total-sku">-</div>
                     </div>
-                    <div style="font-size: 2rem;">📊</div>
+                    <div class="stat-icon-wrapper stat-icon-blue">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="7" height="9" x="3" y="3" rx="1"/>
+                            <rect width="7" height="5" x="14" y="3" rx="1"/>
+                            <rect width="7" height="9" x="14" y="12" rx="1"/>
+                            <rect width="7" height="5" x="3" y="16" rx="1"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="card stat-card">
+                <div class="stat-card">
                     <div>
                         <div class="stat-label">Stok Kritis (Restock Triggered)</div>
                         <div class="stat-val" style="color: var(--danger)" id="stat-critical">-</div>
                     </div>
-                    <div style="font-size: 2rem;">🚨</div>
+                    <div class="stat-icon-wrapper stat-icon-red">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" x2="12" y1="8" y2="12"/>
+                            <line x1="12" x2="12.01" y1="16" y2="16"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="card stat-card">
+                <div class="stat-card">
                     <div>
-                        <div class="stat-label">Stok Warning (Perlu Perhatian)</div>
+                        <div class="stat-label">Stok Perlu Perhatian</div>
                         <div class="stat-val" style="color: var(--warning)" id="stat-warning">-</div>
                     </div>
-                    <div style="font-size: 2rem;">⚠️</div>
+                    <div class="stat-icon-wrapper stat-icon-amber">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                            <line x1="12" x2="12" y1="9" y2="13"/>
+                            <line x1="12" x2="12.01" y1="17" y2="17"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
-                <h3 style="margin-bottom: 0.5rem;">Daftar Real-Time Inventaris & Dynamic Safety Threshold</h3>
-                <p style="color: var(--text-muted); font-size: 0.85rem;">Perhitungan otomatis berdasarkan <em>Average Daily Usage</em> dan <em>Supplier Lead Time</em>.</p>
+                <div class="card-header">
+                    <h2 class="card-title">Daftar Real-Time Inventaris & Dynamic Safety Threshold</h2>
+                    <p class="card-subtitle">Perhitungan otomatis kebutuhan restock berdasarkan Average Daily Usage dan Supplier Lead Time.</p>
+                </div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -86,30 +117,43 @@
             </div>
         </section>
 
-        <!-- TAB 2: Document Ingestion Dropzone (ocr-lighton) -->
+        <!-- TAB 2: Document Ingestion Dropzone (ocr-lighton) - Centered Layout -->
         <section id="tab-ocr" class="tab-panel">
-            <div class="grid-2">
+            <div class="ocr-centered-container">
                 <div class="card">
-                    <h3 style="margin-bottom: 0.5rem;">Upload Dokumen Fisik Gudang</h3>
-                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">Ekstraksi otomatis dokumen fisik menggunakan model <strong>ocr-lighton</strong>.</p>
+                    <div class="card-header" style="text-align: center;">
+                        <h2 class="card-title">Upload Dokumen Fisik Gudang</h2>
+                        <p class="card-subtitle">Ekstraksi otomatis dokumen fisik menggunakan model OCR LightOn ke format data terstruktur.</p>
+                    </div>
                     
-                    <div style="display: flex; gap: 1.5rem; margin-bottom: 1.25rem; font-size: 0.9rem;">
-                        <label style="cursor: pointer;"><input type="radio" name="doc_type" value="delivery-note" checked> 🚚 Surat Jalan (Barang Masuk)</label>
-                        <label style="cursor: pointer;"><input type="radio" name="doc_type" value="stock-opname"> 📋 Kartu Stok Opname Fisik</label>
+                    <div class="radio-group">
+                        <label class="radio-label"><input type="radio" name="doc_type" value="delivery-note" checked> Surat Jalan (Barang Masuk)</label>
+                        <label class="radio-label"><input type="radio" name="doc_type" value="stock-opname"> Kartu Stok Opname Fisik</label>
+                        <label class="radio-label"><input type="radio" name="doc_type" value="invoice"> Faktur / Invoice</label>
                     </div>
 
                     <div id="ocr-dropzone" class="dropzone">
-                        <div class="dropzone-icon">📁</div>
-                        <p><strong>Tarik & Lepaskan scan dokumen di sini</strong>, atau klik untuk memilih file</p>
-                        <small style="color: var(--text-dim)">(Mendukung format PNG, JPG, JPEG, PDF)</small>
+                        <div class="dropzone-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" x2="12" y1="3" y2="15"/>
+                            </svg>
+                        </div>
+                        <p class="dropzone-text"><strong>Tarik & letakkan scan dokumen di sini</strong>, atau klik untuk memilih file</p>
+                        <span class="dropzone-sub">Mendukung format PNG, JPG, JPEG, dan PDF</span>
                     </div>
                     <input type="file" id="ocr-file-input" style="display: none;" accept="image/*,application/pdf">
                 </div>
 
+
+
                 <div class="card" id="ocr-result-container" style="display: none;">
-                    <h3 style="margin-bottom: 0.5rem;">Hasil Ekstraksi Data Terstruktur</h3>
-                    <p style="color: var(--text-muted); font-size: 0.85rem;">Dokumen: <strong id="ocr-doc-no" style="color:var(--accent)">-</strong> | Penerbit: <strong id="ocr-vendor">-</strong></p>
-                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 6px; margin: 1rem 0; font-size: 0.85rem;" id="ocr-summary">-</div>
+                    <div class="card-header">
+                        <h2 class="card-title">Hasil Ekstraksi Data Terstruktur</h2>
+                        <p class="card-subtitle">Dokumen: <strong id="ocr-doc-no" style="color:var(--primary)">-</strong> | Penerbit: <strong id="ocr-vendor">-</strong></p>
+                    </div>
+                    <div style="background: var(--bg-card-subtle); padding: 0.75rem 1rem; border-radius: 6px; margin: 0.5rem 0 1rem; font-size: 0.85rem; border: 1px solid var(--border-color);" id="ocr-summary">-</div>
 
                     <div class="table-wrapper">
                         <table>
@@ -125,23 +169,31 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Direct Action from Extracted Document -->
+                    <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+                        <button id="btn-ocr-generate-pr" class="btn btn-primary">Proses Restock & Buat Dokumen PR (PDF)</button>
+                    </div>
                 </div>
+
             </div>
         </section>
 
-        <!-- TAB 3: Live Agent Reasoning Console (SSE) -->
+        <!-- TAB 3: Live Agent Reasoning Console (SSE) - Light & Centered -->
         <section id="tab-stream" class="tab-panel">
-            <div class="card terminal-card">
+            <div class="terminal-card">
                 <div class="terminal-header">
-                    <span class="terminal-dot dot-red"></span>
-                    <span class="terminal-dot dot-yellow"></span>
-                    <span class="terminal-dot dot-green"></span>
-                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">live-agent-thought-stream://qwen-35b-nemotron-35</span>
+                    <div class="terminal-dots">
+                        <span class="terminal-dot dot-red"></span>
+                        <span class="terminal-dot dot-yellow"></span>
+                        <span class="terminal-dot dot-green"></span>
+                    </div>
+                    <span class="terminal-title">live-agent-stream://qwen-35b-nemotron-35</span>
                 </div>
                 <div class="terminal-body" id="terminal-logs">
                     <div class="log-entry">
                         <span class="log-time">[Ready]</span>
-                        <span class="log-msg">Klik tombol <strong>"Run Autonomous Restock"</strong> di pojok kanan atas untuk memicu siklus agen otonom.</span>
+                        <span class="log-msg">Klik tombol <strong>"Run Autonomous Restock"</strong> di pojok kanan atas untuk menjalankan siklus reasoning agen.</span>
                     </div>
                 </div>
             </div>
@@ -150,8 +202,14 @@
         <!-- TAB 4: Purchase Requisitions & PDF Previewer -->
         <section id="tab-pr" class="tab-panel">
             <div class="card">
-                <h3 style="margin-bottom: 0.5rem;">Daftar Purchase Requisition & Dokumen Typst</h3>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">Dokumen resmi hasil sintesis agen yang siap di-review dan disetujui (Human-in-the-Loop).</p>
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h2 class="card-title">Daftar Purchase Requisition & Dokumen Typst</h2>
+                        <p class="card-subtitle">Dokumen pengadaan resmi hasil evaluasi agen untuk persetujuan manajerial (Human-In-The-Loop).</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="resetSamplePR()">Reset Demo PR</button>
+                </div>
+
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -179,11 +237,11 @@
     <div id="pdf-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 style="color: #fff;">Pratinjau Dokumen Purchase Requisition (Typst Engine)</h3>
-                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <h3 class="modal-title">Pratinjau Dokumen Purchase Requisition</h3>
+                <button class="close-btn" onclick="closeModal()" aria-label="Tutup">&times;</button>
             </div>
             <div class="modal-body">
-                <iframe id="pdf-iframe" style="width: 100%; height: 100%; border: none; border-radius: 8px;"></iframe>
+                <iframe id="pdf-iframe" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
         </div>
     </div>

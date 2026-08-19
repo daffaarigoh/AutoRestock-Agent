@@ -29,8 +29,9 @@ from database.db import get_db_connection
 memory_checkpointer = MemorySaver()
 
 
-def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING_APPROVAL"):
+def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
     """Insert or update order records into DuckDB orders table."""
+
     conn = get_db_connection()
     try:
         for item in pr.items:
@@ -214,7 +215,7 @@ def typst_node(state: AgentState) -> Dict[str, Any]:
         total_budget=total_budget,
         auditor_status=auditor_status,
         auditor_notes=auditor_notes,
-        status="PENDING_APPROVAL",
+        status="PENDING",
         thread_id=thread_id
     )
     
@@ -222,10 +223,11 @@ def typst_node(state: AgentState) -> Dict[str, Any]:
     pr_doc.pdf_path = pdf_path
     
     # Save pending orders to DuckDB
-    record_orders_to_db(pr_doc, status="PENDING_APPROVAL")
+    record_orders_to_db(pr_doc, status="PENDING")
     
     print(f"[AGENT] Initial Document Generated: {pdf_path}")
-    print(f"[AGENT] PR #{pr_number} created with status 'PENDING_APPROVAL'. Pausing before Wait Approval Node...")
+    print(f"[AGENT] PR #{pr_number} created with status 'PENDING'. Pausing before Wait Approval Node...")
+
     
     return {
         "pr_document": pr_doc,

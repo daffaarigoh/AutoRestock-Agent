@@ -18,11 +18,15 @@ class OCRDocumentItem(BaseModel):
     line_no: int
     item_name: str
     sku: Optional[str] = "N/A"
-    qty_recorded: int = Field(..., description="Quantity recorded on the physical document")
+    qty_recorded: int = Field(default=0, description="Quantity recorded on the physical document")
     unit: str = "pcs"
     unit_price: Optional[float] = 0.0
     total_price: Optional[float] = 0.0
     condition_notes: Optional[str] = "Baik / Sesuai"
+
+    @property
+    def qty_received(self) -> int:
+        return self.qty_recorded
 
 
 class OCRDocumentResult(BaseModel):
@@ -35,6 +39,47 @@ class OCRDocumentResult(BaseModel):
     total_amount: float = 0.0
     extraction_confidence: float = 0.96
     summary: str = "Dokumen fisik berhasil diekstrak dan siap disinkronkan ke database."
+
+    @property
+    def vendor_name(self) -> str:
+        return self.vendor_or_issuer
+
+
+# -------------------------------------------------------------
+# Visual Shelf Audit Schemas (Powered by qwen-35b-vision)
+# -------------------------------------------------------------
+
+class StockStatus(str, Enum):
+    CRITICAL_EMPTY = "CRITICAL_EMPTY"
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    DAMAGED = "DAMAGED"
+
+
+class BoundingBox(BaseModel):
+    ymin: float = 0.0
+    xmin: float = 0.0
+    ymax: float = 1.0
+    xmax: float = 1.0
+
+
+class DetectedShelfItem(BaseModel):
+    slot_id: str
+    item_label: str
+    status: StockStatus = StockStatus.NORMAL
+    confidence: float = 0.9
+    bbox: BoundingBox
+    notes: Optional[str] = None
+
+
+class VisionAuditResult(BaseModel):
+    image_filename: str = "shelf.jpg"
+    total_slots_scanned: int
+    empty_slots_count: int
+    low_stock_count: int
+    detected_items: List[DetectedShelfItem]
+    annotated_image_url: Optional[str] = None
+    audit_summary: str = "Visual shelf scan completed."
 
 
 # -------------------------------------------------------------
@@ -73,4 +118,6 @@ class PurchaseRequisitionDoc(BaseModel):
     auditor_status: str = "PASSED"              # PASSED | REVISED
     auditor_notes: str = "Compliance & budget verified by nemotron-35."
     pdf_path: Optional[str] = None
-    status: str = "PENDING_APPROVAL"            # PENDING_APPROVAL | APPROVED | REJECTED
+    status: str = "PENDING"                     # PENDING | APPROVED | REJECTED
+
+

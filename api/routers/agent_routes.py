@@ -63,12 +63,44 @@ def run_agent_cycle():
     """
     try:
         pr_document = run_autorestock_cycle()
+        if pr_document:
+            from api.routers.approval_routes import PR_STORE
+            from core.schemas import PurchaseRequisitionDoc, PurchaseItemRequest
+            from docgen.pdf_generator import pdf_generator
+            
+            items_req = [
+                PurchaseItemRequest(
+                    item_id=it.item_id,
+                    name=it.name,
+                    reorder_qty=it.reorder_qty,
+                    unit=it.unit,
+                    vendor_id=it.vendor_id,
+                    vendor_name=it.vendor_name,
+                    unit_price=it.unit_price,
+                    total_price=it.total_price,
+                    reason=it.reason
+                )
+                for it in pr_document.items
+            ]
+            clean_filename = f"{pr_document.pr_number.replace('-', '_')}.pdf"
+            PR_STORE[pr_document.pr_number] = PurchaseRequisitionDoc(
+                pr_number=pr_document.pr_number,
+                created_at=pr_document.created_at,
+                items=items_req,
+                total_budget=pr_document.total_budget,
+                auditor_status=pr_document.auditor_status or "PASSED",
+                auditor_notes=pr_document.auditor_notes or "Audit passed.",
+                pdf_path=f"/storage/documents/{clean_filename}",
+                status=pr_document.status or "PENDING"
+            )
+            pdf_generator.generate_purchase_requisition_pdf(PR_STORE[pr_document.pr_number], output_filename=clean_filename)
         return pr_document
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"AutoRestock agent cycle failed: {str(e)}"
         )
+
 
 
 @router.get("/api/documents/pr/{pr_number}/download")

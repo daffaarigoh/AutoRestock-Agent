@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Optional, Any
 
 try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +28,10 @@ class Settings(_BaseSettings):
     # Mock Mode
     MOCK_MODELS: bool = True
 
+    # Alternative standard env keys
+    LLM_KEY: Optional[str] = None
+    LLM_URL: Optional[str] = None
+
     # Model URLs
     MODEL_QWEN_URL: str = "http://localhost:8001/v1"
     MODEL_NEMOTRON_URL: str = "http://localhost:8002/v1"
@@ -42,8 +47,24 @@ class Settings(_BaseSettings):
     DATA_DIR: Path = BASE_DIR / "data"
     SAMPLES_DIR: Path = BASE_DIR / "data" / "samples"
 
+    def model_post_init(self, __context: Any) -> None:
+        # If LLM_KEY is provided, sync with MODEL_API_KEY
+        if self.LLM_KEY and (self.MODEL_API_KEY == "dummy-key" or not self.MODEL_API_KEY):
+            self.MODEL_API_KEY = self.LLM_KEY.strip().strip('"').strip("'")
+        
+        # If LLM_URL is provided, sync with model base URLs
+        if self.LLM_URL:
+            base_url = self.LLM_URL.strip().strip('"').strip("'").rstrip("/")
+            if "/v1" not in base_url:
+                base_url = f"{base_url}/v1"
+            if self.MODEL_QWEN_URL == "http://localhost:8001/v1":
+                self.MODEL_QWEN_URL = base_url
+            if self.MODEL_NEMOTRON_URL == "http://localhost:8002/v1":
+                self.MODEL_NEMOTRON_URL = base_url
+
 
 settings = Settings()
+
 
 # Ensure directories exist
 settings.STORAGE_DIR.mkdir(parents=True, exist_ok=True)

@@ -28,33 +28,18 @@ class TypstPDFGenerator:
             output_filename = f"{pr.pr_number.replace('-', '_')}.pdf"
 
         output_path = settings.DOCUMENTS_DIR / output_filename
-        template_path = settings.BASE_DIR / "docgen" / "templates" / "purchase_requisition.typ"
-        temp_json_path = settings.BASE_DIR / "docgen" / "templates" / "pr_payload.json"
+        settings.DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
-        # 1. Write payload for Typst
-        payload = pr.model_dump()
-        with open(temp_json_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-
-        # 2. Try Typst compilation
-        compiled_successfully = False
+        from docgen.compiler import generate_pr_pdf
         try:
-            import typst
-            typst.compile(str(template_path), output=str(output_path))
-            compiled_successfully = True
-            logger.info(f"Typst compiled PDF successfully: {output_path}")
+            payload = pr.model_dump()
+            generated_file = generate_pr_pdf(payload, output_path=output_path)
+            return Path(generated_file)
         except Exception as e:
-            logger.warning(f"Typst engine compile exception: {e}. Using fallback PDF renderer.")
-
-        # 3. Fallback PDF renderer using PyMuPDF if typst is not installed
-        if not compiled_successfully or not output_path.exists():
+            logger.warning(f"Typst compile exception: {e}. Using fallback renderer.")
             cls._render_fallback_pdf(pr, output_path)
+            return output_path
 
-        # 4. Clean up temp JSON
-        if temp_json_path.exists():
-            temp_json_path.unlink()
-
-        return output_path
 
     @classmethod
     def _render_fallback_pdf(cls, pr: PurchaseRequisitionDoc, output_path: Path):

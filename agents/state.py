@@ -5,16 +5,17 @@ from pydantic import BaseModel, Field
 class RestockItem(BaseModel):
     item_id: str = Field(..., description="Unique item identifier")
     name: str = Field(..., description="Name of the item")
-    category: str = Field(..., description="Item category")
-    current_stock: int = Field(..., description="Current stock level in inventory")
-    min_threshold: int = Field(..., description="Minimum safety threshold")
+    category: str = Field("General", description="Item category")
+    current_stock: int = Field(0, description="Current stock level in inventory")
+    min_threshold: int = Field(0, description="Minimum safety threshold")
     reorder_qty: int = Field(..., description="Calculated reorder quantity")
-    unit: str = Field(..., description="Unit of measurement (pcs, spool, roll, etc.)")
-    vendor_id: str = Field(..., description="ID of the matched vendor")
+    unit: str = Field("pcs", description="Unit of measurement (pcs, spool, roll, etc.)")
+    vendor_id: str = Field("VND-001", description="ID of the matched vendor")
     vendor_name: str = Field(..., description="Name of the matched vendor")
     unit_price: float = Field(..., description="Unit price offered by vendor")
     total_price: float = Field(..., description="Total price = unit_price * reorder_qty")
-    reason: str = Field(..., description="Reasoning / justification for purchase")
+    reason: str = Field("", description="Reasoning / justification for purchase")
+
 
 
 class PurchaseRequisition(BaseModel):
@@ -25,8 +26,9 @@ class PurchaseRequisition(BaseModel):
     auditor_status: str = Field("PASSED", description="Auditor status: PASSED or REVISED")
     auditor_notes: str = Field("", description="Audit notes and compliance evaluation from auditor")
     pdf_path: Optional[str] = Field(None, description="Path to generated Typst PDF document")
-    status: str = Field("PENDING_APPROVAL", description="Requisition status: PENDING_APPROVAL | APPROVED | REJECTED")
+    status: str = Field("PENDING", description="Requisition status: PENDING | APPROVED | REJECTED")
     thread_id: Optional[str] = Field(None, description="LangGraph execution thread identifier")
+
 
 
 class AgentState(TypedDict, total=False):

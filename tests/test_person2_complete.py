@@ -19,6 +19,8 @@ class TestPerson2CompletePipeline(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(app)
+        self.client.post("/api/approval/reset")
+
 
     def test_dashboard_ui_served(self):
         """

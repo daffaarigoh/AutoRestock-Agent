@@ -103,9 +103,85 @@ class ModelGateway:
                 logger.warning(f"Failed to call OCR LightOn model at {endpoint}: {e}. Falling back to mock.")
                 return self._mock_ocr_document_extraction(doc_type_hint)
 
+    async def vision_shelf_audit(
+        self,
+        image_bytes: bytes
+    ) -> Dict[str, Any]:
+        """
+        Calls qwen-35b-vision to detect empty/depleted shelf slots and locate bounding boxes.
+        """
+        if self.mock_mode:
+            return self._mock_vision_shelf_audit()
+
+        endpoint = settings.MODEL_QWEN_VISION_URL
+        b64_image = base64.b64encode(image_bytes).decode("utf-8")
+
+        payload = {
+            "model": "qwen-35b-vision",
+            "image": b64_image,
+            "task": "shelf_stock_audit",
+        }
+
+        headers = {
+            "Authorization": f"Bearer {settings.MODEL_API_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                res = await client.post(f"{endpoint}/audit", json=payload, headers=headers)
+                res.raise_for_status()
+                return res.json()
+            except Exception as e:
+                logger.warning(f"Failed to call Vision model at {endpoint}: {e}. Falling back to mock.")
+                return self._mock_vision_shelf_audit()
+
     # -------------------------------------------------------------
     # Realistic Mock Engines for Zero-Config Offline Testing
     # -------------------------------------------------------------
+
+    def _mock_vision_shelf_audit(self) -> Dict[str, Any]:
+        return {
+            "total_slots_scanned": 4,
+            "empty_slots_count": 2,
+            "low_stock_count": 0,
+            "audit_summary": "Pemeriksaan visual rak gudang mendeteksi 2 slot rak dalam kondisi kritis kosong.",
+            "detected_items": [
+                {
+                    "slot_id": "SLOT-A1",
+                    "item_label": "Baut Baja Hitam M8 (Empty Slot)",
+                    "status": "CRITICAL_EMPTY",
+                    "confidence": 0.98,
+                    "bbox": {"ymin": 0.1, "xmin": 0.05, "ymax": 0.45, "xmax": 0.45},
+                    "notes": "Slot kosong total, membutuhkan restock segera."
+                },
+                {
+                    "slot_id": "SLOT-A2",
+                    "item_label": "Oli Hidrolik ISO 68 (Empty Slot)",
+                    "status": "CRITICAL_EMPTY",
+                    "confidence": 0.95,
+                    "bbox": {"ymin": 0.1, "xmin": 0.55, "ymax": 0.45, "xmax": 0.95},
+                    "notes": "Slot kosong total."
+                },
+                {
+                    "slot_id": "SLOT-B1",
+                    "item_label": "Lakban Coklat 2 Inch",
+                    "status": "NORMAL",
+                    "confidence": 0.92,
+                    "bbox": {"ymin": 0.55, "xmin": 0.05, "ymax": 0.9, "xmax": 0.45},
+                    "notes": "Stok mencukupi."
+                },
+                {
+                    "slot_id": "SLOT-B2",
+                    "item_label": "Kertas Box A4 80gr",
+                    "status": "NORMAL",
+                    "confidence": 0.96,
+                    "bbox": {"ymin": 0.55, "xmin": 0.55, "ymax": 0.9, "xmax": 0.95},
+                    "notes": "Stok penuh."
+                }
+            ]
+        }
+
 
     def _mock_chat_completion(self, model_name: str, messages: List[Dict[str, str]]) -> str:
         if "nemotron" in model_name.lower():
@@ -127,30 +203,60 @@ class ModelGateway:
                 "doc_number": "OPNAME-2026-0819",
                 "vendor_or_issuer": "Tim Gudang Logistik B",
                 "date_recorded": "2026-08-19",
-                "inspector_name": "Agus Setiawan (Warehouse Officer)",
+                "inspector_name": "Agus Setiawan (Warehouse Lead Inspector)",
                 "total_amount": 0.0,
                 "extraction_confidence": 0.98,
-                "summary": "Hasil stock opname fisik gudang mencatat stok Baut M8 tersisa 12 pcs (Kritis) dan Oli Hidrolik tersisa 1 drum.",
+                "summary": "Hasil stock opname fisik gudang mencatat 5 SKU kritis di bawah threshold: STM32F401 (12 pcs), ESP32 (8 pcs), Thermal Paste (5 tube), Cardboard Box (35 pcs), Bubble Wrap (4 roll).",
                 "items": [
                     {
                         "line_no": 1,
-                        "item_name": "Baut Baja Hitam M8 x 50mm",
-                        "sku": "SKU-BAUT-M8",
+                        "item_name": "Microcontroller STM32F401",
+                        "sku": "ITM-001",
                         "qty_recorded": 12,
                         "unit": "pcs",
-                        "unit_price": 2500.0,
-                        "total_price": 30000.0,
-                        "condition_notes": "Stok fisik menipis tajam, di bawah batas threshold 100 pcs."
+                        "unit_price": 65000.0,
+                        "total_price": 780000.0,
+                        "condition_notes": "Stok fisik 12 pcs, di bawah threshold 50 pcs."
                     },
                     {
                         "line_no": 2,
-                        "item_name": "Oli Hidrolik ISO VG 68 20L",
-                        "sku": "SKU-OLI-ISO68",
-                        "qty_recorded": 1,
-                        "unit": "pail",
-                        "unit_price": 875000.0,
-                        "total_price": 875000.0,
-                        "condition_notes": "Tersisa 1 pail, butuh restock segera."
+                        "item_name": "ESP32-WROOM-32D Module",
+                        "sku": "ITM-002",
+                        "qty_recorded": 8,
+                        "unit": "pcs",
+                        "unit_price": 39500.0,
+                        "total_price": 316000.0,
+                        "condition_notes": "Stok fisik 8 pcs, di bawah threshold 40 pcs."
+                    },
+                    {
+                        "line_no": 3,
+                        "item_name": "Thermal Paste Arctic MX-4 4g",
+                        "sku": "ITM-003",
+                        "qty_recorded": 5,
+                        "unit": "tube",
+                        "unit_price": 48000.0,
+                        "total_price": 240000.0,
+                        "condition_notes": "Stok fisik 5 tube, di bawah threshold 25 tube."
+                    },
+                    {
+                        "line_no": 4,
+                        "item_name": "Cardboard Box 30x20x15cm",
+                        "sku": "ITM-004",
+                        "qty_recorded": 35,
+                        "unit": "pcs",
+                        "unit_price": 4200.0,
+                        "total_price": 147000.0,
+                        "condition_notes": "Stok fisik 35 pcs, di bawah threshold 150 pcs."
+                    },
+                    {
+                        "line_no": 5,
+                        "item_name": "Bubble Wrap Roll 50m x 50cm",
+                        "sku": "ITM-005",
+                        "qty_recorded": 4,
+                        "unit": "roll",
+                        "unit_price": 72000.0,
+                        "total_price": 288000.0,
+                        "condition_notes": "Stok fisik 4 roll, di bawah threshold 15 roll."
                     }
                 ]
             }
@@ -158,35 +264,66 @@ class ModelGateway:
             return {
                 "doc_type": "SURAT_JALAN",
                 "doc_number": "SJ-2026-0819-094",
-                "vendor_or_issuer": "PT. MITRA LOGISTIK UTAMA",
+                "vendor_or_issuer": "PT. ELEKTRONIKA JAYA PRIMA & LOGISTIK",
                 "date_recorded": "2026-08-19",
                 "inspector_name": "Petugas Penerima Gudang",
-                "total_amount": 4750000.0,
+                "total_amount": 10600000.0,
                 "extraction_confidence": 0.97,
-                "summary": "Surat Jalan pengiriman barang restock mingguan dari PT Mitra Logistik Utama.",
+                "summary": "Surat Jalan pengiriman barang masuk restock: STM32F401 (+76), ESP32 (+52), Thermal Paste (+33), Cardboard Box (+190), Bubble Wrap (+17).",
                 "items": [
                     {
                         "line_no": 1,
-                        "item_name": "Baut Baja M8 x 50mm",
-                        "sku": "SKU-BAUT-M8",
-                        "qty_recorded": 500,
+                        "item_name": "Microcontroller STM32F401",
+                        "sku": "ITM-001",
+                        "qty_recorded": 76,
                         "unit": "pcs",
-                        "unit_price": 2500.0,
-                        "total_price": 1250000.0,
-                        "condition_notes": "Kemasan tersegel rapi"
+                        "unit_price": 65000.0,
+                        "total_price": 4940000.0,
+                        "condition_notes": "Kemasan anti-statik tersegel rapi"
                     },
                     {
                         "line_no": 2,
-                        "item_name": "Oli Hidrolik ISO 68 (Pail 20L)",
-                        "sku": "SKU-OLI-ISO68",
-                        "qty_recorded": 4,
-                        "unit": "pail",
-                        "unit_price": 875000.0,
-                        "total_price": 3500000.0,
-                        "condition_notes": "Kondisi drum baik tanpa kebocoran"
+                        "item_name": "ESP32-WROOM-32D Module",
+                        "sku": "ITM-002",
+                        "qty_recorded": 52,
+                        "unit": "pcs",
+                        "unit_price": 39500.0,
+                        "total_price": 2054000.0,
+                        "condition_notes": "Reel kemasan utuh"
+                    },
+                    {
+                        "line_no": 3,
+                        "item_name": "Thermal Paste Arctic MX-4 4g",
+                        "sku": "ITM-003",
+                        "qty_recorded": 33,
+                        "unit": "tube",
+                        "unit_price": 48000.0,
+                        "total_price": 1584000.0,
+                        "condition_notes": "Dus segel pabrik"
+                    },
+                    {
+                        "line_no": 4,
+                        "item_name": "Cardboard Box 30x20x15cm",
+                        "sku": "ITM-004",
+                        "qty_recorded": 190,
+                        "unit": "pcs",
+                        "unit_price": 4200.0,
+                        "total_price": 798000.0,
+                        "condition_notes": "Bandel utuh rapi"
+                    },
+                    {
+                        "line_no": 5,
+                        "item_name": "Bubble Wrap Roll 50m x 50cm",
+                        "sku": "ITM-005",
+                        "qty_recorded": 17,
+                        "unit": "roll",
+                        "unit_price": 72000.0,
+                        "total_price": 1224000.0,
+                        "condition_notes": "Roll tersegel plastik"
                     }
                 ]
             }
+
 
 
 gateway = ModelGateway()
