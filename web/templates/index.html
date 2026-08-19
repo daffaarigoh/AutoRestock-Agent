@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRestock-Agent | Autonomous Procurement & Inventory AI</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <header class="navbar">
+        <div class="brand">
+            <span class="brand-badge">AI PROCUREMENT</span>
+            <span>AutoRestock-Agent</span>
+        </div>
+        <div class="nav-status">
+            <div class="status-pill">
+                <span class="pulse-dot"></span>
+                <span>Active Models: qwen-35b | nemotron-35 | ocr-lighton</span>
+            </div>
+            <button id="btn-run-agent" class="btn btn-primary">⚡ Run Autonomous Restock</button>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-container">
+        <button class="tab-btn active" data-tab="tab-inventory">📦 Live Inventory</button>
+        <button class="tab-btn" data-tab="tab-ocr">📄 Document Ingestion (OCR)</button>
+        <button class="tab-btn" data-tab="tab-stream">⚡ Live Agent Console (SSE)</button>
+        <button class="tab-btn" data-tab="tab-pr">📑 Purchase Requisitions (Typst)</button>
+    </nav>
+
+    <!-- Main Content Panels -->
+    <main class="main-content">
+
+        <!-- TAB 1: Live Inventory Monitor -->
+        <section id="tab-inventory" class="tab-panel active">
+            <div class="grid-3">
+                <div class="card stat-card">
+                    <div>
+                        <div class="stat-label">Total SKU Dipantau</div>
+                        <div class="stat-val" id="stat-total-sku">-</div>
+                    </div>
+                    <div style="font-size: 2rem;">📊</div>
+                </div>
+                <div class="card stat-card">
+                    <div>
+                        <div class="stat-label">Stok Kritis (Restock Triggered)</div>
+                        <div class="stat-val" style="color: var(--danger)" id="stat-critical">-</div>
+                    </div>
+                    <div style="font-size: 2rem;">🚨</div>
+                </div>
+                <div class="card stat-card">
+                    <div>
+                        <div class="stat-label">Stok Warning (Perlu Perhatian)</div>
+                        <div class="stat-val" style="color: var(--warning)" id="stat-warning">-</div>
+                    </div>
+                    <div style="font-size: 2rem;">⚠️</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 0.5rem;">Daftar Real-Time Inventaris & Dynamic Safety Threshold</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">Perhitungan otomatis berdasarkan <em>Average Daily Usage</em> dan <em>Supplier Lead Time</em>.</p>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama SKU / Barang</th>
+                                <th>Kategori</th>
+                                <th>Stok Fisik</th>
+                                <th>Threshold Min</th>
+                                <th>Burn Rate</th>
+                                <th>Lead Time</th>
+                                <th>Harga Satuan</th>
+                                <th>Status Kesehatan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: Document Ingestion Dropzone (ocr-lighton) -->
+        <section id="tab-ocr" class="tab-panel">
+            <div class="grid-2">
+                <div class="card">
+                    <h3 style="margin-bottom: 0.5rem;">Upload Dokumen Fisik Gudang</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">Ekstraksi otomatis dokumen fisik menggunakan model <strong>ocr-lighton</strong>.</p>
+                    
+                    <div style="display: flex; gap: 1.5rem; margin-bottom: 1.25rem; font-size: 0.9rem;">
+                        <label style="cursor: pointer;"><input type="radio" name="doc_type" value="delivery-note" checked> 🚚 Surat Jalan (Barang Masuk)</label>
+                        <label style="cursor: pointer;"><input type="radio" name="doc_type" value="stock-opname"> 📋 Kartu Stok Opname Fisik</label>
+                    </div>
+
+                    <div id="ocr-dropzone" class="dropzone">
+                        <div class="dropzone-icon">📁</div>
+                        <p><strong>Tarik & Lepaskan scan dokumen di sini</strong>, atau klik untuk memilih file</p>
+                        <small style="color: var(--text-dim)">(Mendukung format PNG, JPG, JPEG, PDF)</small>
+                    </div>
+                    <input type="file" id="ocr-file-input" style="display: none;" accept="image/*,application/pdf">
+                </div>
+
+                <div class="card" id="ocr-result-container" style="display: none;">
+                    <h3 style="margin-bottom: 0.5rem;">Hasil Ekstraksi Data Terstruktur</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem;">Dokumen: <strong id="ocr-doc-no" style="color:var(--accent)">-</strong> | Penerbit: <strong id="ocr-vendor">-</strong></p>
+                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 6px; margin: 1rem 0; font-size: 0.85rem;" id="ocr-summary">-</div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item Barang</th>
+                                    <th>Qty Tercatat</th>
+                                    <th>Estimasi Harga</th>
+                                    <th>Catatan Fisik</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ocr-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: Live Agent Reasoning Console (SSE) -->
+        <section id="tab-stream" class="tab-panel">
+            <div class="card terminal-card">
+                <div class="terminal-header">
+                    <span class="terminal-dot dot-red"></span>
+                    <span class="terminal-dot dot-yellow"></span>
+                    <span class="terminal-dot dot-green"></span>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">live-agent-thought-stream://qwen-35b-nemotron-35</span>
+                </div>
+                <div class="terminal-body" id="terminal-logs">
+                    <div class="log-entry">
+                        <span class="log-time">[Ready]</span>
+                        <span class="log-msg">Klik tombol <strong>"Run Autonomous Restock"</strong> di pojok kanan atas untuk memicu siklus agen otonom.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: Purchase Requisitions & PDF Previewer -->
+        <section id="tab-pr" class="tab-panel">
+            <div class="card">
+                <h3 style="margin-bottom: 0.5rem;">Daftar Purchase Requisition & Dokumen Typst</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">Dokumen resmi hasil sintesis agen yang siap di-review dan disetujui (Human-in-the-Loop).</p>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>No. Dokumen PR</th>
+                                <th>Tanggal Dibuat</th>
+                                <th>Jumlah Item</th>
+                                <th>Total Anggaran</th>
+                                <th>Audit Nemotron</th>
+                                <th>Status Approval</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pr-list-tbody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal PDF Previewer -->
+    <div id="pdf-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="color: #fff;">Pratinjau Dokumen Purchase Requisition (Typst Engine)</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <iframe id="pdf-iframe" style="width: 100%; height: 100%; border: none; border-radius: 8px;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
