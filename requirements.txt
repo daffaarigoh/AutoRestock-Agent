@@ -1,28 +1,26 @@
-duckdb>=1.0.0
-pydantic>=2.0.0
-langgraph>=1.2.0
-fastapi>=0.110.0
-uvicorn>=0.30.0
-typst>=0.11.0
-pandas>=2.0.0
-httpx>=0.27.0
-# Web Framework & API
+# ==============================================================================
+# AutoRestock-Agent Dependencies (Pure Python / Local Environment)
+# ==============================================================================
+
+# Web Framework & API Server
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
 python-multipart>=0.0.9
 httpx>=0.27.0
+
+# Data Models & Settings
 pydantic>=2.6.0
 pydantic-settings>=2.2.0
 
-# Document & High-Speed Typesetting
+# Embedded Relational Database & Data Analysis
+duckdb>=1.0.0
+pandas>=2.0.0
+
+# Multi-Agent Workflow Engine
+langgraph>=0.2.0
+
+# Document Typesetting & Image Processing
 typst>=0.11.0
 pillow>=10.2.0
+pymupdf>=1.24.0
 
-# Analytics & Data
-duckdb>=0.10.0
-
-# Testing & Quality
-pytest>=8.0.0
-pytest-asyncio>=0.23.0
-pytest-mock>=3.12.0
-ruff>=0.3.0

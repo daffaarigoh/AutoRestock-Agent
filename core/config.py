@@ -43,6 +43,9 @@ class Settings(_BaseSettings):
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
     STORAGE_DIR: Path = BASE_DIR / "storage"
     DOCUMENTS_DIR: Path = BASE_DIR / "storage" / "documents"
+    PENDING_DIR: Path = BASE_DIR / "storage" / "pending"
+    APPROVED_DIR: Path = BASE_DIR / "storage" / "approved"
+    REJECTED_DIR: Path = BASE_DIR / "storage" / "rejected"
     ANNOTATED_DIR: Path = BASE_DIR / "storage" / "annotated"
     DATA_DIR: Path = BASE_DIR / "data"
     SAMPLES_DIR: Path = BASE_DIR / "data" / "samples"
@@ -65,10 +68,13 @@ class Settings(_BaseSettings):
 
 settings = Settings()
 
-
 # Ensure directories exist
 settings.STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 settings.DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+settings.PENDING_DIR.mkdir(parents=True, exist_ok=True)
+settings.APPROVED_DIR.mkdir(parents=True, exist_ok=True)
+settings.REJECTED_DIR.mkdir(parents=True, exist_ok=True)
 settings.ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
 settings.SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+
