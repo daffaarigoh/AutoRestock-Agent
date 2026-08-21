@@ -1,0 +1,127 @@
+{
+  "name": "AutoRestock-V2 Enterprise n8n Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notify",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Webhook Notification Inbound",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 260],
+      "id": "webhook-notify"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.channel }}",
+              "value2": "email"
+            }
+          ]
+        }
+      },
+      "name": "Check Channel (Email vs Telegram)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [480, 260],
+      "id": "if-channel"
+    },
+    {
+      "parameters": {
+        "fromEmail": "procurement@retail-nusantara.co.id",
+        "toEmail": "={{ $json.body.recipient }}",
+        "subject": "={{ $json.body.subject }} [{{ $json.body.priority }}]",
+        "text": "={{ $json.body.message }}"
+      },
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [720, 180],
+      "id": "email-notify"
+    },
+    {
+      "parameters": {
+        "chatId": "-1001234567890",
+        "text": "=📢 AutoRestock-V2 Alert\n\nRecipient: {{ $json.body.recipient }}\nPriority: {{ $json.body.priority }}\nMessage: {{ $json.body.message }}"
+      },
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [720, 340],
+      "id": "telegram-notify"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "po-dispatch",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Webhook PO Dispatch Inbound",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 520],
+      "id": "webhook-po-dispatch"
+    },
+    {
+      "parameters": {
+        "fromEmail": "purchasing@retail-nusantara.co.id",
+        "toEmail": "sales@supplier-vendor.com",
+        "subject": "=Official Purchase Order {{ $json.body.pr_number }} - PT Retail Logistik Nusantara",
+        "text": "=Yth. Rekanan Supplier {{ $json.body.supplier_name }},\n\nTerlampir surat Purchase Order (PO) resmi kami dengan rincian total Rp {{ $json.body.grand_total }}.\n\nMohon segera diproses dan dikirimkan konfirmasi jadwal pengiriman barang.\n\nSalam,\nProcurement Dept."
+      },
+      "name": "Send Vendor PO Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [520, 520],
+      "id": "vendor-po-email"
+    }
+  ],
+  "connections": {
+    "Webhook Notification Inbound": {
+      "main": [
+        [
+          {
+            "node": "Check Channel (Email vs Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Channel (Email vs Telegram)": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook PO Dispatch Inbound": {
+      "main": [
+        [
+          {
+            "node": "Send Vendor PO Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
