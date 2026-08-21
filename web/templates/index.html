@@ -36,7 +36,8 @@
 
     <!-- Navigation Tabs (Centered) -->
     <nav class="tabs-container">
-        <button class="tab-btn active" data-tab="tab-inventory">Live Inventory</button>
+        <button class="tab-btn active" data-tab="tab-assistant">✨ AI Workflow Assistant</button>
+        <button class="tab-btn" data-tab="tab-inventory">Live Inventory & Thresholds</button>
         <button class="tab-btn" data-tab="tab-ocr">Document Ingestion (OCR)</button>
         <button class="tab-btn" data-tab="tab-stream">Live Agent Console (SSE)</button>
         <button class="tab-btn" data-tab="tab-pr">Purchase Requisitions</button>
@@ -45,8 +46,93 @@
     <!-- Main Content Panels -->
     <main class="main-content">
 
-        <!-- TAB 1: Live Inventory Monitor -->
-        <section id="tab-inventory" class="tab-panel active">
+        <!-- TAB 0: AI Dynamic Workflow Assistant (Non-Technical User Friendly) -->
+        <section id="tab-assistant" class="tab-panel active">
+            <div class="assistant-hero card">
+                <div class="assistant-header">
+                    <div class="assistant-badge">Dynamic Multi-Agent Synthesizer</div>
+                    <h1 class="assistant-title">Perintahkan AI Apa Saja untuk Mengelola Gudang</h1>
+                    <p class="assistant-desc">Ketik instruksi dalam bahasa sehari-hari. AI Agent akan otomatis menyusun alur kerja (*Dynamic Workflow*), menganalisis database DuckDB, membuat dokumen PDF resmi, dan mendistribusikan hasilnya ke Telegram, Email, atau n8n.</p>
+                </div>
+
+                <form id="custom-prompt-form">
+                    <div class="prompt-input-wrapper">
+                        <input type="text" id="custom-prompt-input" class="prompt-input" placeholder="Contoh: Tolong cek barang elektronik yang stoknya kritis, pilih vendor termurah, buatkan PDF..." autocomplete="off">
+                        <button type="submit" id="btn-submit-prompt" class="btn btn-primary btn-lg">
+                            <span>Jalankan Workflow</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Multi-Channel Selector -->
+                    <div class="channel-selector-container">
+                        <div class="channel-selector-header">
+                            <span class="channel-selector-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                </svg>
+                                Target Distribusi Output (Bebas Dipilih):
+                            </span>
+                            <span style="font-size: 0.75rem; color: #64748b;">Pilih satu atau kombinasi tujuan</span>
+                        </div>
+                        <div class="channel-options">
+                            <label class="channel-chip active" id="chip-db">
+                                <input type="checkbox" id="chk-db" value="database" checked>
+                                <span>🌐 Web Dashboard & DuckDB</span>
+                            </label>
+                            <label class="channel-chip" id="chip-email">
+                                <input type="checkbox" id="chk-email" value="email">
+                                <span>✉️ Kirim ke Email</span>
+                            </label>
+                            <label class="channel-chip" id="chip-tele">
+                                <input type="checkbox" id="chk-tele" value="telegram">
+                                <span>📱 Kirim ke Telegram</span>
+                            </label>
+                            <label class="channel-chip" id="chip-n8n">
+                                <input type="checkbox" id="chk-n8n" value="n8n">
+                                <span>⚡ Kirim ke n8n Webhook</span>
+                            </label>
+                        </div>
+                        <div class="email-custom-wrapper" id="email-input-wrapper">
+                            <span style="font-size: 0.8rem; color: #475569; font-weight: 600;">Email Penerima:</span>
+                            <input type="email" id="custom-recipient-email" class="email-custom-input" placeholder="manager@company.com" value="manager@company.com">
+                        </div>
+                    </div>
+                </form>
+
+                <div class="prompt-suggestions">
+                    <span class="suggestion-label">Coba Contoh Cepat:</span>
+                    <button class="prompt-chip" data-prompt="Pindai barang inventaris yang stoknya kritis, buat draf PR, simpan ke database saja.">💾 Web Dashboard & DB Saja</button>
+                    <button class="prompt-chip" data-prompt="Cek stok barang kategori Electronics yang kritis, pilihkan vendor termurah, buatkan PDF, dan kirim ke Telegram saja.">📱 Telegram Saja</button>
+                    <button class="prompt-chip" data-prompt="Buatkan laporan restock barang Packaging, kompilasi PDF resmi, lalu kirimkan ke email saja.">✉️ Email Saja</button>
+                    <button class="prompt-chip" data-prompt="Periksa semua barang di gudang yang di bawah threshold, buatkan draf PR PDF, kirimkan notifikasi ke Telegram dan Email.">⚡ Email + Telegram</button>
+                    <button class="prompt-chip" data-prompt="Lakukan audit stok bahan habis pakai, buatkan PDF Purchase Requisition, dan kirimkan ke n8n webhook.">🔄 n8n Webhook</button>
+                </div>
+            </div>
+
+            <!-- Dynamic Workflow Execution Result Card -->
+            <div id="dynamic-result-card" class="card" style="display: none; margin-top: 1.5rem;">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 class="card-title" id="dyn-title">Hasil Eksekusi Dynamic Workflow</h2>
+                        <p class="card-subtitle" id="dyn-subtitle">Alur kerja disintesis secara otonom oleh AI Agent</p>
+                    </div>
+                    <div id="dyn-actions" style="display: flex; gap: 0.5rem;"></div>
+                </div>
+
+                <div class="dyn-summary-box" id="dyn-summary"></div>
+
+                <div class="dyn-steps-timeline" id="dyn-steps-container">
+                    <!-- Dynamic steps injected via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 1: Live Inventory Monitor & Threshold Management -->
+        <section id="tab-inventory" class="tab-panel">
             <div class="grid-3">
                 <div class="stat-card">
                     <div>
@@ -91,9 +177,12 @@
             </div>
 
             <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Daftar Real-Time Inventaris & Dynamic Safety Threshold</h2>
-                    <p class="card-subtitle">Perhitungan otomatis kebutuhan restock berdasarkan Average Daily Usage dan Supplier Lead Time.</p>
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h2 class="card-title">Daftar Real-Time Inventaris & Pengaturan Threshold</h2>
+                        <p class="card-subtitle">Klik tombol <strong>"Ubah Threshold"</strong> pada baris barang mana saja untuk menyesuaikan batas minimum stok aman.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadInventory()">Refresh Data</button>
                 </div>
                 <div class="table-wrapper">
                     <table>
@@ -107,6 +196,7 @@
                                 <th>Lead Time</th>
                                 <th>Harga Satuan</th>
                                 <th>Status Kesehatan</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="inventory-table-body">
@@ -145,8 +235,6 @@
                     </div>
                     <input type="file" id="ocr-file-input" style="display: none;" accept="image/*,application/pdf">
                 </div>
-
-
 
                 <div class="card" id="ocr-result-container" style="display: none;">
                     <div class="card-header">
@@ -193,7 +281,7 @@
                 <div class="terminal-body" id="terminal-logs">
                     <div class="log-entry">
                         <span class="log-time">[Ready]</span>
-                        <span class="log-msg">Klik tombol <strong>"Run Autonomous Restock"</strong> di pojok kanan atas untuk menjalankan siklus reasoning agen.</span>
+                        <span class="log-msg">Klik tombol <strong>"Run Autonomous Restock"</strong> atau gunakan <strong>"AI Workflow Assistant"</strong> untuk menjalankan agen.</span>
                     </div>
                 </div>
             </div>
@@ -233,6 +321,37 @@
 
     </main>
 
+    <!-- Modal Edit Threshold -->
+    <div id="threshold-modal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">Pengaturan Batas Stok (Threshold)</h3>
+                <button class="close-btn" onclick="closeThresholdModal()" aria-label="Tutup">&times;</button>
+            </div>
+            <form id="threshold-form" class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                <input type="hidden" id="edit-item-id">
+                <div>
+                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">Nama SKU / Barang</label>
+                    <div id="edit-item-name" style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin-top: 0.25rem;">-</div>
+                </div>
+                <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div>
+                        <label class="form-label" for="edit-current-stock">Stok Fisik Saat Ini</label>
+                        <input type="number" id="edit-current-stock" class="form-input" min="0" required>
+                    </div>
+                    <div>
+                        <label class="form-label" for="edit-min-threshold">Batas Minimum (Threshold)</label>
+                        <input type="number" id="edit-min-threshold" class="form-input" min="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeThresholdModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal PDF Previewer -->
     <div id="pdf-modal" class="modal">
         <div class="modal-content">
@@ -249,3 +368,4 @@
     <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
+

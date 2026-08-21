@@ -58,11 +58,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td>${item.category}</td>
                     <td><strong style="color:${stockColor}">${item.current_stock}</strong> <span style="color:var(--text-muted)">${item.unit}</span></td>
-                    <td>${item.min_threshold} <span style="color:var(--text-muted)">${item.unit}</span></td>
-                    <td>${item.avg_daily_usage} / day</td>
-                    <td>${item.lead_time_days} days</td>
+                    <td><strong>${item.min_threshold}</strong> <span style="color:var(--text-muted)">${item.unit}</span></td>
+                    <td>${item.avg_daily_usage} / hari</td>
+                    <td>${item.lead_time_days} hari</td>
                     <td>Rp ${Number(item.unit_price).toLocaleString('id-ID')}</td>
                     <td><span class="badge ${badgeClass}">${item.health}</span></td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="openThresholdModal('${item.item_id}', '${item.name.replace(/'/g, "\\'")}', ${item.current_stock}, ${item.min_threshold})">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                            Ubah Threshold
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -70,6 +79,221 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to load inventory:', err);
         }
     }
+
+    // -------------------------------------------------------------
+    // Threshold Modal Management
+    // -------------------------------------------------------------
+    window.openThresholdModal = function(itemId, itemName, currentStock, minThreshold) {
+        document.getElementById('edit-item-id').value = itemId;
+        document.getElementById('edit-item-name').textContent = `${itemName} (${itemId})`;
+        document.getElementById('edit-current-stock').value = currentStock;
+        document.getElementById('edit-min-threshold').value = minThreshold;
+        document.getElementById('threshold-modal').classList.add('active');
+    };
+
+    window.closeThresholdModal = function() {
+        document.getElementById('threshold-modal').classList.remove('active');
+    };
+
+    const thresholdForm = document.getElementById('threshold-form');
+    if (thresholdForm) {
+        thresholdForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const itemId = document.getElementById('edit-item-id').value;
+            const currentStock = parseInt(document.getElementById('edit-current-stock').value);
+            const minThreshold = parseInt(document.getElementById('edit-min-threshold').value);
+
+            try {
+                const res = await fetch(`/api/inventory/items/${itemId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_stock: currentStock,
+                        min_threshold: minThreshold
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    closeThresholdModal();
+                    await loadInventory();
+                } else {
+                    alert(`Gagal update threshold: ${data.detail || data.message}`);
+                }
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+            }
+        });
+    }
+
+    // -------------------------------------------------------------
+    // AI Workflow Assistant (Natural Language Prompt & Multi-Channel Handling)
+    // -------------------------------------------------------------
+    const promptForm = document.getElementById('custom-prompt-form');
+    const promptInput = document.getElementById('custom-prompt-input');
+    const btnSubmitPrompt = document.getElementById('btn-submit-prompt');
+    const dynamicResultCard = document.getElementById('dynamic-result-card');
+    const dynTitle = document.getElementById('dyn-title');
+    const dynSubtitle = document.getElementById('dyn-subtitle');
+    const dynSummary = document.getElementById('dyn-summary');
+    const dynStepsContainer = document.getElementById('dyn-steps-container');
+    const dynActions = document.getElementById('dyn-actions');
+    const emailInputWrapper = document.getElementById('email-input-wrapper');
+    const customRecipientEmail = document.getElementById('custom-recipient-email');
+
+    // Channel Chip Interactions
+    ['chk-db', 'chk-email', 'chk-tele', 'chk-n8n'].forEach(id => {
+        const chk = document.getElementById(id);
+        if (chk) {
+            chk.addEventListener('change', () => {
+                const parent = chk.closest('.channel-chip');
+                if (parent) {
+                    if (chk.checked) parent.classList.add('active');
+                    else parent.classList.remove('active');
+                }
+                if (id === 'chk-email' && emailInputWrapper) {
+                    if (chk.checked) emailInputWrapper.classList.add('show');
+                    else emailInputWrapper.classList.remove('show');
+                }
+            });
+        }
+    });
+
+    // Prompt chip suggestion handler
+    document.querySelectorAll('.prompt-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const promptText = chip.getAttribute('data-prompt');
+            if (promptInput && promptText) {
+                promptInput.value = promptText;
+                
+                // Smart auto-select channel based on clicked chip
+                const pLow = promptText.toLowerCase();
+                const chkEmail = document.getElementById('chk-email');
+                const chkTele = document.getElementById('chk-tele');
+                const chkN8n = document.getElementById('chk-n8n');
+                
+                if (pLow.includes('email saja') || pLow.includes('hanya email')) {
+                    if (chkEmail) { chkEmail.checked = true; chkEmail.dispatchEvent(new Event('change')); }
+                    if (chkTele) { chkTele.checked = false; chkTele.dispatchEvent(new Event('change')); }
+                    if (chkN8n) { chkN8n.checked = false; chkN8n.dispatchEvent(new Event('change')); }
+                } else if (pLow.includes('telegram saja') || pLow.includes('hanya telegram')) {
+                    if (chkEmail) { chkEmail.checked = false; chkEmail.dispatchEvent(new Event('change')); }
+                    if (chkTele) { chkTele.checked = true; chkTele.dispatchEvent(new Event('change')); }
+                    if (chkN8n) { chkN8n.checked = false; chkN8n.dispatchEvent(new Event('change')); }
+                } else if (pLow.includes('database saja') || pLow.includes('hanya simpan') || pLow.includes('web dashboard & db saja')) {
+                    if (chkEmail) { chkEmail.checked = false; chkEmail.dispatchEvent(new Event('change')); }
+                    if (chkTele) { chkTele.checked = false; chkTele.dispatchEvent(new Event('change')); }
+                    if (chkN8n) { chkN8n.checked = false; chkN8n.dispatchEvent(new Event('change')); }
+                } else {
+                    if (chkEmail) { chkEmail.checked = pLow.includes('email'); chkEmail.dispatchEvent(new Event('change')); }
+                    if (chkTele) { chkTele.checked = pLow.includes('tele'); chkTele.dispatchEvent(new Event('change')); }
+                    if (chkN8n) { chkN8n.checked = pLow.includes('n8n'); chkN8n.dispatchEvent(new Event('change')); }
+                }
+
+                if (promptForm) promptForm.dispatchEvent(new Event('submit'));
+            }
+        });
+    });
+
+    if (promptForm) {
+        promptForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            // Collect selected channel destinations
+            const destinations = [];
+            const chkEmail = document.getElementById('chk-email');
+            const chkTele = document.getElementById('chk-tele');
+            const chkN8n = document.getElementById('chk-n8n');
+
+            if (chkEmail && chkEmail.checked) destinations.push('email');
+            if (chkTele && chkTele.checked) destinations.push('telegram');
+            if (chkN8n && chkN8n.checked) destinations.push('n8n');
+
+            const recipientEmail = customRecipientEmail ? customRecipientEmail.value.trim() : 'manager@company.com';
+
+            btnSubmitPrompt.disabled = true;
+            btnSubmitPrompt.innerHTML = `<span>AI Memproses...</span>`;
+
+            dynamicResultCard.style.display = 'block';
+            dynTitle.textContent = 'Menyusun Alur Kerja Dinamis...';
+            dynSubtitle.textContent = `Prompt: "${prompt}"`;
+            dynSummary.innerHTML = `<em>Sedang menganalisis intent, memeriksa database DuckDB, dan menyusun langkah eksekusi...</em>`;
+            dynStepsContainer.innerHTML = '';
+            dynActions.innerHTML = '';
+
+            try {
+                const res = await fetch('/api/agent/custom-prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        destinations: destinations,
+                        recipient_email: recipientEmail
+                    })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Gagal mengeksekusi prompt.');
+                }
+
+                dynTitle.textContent = data.workflow_title || 'Dynamic Workflow Result';
+                dynSubtitle.textContent = `Prompt: "${data.prompt}"`;
+                dynSummary.innerHTML = `<strong>Ringkasan Eksekusi:</strong> ${data.summary}`;
+
+                // Render dynamic steps
+                dynStepsContainer.innerHTML = '';
+                (data.execution_steps || []).forEach(step => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = 'dyn-step-item';
+                    stepDiv.innerHTML = `
+                        <div class="dyn-step-num">${step.step_number}</div>
+                        <div class="dyn-step-content">
+                            <div class="dyn-step-title">${step.title}</div>
+                            <div class="dyn-step-desc">${step.details}</div>
+                        </div>
+                    `;
+                    dynStepsContainer.appendChild(stepDiv);
+                });
+
+                // Render action buttons (e.g. Preview PDF, View PR list)
+                dynActions.innerHTML = '';
+                if (data.pr_number) {
+                    const btnPreview = document.createElement('button');
+                    btnPreview.className = 'btn btn-primary btn-sm';
+                    btnPreview.textContent = '📄 Lihat Dokumen PDF';
+                    btnPreview.onclick = () => previewPDF(data.pr_number);
+                    dynActions.appendChild(btnPreview);
+                }
+
+                const btnViewPR = document.createElement('button');
+                btnViewPR.className = 'btn btn-secondary btn-sm';
+                btnViewPR.textContent = 'Daftar Purchase Requisitions';
+                btnViewPR.onclick = () => {
+                    document.querySelector('[data-tab="tab-pr"]').click();
+                };
+                dynActions.appendChild(btnViewPR);
+
+                // Refresh inventory and PR table in background
+                await loadInventory();
+                await loadPurchaseRequisitions();
+            } catch (err) {
+                dynSummary.innerHTML = `<span style="color: var(--danger); font-weight: 600;">Terjadi Kesalahan: ${err.message}</span>`;
+            } finally {
+                btnSubmitPrompt.disabled = false;
+                btnSubmitPrompt.innerHTML = `
+                    <span>Jalankan Workflow</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                `;
+            }
+        });
+    }
+
+
 
     // -------------------------------------------------------------
     // OCR Document Upload & Parsing
@@ -289,9 +513,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.previewPDF = function(prNumber) {
         const modal = document.getElementById('pdf-modal');
         const iframe = document.getElementById('pdf-iframe');
-        const cleanPr = prNumber.replace(/-/g, '_');
-        // Add cache busting timestamp to always load fresh compiled PDF
-        iframe.src = `/storage/documents/${cleanPr}.pdf?t=${Date.now()}`;
+        // Use the robust download endpoint which automatically checks approved, pending, rejected, and documents folders
+        iframe.src = `/api/documents/pr/${encodeURIComponent(prNumber)}/download?t=${Date.now()}`;
         modal.classList.add('active');
     };
 

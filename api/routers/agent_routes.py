@@ -183,3 +183,120 @@ def approve_pr_requisition(request: ApprovalRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process PR approval: {str(e)}"
         )
+
+
+class UpdateItemThresholdRequest(BaseModel):
+    min_threshold: Optional[int] = Field(None, description="New minimum safety threshold")
+    current_stock: Optional[int] = Field(None, description="Optional update to current physical stock")
+    avg_daily_usage: Optional[float] = Field(None, description="Optional update to daily usage burn rate")
+    lead_time_days: Optional[int] = Field(None, description="Optional update to vendor lead time")
+
+
+@router.patch("/api/inventory/items/{item_id}")
+def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest):
+    """
+    Updates threshold and inventory parameters for a specific item in DuckDB.
+    """
+    conn = get_db_connection()
+    try:
+        existing = conn.execute("SELECT item_id, name, min_threshold, current_stock FROM items WHERE item_id = ?", [item_id]).fetchone()
+        if not existing:
+            raise HTTPException(status_code=404, detail=f"Item with ID '{item_id}' not found in inventory.")
+
+        updates = []
+        params = []
+        if payload.min_threshold is not None:
+            updates.append("min_threshold = ?")
+            params.append(payload.min_threshold)
+        if payload.current_stock is not None:
+            updates.append("current_stock = ?")
+            params.append(payload.current_stock)
+        if payload.avg_daily_usage is not None:
+            updates.append("avg_daily_usage = ?")
+            params.append(payload.avg_daily_usage)
+        if payload.lead_time_days is not None:
+            updates.append("lead_time_days = ?")
+            params.append(payload.lead_time_days)
+
+        if not updates:
+            return {"status": "no_change", "message": "No parameters provided to update."}
+
+        params.append(item_id)
+        sql = f"UPDATE items SET {', '.join(updates)} WHERE item_id = ?;"
+        conn.execute(sql, params)
+
+        # Retrieve updated record
+        updated_row = conn.execute("""
+            SELECT item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit
+            FROM items WHERE item_id = ?;
+        """, [item_id]).fetchone()
+        columns = [d[0] for d in conn.description]
+        updated_item = dict(zip(columns, updated_row))
+
+        return {
+            "status": "success",
+            "message": f"Berhasil memperbarui {existing[1]} ({item_id}).",
+            "item": updated_item
+        }
+    finally:
+        conn.close()
+
+
+class CustomPromptRequest(BaseModel):
+    prompt: str = Field(..., description="Natural language prompt from user describing restock intent or workflow")
+    destinations: Optional[List[str]] = Field(None, description="Explicit destinations: ['database', 'email', 'telegram', 'n8n', 'pdf']")
+    recipient_email: Optional[str] = Field(None, description="Optional custom recipient email")
+
+
+@router.post("/api/agent/custom-prompt")
+async def execute_custom_prompt_workflow(request: CustomPromptRequest):
+    """
+    Accepts free-form natural language instructions from non-technical users,
+    synthesizes a custom multi-agent workflow, executes actions, and dispatches outputs.
+    """
+    if not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt tidak boleh kosong.")
+
+    from agents.dynamic_workflow import workflow_synthesizer
+    try:
+        result = await workflow_synthesizer.execute_dynamic_workflow(
+            prompt=request.prompt,
+            override_destinations=request.destinations,
+            override_email=request.recipient_email
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Gagal mengeksekusi dynamic workflow: {str(e)}"
+        )
+
+
+@router.get("/api/agent/prompt-templates")
+def get_prompt_templates():
+    """
+    Returns curated 1-click prompt templates for non-technical users.
+    """
+    return [
+        {
+            "id": 1,
+            "title": "Restock Darurat Elektronik -> Telegram",
+            "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, pilihkan vendor termurah, buatkan dokumen PDF, dan kirim notifikasi ke Telegram."
+        },
+        {
+            "id": 2,
+            "title": "Update Threshold STM32 & Simpan DB",
+            "prompt": "Ubah threshold barang ITM-001 jadi 80 pcs, lalu hitung ulang kebutuhan restock dan simpan hasilnya di database saja."
+        },
+        {
+            "id": 3,
+            "title": "Rekap Stok Kemasan -> Email & n8n",
+            "prompt": "Buatkan rekap laporan restock barang Packaging dan kirimkan ke email manager@company.com serta webhook n8n."
+        },
+        {
+            "id": 4,
+            "title": "Audit Lengkap Semua Barang Gudang",
+            "prompt": "Periksa semua barang di gudang yang di bawah threshold, buatkan draf Purchase Requisition PDF resmi."
+        }
+    ]
+

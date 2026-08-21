@@ -39,6 +39,17 @@ class Settings(_BaseSettings):
     MODEL_QWEN_VISION_URL: str = "http://localhost:8004/v1"
     MODEL_API_KEY: str = "dummy-key"
 
+    # Integrations & Dispatchers (n8n, Email, Telegram)
+    N8N_WEBHOOK_URL: Optional[str] = None
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_EMAIL: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    DEFAULT_RECIPIENT_EMAIL: str = "manager@company.com"
+    TELEGRAM_BOT_TOKEN: Optional[str] = None
+    TELEGRAM_CHAT_ID: Optional[str] = None
+
+
     # File Paths
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
     STORAGE_DIR: Path = BASE_DIR / "storage"

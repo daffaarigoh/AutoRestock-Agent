@@ -642,3 +642,322 @@ tbody tr:hover td {
     background: #f1f5f9;
     color: var(--text-main);
 }
+
+/* ==========================================================================
+   AI Workflow Assistant & Dynamic Prompt Styles (User-Friendly)
+   ========================================================================== */
+.assistant-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+    border: 1.5px solid #dbeafe;
+    padding: 2.25rem;
+    box-shadow: 0 4px 20px -2px rgba(37, 99, 235, 0.08);
+}
+
+.assistant-header {
+    max-width: 800px;
+    margin: 0 auto 1.5rem;
+    text-align: center;
+}
+
+.assistant-badge {
+    display: inline-block;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+}
+
+.assistant-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.4px;
+    line-height: 1.25;
+}
+
+.assistant-desc {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+}
+
+.prompt-input-wrapper {
+    max-width: 840px;
+    margin: 0 auto 1.25rem;
+    display: flex;
+    gap: 0.75rem;
+    background: #ffffff;
+    padding: 0.4rem;
+    border: 2px solid #bfdbfe;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.prompt-input-wrapper:focus-within {
+    border-color: #2563eb;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.16);
+}
+
+.prompt-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: #0f172a;
+}
+
+.prompt-input::placeholder {
+    color: #94a3b8;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.4rem;
+    font-size: 0.95rem;
+    border-radius: var(--radius-md);
+}
+
+.prompt-suggestions {
+    max-width: 840px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.suggestion-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-right: 0.25rem;
+}
+
+.prompt-chip {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.prompt-chip:hover {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #93c5fd;
+    transform: translateY(-1px);
+}
+
+/* Dynamic Steps Execution Timeline */
+.dyn-summary-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-sm);
+    padding: 0.9rem 1.25rem;
+    font-size: 0.9rem;
+    color: #1e3a8a;
+    font-weight: 500;
+    margin-bottom: 1.25rem;
+    line-height: 1.45;
+}
+
+.dyn-steps-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dyn-step-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 0.9rem 1.1rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s ease;
+}
+
+.dyn-step-item:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.dyn-step-num {
+    width: 28px;
+    height: 28px;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1.5px solid #bfdbfe;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.dyn-step-content {
+    flex: 1;
+}
+
+.dyn-step-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #0f172a;
+}
+
+.dyn-step-desc {
+    font-size: 0.84rem;
+    color: #475569;
+    margin-top: 0.2rem;
+    line-height: 1.4;
+}
+
+/* Small Form Modal */
+.modal-content.modal-sm {
+    max-width: 480px;
+    height: auto;
+    max-height: 90vh;
+}
+
+.modal-content.modal-sm .modal-body {
+    padding: 1.25rem 1.5rem;
+    background: #ffffff;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.35rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.form-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+/* Multi-Channel Distribution Selector */
+.channel-selector-container {
+    max-width: 840px;
+    margin: 0.75rem auto 1.25rem;
+    padding: 0.85rem 1.1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+}
+
+.channel-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+}
+
+.channel-selector-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.channel-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.channel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+}
+
+.channel-chip:hover {
+    border-color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.channel-chip input[type="checkbox"] {
+    accent-color: #2563eb;
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+}
+
+.channel-chip.active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #1d4ed8;
+}
+
+.email-custom-wrapper {
+    margin-top: 0.6rem;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    animation: fadeIn 0.15s ease;
+}
+
+.email-custom-wrapper.show {
+    display: flex;
+}
+
+.email-custom-input {
+    flex: 1;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    font-size: 0.84rem;
+    color: #0f172a;
+    outline: none;
+}
+
+.email-custom-input:focus {
+    border-color: #2563eb;
+}
+
+

@@ -78,9 +78,38 @@ def test_full_pipeline():
     assert res_download_rej.headers["content-type"] == "application/pdf"
     print(f"[TEST 8] GET /api/documents/pr/{pr2_number}/download: OK -> Rejected PDF downloaded ({len(res_download_rej.content)} bytes)")
     
+    # 9. Test Threshold Customizer Endpoint (PATCH /api/inventory/items/{item_id})
+    res_threshold = client.patch("/api/inventory/items/ITM-001", json={
+        "min_threshold": 75,
+        "current_stock": 10
+    })
+    assert res_threshold.status_code == 200
+    assert res_threshold.json()["item"]["min_threshold"] == 75
+    print(f"[TEST 9] PATCH /api/inventory/items/ITM-001: OK -> Updated threshold to 75 (current: 10)")
+
+    # 10. Test Prompt Templates Endpoint (GET /api/agent/prompt-templates)
+    res_templates = client.get("/api/agent/prompt-templates")
+    assert res_templates.status_code == 200
+    templates = res_templates.json()
+    assert len(templates) >= 4
+    print(f"[TEST 10] GET /api/agent/prompt-templates: OK -> Retrieved {len(templates)} 1-click prompt templates")
+
+    # 11. Test Custom Prompt Dynamic Workflow Synthesizer (POST /api/agent/custom-prompt)
+    res_custom = client.post("/api/agent/custom-prompt", json={
+        "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, buatkan dokumen PDF, dan kirim ke Telegram serta n8n."
+    })
+    assert res_custom.status_code == 200
+    dyn_data = res_custom.json()
+    assert dyn_data["total_items_analyzed"] >= 2
+    assert "telegram" in dyn_data["target_destinations"]
+    assert "n8n" in dyn_data["target_destinations"]
+    assert len(dyn_data["execution_steps"]) >= 4
+    print(f"[TEST 11] POST /api/agent/custom-prompt: OK -> Dynamic workflow synthesized & executed ({len(dyn_data['execution_steps'])} steps, {dyn_data['total_items_analyzed']} items, budget: {dyn_data['total_budget_formatted']})")
+
     print("=" * 80)
-    print("🎉 ALL 8 INTEGRATION TESTS (INCLUDING APPROVE & REJECT) PASSED!")
+    print("🎉 ALL 11 INTEGRATION TESTS (INCLUDING THRESHOLDS, PROMPT SYNTHESIS & N8N) PASSED!")
     print("=" * 80 + "\n")
 
 if __name__ == "__main__":
     test_full_pipeline()
+

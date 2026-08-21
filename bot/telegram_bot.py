@@ -7,6 +7,7 @@ try:
 except ImportError:
     import httpx2 as httpx
 
+from core.config import settings
 from core.schemas import PurchaseRequisitionDoc
 
 logger = logging.getLogger(__name__)
@@ -15,18 +16,18 @@ logger = logging.getLogger(__name__)
 class TelegramApprovalBot:
     """
     Dispatches interactive Human-in-the-Loop approval requests to Warehouse Managers
-    via Telegram Bot with inline keyboard buttons.
+    via Telegram Bot with inline keyboard buttons and one-click quick action links.
     """
 
     def __init__(self):
-        self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-        self.chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+        self.bot_token = settings.TELEGRAM_BOT_TOKEN or os.getenv("TELEGRAM_BOT_TOKEN", "")
+        self.chat_id = settings.TELEGRAM_CHAT_ID or os.getenv("TELEGRAM_CHAT_ID", "")
         self.is_configured = bool(self.bot_token and self.chat_id)
 
     async def send_restock_approval_request(
         self,
         pr: PurchaseRequisitionDoc,
-        callback_base_url: str = "http://localhost:8000"
+        callback_base_url: str = "http://127.0.0.1:8000"
     ) -> Dict[str, Any]:
         """
         Sends an approval card to the manager's Telegram chat.
@@ -36,6 +37,10 @@ class TelegramApprovalBot:
             f"  • *{item.name}*: {item.reorder_qty} {item.unit} @ Rp {item.unit_price:,.0f} -> _Vendor: {item.vendor_name}_"
             for item in pr.items
         ])
+
+        approve_link = f"{callback_base_url}/api/approval/quick-action?pr_number={pr.pr_number}&action=APPROVE"
+        reject_link = f"{callback_base_url}/api/approval/quick-action?pr_number={pr.pr_number}&action=REJECT"
+        pdf_link = f"{callback_base_url}/api/documents/pr/{pr.pr_number}/download"
 
         message_text = (
             f"🚨 *PERMINTAAN PERSETUJUAN RESTOCK (PR)*\n"
@@ -47,19 +52,23 @@ class TelegramApprovalBot:
             f"🛡️ *Audit Nemotron-35*: `{pr.auditor_status}`\n"
             f"📝 *Catatan Auditor*: _{pr.auditor_notes}_\n"
             f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"Silakan tinjau dan berikan persetujuan:"
+            f"⚡ *Aksi Cepat Persetujuan:*\n"
+            f"✅ [Klik untuk Setujui (Stok Bertambah)]({approve_link})\n"
+            f"❌ [Klik untuk Tolak (Stok Tetap)]({reject_link})\n"
+            f"📄 [Unduh Dokumen PDF Resmi]({pdf_link})\n\n"
+            f"Atau gunakan tombol di bawah:"
         )
 
         reply_markup = {
             "inline_keyboard": [
                 [
                     {
-                        "text": "✅ Approve PR",
-                        "callback_data": f"approve:{pr.pr_number}"
+                        "text": "✅ Setujui (Approve)",
+                        "url": approve_link
                     },
                     {
-                        "text": "❌ Reject",
-                        "callback_data": f"reject:{pr.pr_number}"
+                        "text": "❌ Tolak (Reject)",
+                        "url": reject_link
                     }
                 ],
                 [
@@ -78,6 +87,11 @@ class TelegramApprovalBot:
                 "message": "Notification dispatched in simulation mode (set TELEGRAM_BOT_TOKEN in .env for real delivery).",
                 "pr_number": pr.pr_number,
                 "preview_text": message_text,
+                "interactive_actions": {
+                    "approve_url": approve_link,
+                    "reject_url": reject_link,
+                    "pdf_download_url": pdf_link
+                }
             }
 
         url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
@@ -99,3 +113,4 @@ class TelegramApprovalBot:
 
 
 telegram_bot = TelegramApprovalBot()
+
