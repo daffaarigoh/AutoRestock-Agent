@@ -1,371 +1,289 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoRestock Agent | Autonomous Procurement & Inventory AI</title>
-    <link rel="stylesheet" href="/static/css/dashboard.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoRestock V2 - Enterprise AI Operations Copilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
 </head>
-<body>
+<body class="sidebar-collapsed">
 
-    <!-- Header Navbar -->
-    <header class="navbar">
-        <div class="brand">
-            <div class="brand-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m7.5 4.27 9 5.15"/>
-                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-                    <path d="m3.3 7 8.7 5 8.7-5"/>
-                    <path d="M12 22V12"/>
-                </svg>
-            </div>
-            <span class="brand-text">AutoRestock Agent</span>
-            <span class="brand-badge">Autonomous Procurement</span>
-        </div>
-        <div class="nav-status">
-            <div class="status-pill">
-                <span class="pulse-dot"></span>
-                <span>Active Models: qwen-35b | nemotron-35 | ocr-lighton</span>
-            </div>
-            <button id="btn-run-agent" class="btn btn-primary">Run Autonomous Restock</button>
-        </div>
-    </header>
-
-    <!-- Navigation Tabs (Centered) -->
-    <nav class="tabs-container">
-        <button class="tab-btn active" data-tab="tab-assistant">✨ AI Workflow Assistant</button>
-        <button class="tab-btn" data-tab="tab-inventory">Live Inventory & Thresholds</button>
-        <button class="tab-btn" data-tab="tab-ocr">Document Ingestion (OCR)</button>
-        <button class="tab-btn" data-tab="tab-stream">Live Agent Console (SSE)</button>
-        <button class="tab-btn" data-tab="tab-pr">Purchase Requisitions</button>
-    </nav>
-
-    <!-- Main Content Panels -->
-    <main class="main-content">
-
-        <!-- TAB 0: AI Dynamic Workflow Assistant (Non-Technical User Friendly) -->
-        <section id="tab-assistant" class="tab-panel active">
-            <div class="assistant-hero card">
-                <div class="assistant-header">
-                    <div class="assistant-badge">Dynamic Multi-Agent Synthesizer</div>
-                    <h1 class="assistant-title">Perintahkan AI Apa Saja untuk Mengelola Gudang</h1>
-                    <p class="assistant-desc">Ketik instruksi dalam bahasa sehari-hari. AI Agent akan otomatis menyusun alur kerja (*Dynamic Workflow*), menganalisis database DuckDB, membuat dokumen PDF resmi, dan mendistribusikan hasilnya ke Telegram, Email, atau n8n.</p>
-                </div>
-
-                <form id="custom-prompt-form">
-                    <div class="prompt-input-wrapper">
-                        <input type="text" id="custom-prompt-input" class="prompt-input" placeholder="Contoh: Tolong cek barang elektronik yang stoknya kritis, pilih vendor termurah, buatkan PDF..." autocomplete="off">
-                        <button type="submit" id="btn-submit-prompt" class="btn btn-primary btn-lg">
-                            <span>Jalankan Workflow</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Multi-Channel Selector -->
-                    <div class="channel-selector-container">
-                        <div class="channel-selector-header">
-                            <span class="channel-selector-title">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                                </svg>
-                                Target Distribusi Output (Bebas Dipilih):
-                            </span>
-                            <span style="font-size: 0.75rem; color: #64748b;">Pilih satu atau kombinasi tujuan</span>
-                        </div>
-                        <div class="channel-options">
-                            <label class="channel-chip active" id="chip-db">
-                                <input type="checkbox" id="chk-db" value="database" checked>
-                                <span>🌐 Web Dashboard & DuckDB</span>
-                            </label>
-                            <label class="channel-chip" id="chip-email">
-                                <input type="checkbox" id="chk-email" value="email">
-                                <span>✉️ Kirim ke Email</span>
-                            </label>
-                            <label class="channel-chip" id="chip-tele">
-                                <input type="checkbox" id="chk-tele" value="telegram">
-                                <span>📱 Kirim ke Telegram</span>
-                            </label>
-                            <label class="channel-chip" id="chip-n8n">
-                                <input type="checkbox" id="chk-n8n" value="n8n">
-                                <span>⚡ Kirim ke n8n Webhook</span>
-                            </label>
-                        </div>
-                        <div class="email-custom-wrapper" id="email-input-wrapper">
-                            <span style="font-size: 0.8rem; color: #475569; font-weight: 600;">Email Penerima:</span>
-                            <input type="email" id="custom-recipient-email" class="email-custom-input" placeholder="manager@company.com" value="manager@company.com">
-                        </div>
-                    </div>
-                </form>
-
-                <div class="prompt-suggestions">
-                    <span class="suggestion-label">Coba Contoh Cepat:</span>
-                    <button class="prompt-chip" data-prompt="Pindai barang inventaris yang stoknya kritis, buat draf PR, simpan ke database saja.">💾 Web Dashboard & DB Saja</button>
-                    <button class="prompt-chip" data-prompt="Cek stok barang kategori Electronics yang kritis, pilihkan vendor termurah, buatkan PDF, dan kirim ke Telegram saja.">📱 Telegram Saja</button>
-                    <button class="prompt-chip" data-prompt="Buatkan laporan restock barang Packaging, kompilasi PDF resmi, lalu kirimkan ke email saja.">✉️ Email Saja</button>
-                    <button class="prompt-chip" data-prompt="Periksa semua barang di gudang yang di bawah threshold, buatkan draf PR PDF, kirimkan notifikasi ke Telegram dan Email.">⚡ Email + Telegram</button>
-                    <button class="prompt-chip" data-prompt="Lakukan audit stok bahan habis pakai, buatkan PDF Purchase Requisition, dan kirimkan ke n8n webhook.">🔄 n8n Webhook</button>
-                </div>
-            </div>
-
-            <!-- Dynamic Workflow Execution Result Card -->
-            <div id="dynamic-result-card" class="card" style="display: none; margin-top: 1.5rem;">
-                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h2 class="card-title" id="dyn-title">Hasil Eksekusi Dynamic Workflow</h2>
-                        <p class="card-subtitle" id="dyn-subtitle">Alur kerja disintesis secara otonom oleh AI Agent</p>
-                    </div>
-                    <div id="dyn-actions" style="display: flex; gap: 0.5rem;"></div>
-                </div>
-
-                <div class="dyn-summary-box" id="dyn-summary"></div>
-
-                <div class="dyn-steps-timeline" id="dyn-steps-container">
-                    <!-- Dynamic steps injected via JS -->
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 1: Live Inventory Monitor & Threshold Management -->
-        <section id="tab-inventory" class="tab-panel">
-            <div class="grid-3">
-                <div class="stat-card">
-                    <div>
-                        <div class="stat-label">Total SKU Dipantau</div>
-                        <div class="stat-val" id="stat-total-sku">-</div>
-                    </div>
-                    <div class="stat-icon-wrapper stat-icon-blue">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect width="7" height="9" x="3" y="3" rx="1"/>
-                            <rect width="7" height="5" x="14" y="3" rx="1"/>
-                            <rect width="7" height="9" x="14" y="12" rx="1"/>
-                            <rect width="7" height="5" x="3" y="16" rx="1"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div>
-                        <div class="stat-label">Stok Kritis (Restock Triggered)</div>
-                        <div class="stat-val" style="color: var(--danger)" id="stat-critical">-</div>
-                    </div>
-                    <div class="stat-icon-wrapper stat-icon-red">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="12" x2="12" y1="8" y2="12"/>
-                            <line x1="12" x2="12.01" y1="16" y2="16"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div>
-                        <div class="stat-label">Stok Perlu Perhatian</div>
-                        <div class="stat-val" style="color: var(--warning)" id="stat-warning">-</div>
-                    </div>
-                    <div class="stat-icon-wrapper stat-icon-amber">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-                            <line x1="12" x2="12" y1="9" y2="13"/>
-                            <line x1="12" x2="12.01" y1="17" y2="17"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <h2 class="card-title">Daftar Real-Time Inventaris & Pengaturan Threshold</h2>
-                        <p class="card-subtitle">Klik tombol <strong>"Ubah Threshold"</strong> pada baris barang mana saja untuk menyesuaikan batas minimum stok aman.</p>
-                    </div>
-                    <button class="btn btn-secondary btn-sm" onclick="loadInventory()">Refresh Data</button>
-                </div>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Nama SKU / Barang</th>
-                                <th>Kategori</th>
-                                <th>Stok Fisik</th>
-                                <th>Threshold Min</th>
-                                <th>Burn Rate</th>
-                                <th>Lead Time</th>
-                                <th>Harga Satuan</th>
-                                <th>Status Kesehatan</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventory-table-body">
-                            <!-- Populated dynamically via JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 2: Document Ingestion Dropzone (ocr-lighton) - Centered Layout -->
-        <section id="tab-ocr" class="tab-panel">
-            <div class="ocr-centered-container">
-                <div class="card">
-                    <div class="card-header" style="text-align: center;">
-                        <h2 class="card-title">Upload Dokumen Fisik Gudang</h2>
-                        <p class="card-subtitle">Ekstraksi otomatis dokumen fisik menggunakan model OCR LightOn ke format data terstruktur.</p>
-                    </div>
-                    
-                    <div class="radio-group">
-                        <label class="radio-label"><input type="radio" name="doc_type" value="delivery-note" checked> Surat Jalan (Barang Masuk)</label>
-                        <label class="radio-label"><input type="radio" name="doc_type" value="stock-opname"> Kartu Stok Opname Fisik</label>
-                        <label class="radio-label"><input type="radio" name="doc_type" value="invoice"> Faktur / Invoice</label>
-                    </div>
-
-                    <div id="ocr-dropzone" class="dropzone">
-                        <div class="dropzone-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <polyline points="17 8 12 3 7 8"/>
-                                <line x1="12" x2="12" y1="3" y2="15"/>
-                            </svg>
-                        </div>
-                        <p class="dropzone-text"><strong>Tarik & letakkan scan dokumen di sini</strong>, atau klik untuk memilih file</p>
-                        <span class="dropzone-sub">Mendukung format PNG, JPG, JPEG, dan PDF</span>
-                    </div>
-                    <input type="file" id="ocr-file-input" style="display: none;" accept="image/*,application/pdf">
-                </div>
-
-                <div class="card" id="ocr-result-container" style="display: none;">
-                    <div class="card-header">
-                        <h2 class="card-title">Hasil Ekstraksi Data Terstruktur</h2>
-                        <p class="card-subtitle">Dokumen: <strong id="ocr-doc-no" style="color:var(--primary)">-</strong> | Penerbit: <strong id="ocr-vendor">-</strong></p>
-                    </div>
-                    <div style="background: var(--bg-card-subtle); padding: 0.75rem 1rem; border-radius: 6px; margin: 0.5rem 0 1rem; font-size: 0.85rem; border: 1px solid var(--border-color);" id="ocr-summary">-</div>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Item Barang</th>
-                                    <th>Qty Tercatat</th>
-                                    <th>Estimasi Harga</th>
-                                    <th>Catatan Fisik</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ocr-table-body">
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Direct Action from Extracted Document -->
-                    <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
-                        <button id="btn-ocr-generate-pr" class="btn btn-primary">Proses Restock & Buat Dokumen PR (PDF)</button>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- TAB 3: Live Agent Reasoning Console (SSE) - Light & Centered -->
-        <section id="tab-stream" class="tab-panel">
-            <div class="terminal-card">
-                <div class="terminal-header">
-                    <div class="terminal-dots">
-                        <span class="terminal-dot dot-red"></span>
-                        <span class="terminal-dot dot-yellow"></span>
-                        <span class="terminal-dot dot-green"></span>
-                    </div>
-                    <span class="terminal-title">live-agent-stream://qwen-35b-nemotron-35</span>
-                </div>
-                <div class="terminal-body" id="terminal-logs">
-                    <div class="log-entry">
-                        <span class="log-time">[Ready]</span>
-                        <span class="log-msg">Klik tombol <strong>"Run Autonomous Restock"</strong> atau gunakan <strong>"AI Workflow Assistant"</strong> untuk menjalankan agen.</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 4: Purchase Requisitions & PDF Previewer -->
-        <section id="tab-pr" class="tab-panel">
-            <div class="card">
-                <div class="card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <h2 class="card-title">Daftar Purchase Requisition & Dokumen Typst</h2>
-                        <p class="card-subtitle">Dokumen pengadaan resmi hasil evaluasi agen untuk persetujuan manajerial (Human-In-The-Loop).</p>
-                    </div>
-                    <button class="btn btn-secondary btn-sm" onclick="resetSamplePR()">Reset Demo PR</button>
-                </div>
-
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>No. Dokumen PR</th>
-                                <th>Tanggal Dibuat</th>
-                                <th>Jumlah Item</th>
-                                <th>Total Anggaran</th>
-                                <th>Audit Nemotron</th>
-                                <th>Status Approval</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pr-list-tbody">
-                            <!-- Populated dynamically via JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Modal Edit Threshold -->
-    <div id="threshold-modal" class="modal">
-        <div class="modal-content modal-sm">
-            <div class="modal-header">
-                <h3 class="modal-title">Pengaturan Batas Stok (Threshold)</h3>
-                <button class="close-btn" onclick="closeThresholdModal()" aria-label="Tutup">&times;</button>
-            </div>
-            <form id="threshold-form" class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
-                <input type="hidden" id="edit-item-id">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">Nama SKU / Barang</label>
-                    <div id="edit-item-name" style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin-top: 0.25rem;">-</div>
-                </div>
-                <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                    <div>
-                        <label class="form-label" for="edit-current-stock">Stok Fisik Saat Ini</label>
-                        <input type="number" id="edit-current-stock" class="form-input" min="0" required>
-                    </div>
-                    <div>
-                        <label class="form-label" for="edit-min-threshold">Batas Minimum (Threshold)</label>
-                        <input type="number" id="edit-min-threshold" class="form-input" min="1" required>
-                    </div>
-                </div>
-                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
-                    <button type="button" class="btn btn-secondary" onclick="closeThresholdModal()">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-                </div>
-            </form>
-        </div>
+  <!-- Top Executive Header (Gemini / Modern SaaS inspired) -->
+  <!-- Top Executive Header (Minimalist: Logo & Sidebar Toggle Only) -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="white"/>
+        </svg>
+      </div>
+      <div class="brand-info">
+        <div class="brand-name">AutoRestock <span class="brand-badge">V2</span></div>
+        <span class="brand-subtitle">Autonomous AI Procurement Copilot</span>
+      </div>
     </div>
 
-    <!-- Modal PDF Previewer -->
-    <div id="pdf-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Pratinjau Dokumen Purchase Requisition</h3>
-                <button class="close-btn" onclick="closeModal()" aria-label="Tutup">&times;</button>
-            </div>
-            <div class="modal-body">
-                <iframe id="pdf-iframe" style="width: 100%; height: 100%; border: none;"></iframe>
-            </div>
-        </div>
+    <!-- Right Header Actions (Sidebar Toggle Only) -->
+    <div class="header-actions">
+      <button class="btn btn-primary btn-sm" id="btnToggleSidebar" onclick="toggleDataSidebar()">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+        </svg>
+        <span id="toggleSidebarText">Katalog & Data</span>
+      </button>
     </div>
+  </header>
 
-    <script src="/static/js/dashboard.js"></script>
+  <!-- Main Workspace Layout -->
+  <main class="app-layout">
+    
+    <!-- CENTER CHAT-FIRST INTERFACE (Google Gemini Style) -->
+    <section class="gemini-chat-container is-empty-state" id="geminiChatContainer">
+      
+      <!-- Top Chat Action Bar (Inside Chat Area) -->
+      <div class="chat-top-bar" id="chatTopBar">
+        <button class="btn-clear-chat-pill" onclick="clearCopilotFeed()" title="Bersihkan riwayat percakapan">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          <span>Bersihkan Chat</span>
+        </button>
+      </div>
+
+      <!-- GEMINI HERO EMPTY STATE (Centered when no messages) -->
+      <div class="gemini-hero-empty" id="geminiHeroEmpty">
+        <div class="hero-sparkle-icon">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z" fill="url(#heroSparkleGrad)"/>
+            <defs>
+              <linearGradient id="heroSparkleGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#60A5FA"/>
+                <stop offset="1" stop-color="#2563EB"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="hero-title">AutoRestock AI Inventory</h1>
+        <p class="hero-subtitle">Asisten AI multi-flow & otomatisasi gudang. Berikan instruksi seputar restock, audit struk OCR, update stok, pembuatan PR pengadaan, hingga integrasi database.</p>
+      </div>
+
+      <!-- Conversational Stream (Visible when chat history exists) -->
+      <div class="chat-feed-wrapper" id="copilotFeedWrapper">
+        <div class="chat-feed" id="copilotFeed">
+          <!-- Dynamic Chat Message Bubbles -->
+        </div>
+      </div>
+
+      <!-- Bottom / Centered Chat Input Deck (Gemini Floating Pill) -->
+      <div class="chat-input-deck" id="chatInputDeck">
+        <div class="chat-input-inner">
+          
+          <!-- Attached File Preview Chip -->
+          <div id="attachedFilePreview" class="attached-file-chip" style="display: none;">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#60a5fa">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+            <span id="attachedFileName">file.jpg</span>
+            <button type="button" onclick="removeAttachedFile()" class="btn-remove-file" title="Hapus lampiran">✕</button>
+          </div>
+
+          <!-- Main Input Bar -->
+          <div class="input-bar-container">
+            <input type="file" id="mediaFileInput" style="display: none;" accept="image/*,.pdf,.csv,.xlsx,.txt" onchange="handleFileSelected(event)">
+            
+            <button type="button" class="btn-icon-attachment" onclick="document.getElementById('mediaFileInput').click()" title="Lampirkan Dokumen / Struk / Nota / CSV">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+              </svg>
+            </button>
+
+            <textarea id="promptInput" class="prompt-textarea" placeholder="Tanyakan inventaris, minta restock, tambah produk, atau lampirkan struk..." rows="1" onkeydown="handleKey(event)"></textarea>
+
+            <button class="btn btn-primary btn-send" id="btnSendPrompt" onclick="submitPrompt()">
+              <span>Kirim Perintah</span>
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="channel-selector" style="display: flex; gap: 8px; margin-top: 8px; padding: 0 12px; justify-content: flex-end;">
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; color: var(--text-muted); font-weight: 500;">
+                  <input type="checkbox" id="chk-email" value="email">
+                  <span>✉️ Email</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; color: var(--text-muted); font-weight: 500;">
+                  <input type="checkbox" id="chk-tele" value="telegram">
+                  <span>📱 Telegram</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; color: var(--text-muted); font-weight: 500;">
+                  <input type="checkbox" id="chk-n8n" value="n8n">
+                  <span>⚡ n8n Webhook</span>
+              </label>
+          </div>
+          
+          <div class="input-hint">
+            AutoRestock V2 menggunakan Multi-Agent System yang terhubung langsung ke database & eksekusi otomatis.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLLAPSIBLE GLASSMORPHISM DATA SIDEBAR (Right Drawer) -->
+    <aside class="data-sidebar" id="dataSidebar">
+      
+      <!-- Sidebar Header with Tabs & Close Action -->
+      <div class="sidebar-header">
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab-btn active" data-target="canvas-inventory" onclick="switchCanvasTab('canvas-inventory')">
+            Katalog Stok
+          </button>
+          <button class="sidebar-tab-btn" data-target="canvas-prs" onclick="switchCanvasTab('canvas-prs')">
+            Purchase Requisitions (PR)
+          </button>
+          <button class="sidebar-tab-btn" data-target="canvas-terminal" onclick="switchCanvasTab('canvas-terminal')">
+            Live Terminal
+          </button>
+        </div>
+
+        <button class="btn-sidebar-close" onclick="closeDataSidebar()" title="Tutup / Collapse Sidebar">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- TAB 1: Live Real-Time Inventory Table -->
+      <div class="canvas-tab-content active" id="canvas-inventory">
+        <div class="table-toolbar">
+          <div class="search-box-wrapper">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" class="search-icon">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="searchCatalog" class="input-search" placeholder="Cari nama barang / SKU..." oninput="filterCatalogTable()">
+          </div>
+
+          <select id="filterCategory" class="select-category" onchange="filterCatalogTable()">
+            <option value="">Semua Kategori</option>
+          </select>
+
+          <a href="/api/inventory/export/csv" class="btn btn-secondary btn-sm" download title="Unduh Katalog CSV">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Ekspor
+          </a>
+
+          <button class="btn btn-secondary btn-sm" id="btnRefreshCatalog" onclick="triggerVisualRefresh('btnRefreshCatalog', loadAllData)" title="Segarkan Data">
+            <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="table-responsive-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Nama Produk</th>
+                <th>Kategori</th>
+                <th class="text-right">Stok</th>
+                <th class="text-right" id="th-minmax">Min/Max</th>
+                <th class="text-right">Harga (IDR)</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="catalogTableBody">
+              <tr><td colspan="7" class="text-center" style="padding: 28px;">Memuat data katalog...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: Purchase Requisitions -->
+      <div class="canvas-tab-content" id="canvas-prs">
+        <div class="table-toolbar" style="justify-content: space-between;">
+          <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Dokumen Purchase Requisition Resmi</span>
+          <button class="btn btn-secondary btn-sm" id="btnRefreshPrs" onclick="triggerVisualRefresh('btnRefreshPrs', loadApprovals)">
+            <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="table-responsive-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nomor PR</th>
+                <th>Supplier</th>
+                <th class="text-center">Items</th>
+                <th class="text-right">Total (IDR)</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="prsTableBody">
+              <tr><td colspan="6" class="text-center" style="padding: 28px;">Memuat data PR...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: Live Agent Terminal -->
+      <div class="canvas-tab-content" id="canvas-terminal" style="height: calc(100% - 60px);">
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <span class="terminal-title">AUTONOMOUS REASONING ENGINE - LIVE STREAM</span>
+            <button class="btn btn-secondary btn-sm" style="background: #1e293b; color: #94a3b8; border-color: #334155; padding: 2px 8px; font-size: 11px;" onclick="clearTerminalLogs()">Clear Log</button>
+          </div>
+          <div class="terminal-body" id="liveAgentTerminal"></div>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- In-App PDF Preview Modal -->
+  <div class="modal-backdrop" id="pdfPreviewModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span style="font-family: var(--font-mono); color: #2563eb;" id="modalPrNumber">PR-XXXXX</span>
+          <span style="font-size: 12px; color: var(--text-muted);" id="modalSupplierName">-</span>
+          <span class="badge" id="modalPrStatusBadge">PENDING</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="closePdfModal()">✕ Tutup</button>
+      </div>
+      <div class="modal-body">
+        <iframe id="pdfPreviewIframe" class="pdf-iframe" src="about:blank"></iframe>
+      </div>
+      <div class="modal-footer">
+        <div style="font-size: 13.5px; font-weight: 700; color: #0f172a;" id="modalGrandTotal">Total: Rp 0</div>
+        <div style="display: flex; gap: 8px;">
+          <a href="#" id="modalDownloadBtn" target="_blank" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Unduh PDF
+          </a>
+          <button class="btn btn-success btn-sm" id="modalApproveBtn" onclick="approvePrFromModal()">
+            Setujui Purchase Order
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
 
