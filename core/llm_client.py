@@ -80,7 +80,7 @@ class LLMClient:
                     "max_tokens": max_tokens
                 }
                 
-                async with httpx.AsyncClient(timeout=3.5) as client:
+                async with httpx.AsyncClient(timeout=30.0) as client:
                     response = await client.post(
                         f"{self.base_url}/chat/completions",
                         headers=headers,
@@ -88,7 +88,8 @@ class LLMClient:
                     )
                     if response.status_code == 200:
                         data = response.json()
-                        return data["choices"][0]["message"]["content"]
+                        msg = data["choices"][0]["message"]
+                        return msg.get("content") or msg.get("reasoning_content") or ""
             except Exception as e:
                 log_agent_step(
                     step_name="LLM Call Fallback",
@@ -131,7 +132,7 @@ class LLMClient:
                     '"stock_adjustment_data": {"sku": "SKU", "target_stock": 20}, "threshold_data": {"sku": "SKU", "min_stock": 10, "max_stock": 50}, '
                     '"edit_item_data": {"sku": "SKU", "unit_price": 50000, "current_stock": 10}, "delete_item_data": {"sku": "SKU", "item_name": "Name"}}'
                 )
-                raw_llm = await self.complete(prompt=user_prompt, system_prompt=system_prompt, model=self.default_model)
+                raw_llm = await self.complete(prompt=user_prompt, system_prompt=system_prompt, model=self.default_model, max_tokens=1500)
                 json_match = re.search(r'\{.*\}', raw_llm, re.DOTALL)
                 if json_match:
                     llm_data = json.loads(json_match.group(0))
