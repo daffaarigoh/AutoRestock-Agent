@@ -264,7 +264,38 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest):
             override_destinations=request.destinations,
             override_email=request.recipient_email
         )
-        return result
+        
+        # Map to dashboard.js expected schema
+        action_type = "general"
+        steps_str = str(result.get("execution_steps", []))
+        if "Threshold" in steps_str:
+            action_type = "update_threshold"
+        elif result.get("pr_number"):
+            action_type = "review_prs"
+        elif "n8n" in result.get("target_destinations", []):
+            action_type = "n8n"
+
+        dashboard_response = {
+            "parsed_intent": {},
+            "action_type": action_type,
+            "message": result.get("summary", ""),
+            "generated_prs": [],
+            "affected_items": []
+        }
+
+        if result.get("pr_number"):
+            from api.routers.approval_routes import PR_STORE
+            pr_doc = PR_STORE.get(result["pr_number"])
+            if pr_doc:
+                dashboard_response["generated_prs"] = [{
+                    "pr_number": pr_doc.pr_number,
+                    "supplier_name": "Multiple Vendors" if len(set(it.vendor_name for it in pr_doc.items)) > 1 else (pr_doc.items[0].vendor_name if pr_doc.items else "Vendor"),
+                    "grand_total": pr_doc.total_budget,
+                    "status": pr_doc.status.lower(),
+                    "items": [{"item_name": it.name, "quantity": it.reorder_qty, "unit": it.unit} for it in pr_doc.items]
+                }]
+                
+        return dashboard_response
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

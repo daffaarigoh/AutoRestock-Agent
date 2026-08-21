@@ -31,7 +31,32 @@
         "chatId": "=@your_telegram_chat_id",
         "text": "={{ $json.telegram_message }}",
         "additionalFields": {
-          "parse_mode": "HTML"
+          "parse_mode": "HTML",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "✅ Approve (Tambah Stok)",
+                      "url": "={{ $json.approve_url }}"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "❌ Reject (Batalkan)",
+                      "url": "={{ $json.reject_url }}"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
         }
       },
       "type": "n8n-nodes-base.telegram",

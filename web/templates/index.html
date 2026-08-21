@@ -27,7 +27,13 @@
     </div>
 
     <!-- Right Header Actions (Sidebar Toggle Only) -->
-    <div class="header-actions">
+    <div class="header-actions" style="display: flex; align-items: center; gap: 15px;">
+      <!-- API Health Indicator -->
+      <div id="apiHealthIndicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #94a3b8; padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 20px;">
+        <span id="apiHealthDot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 8px #ef4444; transition: all 0.3s ease;"></span>
+        <span id="apiHealthText">API Checking...</span>
+      </div>
+
       <button class="btn btn-primary btn-sm" id="btnToggleSidebar" onclick="toggleDataSidebar()">
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>

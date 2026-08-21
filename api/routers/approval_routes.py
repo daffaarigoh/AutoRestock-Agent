@@ -164,7 +164,7 @@ async def quick_approval_action(
                 for item in pr.items:
                     conn.execute("""
                         UPDATE items
-                        SET current_stock = current_stock + ?
+                        SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
                         WHERE item_id = ? OR name = ?;
                     """, [item.reorder_qty, item.item_id, item.name])
                     items_updated_summary.append(f"<li><strong>{item.name}</strong>: +{item.reorder_qty} {item.unit} (Stok Fisik Bertambah)</li>")

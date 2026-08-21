@@ -159,9 +159,10 @@ function removeAttachedFile() {
 // --- Dynamic Categories ---
 async function loadCategories() {
   try {
-    const res = await fetch('/api/inventory/categories');
-    if (res.ok) {
-      state.categories = await res.json();
+    // Dynamically extract unique categories from loaded items
+    if (state.items && state.items.length > 0) {
+      const cats = new Set(state.items.map(it => it.category));
+      state.categories = Array.from(cats).filter(c => c);
       renderCategoryOptions();
     }
   } catch (e) {
@@ -188,14 +189,15 @@ async function loadAllData() {
   await Promise.all([
     loadDashboardStats(),
     loadInventoryItems(),
-    loadCategories(),
     loadApprovals()
   ]);
+  // Load categories after items are loaded
+  await loadCategories();
 }
 
 async function loadDashboardStats() {
   try {
-    const res = await fetch('/api/inventory/stats');
+    const res = await fetch('/api/stream/inventory-summary');
     if (res.ok) {
       state.stats = await res.json();
       renderStats();
@@ -222,7 +224,18 @@ async function loadInventoryItems() {
   try {
     const res = await fetch('/api/inventory/items');
     if (res.ok) {
-      state.items = await res.json();
+      const rawItems = await res.json();
+      state.items = rawItems.map(it => ({
+        sku: it.item_id,
+        name: it.name,
+        supplier_name: '-', 
+        category: it.category,
+        current_stock: it.current_stock,
+        unit: it.unit,
+        min_stock: it.min_threshold,
+        max_stock: (it.min_threshold || 1) * 3, 
+        unit_price: 0 
+      }));
       filterCatalogTable();
     }
   } catch (e) {
@@ -283,7 +296,7 @@ function filterCatalogTable() {
 // --- Purchase Requisitions (Pending on Top, Approved at Bottom) ---
 async function loadApprovals() {
   try {
-    const res = await fetch('/api/approvals/all');
+    const res = await fetch('/api/approval/list');
     if (res.ok) {
       const allPrs = await res.json();
       
@@ -512,13 +525,13 @@ async function submitPrompt(customText) {
       formData.append('prompt', promptText || 'Proses dokumen dan sinkronkan data ke katalog stok');
       formData.append('auto_execute', 'true');
 
-      res = await fetch('/api/agent/upload-media', {
+      res = await fetch('/api/ingest/delivery-note', {
         method: 'POST',
         body: formData
       });
       removeAttachedFile();
     } else {
-      res = await fetch('/api/agent/prompt-restock', {
+      res = await fetch('/api/agent/custom-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: promptText, auto_execute: true, destinations: destinations })
@@ -526,9 +539,12 @@ async function submitPrompt(customText) {
     }
 
     const data = await res.json();
-    removeLoadingBubble(loadingId);
+    if (!res.ok) {
+      throw new Error(data.detail || "Terjadi kesalahan pada agent.");
+    }
 
     if (res.ok) {
+      removeLoadingBubble(loadingId);
       appendAgentResponseCard(data);
       // Auto refresh catalog, categories, and approvals instantly
       await loadAllData();
@@ -1029,3 +1045,31 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
+
+// --- API Health Checker ---
+async function checkApiHealth() {
+  const dot = document.getElementById('apiHealthDot');
+  const text = document.getElementById('apiHealthText');
+  if (!dot || !text) return;
+  
+  try {
+    const res = await fetch('/health', { method: 'GET' });
+    if (res.ok) {
+      dot.style.backgroundColor = '#10b981'; // Green
+      dot.style.boxShadow = '0 0 8px #10b981';
+      text.textContent = 'API Connected';
+      text.style.color = '#e2e8f0';
+    } else {
+      throw new Error("Not OK");
+    }
+  } catch (e) {
+    dot.style.backgroundColor = '#ef4444'; // Red
+    dot.style.boxShadow = '0 0 8px #ef4444';
+    text.textContent = 'API Disconnected';
+    text.style.color = '#ef4444';
+  }
+}
+
+// Initial check and set interval
+checkApiHealth();
+setInterval(checkApiHealth, 5000);
