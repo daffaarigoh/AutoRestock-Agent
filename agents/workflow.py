@@ -339,11 +339,38 @@ class AutoRestockWorkflow:
 
         # Step 1.4: Dynamic PR Review / Inquiries Handler
         if parsed_intent.intent_type == "review_prs":
+            p_prompt = user_prompt.lower()
             pending_prs = db.get_purchase_requisitions(status="pending_approval")
+            target_list = pending_prs if pending_prs else db.get_purchase_requisitions()
+
+            if any(w in p_prompt for w in ["paling besar", "terbesar", "tertinggi", "nominal tertinggi", "terbanyak", "maksimal"]):
+                target_list.sort(key=lambda p: p.grand_total, reverse=True)
+                top_prs = target_list[:1] if target_list else []
+                state["status"] = "completed"
+                state["action_type"] = "review_prs"
+                state["generated_prs"] = [p.model_dump() for p in top_prs]
+                if top_prs:
+                    state["message"] = f"Purchase Requisition pending dengan total nominal TERBESAR adalah {top_prs[0].pr_number} (Supplier: {top_prs[0].supplier_name}) senilai Rp {top_prs[0].grand_total:,.0f}."
+                else:
+                    state["message"] = "Tidak ditemukan data Purchase Requisition pending di sistem."
+                return state
+
+            elif any(w in p_prompt for w in ["paling kecil", "terkecil", "terendah", "minimal"]):
+                target_list.sort(key=lambda p: p.grand_total)
+                top_prs = target_list[:1] if target_list else []
+                state["status"] = "completed"
+                state["action_type"] = "review_prs"
+                state["generated_prs"] = [p.model_dump() for p in top_prs]
+                if top_prs:
+                    state["message"] = f"Purchase Requisition pending dengan total nominal TERKECIL adalah {top_prs[0].pr_number} (Supplier: {top_prs[0].supplier_name}) senilai Rp {top_prs[0].grand_total:,.0f}."
+                else:
+                    state["message"] = "Tidak ditemukan data Purchase Requisition pending di sistem."
+                return state
+
             state["status"] = "completed"
             state["action_type"] = "review_prs"
-            state["generated_prs"] = [p.model_dump() for p in pending_prs]
-            state["message"] = f"Terdapat {len(pending_prs)} Purchase Requisition pending yang memerlukan tinjauan/persetujuan manajer."
+            state["generated_prs"] = [p.model_dump() for p in target_list]
+            state["message"] = f"Terdapat {len(target_list)} Purchase Requisition pending yang memerlukan tinjauan/persetujuan manajer."
             return state
 
         # Step 1.5: Dynamic Summary & Analysis Handler

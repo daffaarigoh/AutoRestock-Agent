@@ -201,11 +201,14 @@ class LLMClient:
 
         matched_items_list.sort(key=lambda x: x[0], reverse=True)
         if matched_items_list:
+            top_score = matched_items_list[0][0]
             matched_item = matched_items_list[0][1]
-            target_skus = [it["sku"] for _, it in matched_items_list]
+            # Strictly filter: Only include secondary items if they also scored high (prevent single common word false positives like 'goreng')
+            target_skus = [it["sku"] for s, it in matched_items_list if s >= max(150, top_score * 0.75)]
 
         # --- STEP 2: Intent Classification ---
-        intent_type = "restock"
+        # Default intent: 'summary' (safe informational inquiry) instead of 'restock' (to avoid accidental PR generation)
+        intent_type = "summary" if any(w in p_lower for w in ["beri tahu", "beritahu", "tampilkan", "apa", "berapa", "mana", "siapa", "tolong info", "info", "cek", "lihat"]) else "restock"
         notification_channel = None
         notification_recipient = None
         notification_message = None
@@ -224,7 +227,6 @@ class LLMClient:
         # =====================================================================
         def _extract_category_names(raw: str) -> list:
             """Extract one or more category names from raw text, stripping trailing reasons."""
-            # Remove common trailing reason/context phrases
             c = re.sub(r'\s+(?:karena|soalnya|sebab|alasan|karean|karna|krn|krna)(?:\s.*)?$', '', raw, flags=re.IGNORECASE)
             c = re.sub(r'\s+(?:di|pada|ke|dari|dalam)\s+(?:database|sistem|katalog|stok|tabel|data|db|inventory).*$', '', c, flags=re.IGNORECASE)
             c = re.sub(r'\s+(?:ya|dong|donk|please|plz|tolong|segera|sekarang|secepatnya)$', '', c, flags=re.IGNORECASE)
@@ -233,8 +235,6 @@ class LLMClient:
             if not c:
                 return []
 
-            # Split by " dan " and "," to get multiple categories
-            # NOTE: Do NOT split on "&" because category names can contain it (e.g. "IT & Electronics")
             parts = re.split(r'\s+dan\s+|,\s*', c, flags=re.IGNORECASE)
             names = []
             for p in parts:
@@ -245,11 +245,8 @@ class LLMClient:
 
         # =====================================================================
         # HELPER: Check if prompt contains actual product specification data
-        # (e.g. name+category, name+stock, name+harga) — NOT just a verb like "tambah"
         # =====================================================================
         def _has_product_spec_data() -> bool:
-            """Returns True if the prompt contains structured product specification keywords
-            indicating the user wants to register a NEW item (not just a generic 'tambah' verb)."""
             spec_pairs = [
                 (r'(?:nama\s+(?:produk|barang|item))', True),
                 (r'(?:kategori\s*[:=]?\s*[a-zA-Z])', True),
@@ -260,10 +257,8 @@ class LLMClient:
                 (r'(?:supplier\s*[:=]?\s*[a-zA-Z])', True),
             ]
             spec_count = sum(1 for pat, _ in spec_pairs if re.search(pat, user_prompt, re.IGNORECASE))
-            # Need at least 2 specification fields or an explicit "nama produk" to confirm add_item
             if spec_count >= 2:
                 return True
-            # Or contains a clear product name pattern after "tambah/tambahkan"
             if re.search(r'(?:tambah(?:kan)?|input|daftarkan|buat)\s+(?:nama\s+)?(?:produk|barang|item)\s+\w', user_prompt, re.IGNORECASE):
                 return True
             return False
@@ -274,7 +269,8 @@ class LLMClient:
         if any(w in p_lower for w in [
             "lihat pr", "lihat semua pr", "cek pr", "daftar pr", "status pr", "data pada pr", 
             "data pr", "pr pending", "pr yang berstatus pending", "berstatus pending", "semua pr", 
-            "tampilkan pr", "tinjau pr", "review pr", "lihat data pr", "lihat dokumen pr", "cari pr", "daftar purchase requisition"
+            "tampilkan pr", "tinjau pr", "review pr", "lihat data pr", "lihat dokumen pr", "cari pr", 
+            "daftar purchase requisition", "pr terbesar", "pr paling besar", "pr tertinggi", "total paling besar", "total terbesar"
         ]) and not any(w in p_lower for w in ["buatkan pr", "buat pr", "pesankan", "order pr", "generate pr", "bikin pr"]):
             intent_type = "review_prs"
 
