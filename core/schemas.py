@@ -175,6 +175,8 @@ class ParsedPromptIntent(BaseModel):
     delete_item_data: Optional[Dict[str, Any]] = None
     category_data: Optional[Dict[str, Any]] = None
     ui_action_data: Optional[Dict[str, Any]] = None
+    approve_pr_data: Optional[Dict[str, Any]] = None
+    financial_calc_data: Optional[Dict[str, Any]] = None
 
 
 class PromptRestockResponse(BaseModel):

@@ -119,7 +119,102 @@ class AutoRestockWorkflow:
         parsed_intent = await llm_client.parse_restock_prompt(user_prompt, all_items)
         state["parsed_intent"] = parsed_intent
 
-        # Step 1.1: Dynamic Add Item Handler
+        # Step 1.00: Dynamic Batch PR Approval Handler (Direct Database Execution)
+        if parsed_intent.intent_type == "approve_prs":
+            ap_data = parsed_intent.approve_pr_data or {}
+            min_amt = ap_data.get("min_amount")
+            max_amt = ap_data.get("max_amount")
+            
+            pending_prs = db.get_purchase_requisitions(status="pending_approval")
+            target_prs = []
+            
+            for p in pending_prs:
+                if min_amt is not None and p.grand_total < min_amt:
+                    continue
+                if max_amt is not None and p.grand_total > max_amt:
+                    continue
+                target_prs.append(p)
+
+            approved_list = []
+            total_approved_val = 0.0
+            
+            for pr in target_prs:
+                updated = db.update_pr_status(
+                    pr_number=pr.pr_number,
+                    status=PRStatus.APPROVED,
+                    approver_name="Manager (AI Batch Command)",
+                    notes="Approved via Copilot natural language instruction"
+                )
+                if updated:
+                    # Replenish stock in inventory database
+                    for pit in updated.items:
+                        db.update_stock(
+                            sku=pit.sku,
+                            change=pit.quantity,
+                            transaction_type="pr_batch_approval_replenishment",
+                            ref_doc=updated.pr_number,
+                            notes=f"Stok bertambah dari persetujuan PR {updated.pr_number}"
+                        )
+                    approved_list.append(updated.model_dump())
+                    total_approved_val += updated.grand_total
+
+            crit_desc = []
+            if min_amt: crit_desc.append(f"di atas Rp {min_amt:,.0f}")
+            if max_amt: crit_desc.append(f"di bawah Rp {max_amt:,.0f}")
+            crit_str = f" ({', '.join(crit_desc)})" if crit_desc else ""
+
+            if approved_list:
+                msg = f"Berhasil menyetujui {len(approved_list)} Purchase Requisition pending{crit_str} dengan total nilai Rp {total_approved_val:,.0f}. Saldo stok barang di katalog telah otomatis disinkronkan ke database."
+            else:
+                msg = f"Tidak ditemukan Purchase Requisition pending{crit_str} yang memenuhi kriteria untuk disetujui."
+
+            log_agent_step(
+                step_name="Batch PR Approval Execution",
+                agent_name="ProcurementAgent",
+                status="success" if approved_list else "info",
+                message=f"Approved {len(approved_list)} PRs totaling Rp {total_approved_val:,.0f}"
+            )
+            state["status"] = "completed"
+            state["action_type"] = "approve_prs"
+            state["generated_prs"] = approved_list
+            state["message"] = msg
+            return state
+
+        # Step 1.001: Dynamic Financial & PR Aggregation Calculator
+        if parsed_intent.intent_type == "calculate_financials":
+            all_prs = db.get_purchase_requisitions()
+            pending_prs = [p for p in all_prs if p.status.value == "pending_approval"]
+            approved_prs = [p for p in all_prs if p.status.value == "approved"]
+            
+            total_all = sum(p.grand_total for p in all_prs)
+            total_pending = sum(p.grand_total for p in pending_prs)
+            total_approved = sum(p.grand_total for p in approved_prs)
+            
+            stats = db.get_dashboard_stats()
+            
+            msg = (
+                f"Total jumlah uang yang harus dibayar untuk seluruh {len(all_prs)} dokumen Purchase Requisition adalah Rp {total_all:,.0f}."
+            )
+            
+            log_agent_step(
+                step_name="Financial Calculation",
+                agent_name="FinancialAnalystAgent",
+                status="success",
+                message=f"Computed total PR liabilities: Rp {total_all:,.0f}"
+            )
+            state["status"] = "completed"
+            state["action_type"] = "calculate_financials"
+            state["message"] = msg
+            state["affected_items"] = [{
+                "total_all_prs_idr": total_all,
+                "total_pending_prs_idr": total_pending,
+                "total_approved_prs_idr": total_approved,
+                "total_inventory_value_idr": stats.total_inventory_value_idr,
+                "count_all": len(all_prs),
+                "count_pending": len(pending_prs),
+                "count_approved": len(approved_prs)
+            }]
+            return state
         if parsed_intent.intent_type == "add_item" and parsed_intent.new_item_data:
             from core.schemas import InventoryItem
             item_dict = parsed_intent.new_item_data

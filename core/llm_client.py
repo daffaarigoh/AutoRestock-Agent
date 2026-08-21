@@ -126,9 +126,12 @@ class LLMClient:
                     "You are the autonomous AI reasoning engine of AutoRestock-V2. "
                     "Analyze the user's natural language instruction and extract the structured intent. "
                     "Respond with ONLY valid JSON adhering to this schema: "
-                    '{"intent_type": "restock"|"add_item"|"update_stock"|"check_stock"|"add_category"|"delete_category"|"edit_item"|"delete_item"|"update_threshold"|"review_prs"|"export_data"|"ui_action"|"notify_email"|"notify_telegram"|"sync_export", '
+                    '{"intent_type": "restock"|"add_item"|"update_stock"|"check_stock"|"add_category"|"delete_category"|"edit_item"|"delete_item"|"update_threshold"|"review_prs"|"approve_prs"|"calculate_financials"|"export_data"|"ui_action"|"notify_email"|"notify_telegram"|"sync_export", '
                     '"target_skus": ["SKU1"], "target_categories": ["Category"], "target_supplier": "Supplier", "quantity_specified": 20, "quantity_strategy": "auto_to_max"|"fixed_amount"|"safety_buffer", '
-                    '"urgency": "NORMAL"|"HIGH"|"URGENT", "reasoning": "summary", "category_data": {"action": "add"|"delete", "category_name": "Name"}, '
+                    '"urgency": "NORMAL"|"HIGH"|"URGENT", "reasoning": "summary", '
+                    '"approve_pr_data": {"action": "approve", "filter_status": "pending_approval", "min_amount": 10000000.0, "max_amount": null}, '
+                    '"financial_calc_data": {"target": "prs", "filter_status": "all"|"pending_approval"}, '
+                    '"category_data": {"action": "add"|"delete", "category_name": "Name"}, '
                     '"stock_adjustment_data": {"sku": "SKU", "target_stock": 20}, "threshold_data": {"sku": "SKU", "min_stock": 10, "max_stock": 50}, '
                     '"edit_item_data": {"sku": "SKU", "unit_price": 50000, "current_stock": 10}, "delete_item_data": {"sku": "SKU", "item_name": "Name"}}'
                 )
@@ -265,9 +268,48 @@ class LLMClient:
             return False
 
         # =====================================================================
-        # 0.0 PR Review / Approvals / View PR Data Intent
+        # 0.00 Batch / Filtered PR Approval Intent
         # =====================================================================
-        if any(w in p_lower for w in [
+        if any(w in p_lower for w in ["setujui pr", "approve pr", "setujui semua pr", "acc pr", "setujui purchase requisition", "setuju pr"]):
+            intent_type = "approve_prs"
+            min_amt = None
+            max_amt = None
+
+            # Parse "diatas 10 juta", "lebih dari 10jt", "di atas 5jt"
+            above_match = re.search(r'(?:di\s*atas|lebih\s*dari|minimum|>|>=)\s*([0-9\.,]+(?:\s*(?:jt|juta|rb|ribu|k|miliar|m))?)', p_lower)
+            if above_match:
+                min_amt = parse_smart_currency(above_match.group(1))
+
+            # Parse "dibawah 5 juta", "kurang dari 5jt"
+            below_match = re.search(r'(?:di\s*bawah|kurang\s*dari|<|<=)\s*([0-9\.,]+(?:\s*(?:jt|juta|rb|ribu|k|miliar|m))?)', p_lower)
+            if below_match:
+                max_amt = parse_smart_currency(below_match.group(1))
+
+            approve_pr_data = {
+                "action": "approve",
+                "filter_status": "pending_approval",
+                "min_amount": min_amt,
+                "max_amount": max_amt
+            }
+
+        # =====================================================================
+        # 0.01 Financial Aggregations & Cost Calculations Intent
+        # =====================================================================
+        elif any(w in p_lower for w in [
+            "berapa jumlah uang", "berapa total uang", "hitung total semua pr", "hitung total pr", 
+            "hitung semua pr", "hitung uang", "total yang harus dibayar", "berapa biaya", 
+            "berapa total biaya", "hitung pr", "total uang pr", "total bayar", "total biaya pr", "jumlah uang yang harus dibayar"
+        ]):
+            intent_type = "calculate_financials"
+            financial_calc_data = {
+                "target": "prs",
+                "filter_status": "all" if "semua" in p_lower else "pending_approval"
+            }
+
+        # =====================================================================
+        # 0.02 PR Review / Approvals / View PR Data Intent
+        # =====================================================================
+        elif any(w in p_lower for w in [
             "lihat pr", "lihat semua pr", "cek pr", "daftar pr", "status pr", "data pada pr", 
             "data pr", "pr pending", "pr yang berstatus pending", "berstatus pending", "semua pr", 
             "tampilkan pr", "tinjau pr", "review pr", "lihat data pr", "lihat dokumen pr", "cari pr", 

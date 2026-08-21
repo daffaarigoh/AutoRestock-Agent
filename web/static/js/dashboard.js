@@ -711,6 +711,86 @@ function appendAgentResponseCard(data) {
     switchCanvasTab('canvas-prs');
   }
 
+  // SCENARIO 4.5: Batch / Filtered PR Approval Executed
+  else if (actionType === 'approve_prs') {
+    const approvedPrs = prs || [];
+    const listHtml = approvedPrs.map(p => `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.1); font-size: 12.5px;">
+        <div>
+          <strong style="font-family: var(--font-mono); color: #60A5FA;">${p.pr_number}</strong>
+          <span style="color: #94A3B8; font-size: 11.5px; margin-left: 6px;">${escapeHtml(p.supplier_name)}</span>
+        </div>
+        <div style="text-align: right; display: flex; align-items: center; gap: 8px;">
+          <span class="badge badge-approved" style="font-size: 10px;">DISETUJUI</span>
+          <strong style="color: #34D399;">${formatCurrency(p.grand_total)}</strong>
+        </div>
+      </div>
+    `).join('');
+
+    actionHtml = `
+      <div class="action-card" style="border-left: 4px solid #10B981; background: rgba(16, 185, 129, 0.05);">
+        <div class="action-card-header">
+          <span style="font-weight: 700; font-size: 13px; color: #34D399;">PERSETUJUAN PR BERHASIL DIEKSEKUSI</span>
+          <span class="badge badge-approved">${approvedPrs.length} PR DISETUJUI</span>
+        </div>
+        <div class="action-card-body">
+          <div style="font-size: 13px; color: #E2E8F0; margin-bottom: 10px; line-height: 1.5;">
+            ${escapeHtml(data.message)}
+          </div>
+          ${approvedPrs.length > 0 ? `
+            <div style="max-height: 180px; overflow-y: auto; margin-bottom: 8px;">
+              ${listHtml}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    loadAllData();
+    openDataSidebar('canvas-prs');
+  }
+
+  // SCENARIO 4.6: Financial & PR Cost Calculation
+  else if (actionType === 'calculate_financials') {
+    const fin = (items && items.length > 0) ? items[0] : {};
+    actionHtml = `
+      <div class="action-card" style="border-left: 4px solid #3B82F6; background: rgba(59, 130, 246, 0.05);">
+        <div class="action-card-header">
+          <span style="font-weight: 700; font-size: 13px; color: #60A5FA;">KALKULASI BIAYA & TOTAL PENGADAAN</span>
+          <span class="badge badge-approved">FINANSIAL</span>
+        </div>
+        <div class="action-card-body">
+          <div style="font-size: 14.5px; font-weight: 700; color: #FFFFFF; margin-bottom: 12px;">
+            ${escapeHtml(data.message)}
+          </div>
+          ${fin.total_all_prs_idr !== undefined ? `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12.5px; background: rgba(255, 255, 255, 0.02); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 255, 255, 0.06);">
+              <div>
+                <span style="color: #94A3B8;">Total Seluruh Dokumen PR:</span>
+                <div style="font-weight: 800; font-size: 15px; color: #60A5FA; margin-top: 2px;">${formatCurrency(fin.total_all_prs_idr)}</div>
+                <div style="font-size: 11px; color: #64748B;">(${fin.count_all} PR)</div>
+              </div>
+              <div>
+                <span style="color: #94A3B8;">PR Pending (Kewajiban Bayar):</span>
+                <div style="font-weight: 800; font-size: 15px; color: #FBBF24; margin-top: 2px;">${formatCurrency(fin.total_pending_prs_idr)}</div>
+                <div style="font-size: 11px; color: #64748B;">(${fin.count_pending} PR Menunggu)</div>
+              </div>
+              <div style="margin-top: 6px;">
+                <span style="color: #94A3B8;">PR Disetujui (PO Aktif):</span>
+                <div style="font-weight: 800; font-size: 15px; color: #34D399; margin-top: 2px;">${formatCurrency(fin.total_approved_prs_idr)}</div>
+                <div style="font-size: 11px; color: #64748B;">(${fin.count_approved} PR Approved)</div>
+              </div>
+              <div style="margin-top: 6px;">
+                <span style="color: #94A3B8;">Total Nilai Aset Stok Gudang:</span>
+                <div style="font-weight: 800; font-size: 15px; color: #FFFFFF; margin-top: 2px;">${formatCurrency(fin.total_inventory_value_idr)}</div>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    openDataSidebar('canvas-prs');
+  }
+
   // SCENARIO 5: Product Details / Metadata Edited (Single or Batch)
   else if (actionType === 'edit_item' && items.length > 0) {
     const listHtml = items.map(it => `
