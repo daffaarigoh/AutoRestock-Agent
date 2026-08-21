@@ -17,10 +17,55 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   restoreUiCustomizations();
   restoreCopilotFeed();
+  initSidebarResizer();
   initWebSocket();
   loadAllData();
   setInterval(loadDashboardStats, 15000);
 });
+
+// --- Dynamic Sidebar Resizer (Drag to adjust width, persisted in LocalStorage) ---
+function initSidebarResizer() {
+  const sidebar = document.getElementById('dataSidebar');
+  const resizer = document.getElementById('sidebarResizer');
+  if (!sidebar || !resizer) return;
+
+  // Restore saved width from localStorage
+  const savedWidth = localStorage.getItem('ar_sidebar_width');
+  if (savedWidth && parseInt(savedWidth) >= 380) {
+    document.documentElement.style.setProperty('--sidebar-width', `${savedWidth}px`);
+  }
+
+  let isDragging = false;
+  let startX = 0;
+  let startWidth = 0;
+
+  resizer.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    startWidth = sidebar.getBoundingClientRect().width;
+    document.body.classList.add('is-resizing');
+    resizer.classList.add('is-active');
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const delta = startX - e.clientX; // Dragging left increases width
+    const maxWidth = Math.min(window.innerWidth * 0.85, 950);
+    const newWidth = Math.max(380, Math.min(maxWidth, startWidth + delta));
+    document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      document.body.classList.remove('is-resizing');
+      resizer.classList.remove('is-active');
+      const currentWidth = sidebar.getBoundingClientRect().width;
+      localStorage.setItem('ar_sidebar_width', Math.round(currentWidth));
+    }
+  });
+}
 
 function restoreUiCustomizations() {
   try {
@@ -226,16 +271,17 @@ async function loadInventoryItems() {
     if (res.ok) {
       const rawItems = await res.json();
       state.items = rawItems.map(it => ({
-        sku: it.item_id,
-        name: it.name,
-        supplier_name: '-', 
-        category: it.category,
-        current_stock: it.current_stock,
-        unit: it.unit,
-        min_stock: it.min_threshold,
-        max_stock: (it.min_threshold || 1) * 3, 
-        unit_price: 0 
+        sku: it.sku || it.item_id || '-',
+        name: it.name || '-',
+        supplier_name: it.supplier_name || it.vendor_name || '',
+        category: it.category || 'General',
+        current_stock: it.current_stock ?? 0,
+        unit: it.unit || 'pcs',
+        min_stock: it.min_stock ?? it.min_threshold ?? 5,
+        max_stock: it.max_stock ?? ((it.min_threshold || 5) * 3),
+        unit_price: it.unit_price ?? 0
       }));
+      loadCategories();
       filterCatalogTable();
     }
   } catch (e) {

@@ -16,8 +16,25 @@
   <header class="app-header">
     <div class="brand-section">
       <div class="brand-logo">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="white"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L3 7L12 12L21 7L12 2Z" fill="url(#brandBoxTop)" stroke="#38BDF8" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M3 7V17L12 22V12L3 7Z" fill="url(#brandBoxLeft)" stroke="#2563EB" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M21 7V17L12 22V12L21 7Z" fill="url(#brandBoxRight)" stroke="#1D4ED8" stroke-width="1.2" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="1.8" fill="#60A5FA"/>
+          <defs>
+            <linearGradient id="brandBoxTop" x1="3" y1="2" x2="21" y2="12" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38BDF8"/>
+              <stop offset="1" stop-color="#0284C7"/>
+            </linearGradient>
+            <linearGradient id="brandBoxLeft" x1="3" y1="7" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#1E40AF"/>
+              <stop offset="1" stop-color="#0F172A"/>
+            </linearGradient>
+            <linearGradient id="brandBoxRight" x1="12" y1="12" x2="21" y2="22" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#2563EB"/>
+              <stop offset="1" stop-color="#1E293B"/>
+            </linearGradient>
+          </defs>
         </svg>
       </div>
       <div class="brand-info">
@@ -59,15 +76,29 @@
         </button>
       </div>
 
-      <!-- GEMINI HERO EMPTY STATE (Centered when no messages) -->
+      <!-- HERO EMPTY STATE (Isometric Smart Inventory Box) -->
       <div class="gemini-hero-empty" id="geminiHeroEmpty">
         <div class="hero-sparkle-icon">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z" fill="url(#heroSparkleGrad)"/>
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L3 7L12 12L21 7L12 2Z" fill="url(#heroBoxTop)" stroke="#38BDF8" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M3 7V17L12 22V12L3 7Z" fill="url(#heroBoxLeft)" stroke="#2563EB" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M21 7V17L12 22V12L21 7Z" fill="url(#heroBoxRight)" stroke="#1D4ED8" stroke-width="1.2" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="2.2" fill="#60A5FA"/>
+            <circle cx="12" cy="7" r="1.2" fill="#FFFFFF"/>
+            <circle cx="7.5" cy="14.5" r="1.2" fill="#93C5FD"/>
+            <circle cx="16.5" cy="14.5" r="1.2" fill="#93C5FD"/>
             <defs>
-              <linearGradient id="heroSparkleGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#60A5FA"/>
-                <stop offset="1" stop-color="#2563EB"/>
+              <linearGradient id="heroBoxTop" x1="3" y1="2" x2="21" y2="12" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#38BDF8"/>
+                <stop offset="1" stop-color="#0284C7"/>
+              </linearGradient>
+              <linearGradient id="heroBoxLeft" x1="3" y1="7" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#1E40AF"/>
+                <stop offset="1" stop-color="#0F172A"/>
+              </linearGradient>
+              <linearGradient id="heroBoxRight" x1="12" y1="12" x2="21" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#2563EB"/>
+                <stop offset="1" stop-color="#1E293B"/>
               </linearGradient>
             </defs>
           </svg>
@@ -140,6 +171,8 @@
 
     <!-- COLLAPSIBLE GLASSMORPHISM DATA SIDEBAR (Right Drawer) -->
     <aside class="data-sidebar" id="dataSidebar">
+      <!-- Drag Resize Handle -->
+      <div class="sidebar-resizer" id="sidebarResizer" title="Tarik ke kiri/kanan untuk menyesuaikan lebar panel"></div>
       
       <!-- Sidebar Header with Tabs & Close Action -->
       <div class="sidebar-header">
