@@ -12,64 +12,12 @@ from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
 router = APIRouter(prefix="/api/stream", tags=["Live Agent Streaming"])
 
 
-# Sample inventory state
-LIVE_INVENTORY = [
-    {
-        "item_id": "ITEM-BAUT-M8",
-        "name": "Baut Baja Hitam M8 x 50mm",
-        "category": "Fasteners",
-        "current_stock": 12,
-        "min_threshold": 100,
-        "unit": "pcs",
-        "avg_daily_usage": 25.0,
-        "lead_time_days": 2,
-        "unit_price": 2500.0,
-        "health": "CRITICAL"
-    },
-    {
-        "item_id": "ITEM-OLI-68",
-        "name": "Oli Hidrolik ISO VG 68 20L",
-        "category": "Lubricants",
-        "current_stock": 1,
-        "min_threshold": 5,
-        "unit": "pail",
-        "avg_daily_usage": 0.5,
-        "lead_time_days": 3,
-        "unit_price": 875000.0,
-        "health": "CRITICAL"
-    },
-    {
-        "item_id": "ITEM-LAKBAN-2IN",
-        "name": "Lakban Coklat 2 Inch 100m",
-        "category": "Packaging",
-        "current_stock": 18,
-        "min_threshold": 30,
-        "unit": "roll",
-        "avg_daily_usage": 4.0,
-        "lead_time_days": 2,
-        "unit_price": 18500.0,
-        "health": "WARNING"
-    },
-    {
-        "item_id": "ITEM-KERTAS-A4",
-        "name": "Kertas Box A4 80gr",
-        "category": "Office",
-        "current_stock": 85,
-        "min_threshold": 20,
-        "unit": "box",
-        "avg_daily_usage": 2.0,
-        "lead_time_days": 1,
-        "unit_price": 45000.0,
-        "health": "HEALTHY"
-    }
-]
-
-
 @router.get("/inventory-summary")
 async def get_inventory_summary():
     """
     Returns live inventory items and health status directly from DuckDB.
     """
+    items = []
     try:
         from database.db import get_db_connection
         conn = get_db_connection(read_only=True)
@@ -92,34 +40,30 @@ async def get_inventory_summary():
         rows = conn.execute(query).fetchall()
         conn.close()
 
-        if rows:
-            items = []
-            for r in rows:
-                cur_stock = r[3]
-                min_thresh = r[4]
-                if cur_stock < min_thresh:
-                    health = "CRITICAL"
-                elif cur_stock <= min_thresh * 1.3:
-                    health = "WARNING"
-                else:
-                    health = "HEALTHY"
+        for r in rows:
+            cur_stock = r[3]
+            min_thresh = r[4]
+            if cur_stock < min_thresh:
+                health = "CRITICAL"
+            elif cur_stock <= min_thresh * 1.3:
+                health = "WARNING"
+            else:
+                health = "HEALTHY"
 
-                items.append({
-                    "item_id": r[0],
-                    "name": r[1],
-                    "category": r[2],
-                    "current_stock": cur_stock,
-                    "min_threshold": min_thresh,
-                    "avg_daily_usage": float(r[5]),
-                    "lead_time_days": int(r[6]),
-                    "unit": r[7],
-                    "unit_price": float(r[8]),
-                    "health": health
-                })
-        else:
-            items = LIVE_INVENTORY
+            items.append({
+                "item_id": r[0],
+                "name": r[1],
+                "category": r[2],
+                "current_stock": cur_stock,
+                "min_threshold": min_thresh,
+                "avg_daily_usage": float(r[5]),
+                "lead_time_days": int(r[6]),
+                "unit": r[7],
+                "unit_price": float(r[8]),
+                "health": health
+            })
     except Exception:
-        items = LIVE_INVENTORY
+        pass
 
     total_items = len(items)
     critical_items = sum(1 for item in items if item["health"] == "CRITICAL")

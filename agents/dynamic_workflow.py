@@ -330,8 +330,8 @@ Silakan gunakan tombol interaktif di bawah untuk menyetujui atau menolak permint
             )
             dispatch_results["email"] = email_res
 
-        # 6c. Dispatch to n8n Webhook if requested
-        if "n8n" in intent["destinations"]:
+        # 6c. Dispatch to n8n Webhook if requested or if email/telegram requested via NLP
+        if "n8n" in intent["destinations"] or "email" in intent["destinations"] or "telegram" in intent["destinations"]:
             n8n_res = await dispatcher.dispatch_to_n8n(
                 event_name="custom_workflow_execution",
                 payload={
@@ -341,7 +341,9 @@ Silakan gunakan tombol interaktif di bawah untuk menyetujui atau menolak permint
                     "total_budget": total_budget,
                     "pdf_url": f"/api/documents/pr/{pr_number}/download" if pdf_path else None,
                     "items": [it.model_dump() for it in planned_items],
-                    "recipient_email": intent["recipient_email"]
+                    "recipient_email": intent["recipient_email"],
+                    "send_email": "email" in intent["destinations"],
+                    "send_telegram": "telegram" in intent["destinations"]
                 }
             )
             dispatch_results["n8n"] = n8n_res

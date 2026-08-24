@@ -375,7 +375,7 @@ function openPdfModal(prNumber, supplierName, grandTotal, status) {
   // Set download button href with ?download=true
   const downloadBtn = document.getElementById('modalDownloadBtn');
   if (downloadBtn) {
-    downloadBtn.href = `/api/approvals/download/${prNumber}?download=true`;
+    downloadBtn.href = `/api/documents/pr/${prNumber}/download?download=true`;
     downloadBtn.setAttribute('download', `${prNumber}.pdf`);
   }
 
@@ -388,7 +388,7 @@ function openPdfModal(prNumber, supplierName, grandTotal, status) {
   // Load iframe with inline preview
   const iframe = document.getElementById('pdfPreviewIframe');
   if (iframe) {
-    iframe.src = `/api/approvals/download/${prNumber}`;
+    iframe.src = `/api/documents/pr/${prNumber}/download?inline=true`;
   }
 
   modal.classList.add('open');
@@ -511,12 +511,6 @@ async function submitPrompt(customText) {
 
     try {
       const destinations = [];
-      const chkEmail = document.getElementById('chk-email');
-      const chkTele = document.getElementById('chk-tele');
-      const chkN8n = document.getElementById('chk-n8n');
-      if (chkEmail && chkEmail.checked) destinations.push('email');
-      if (chkTele && chkTele.checked) destinations.push('telegram');
-      if (chkN8n && chkN8n.checked) destinations.push('n8n');
 
     let res;
     if (hasFile) {

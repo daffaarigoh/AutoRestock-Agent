@@ -104,10 +104,11 @@ def run_agent_cycle():
 
 
 @router.get("/api/documents/pr/{pr_number}/download")
-def download_pr_document(pr_number: str):
+def download_pr_document(pr_number: str, inline: bool = False):
     """
-    Downloads the generated Typst Purchase Requisition PDF for a given pr_number.
-    Checks approved/, rejected/, and pending/ folders in priority order.
+    Downloads or previews the generated Typst Purchase Requisition PDF.
+    Use ?inline=true to display in-browser (for iframe previews).
+    Checks approved/, rejected/, pending/, and documents/ folders in priority order.
     """
     clean_pr_num = pr_number.replace("/", "_").replace("\\", "_")
     
@@ -116,6 +117,7 @@ def download_pr_document(pr_number: str):
         STORAGE_DIR / "approved" / f"{clean_pr_num}.pdf",
         STORAGE_DIR / "rejected" / f"{clean_pr_num}.pdf",
         STORAGE_DIR / "pending" / f"{clean_pr_num}.pdf",
+        STORAGE_DIR / "documents" / f"{clean_pr_num.replace('-', '_')}.pdf",
         STORAGE_DIR / f"{clean_pr_num}.pdf"
     ]
     
@@ -134,13 +136,14 @@ def download_pr_document(pr_number: str):
     if found_path is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Purchase Requisition PDF '{pr_number}' not found in storage (checked approved, rejected, and pending folders)."
+            detail=f"Purchase Requisition PDF '{pr_number}' not found in storage (checked approved, rejected, pending, and documents folders)."
         )
             
     return FileResponse(
         path=str(found_path),
         media_type="application/pdf",
-        filename=f"{clean_pr_num}.pdf"
+        filename=f"{clean_pr_num}.pdf",
+        content_disposition_type="inline" if inline else "attachment"
     )
 
 
