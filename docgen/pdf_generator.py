@@ -1,7 +1,5 @@
-import json
 import logging
 from pathlib import Path
-from typing import Optional
 
 from core.config import settings
 from core.schemas import PurchaseRequisitionDoc
@@ -19,7 +17,7 @@ class TypstPDFGenerator:
     def generate_purchase_requisition_pdf(
         cls,
         pr: PurchaseRequisitionDoc,
-        output_filename: Optional[str] = None
+        output_filename: str | None = None
     ) -> Path:
         """
         Compiles Typst template into a formal PDF Purchase Requisition document.

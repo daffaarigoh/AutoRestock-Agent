@@ -1,6 +1,5 @@
-import os
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any
 
 try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,8 +28,8 @@ class Settings(_BaseSettings):
     MOCK_MODELS: bool = True
 
     # Alternative standard env keys
-    LLM_KEY: Optional[str] = None
-    LLM_URL: Optional[str] = None
+    LLM_KEY: str | None = None
+    LLM_URL: str | None = None
 
     # Model URLs
     MODEL_QWEN_URL: str = "http://localhost:8001/v1"
@@ -39,15 +38,13 @@ class Settings(_BaseSettings):
     MODEL_QWEN_VISION_URL: str = "http://localhost:8004/v1"
     MODEL_API_KEY: str = "dummy-key"
 
-    # Integrations & Dispatchers (n8n, Email, Telegram)
-    N8N_WEBHOOK_URL: Optional[str] = None
-    SMTP_SERVER: str = "smtp.gmail.com"
+    # Integrations & Dispatchers (Email)
+    SMTP_SERVER: str | None = None
     SMTP_PORT: int = 587
-    SMTP_EMAIL: Optional[str] = None
-    SMTP_PASSWORD: Optional[str] = None
-    DEFAULT_RECIPIENT_EMAIL: str = "manager@company.com"
-    TELEGRAM_BOT_TOKEN: Optional[str] = None
-    TELEGRAM_CHAT_ID: Optional[str] = None
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_EMAIL: str | None = None
+    DEFAULT_RECIPIENT_EMAIL: str | None = None
 
 
     # File Paths
@@ -71,10 +68,10 @@ class Settings(_BaseSettings):
             base_url = self.LLM_URL.strip().strip('"').strip("'").rstrip("/")
             if "/v1" not in base_url:
                 base_url = f"{base_url}/v1"
-            if self.MODEL_QWEN_URL == "http://localhost:8001/v1":
-                self.MODEL_QWEN_URL = base_url
-            if self.MODEL_NEMOTRON_URL == "http://localhost:8002/v1":
-                self.MODEL_NEMOTRON_URL = base_url
+            self.MODEL_QWEN_URL = base_url
+            self.MODEL_NEMOTRON_URL = base_url
+            self.MODEL_OCR_LIGHTON_URL = base_url
+            self.MODEL_QWEN_VISION_URL = base_url
 
 
 settings = Settings()

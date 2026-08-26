@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AutoRestock</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .badge {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .logout-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logout-btn:hover {
+            background: var(--surface-light);
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .editor-wrapper {
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            background: #0b1121;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            color: #60a5fa;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .save-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .save-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .status-toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--success);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .status-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">AutoRestock Admin</div>
+        <div class="user-controls">
+            <span class="badge"><i class="ri-shield-user-fill"></i> SUPERADMIN</span>
+            <span id="usernameDisplay">admin</span>
+            <button class="logout-btn" onclick="logout()">
+                <i class="ri-logout-box-line"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" id="formTitle">Buat Workflow Baru (Data-Driven Engine)</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="save-btn" id="cancelEditBtn" onclick="cancelEdit()" style="display: none; background: transparent; color: var(--text-muted); border: 1px solid var(--border);">
+                        Batal
+                    </button>
+                    <button class="save-btn" id="createWfBtn" onclick="submitWorkflow()">
+                        <i class="ri-git-merge-line"></i> Compile Workflow
+                    </button>
+                </div>
+            </div>
+            
+            <p style="color: var(--text-muted); margin-top: -10px; margin-bottom: 20px;">
+                Tulis instruksi bisnis dalam bahasa natural. AI akan meng-compile (menyusun) instruksi Anda menjadi struktur eksekusi JSON yang ketat.
+            </p>
+
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <input type="hidden" id="wfId">
+                <input type="text" id="wfName" placeholder="Nama Workflow (contoh: Cek Stok Harian)" style="flex: 1; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: white;">
+                <input type="text" id="wfDesc" placeholder="Deskripsi Singkat" style="flex: 2; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: white;">
+            </div>
+
+            <div class="editor-wrapper">
+                <textarea id="wfInstruction" style="height: 200px;" placeholder="Tulis aturan bisnis di sini... 
+Contoh: Periksa stok produk setiap hari. Jika kurang dari batas, hitung ulang kebutuhan, buatkan draf PR, dan kirim ke telegram."></textarea>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 2rem;">
+            <div class="card-header">
+                <h2 class="card-title">Daftar Workflow Aktif</h2>
+                <button class="save-btn" onclick="loadWorkflows()" style="background: transparent; color: var(--primary); border: 1px solid var(--primary);">
+                    <i class="ri-refresh-line"></i> Refresh
+                </button>
+            </div>
+            
+            <div id="workflowList" style="display: flex; flex-direction: column; gap: 1rem;">
+                <p style="color: var(--text-muted);">Memuat daftar workflow...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-toast" id="toast">
+        <i class="ri-checkbox-circle-fill"></i> <span id="toastMsg">Berhasil!</span>
+    </div>
+
+    <script>
+        // Check Auth
+        const token = localStorage.getItem('access_token');
+        const role = localStorage.getItem('role');
+        
+        if (!token || role !== 'ADMIN') {
+            window.location.href = '/static/login.html';
+        }
+
+        document.getElementById('usernameDisplay').textContent = localStorage.getItem('username');
+
+        // Submit Workflow (Create or Update)
+        async function submitWorkflow() {
+            const btn = document.getElementById('createWfBtn');
+            const id = document.getElementById('wfId').value;
+            const name = document.getElementById('wfName').value;
+            const desc = document.getElementById('wfDesc').value;
+            const instruction = document.getElementById('wfInstruction').value;
+            const toast = document.getElementById('toast');
+            
+            if (!name || !instruction) {
+                alert("Nama dan instruksi wajib diisi!");
+                return;
+            }
+
+            btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Compiling...';
+            btn.style.opacity = '0.7';
+
+            try {
+                const url = id ? `/api/auth/admin/workflows/${id}` : '/api/auth/admin/workflows';
+                const method = id ? 'PUT' : 'POST';
+                
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name: name, description: desc, business_instruction: instruction })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('toastMsg').textContent = `Workflow ${id ? 'diperbarui' : 'disusun'}: ${data.workflow_id}`;
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 4000);
+                    
+                    cancelEdit(); // Reset form
+                    loadWorkflows(); // Refresh list
+                } else {
+                    alert("Gagal menyimpan workflow.");
+                }
+            } catch (err) {
+                alert("Terjadi kesalahan kompilasi workflow.");
+            } finally {
+                btn.innerHTML = id ? '<i class="ri-edit-line"></i> Update Workflow' : '<i class="ri-git-merge-line"></i> Compile Workflow';
+                btn.style.opacity = '1';
+            }
+        }
+        
+        function cancelEdit() {
+            document.getElementById('wfId').value = '';
+            document.getElementById('wfName').value = '';
+            document.getElementById('wfDesc').value = '';
+            document.getElementById('wfInstruction').value = '';
+            document.getElementById('formTitle').textContent = 'Buat Workflow Baru (Data-Driven Engine)';
+            document.getElementById('createWfBtn').innerHTML = '<i class="ri-git-merge-line"></i> Compile Workflow';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+        }
+
+        // Load Workflows
+        async function loadWorkflows() {
+            const listDiv = document.getElementById('workflowList');
+            try {
+                const res = await fetch('/api/auth/admin/workflows', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.ok) {
+                    const workflows = await res.json();
+                    if (workflows.length === 0) {
+                        listDiv.innerHTML = '<p style="color: var(--text-muted);">Belum ada workflow yang dibuat.</p>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    workflows.forEach(wf => {
+                        html += `
+                            <div style="background: var(--bg-dark); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.1rem; color: #60a5fa;">${wf.name}</h3>
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">ID: ${wf.id}</p>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <button onclick='editWf(${JSON.stringify(wf).replace(/'/g, "&#39;")})' style="background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Edit</button>
+                                        <button onclick="deleteWf('${wf.id}')" style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Hapus</button>
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2);">ACTIVE</span>
+                                    </div>
+                                </div>
+                                <p style="font-size: 0.95rem; margin-bottom: 1rem;">${wf.description || 'Tidak ada deskripsi'}</p>
+                                <details style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                                    <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Lihat Detail JSON Execution</summary>
+                                    <pre style="margin-top: 1rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; color: #a5b4fc; overflow-x: auto;">${JSON.stringify(wf.compiled_json, null, 2)}</pre>
+                                </details>
+                            </div>
+                        `;
+                    });
+                    listDiv.innerHTML = html;
+                }
+            } catch (err) {
+                listDiv.innerHTML = '<p style="color: var(--danger);">Gagal memuat workflow.</p>';
+                console.error("Gagal load workflow", err);
+            }
+        }
+
+        function editWf(wf) {
+            document.getElementById('wfId').value = wf.id;
+            document.getElementById('wfName').value = wf.name;
+            document.getElementById('wfDesc').value = wf.description;
+            document.getElementById('wfInstruction').value = wf.business_instruction;
+            document.getElementById('formTitle').textContent = `Edit Workflow: ${wf.id}`;
+            document.getElementById('createWfBtn').innerHTML = '<i class="ri-edit-line"></i> Update Workflow';
+            document.getElementById('cancelEditBtn').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function deleteWf(id) {
+            if(!confirm(`Yakin ingin menghapus workflow ${id}?`)) return;
+            try {
+                const res = await fetch(`/api/auth/admin/workflows/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if(res.ok) {
+                    loadWorkflows();
+                } else {
+                    alert("Gagal menghapus.");
+                }
+            } catch (err) {
+                alert("Terjadi kesalahan.");
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/static/login.html';
+        }
+
+        loadWorkflows();
+    </script>
+</body>
+</html>

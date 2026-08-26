@@ -1,7 +1,7 @@
-import os
 import sys
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -11,10 +11,13 @@ WORKSPACE_DIR = Path(__file__).resolve().parent.parent.parent
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
+from fastapi import Depends
+
 from agents.state import PurchaseRequisition
-from agents.workflow import run_autorestock_cycle, resume_approval
-from mcp_server.tools import get_all_inventory_items
+from agents.workflow import resume_approval, run_autorestock_cycle
+from core.security import TokenData, get_current_user
 from database.db import get_db_connection
+from mcp_server.tools import get_all_inventory_items
 
 router = APIRouter(tags=["AutoRestock Agent"])
 
@@ -24,8 +27,8 @@ STORAGE_DIR = WORKSPACE_DIR / "storage"
 class ApprovalRequest(BaseModel):
     pr_number: str = Field(..., description="Purchase Requisition number to approve or reject")
     action: str = Field("APPROVE", description="Decision action: 'APPROVE' or 'REJECT'")
-    approver_name: Optional[str] = Field("Warehouse Operations Manager", description="Name/Role of approver")
-    notes: Optional[str] = Field("Approved for vendor procurement", description="Manager review notes")
+    approver_name: str | None = Field("Warehouse Operations Manager", description="Name/Role of approver")
+    notes: str | None = Field("Approved for vendor procurement", description="Manager review notes")
 
 
 class ApprovalResponse(BaseModel):
@@ -33,21 +36,21 @@ class ApprovalResponse(BaseModel):
     status: str
     approver: str
     message: str
-    pr_document: Optional[PurchaseRequisition] = None
+    pr_document: PurchaseRequisition | None = None
 
 
-@router.get("/api/inventory/items", response_model=List[Dict[str, Any]])
-def get_inventory_items():
+@router.get("/api/inventory/items", response_model=list[dict[str, Any]])
+def get_inventory_items(current_user: TokenData = Depends(get_current_user)):
     """
     Retrieve all inventory items from DuckDB.
     """
     try:
-        items = get_all_inventory_items()
+        items = get_all_inventory_items(tenant_id=current_user.tenant_id)
         return items
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch inventory items: {str(e)}"
+            detail=f"Failed to fetch inventory items: {e!s}"
         )
 
 
@@ -65,7 +68,7 @@ def run_agent_cycle():
         pr_document = run_autorestock_cycle()
         if pr_document:
             from api.routers.approval_routes import PR_STORE
-            from core.schemas import PurchaseRequisitionDoc, PurchaseItemRequest
+            from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
             from docgen.pdf_generator import pdf_generator
             
             items_req = [
@@ -98,7 +101,7 @@ def run_agent_cycle():
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"AutoRestock agent cycle failed: {str(e)}"
+            detail=f"AutoRestock agent cycle failed: {e!s}"
         )
 
 
@@ -184,15 +187,15 @@ def approve_pr_requisition(request: ApprovalRequest):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process PR approval: {str(e)}"
+            detail=f"Failed to process PR approval: {e!s}"
         )
 
 
 class UpdateItemThresholdRequest(BaseModel):
-    min_threshold: Optional[int] = Field(None, description="New minimum safety threshold")
-    current_stock: Optional[int] = Field(None, description="Optional update to current physical stock")
-    avg_daily_usage: Optional[float] = Field(None, description="Optional update to daily usage burn rate")
-    lead_time_days: Optional[int] = Field(None, description="Optional update to vendor lead time")
+    min_threshold: int | None = Field(None, description="New minimum safety threshold")
+    current_stock: int | None = Field(None, description="Optional update to current physical stock")
+    avg_daily_usage: float | None = Field(None, description="Optional update to daily usage burn rate")
+    lead_time_days: int | None = Field(None, description="Optional update to vendor lead time")
 
 
 @router.patch("/api/inventory/items/{item_id}")
@@ -247,12 +250,12 @@ def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest):
 
 class CustomPromptRequest(BaseModel):
     prompt: str = Field(..., description="Natural language prompt from user describing restock intent or workflow")
-    destinations: Optional[List[str]] = Field(None, description="Explicit destinations: ['database', 'email', 'telegram', 'n8n', 'pdf']")
-    recipient_email: Optional[str] = Field(None, description="Optional custom recipient email")
+    destinations: list[str] | None = Field(None, description="Explicit destinations: ['database', 'email', 'telegram', 'pdf']")
+    recipient_email: str | None = Field(None, description="Optional custom recipient email")
 
 
 @router.post("/api/agent/custom-prompt")
-async def execute_custom_prompt_workflow(request: CustomPromptRequest):
+async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_user: TokenData = Depends(get_current_user)):
     """
     Accepts free-form natural language instructions from non-technical users,
     synthesizes a custom multi-agent workflow, executes actions, and dispatches outputs.
@@ -260,30 +263,60 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest):
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt tidak boleh kosong.")
 
-    from agents.dynamic_workflow import workflow_synthesizer
+    from agents.router import SemanticRouter
+    from agents.json_executor import JSONExecutionEngine
+    from database.db import get_db_connection
+    import json
+    
     try:
-        result = await workflow_synthesizer.execute_dynamic_workflow(
-            prompt=request.prompt,
-            override_destinations=request.destinations,
-            override_email=request.recipient_email
-        )
+        # Route prompt to workflow ID
+        route_result = await SemanticRouter.route_prompt(request.prompt, current_user.tenant_id)
+        workflow_id = route_result.get("workflow_id")
+        
+        if not workflow_id:
+            # Default to WF-001 (Auto Restock) if nothing matches or LLM failed
+            workflow_id = "WF-001"
+            
+        # Fetch workflow from DB
+        conn = get_db_connection(read_only=True)
+        wf_row = conn.execute("SELECT compiled_json FROM workflows WHERE id = ?", [workflow_id]).fetchone()
+        conn.close()
+        
+        if not wf_row:
+            raise Exception(f"Workflow {workflow_id} not found in database.")
+            
+        compiled_json = json.loads(wf_row[0])
+        
+        # Execute workflow
+        context = {
+            "threshold_updates": route_result.get("threshold_updates", []),
+            "target_item_name": route_result.get("target_item_name"),
+            "send_email": route_result.get("send_email", False)
+        }
+        result = await JSONExecutionEngine.execute(compiled_json, current_user.tenant_id, custom_context=context)
         
         # Map to dashboard.js expected schema
         action_type = "general"
-        steps_str = str(result.get("execution_steps", []))
-        if "Threshold" in steps_str:
+        if "update_threshold" in compiled_json.get("workflow", ""):
             action_type = "update_threshold"
         elif result.get("pr_number"):
             action_type = "review_prs"
-        elif "n8n" in result.get("target_destinations", []):
-            action_type = "n8n"
+        elif context.get("send_email") and "email" in str(compiled_json.get("steps", [])):
+            action_type = "notify_email"
+            
+        affected = []
+        # Return items to dashboard
+        if context.get("low_stock_items"):
+            affected = [{"name": it["name"], "current_stock": it["current_stock"], "min_stock": it.get("min_threshold", 0), "unit": it["unit"]} for it in context["low_stock_items"]]
+        elif context.get("specific_items"):
+            affected = [{"name": it["name"], "current_stock": it["current_stock"], "min_stock": it.get("min_threshold", 0), "unit": it["unit"]} for it in context["specific_items"]]
 
         dashboard_response = {
-            "parsed_intent": {},
+            "parsed_intent": {"workflow_id": workflow_id},
             "action_type": action_type,
             "message": result.get("summary", ""),
             "generated_prs": [],
-            "affected_items": []
+            "affected_items": affected
         }
 
         if result.get("pr_number"):
@@ -302,7 +335,7 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Gagal mengeksekusi dynamic workflow: {str(e)}"
+            detail=f"Gagal mengeksekusi dynamic workflow: {e!s}"
         )
 
 
@@ -324,8 +357,8 @@ def get_prompt_templates():
         },
         {
             "id": 3,
-            "title": "Rekap Stok Kemasan -> Email & n8n",
-            "prompt": "Buatkan rekap laporan restock barang Packaging dan kirimkan ke email manager@company.com serta webhook n8n."
+            "title": "Rekap Stok Kemasan -> Email & Telegram",
+            "prompt": "Buatkan rekap laporan restock barang Packaging dan kirimkan ke email manager@company.com serta telegram."
         },
         {
             "id": 4,

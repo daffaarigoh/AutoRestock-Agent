@@ -1,8 +1,9 @@
 import sys
 from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 # Base path resolution
@@ -11,12 +12,13 @@ if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
 from api.routers.agent_routes import router as agent_router
+from api.routers.approval_routes import PR_STORE
 from api.routers.approval_routes import router as approval_router
+from api.routers.auth_routes import router as auth_router
 from api.routers.ingest_routes import router as ingest_router
 from api.routers.stream_routes import router as stream_router
 from core.config import settings
 from docgen.pdf_generator import pdf_generator
-from api.routers.approval_routes import PR_STORE
 
 app = FastAPI(
     title="AutoRestock-Agent API",
@@ -58,6 +60,7 @@ app.include_router(agent_router)
 app.include_router(ingest_router)
 app.include_router(stream_router)
 app.include_router(approval_router)
+app.include_router(auth_router)
 
 
 @app.on_event("startup")
@@ -115,8 +118,17 @@ def root(request: Request):
 
 
 @app.get("/health", tags=["Health"])
-def health_check():
-    return {"status": "healthy"}
+async def health_check():
+    import httpx
+    from fastapi import HTTPException
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            headers = {"Authorization": f"Bearer {settings.MODEL_API_KEY}"}
+            res = await client.get(f"{settings.MODEL_QWEN_URL}/models", headers=headers)
+            res.raise_for_status()
+        return {"status": "healthy", "llm_connected": True}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"LLM Disconnected: {e!s}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import io
 import uuid
 from pathlib import Path
-from typing import List
+
 from PIL import Image, ImageDraw, ImageFont
 
 from core.config import settings
@@ -24,7 +24,7 @@ class BoundingBoxVisualizer:
     def annotate_shelf_image(
         cls,
         image_bytes: bytes,
-        detected_items: List[DetectedShelfItem],
+        detected_items: list[DetectedShelfItem],
         output_filename: str = None,
     ) -> Path:
         """

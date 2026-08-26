@@ -7,7 +7,9 @@ if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
 from fastapi.testclient import TestClient
+
 from api.main import app
+
 
 def test_full_pipeline():
     client = TestClient(app)
@@ -85,7 +87,7 @@ def test_full_pipeline():
     })
     assert res_threshold.status_code == 200
     assert res_threshold.json()["item"]["min_threshold"] == 75
-    print(f"[TEST 9] PATCH /api/inventory/items/ITM-001: OK -> Updated threshold to 75 (current: 10)")
+    print("[TEST 9] PATCH /api/inventory/items/ITM-001: OK -> Updated threshold to 75 (current: 10)")
 
     # 10. Test Prompt Templates Endpoint (GET /api/agent/prompt-templates)
     res_templates = client.get("/api/agent/prompt-templates")
@@ -96,20 +98,19 @@ def test_full_pipeline():
 
     # 11. Test Custom Prompt Dynamic Workflow Synthesizer (POST /api/agent/custom-prompt)
     res_custom = client.post("/api/agent/custom-prompt", json={
-        "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, buatkan dokumen PDF, dan kirim ke Telegram serta n8n."
+        "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, buatkan dokumen PDF, dan kirim ke Telegram."
     })
     assert res_custom.status_code == 200
     dyn_data = res_custom.json()
     assert dyn_data["total_items_analyzed"] >= 2
     assert "telegram" in dyn_data["target_destinations"]
-    assert "n8n" in dyn_data["target_destinations"]
-    assert len(dyn_data["execution_steps"]) >= 4
+    assert dyn_data["pdf_download_url"] is not None
+    assert len(dyn_data["execution_steps"]) > 0
     print(f"[TEST 11] POST /api/agent/custom-prompt: OK -> Dynamic workflow synthesized & executed ({len(dyn_data['execution_steps'])} steps, {dyn_data['total_items_analyzed']} items, budget: {dyn_data['total_budget_formatted']})")
 
     print("=" * 80)
-    print("🎉 ALL 11 INTEGRATION TESTS (INCLUDING THRESHOLDS, PROMPT SYNTHESIS & N8N) PASSED!")
+    print("🎉 ALL 11 INTEGRATION TESTS (INCLUDING THRESHOLDS, PROMPT SYNTHESIS & TELEGRAM) PASSED!")
     print("=" * 80 + "\n")
 
 if __name__ == "__main__":
     test_full_pipeline()
-

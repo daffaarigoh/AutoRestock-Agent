@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from bot.telegram_bot import telegram_bot
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
+from core.security import TokenData, get_current_user
 
 router = APIRouter(prefix="/api/approval", tags=["Human-in-the-Loop Approval"])
 
@@ -74,34 +74,35 @@ PR_STORE: dict[str, PurchaseRequisitionDoc] = {
 class ApprovalActionPayload(BaseModel):
     pr_number: str
     action: str = "APPROVE"  # APPROVE | REJECT
-    manager_name: Optional[str] = "Warehouse Manager"
-    notes: Optional[str] = None
+    manager_name: str | None = "Warehouse Manager"
+    notes: str | None = None
 
 
 # --- Helper: Update DuckDB order status & optionally add stock ---
 
-def _update_db_status(pr_number: str, action: str, pr: Optional[PurchaseRequisitionDoc] = None) -> str:
+def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | None = None) -> str:
     """Updates DuckDB orders table and optionally increments stock on APPROVE."""
     try:
         from database.db import get_db_connection
         conn = get_db_connection()
+        try:
+            if action == "APPROVE" and pr and pr.items:
+                for item in pr.items:
+                    conn.execute("""
+                        UPDATE items
+                        SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
+                        WHERE item_id = ? OR name = ?;
+                    """, [item.reorder_qty, item.item_id, item.name])
 
-        if action == "APPROVE" and pr and pr.items:
-            for item in pr.items:
-                conn.execute("""
-                    UPDATE items
-                    SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
-                    WHERE item_id = ? OR name = ?;
-                """, [item.reorder_qty, item.item_id, item.name])
-
-        conn.execute(f"UPDATE orders SET status = '{action}' WHERE pr_number = ?;", [pr_number])
-        conn.close()
+            conn.execute(f"UPDATE orders SET status = '{action}' WHERE pr_number = ?;", [pr_number])
+        finally:
+            conn.close()
 
         if action == "APPROVE":
             return "✅ <strong>Stok Fisik Inventaris DuckDB Berhasil Ditambahkan Otomatis!</strong>"
         return "🔒 <strong>Stok Fisik Inventaris Tetap (Tidak Ada Penambahan).</strong>"
     except Exception as e:
-        return f"⚠️ Catatan database: {str(e)}"
+        return f"⚠️ Catatan database: {e!s}"
 
 
 def _regenerate_pdf(pr: PurchaseRequisitionDoc):
@@ -115,7 +116,7 @@ def _regenerate_pdf(pr: PurchaseRequisitionDoc):
         pass
 
 
-def _ensure_pr_in_store(pr_number: str) -> Optional[PurchaseRequisitionDoc]:
+def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
     """Gets a PR from store, creating a default fallback if it starts with 'PR-'."""
     pr = PR_STORE.get(pr_number)
     if not pr and pr_number.startswith("PR-"):
@@ -126,10 +127,13 @@ def _ensure_pr_in_store(pr_number: str) -> Optional[PurchaseRequisitionDoc]:
 
 # --- API Endpoints ---
 
-@router.get("/list", response_model=List[PurchaseRequisitionDoc])
-async def get_all_requisitions():
-    """Returns list of all active purchase requisitions and their approval statuses."""
-    return list(PR_STORE.values())
+@router.get("/list", response_model=list[PurchaseRequisitionDoc])
+async def get_all_requisitions(current_user: TokenData = Depends(get_current_user)):
+    """Returns list of active purchase requisitions filtered by tenant."""
+    if current_user.role == "ADMIN":
+        return list(PR_STORE.values())
+    
+    return [pr for pr in PR_STORE.values() if pr.tenant_id == current_user.tenant_id or pr.tenant_id == "ALL"]
 
 
 @router.get("/quick-action", response_class=HTMLResponse)
@@ -137,7 +141,7 @@ async def quick_approval_action(
     pr_number: str,
     action: str = "APPROVE",
     manager_name: str = "Manager (Email / Telegram)",
-    notes: Optional[str] = None
+    notes: str | None = None
 ):
     """
     Direct one-click approval/rejection endpoint used by Email & Telegram interactive action buttons.

@@ -1,17 +1,19 @@
-import re
 import math
+import re
 import uuid
-import asyncio
 from datetime import datetime
-from typing import Dict, Any, List, Optional
-from pathlib import Path
+from typing import Any
 
-from database.db import get_db_connection
-from mcp_server.tools import calculate_safety_stock, calculate_reorder_quantity, get_best_vendors
-from docgen.compiler import generate_pr_pdf
 from agents.state import PurchaseRequisition, RestockItem
-from core.dispatcher import dispatcher
 from core.config import settings
+from core.dispatcher import dispatcher
+from database.db import get_db_connection
+from docgen.compiler import generate_pr_pdf
+from mcp_server.tools import (
+    calculate_reorder_quantity,
+    calculate_safety_stock,
+    get_best_vendors,
+)
 
 
 class DynamicWorkflowSynthesizer:
@@ -21,69 +23,81 @@ class DynamicWorkflowSynthesizer:
     """
 
     @classmethod
-    def parse_intent(cls, prompt: str, override_destinations: Optional[List[str]] = None, override_email: Optional[str] = None) -> Dict[str, Any]:
+    async def parse_intent(cls, prompt: str, override_destinations: list[str] | None = None, override_email: str | None = None, tenant_id: str = "ALL") -> dict[str, Any]:
         """
-        Extracts structured intent from user prompt (Category, Threshold Changes, Actions, Destinations).
-        Supports explicit destination overrides or natural language patterns like 'email saja', 'telegram saja', 'dashboard saja'.
+        Extracts structured intent from user prompt using LLM JSON Mode.
         """
-        p_lower = prompt.lower()
+        import json
 
-        # 1. Detect Category Filter
-        category = None
-        if "elektronik" in p_lower or "electronic" in p_lower:
-            category = "Electronics"
-        elif "kemasan" in p_lower or "packaging" in p_lower or "box" in p_lower:
-            category = "Packaging"
-        elif "consumable" in p_lower or "habis pakai" in p_lower or "pasta" in p_lower:
-            category = "Consumables"
-        elif "mekanikal" in p_lower or "mechanical" in p_lower:
-            category = "Mechanical"
-        elif "hardware" in p_lower or "baut" in p_lower:
-            category = "Hardware"
+        from core.llm_client import ModelGateway
+        from database.db import get_db_connection
 
-        # 2. Detect specific Item ID or Threshold updates
-        # Patterns like: "ubah threshold ITM-001 jadi 80" or "threshold ITM-002: 50"
-        threshold_updates = []
-        item_matches = re.findall(r"(itm-\d{3})", p_lower)
-        num_matches = re.findall(r"(?:jadi|menjadi|ke|set|to|=)\s*(\d+)", p_lower)
-        if item_matches and num_matches:
-            for item_id, val in zip(item_matches, num_matches):
-                threshold_updates.append({
-                    "item_id": item_id.upper(),
-                    "new_threshold": int(val)
-                })
+        conn = get_db_connection(read_only=True)
+        items_db = conn.execute("SELECT item_id, name FROM items WHERE tenant_id = ? OR ? = 'ALL'", [tenant_id, tenant_id]).fetchall()
+        settings_db = conn.execute("SELECT value FROM system_settings WHERE key = 'system_prompt'").df()
+        conn.close()
+        available_items_str = ", ".join([f"{row[0]} ({row[1]})" for row in items_db])
+        admin_prompt = settings_db.iloc[0]['value'] if not settings_db.empty else ""
 
-        # 3. Detect Output Destinations
-        destinations = ["database", "pdf"] # Base destinations
+        system_prompt = f"""
+You are an Intent Parser AI for an Inventory AutoRestock system.
+Parse the user's natural language prompt into a structured JSON object.
 
-        if override_destinations is not None and len(override_destinations) > 0:
+[ADMIN INSTRUCTIONS]
+{admin_prompt}
+
+Available Items in Database:
+{available_items_str}
+
+Rules:
+1. `category_filter`: Must be one of ["Electronics", "Packaging", "Consumables", "Mechanical", "Hardware"] or null. Map Indonesian terms (e.g., "baut" -> Hardware, "kardus" -> Packaging, "pasta" -> Consumables).
+2. `threshold_updates`: Extract any requests to update minimum stock thresholds (ambang batas/limit minimum). Output as a list of objects: [{{"item_id": "ITM-XXX", "new_threshold": integer}}]. CRITICAL: "Tambah stok" or "Restock" means buying items, DO NOT put them here!
+3. `destinations`: Where the report should be sent. Base destinations are ALWAYS "database" and "pdf". User might ask for "email", "telegram". 
+   - CRITICAL: Pay strict attention to negations (e.g., "jangan kirim email", "tanpa telegram"). If negated, DO NOT include that destination.
+   - If user says "hanya simpan di database", ONLY return ["database", "pdf"].
+4. `recipient_email`: Extract any email address mentioned in the text (string or null).
+5. `scan_all`: Boolean. Set to true ONLY if the user wants a full report of ALL items (e.g. "laporan semua barang"). Set to false if they ask for items that are low on stock (e.g. "barang yang menipis", "stok kritis") or if they mention a specific item.
+6. `create_pr`: Boolean. Set to true if the user asks to restock or add stock (e.g., "restock", "tambah stok", "belikan", "ajukan pembelian"). Set to false if they just want to check stock or update thresholds.
+7. `specific_items`: Look at the "Available Items in Database". If the user mentions any specific item ID (e.g. "ITM-001") or name, YOU MUST extract its exact `item_id` into a list. Example: user says "tambah stok ITM-001", output ["ITM-001"]. If the user only refers to a general category, leave this empty.
+
+Output strictly valid JSON with the exact keys: "category_filter", "threshold_updates", "destinations", "recipient_email", "scan_all", "create_pr", "specific_items".
+"""
+        gateway = ModelGateway()
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+        
+        try:
+            response_str = await gateway.chat_completion("qwen-35b", messages, temperature=0.1, response_format_json=True)
+            json_match = re.search(r'\{.*\}', response_str, re.DOTALL)
+            if json_match:
+                response_str = json_match.group(0)
+            parsed = json.loads(response_str)
+        except Exception as e:
+            print(f"[INTENT PARSER] LLM failed: {e}. Falling back to default.")
+            parsed = {}
+
+        category = parsed.get("category_filter")
+        threshold_updates = parsed.get("threshold_updates", [])
+        if not isinstance(threshold_updates, list):
+            threshold_updates = []
+            
+        destinations = parsed.get("destinations", ["database", "pdf"])
+        if not isinstance(destinations, list):
+            destinations = ["database", "pdf"]
+        if "database" not in destinations:
+            destinations.append("database")
+        if "pdf" not in destinations:
+            destinations.append("pdf")
+            
+        if override_destinations:
             destinations = list(set(["database", "pdf"] + [d.lower() for d in override_destinations]))
-        else:
-            # Check for exclusive "only / saja" patterns
-            is_email_only = "email saja" in p_lower or "hanya email" in p_lower or "ke email saja" in p_lower
-            is_tele_only = "telegram saja" in p_lower or "hanya telegram" in p_lower or "ke telegram saja" in p_lower
-            is_db_only = "dashboard saja" in p_lower or "database saja" in p_lower or "web saja" in p_lower or "hanya simpan" in p_lower or "hanya database" in p_lower or "hanya dashboard" in p_lower
-
-            if is_db_only:
-                destinations = ["database", "pdf"]
-            elif is_email_only:
-                destinations = ["database", "pdf", "email"]
-            elif is_tele_only:
-                destinations = ["database", "pdf", "telegram"]
-            else:
-                if "telegram" in p_lower or "tele" in p_lower or "bot" in p_lower:
-                    destinations.append("telegram")
-                if "email" in p_lower or "mail" in p_lower or "@" in p_lower:
-                    destinations.append("email")
-                if "n8n" in p_lower or "webhook" in p_lower:
-                    destinations.append("n8n")
-
-        # Detect custom email address if present
-        email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", prompt)
-        recipient_email = override_email or (email_match.group(0) if email_match else settings.DEFAULT_RECIPIENT_EMAIL)
-
-        # Detect if user wants to scan all items or only critical items
-        scan_all = "semua" in p_lower or "all" in p_lower or "rekap" in p_lower or "laporan" in p_lower
+            
+        recipient_email = override_email or parsed.get("recipient_email") or settings.DEFAULT_RECIPIENT_EMAIL
+        scan_all = parsed.get("scan_all", False)
+        create_pr = parsed.get("create_pr", False)
+        specific_items = parsed.get("specific_items") or []
 
         return {
             "prompt": prompt,
@@ -91,20 +105,23 @@ class DynamicWorkflowSynthesizer:
             "threshold_updates": threshold_updates,
             "destinations": list(set(destinations)),
             "recipient_email": recipient_email,
-            "scan_all": scan_all
+            "scan_all": scan_all,
+            "create_pr": create_pr,
+            "specific_items": specific_items
         }
 
     @classmethod
     async def execute_dynamic_workflow(
         cls,
         prompt: str,
-        override_destinations: Optional[List[str]] = None,
-        override_email: Optional[str] = None
-    ) -> Dict[str, Any]:
+        override_destinations: list[str] | None = None,
+        override_email: str | None = None,
+        tenant_id: str = "ALL"
+    ) -> dict[str, Any]:
         """
         Synthesizes and runs a custom workflow from the user's natural language request.
         """
-        intent = cls.parse_intent(prompt, override_destinations=override_destinations, override_email=override_email)
+        intent = await cls.parse_intent(prompt, override_destinations=override_destinations, override_email=override_email, tenant_id=tenant_id)
         execution_steps = []
         start_time = datetime.now()
 
@@ -114,7 +131,7 @@ class DynamicWorkflowSynthesizer:
             updated_items = []
             try:
                 for upd in intent["threshold_updates"]:
-                    conn.execute("UPDATE items SET min_threshold = ? WHERE item_id = ?;", [upd["new_threshold"], upd["item_id"]])
+                    conn.execute("UPDATE items SET min_threshold = ? WHERE item_id = ? AND (tenant_id = ? OR ? = 'ALL');", [upd["new_threshold"], upd["item_id"], tenant_id, tenant_id])
                     updated_items.append(f"{upd['item_id']} -> min_threshold = {upd['new_threshold']}")
                 conn.close()
                 execution_steps.append({
@@ -128,20 +145,29 @@ class DynamicWorkflowSynthesizer:
                     "step_number": 1,
                     "title": "Update Threshold Database DuckDB",
                     "status": "ERROR",
-                    "details": f"Gagal update database: {str(e)}"
+                    "details": f"Gagal update database: {e!s}"
                 })
 
         # STEP 2: Query Inventory from DuckDB
         step_num = len(execution_steps) + 1
         conn = get_db_connection(read_only=True)
-        query = "SELECT item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit FROM items WHERE 1=1"
-        params = []
+        query = "SELECT item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit FROM items WHERE (tenant_id = ? OR ? = 'ALL')"
+        params = [tenant_id, tenant_id]
 
         if intent["category_filter"]:
             query += " AND category = ?"
             params.append(intent["category_filter"])
 
-        if not intent["scan_all"]:
+        if intent.get("specific_items"):
+            conditions = []
+            for item in intent["specific_items"]:
+                conditions.append("(LOWER(item_id) = ? OR LOWER(name) LIKE ?)")
+                params.append(item.lower())
+                params.append(f"%{item.lower()}%")
+            query += " AND (" + " OR ".join(conditions) + ")"
+
+        # Bypass the threshold check if specific items are explicitly requested so we can check their stock regardless of threshold
+        if not intent["scan_all"] and not intent.get("specific_items"):
             query += " AND current_stock < min_threshold"
 
         query += " ORDER BY (min_threshold - current_stock) DESC;"
@@ -158,154 +184,168 @@ class DynamicWorkflowSynthesizer:
             "details": f"Ditemukan {len(items_data)} item yang memenuhi kriteria permintaan user."
         })
 
-        # STEP 3: Planner Agent (qwen-35b) - Vendor Selection & Dynamic Safety Stock
-        step_num += 1
-        planned_items: List[RestockItem] = []
+        # STEP 3 & 4 & 5: Planner, Auditor, and PDF (ONLY IF create_pr IS TRUE)
+        planned_items: list[RestockItem] = []
         total_budget = 0.0
-
-        for it in items_data:
-            item_id = it["item_id"]
-            name = it["name"]
-            curr_stock = it["current_stock"]
-            usage = float(it["avg_daily_usage"])
-            lead = int(it["lead_time_days"])
-            unit = it["unit"]
-
-            safety = calculate_safety_stock(lead, usage)
-            reorder_qty = calculate_reorder_quantity(lead, usage, curr_stock, safety)
-
-            if reorder_qty <= 0 and not intent["scan_all"]:
-                continue
-            if reorder_qty <= 0 and intent["scan_all"]:
-                reorder_qty = int(math.ceil(usage * lead)) or 10
-
-            best_vendor = get_best_vendors(item_id)
-            if best_vendor:
-                chosen = best_vendor
-                v_id = chosen["vendor_id"]
-                v_name = chosen["name"]
-                price = float(chosen["unit_price"])
-            else:
-                v_id = "VND-DEFAULT"
-                v_name = "Supplier Rekanan Gudang"
-                price = 50000.0
-
-            item_total = price * reorder_qty
-            total_budget += item_total
-
-            planned_items.append(RestockItem(
-                item_id=item_id,
-                name=name,
-                current_stock=curr_stock,
-                reorder_qty=reorder_qty,
-                safety_stock=safety,
-                unit=unit,
-                vendor_id=v_id,
-                vendor_name=v_name,
-                unit_price=price,
-                total_price=item_total,
-                reason=f"Stok {curr_stock} {unit} di bawah threshold. Dynamic Safety Stock: {safety} {unit}."
-            ))
-
         total_budget_fmt = f"Rp {total_budget:,.2f}"
-        execution_steps.append({
-            "step_number": step_num,
-            "title": "Perencanaan & Pencocokan Vendor Terbaik (Qwen-35b)",
-            "status": "COMPLETED",
-            "details": f"Berhasil merencanakan restock untuk {len(planned_items)} SKU. Total estimasi pengadaan: {total_budget_fmt}."
-        })
-
-        # STEP 4: Compliance Auditor (nemotron-35)
-        step_num += 1
-        auditor_status = "PASSED" if total_budget <= 25000000.0 else "FLAGGED"
-        auditor_notes = "Anggaran dalam batas pagu pengadaan operasional Q3." if auditor_status == "PASSED" else "Anggaran melebihi batas reguler, butuh tinjauan Direktur Keuangan."
-
-        execution_steps.append({
-            "step_number": step_num,
-            "title": "Verifikasi Kepatuhan & Guardrail Anggaran (Nemotron-35)",
-            "status": "COMPLETED",
-            "details": f"Status: {auditor_status} - {auditor_notes}"
-        })
-
-        # STEP 5: Document Generation (Typst PDF) & Order Sync
-        pr_number = f"PR-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        pr_number = None
         pdf_path = None
-        if "pdf" in intent["destinations"] or len(planned_items) > 0:
+        
+        if not intent["create_pr"]:
+            # User only wants a report, skip PR creation
             step_num += 1
-            pr_doc = PurchaseRequisition(
-                pr_number=pr_number,
-                created_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
-                items=planned_items,
-                total_budget=total_budget,
-                auditor_status=auditor_status,
-                auditor_notes=auditor_notes,
-                status="PENDING"
-            )
-            pdf_path = generate_pr_pdf(pr_doc)
-            
-            # Record in orders table
-            try:
-                conn = get_db_connection()
-                for it in planned_items:
-                    order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-                    conn.execute("""
-                        INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING');
-                    """, [order_id, pr_number, it.item_id, it.vendor_id, it.reorder_qty, it.unit_price, it.total_price])
-                conn.close()
-            except Exception as e:
-                print(f"[WORKFLOW] Orders insert error: {e}")
+            execution_steps.append({
+                "step_number": step_num,
+                "title": "Pengumpulan Laporan Inventaris (Tanpa PR)",
+                "status": "COMPLETED",
+                "details": f"Berhasil mengumpulkan data {len(items_data)} item untuk laporan tanpa menyusun PR."
+            })
+        else:
+            # Full PR Creation
+            step_num += 1
+            for it in items_data:
+                item_id = it["item_id"]
+                name = it["name"]
+                curr_stock = it["current_stock"]
+                usage = float(it["avg_daily_usage"])
+                lead = int(it["lead_time_days"])
+                unit = it["unit"]
 
-            # Sync to PR_STORE for web dashboard preview
-            from api.routers.approval_routes import PR_STORE
-            from core.schemas import PurchaseRequisitionDoc, PurchaseItemRequest
-            clean_filename = f"{pr_number.replace('-', '_')}.pdf"
-            PR_STORE[pr_number] = PurchaseRequisitionDoc(
-                pr_number=pr_number,
-                created_at=pr_doc.created_at,
-                items=[
-                    PurchaseItemRequest(
-                        item_id=it.item_id,
-                        name=it.name,
-                        reorder_qty=it.reorder_qty,
-                        unit=it.unit,
-                        vendor_id=it.vendor_id,
-                        vendor_name=it.vendor_name,
-                        unit_price=it.unit_price,
-                        total_price=it.total_price,
-                        reason=it.reason
-                    ) for it in planned_items
-                ],
-                total_budget=total_budget,
-                auditor_status=auditor_status,
-                auditor_notes=auditor_notes,
-                pdf_path=f"/storage/documents/{clean_filename}",
-                status="PENDING"
-            )
+                safety = calculate_safety_stock(lead, usage)
+                reorder_qty = calculate_reorder_quantity(lead, usage, curr_stock, safety)
+
+                force_restock = intent["scan_all"] or bool(intent.get("specific_items"))
+                if reorder_qty <= 0 and not force_restock:
+                    continue
+                if reorder_qty <= 0 and force_restock:
+                    reorder_qty = int(math.ceil(usage * lead)) or 10
+
+                best_vendor = get_best_vendors(item_id, tenant_id=tenant_id)
+                if best_vendor:
+                    chosen = best_vendor
+                    v_id = chosen["vendor_id"]
+                    v_name = chosen["name"]
+                    price = float(chosen["unit_price"])
+                else:
+                    v_id = "VND-DEFAULT"
+                    v_name = "Supplier Rekanan Gudang"
+                    price = 50000.0
+
+                item_total = price * reorder_qty
+                total_budget += item_total
+
+                planned_items.append(RestockItem(
+                    item_id=item_id,
+                    name=name,
+                    current_stock=curr_stock,
+                    reorder_qty=reorder_qty,
+                    safety_stock=safety,
+                    unit=unit,
+                    vendor_id=v_id,
+                    vendor_name=v_name,
+                    unit_price=price,
+                    total_price=item_total,
+                    reason=f"Stok {curr_stock} {unit} di bawah threshold. Dynamic Safety Stock: {safety} {unit}."
+                ))
+
+            total_budget_fmt = f"Rp {total_budget:,.2f}"
+            execution_steps.append({
+                "step_number": step_num,
+                "title": "Perencanaan & Pencocokan Vendor Terbaik (Qwen-35b)",
+                "status": "COMPLETED",
+                "details": f"Berhasil merencanakan restock untuk {len(planned_items)} SKU. Total estimasi pengadaan: {total_budget_fmt}."
+            })
+
+            # STEP 4: Compliance Auditor (nemotron-35)
+            step_num += 1
+            auditor_status = "PASSED" if total_budget <= 25000000.0 else "FLAGGED"
+            auditor_notes = "Anggaran dalam batas pagu pengadaan operasional Q3." if auditor_status == "PASSED" else "Anggaran melebihi batas reguler, butuh tinjauan Direktur Keuangan."
 
             execution_steps.append({
                 "step_number": step_num,
-                "title": "Kompilasi Dokumen Formal Typst PDF & Sinkronisasi DB",
+                "title": "Verifikasi Kepatuhan & Guardrail Anggaran (Nemotron-35)",
                 "status": "COMPLETED",
-                "details": f"Dokumen resmi {pr_number}.pdf berhasil di-compile dalam <50ms dan dicatat di tabel orders."
+                "details": f"Status: {auditor_status} - {auditor_notes}"
             })
 
-        # STEP 6: Multi-Channel Dispatching (n8n, Telegram, Email, DB)
+            # STEP 5: Document Generation (Typst PDF) & Order Sync
+            pr_number = f"PR-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            pdf_path = None
+            if "pdf" in intent["destinations"] or len(planned_items) > 0:
+                step_num += 1
+                pr_doc = PurchaseRequisition(
+                    pr_number=pr_number,
+                    created_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    items=planned_items,
+                    total_budget=total_budget,
+                    auditor_status=auditor_status,
+                    auditor_notes=auditor_notes,
+                    status="PENDING"
+                )
+                pdf_path = generate_pr_pdf(pr_doc)
+                
+                # Record in orders table
+                try:
+                    conn = get_db_connection()
+                    for it in planned_items:
+                        order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+                        conn.execute("""
+                            INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', ?);
+                        """, [order_id, pr_number, it.item_id, it.vendor_id, it.reorder_qty, it.unit_price, it.total_price, tenant_id])
+                    conn.close()
+                except Exception as e:
+                    print(f"[WORKFLOW] Orders insert error: {e}")
+
+                # Sync to PR_STORE for web dashboard preview
+                from api.routers.approval_routes import PR_STORE
+                from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
+                clean_filename = f"{pr_number.replace('-', '_')}.pdf"
+                PR_STORE[pr_number] = PurchaseRequisitionDoc(
+                    pr_number=pr_number,
+                    created_at=pr_doc.created_at,
+                    items=[
+                        PurchaseItemRequest(
+                            item_id=it.item_id,
+                            name=it.name,
+                            reorder_qty=it.reorder_qty,
+                            unit=it.unit,
+                            vendor_id=it.vendor_id,
+                            vendor_name=it.vendor_name,
+                            unit_price=it.unit_price,
+                            total_price=it.total_price,
+                            reason=it.reason
+                        ) for it in planned_items
+                    ],
+                    total_budget=total_budget,
+                    auditor_status=auditor_status,
+                    auditor_notes=auditor_notes,
+                    pdf_path=f"/storage/documents/{clean_filename}",
+                    status="PENDING",
+                    tenant_id=tenant_id
+                )
+
+                execution_steps.append({
+                    "step_number": step_num,
+                    "title": "Kompilasi Dokumen Formal Typst PDF & Sinkronisasi DB",
+                    "status": "COMPLETED",
+                    "details": f"Dokumen resmi {pr_number}.pdf berhasil di-compile dalam <50ms dan dicatat di tabel orders."
+                })
+
+        # STEP 6: Multi-Channel Dispatching (Telegram, Email, DB)
         step_num += 1
         dispatch_results = {}
 
-        # 6a. Dispatch to Telegram if requested
-        if "telegram" in intent["destinations"] and planned_items:
-            from bot.telegram_bot import telegram_bot
-            if pr_number in PR_STORE:
-                tele_res = await telegram_bot.send_restock_approval_request(PR_STORE[pr_number])
-                dispatch_results["telegram"] = tele_res
+
+        items_list_txt = ""
+        if intent["create_pr"]:
+            items_list_txt = "\n".join([f"• {it.name}: {it.reorder_qty} {it.unit} @ Rp {it.unit_price:,.0f} (Vendor: {it.vendor_name})" for it in planned_items])
 
         # 6b. Dispatch to Email if requested
         if "email" in intent["destinations"]:
-            email_subject = f"Permintaan Restock Gudang - {pr_number}"
-            items_list_txt = "\n".join([f"• {it.name}: {it.reorder_qty} {it.unit} @ Rp {it.unit_price:,.0f} (Vendor: {it.vendor_name})" for it in planned_items])
-            email_body = f"""Halo Manajer Pengadaan,
+            if intent["create_pr"]:
+                email_subject = f"Permintaan Restock Gudang - {pr_number}"
+                email_body = f"""Halo Manajer Pengadaan,
 
 Sistem AutoRestock-Agent telah menyintesis pengadaan baru berdasarkan instruksi:
 Prompt: "{prompt}"
@@ -313,14 +353,17 @@ Prompt: "{prompt}"
 Rincian Pengadaan:
 No. PR: {pr_number}
 Jumlah SKU: {len(planned_items)}
-Total Anggaran: {total_budget_fmt}
+Total Anggaran: {total_budget:,.2f}
 Status: PENDING APPROVAL
 
 Daftar Barang:
 {items_list_txt or '- Tidak ada item -'}
 
 Silakan gunakan tombol interaktif di bawah untuk menyetujui atau menolak permintaan ini."""
-
+            else:
+                email_subject = "Laporan Stok Gudang"
+                email_body = f"Terdapat {len(items_data)} item dalam daftar cek."
+                
             email_res = await dispatcher.dispatch_email(
                 recipient_email=intent["recipient_email"],
                 subject=email_subject,
@@ -330,23 +373,14 @@ Silakan gunakan tombol interaktif di bawah untuk menyetujui atau menolak permint
             )
             dispatch_results["email"] = email_res
 
-        # 6c. Dispatch to n8n Webhook if requested or if email/telegram requested via NLP
-        if "n8n" in intent["destinations"] or "email" in intent["destinations"] or "telegram" in intent["destinations"]:
-            n8n_res = await dispatcher.dispatch_to_n8n(
-                event_name="custom_workflow_execution",
-                payload={
-                    "prompt": prompt,
-                    "pr_number": pr_number,
-                    "total_items": len(planned_items),
-                    "total_budget": total_budget,
-                    "pdf_url": f"/api/documents/pr/{pr_number}/download" if pdf_path else None,
-                    "items": [it.model_dump() for it in planned_items],
-                    "recipient_email": intent["recipient_email"],
-                    "send_email": "email" in intent["destinations"],
-                    "send_telegram": "telegram" in intent["destinations"]
-                }
+        # 6c. Dispatch to Telegram if requested
+        if "telegram" in intent["destinations"]:
+            tele_res = await dispatcher.dispatch_telegram(
+                subject="Laporan Inventaris" if not intent["create_pr"] else "🚨 Permintaan Persetujuan Restock Otomatis",
+                content_text=f"Terdapat {len(items_data)} item dalam daftar cek." if not intent["create_pr"] else f"Sistem AI Agent telah mendeteksi kebutuhan restock barang kritis dan mengompilasi draf resmi Purchase Requisition {pr_number}.\n\nRincian Pengadaan:\nNo. PR: {pr_number}\nJumlah SKU: {len(planned_items)}\nTotal Anggaran: {total_budget:,.2f}\nStatus: PENDING APPROVAL\n\nDaftar Barang:\n{items_list_txt or '- Tidak ada item -'}\n\nSilakan gunakan tombol interaktif di bawah untuk menyetujui atau menolak permintaan ini.",
+                pr_number=pr_number if intent["create_pr"] else None
             )
-            dispatch_results["n8n"] = n8n_res
+            dispatch_results["telegram"] = tele_res
 
         channel_labels = []
         if "database" in intent["destinations"]:
@@ -355,8 +389,6 @@ Silakan gunakan tombol interaktif di bawah untuk menyetujui atau menolak permint
             channel_labels.append(f"Email ({intent['recipient_email']})")
         if "telegram" in intent["destinations"]:
             channel_labels.append("Telegram Bot")
-        if "n8n" in intent["destinations"]:
-            channel_labels.append("n8n Webhook")
 
         execution_steps.append({
             "step_number": step_num,
@@ -367,11 +399,19 @@ Silakan gunakan tombol interaktif di bawah untuk menyetujui atau menolak permint
 
         elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
 
+        if not intent["create_pr"] and items_data:
+            item_list_str = "\n• " + "\n• ".join([f"{i['name']} (Stok: {i['current_stock']} {i['unit']})" for i in items_data[:10]])
+            if len(items_data) > 10:
+                item_list_str += f"\n• ... dan {len(items_data) - 10} lainnya"
+            summary_text = f"Ditemukan {len(items_data)} barang sesuai kriteria pengecekan:{item_list_str}"
+        else:
+            summary_text = f"Alur kerja berhasil disintesis dan dieksekusi. Total {len(planned_items) if intent['create_pr'] else len(items_data)} barang diproses dengan anggaran {total_budget_fmt}."
+
         return {
             "prompt": prompt,
             "workflow_title": f"Dynamic Workflow ({intent['category_filter'] or 'All Items'})",
             "target_destinations": intent["destinations"],
-            "total_items_analyzed": len(planned_items),
+            "total_items_analyzed": len(planned_items) if intent["create_pr"] else len(items_data),
             "total_budget": total_budget,
             "total_budget_formatted": total_budget_fmt,
             "pr_number": pr_number,
@@ -379,7 +419,7 @@ Silakan gunakan tombol interaktif di bawah untuk menyetujui atau menolak permint
             "execution_steps": execution_steps,
             "dispatch_results": dispatch_results,
             "duration_ms": round(elapsed_ms, 2),
-            "summary": f"Alur kerja berhasil disintesis dan dieksekusi dalam {elapsed_ms:.1f}ms. Total {len(planned_items)} barang diproses dengan anggaran {total_budget_fmt}."
+            "summary": summary_text
         }
 
 

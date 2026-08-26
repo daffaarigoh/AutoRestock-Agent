@@ -1,4 +1,5 @@
-from typing import List, Optional, Dict, Any, TypedDict
+from typing import Any, TypedDict
+
 from pydantic import BaseModel, Field
 
 
@@ -21,27 +22,27 @@ class RestockItem(BaseModel):
 class PurchaseRequisition(BaseModel):
     pr_number: str = Field(..., description="Unique PR document number e.g. PR-20260819-001")
     created_at: str = Field(..., description="ISO timestamp of creation")
-    items: List[RestockItem] = Field(default_factory=list, description="List of restocked items")
+    items: list[RestockItem] = Field(default_factory=list, description="List of restocked items")
     total_budget: float = Field(0.0, description="Total budget required for requisition")
     auditor_status: str = Field("PASSED", description="Auditor status: PASSED or REVISED")
     auditor_notes: str = Field("", description="Audit notes and compliance evaluation from auditor")
-    pdf_path: Optional[str] = Field(None, description="Path to generated Typst PDF document")
+    pdf_path: str | None = Field(None, description="Path to generated Typst PDF document")
     status: str = Field("PENDING", description="Requisition status: PENDING | APPROVED | REJECTED")
-    thread_id: Optional[str] = Field(None, description="LangGraph execution thread identifier")
+    thread_id: str | None = Field(None, description="LangGraph execution thread identifier")
 
 
 
 class AgentState(TypedDict, total=False):
     thread_id: str
-    low_stock_items: List[Dict[str, Any]]
-    planned_items: List[RestockItem]
+    low_stock_items: list[dict[str, Any]]
+    planned_items: list[RestockItem]
     total_budget: float
     auditor_status: str
     auditor_notes: str
-    pr_document: Optional[PurchaseRequisition]
-    pdf_path: Optional[str]
-    approval_action: Optional[str]      # "APPROVE" | "REJECT"
-    approver_name: Optional[str]
-    approval_notes: Optional[str]
+    pr_document: PurchaseRequisition | None
+    pdf_path: str | None
+    approval_action: str | None      # "APPROVE" | "REJECT"
+    approver_name: str | None
+    approval_notes: str | None
     is_approved: bool
-    logs: List[str]
+    logs: list[str]

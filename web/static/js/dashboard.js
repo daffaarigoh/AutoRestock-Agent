@@ -15,12 +15,39 @@ const state = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  const uName = localStorage.getItem('username');
+  const uTenant = localStorage.getItem('tenant_id');
+  if (uName) document.getElementById('displayUsername').textContent = uName;
+  if (uTenant) document.getElementById('displayTenant').textContent = uTenant;
+
   restoreUiCustomizations();
   restoreCopilotFeed();
-  initWebSocket();
+  // initWebSocket(); // Disabled to prevent 403 Forbidden backend log spam
   loadAllData();
   setInterval(loadDashboardStats, 15000);
 });
+
+// Override fetch to inject Auth Headers automatically
+const originalFetch = window.fetch;
+window.fetch = async function() {
+    let [resource, config] = arguments;
+    if(config === undefined) {
+        config = {};
+    }
+    if(config.headers === undefined) {
+        config.headers = {};
+    }
+    // Convert Headers object to literal if necessary, simplified approach:
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        if (config.headers instanceof Headers) {
+            config.headers.append('Authorization', `Bearer ${token}`);
+        } else {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
+    }
+    return await originalFetch(resource, config);
+};
 
 function restoreUiCustomizations() {
   try {
@@ -186,11 +213,11 @@ function renderCategoryOptions() {
 
 // --- Data Fetching ---
 async function loadAllData() {
-  await Promise.all([
-    loadDashboardStats(),
-    loadInventoryItems(),
-    loadApprovals()
-  ]);
+  // Use sequential awaits to prevent DuckDB connection lock contention
+  // when multiple endpoints try to open the database file concurrently.
+  await loadDashboardStats();
+  await loadInventoryItems();
+  await loadApprovals();
   // Load categories after items are loaded
   await loadCategories();
 }
@@ -234,7 +261,7 @@ async function loadInventoryItems() {
         unit: it.unit,
         min_stock: it.min_threshold,
         max_stock: (it.min_threshold || 1) * 3, 
-        unit_price: 0 
+        unit_price: it.unit_price || 0 
       }));
       filterCatalogTable();
     }
@@ -438,7 +465,7 @@ async function approvePrQuick(prNumber) {
     });
 
     if (res.ok) {
-      showToast(`Purchase Order ${prNumber} berhasil disetujui & didelegasikan ke n8n!`, 'success');
+      showToast(`Purchase Order ${prNumber} berhasil disetujui!`, 'success');
 
       // Update all buttons and badges across the feed and table immediately
       allActionButtons.forEach(btn => {
@@ -549,7 +576,7 @@ async function submitPrompt(customText) {
     }
   } catch (e) {
     removeLoadingBubble(loadingId);
-    appendAgentErrorMessage("Terjadi kesalahan koneksi ke server backend.");
+    appendAgentErrorMessage(e.message || "Terjadi kesalahan koneksi ke server backend.");
     saveCopilotFeed();
   } finally {
     if (btn) btn.disabled = false;
@@ -880,7 +907,7 @@ function appendAgentResponseCard(data) {
   }
 
   // SCENARIO 6: External Notification / Sync
-  else if (actionType.startsWith('n8n') || actionType === 'notify_email' || actionType === 'notify_telegram') {
+  else if (actionType === 'notify_email') {
     actionHtml = `
       <div class="action-card" style="border-left: 4px solid #3B82F6; background: rgba(59, 130, 246, 0.05);">
         <div class="action-card-header">
@@ -889,6 +916,15 @@ function appendAgentResponseCard(data) {
         </div>
         <div class="action-card-body" style="font-size: 13px; color: #E2E8F0;">
           ${escapeHtml(data.message)}
+          ${items.length > 0 ? `
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255, 255, 255, 0.1); display: flex; flex-wrap: wrap; gap: 6px;">
+              ${items.map(it => `
+                <span class="badge ${it.current_stock <= 0 ? 'badge-out_of_stock' : (it.current_stock <= it.min_stock ? 'badge-low_stock' : 'badge-approved')}">
+                  ${escapeHtml(it.name)}: ${it.current_stock} ${it.unit}
+                </span>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -965,8 +1001,8 @@ function initWebSocket() {
     const dot = document.getElementById('wsStatusDot');
     const label = document.getElementById('wsStatusLabel');
     if (dot) dot.style.backgroundColor = '#f59e0b';
-    if (label) label.textContent = 'Reconnecting...';
-    setTimeout(initWebSocket, 3000);
+    if (label) label.textContent = 'Offline (WebSocket Disabled)';
+    // setTimeout(initWebSocket, 3000); // Disabled reconnect to prevent backend log spam
   };
 }
 
@@ -1014,7 +1050,8 @@ function escapeHtml(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/'/g, '&#039;')
+    .replace(/\n/g, '<br>');
 }
 
 function showToast(message, type = 'info') {

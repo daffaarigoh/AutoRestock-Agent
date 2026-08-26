@@ -1,7 +1,6 @@
 import logging
 import uuid
-from typing import Optional
-from core.config import settings
+
 from core.llm_client import gateway
 from core.schemas import BoundingBox, DetectedShelfItem, StockStatus, VisionAuditResult
 from multimodal.visualizer import BoundingBoxVisualizer
@@ -20,7 +19,7 @@ class VisionAuditor:
     async def audit_shelf_image(
         cls,
         image_bytes: bytes,
-        original_filename: Optional[str] = "shelf.jpg"
+        original_filename: str | None = "shelf.jpg"
     ) -> VisionAuditResult:
         """
         Executes end-to-end visual shelf audit with bounding box annotation.

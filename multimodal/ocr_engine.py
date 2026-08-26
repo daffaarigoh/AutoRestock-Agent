@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+
 from core.llm_client import gateway
 from core.schemas import DocumentType, OCRDocumentItem, OCRDocumentResult
 
@@ -21,7 +21,7 @@ class OCREngine:
         cls,
         image_bytes: bytes,
         doc_type_hint: str = "SURAT_JALAN",
-        filename: Optional[str] = "document.jpg"
+        filename: str | None = "document.jpg"
     ) -> OCRDocumentResult:
         """
         Parses document image into validated OCRDocumentResult schema.

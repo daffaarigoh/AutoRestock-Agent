@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
-from typing import Union
+
 import typst
 
-from agents.state import PurchaseRequisition, RestockItem
+from agents.state import PurchaseRequisition
 
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_PATH = WORKSPACE_DIR / "docgen" / "templates" / "purchase_requisition.typ"
@@ -46,7 +46,7 @@ def get_target_directory(status: str) -> Path:
         return PENDING_DIR
 
 
-def generate_pr_pdf(pr: Union[PurchaseRequisition, dict], output_path: Union[str, Path, None] = None) -> str:
+def generate_pr_pdf(pr: PurchaseRequisition | dict, output_path: str | Path | None = None) -> str:
     """
     Renders a PurchaseRequisition model into a Typst document and compiles it to PDF.
     Saves PDF into storage/pending/, storage/approved/, or storage/rejected/ based on status.

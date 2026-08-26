@@ -1,9 +1,8 @@
-import os
 import sys
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List, Optional
 from pathlib import Path
+from typing import Any
 
 # Fix console encoding on Windows
 if sys.platform == "win32":
@@ -17,13 +16,17 @@ WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
-from langgraph.graph import StateGraph, START, END
+import asyncio
+import json
+
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, StateGraph
 
 from agents.state import AgentState, PurchaseRequisition, RestockItem
-from mcp_server.tools import get_low_stock_items, get_best_vendors
-from docgen.compiler import generate_pr_pdf
+from core.llm_client import ModelGateway
 from database.db import get_db_connection
+from docgen.compiler import generate_pr_pdf
+from mcp_server.tools import get_best_vendors, get_low_stock_items
 
 # Global in-memory checkpointer for thread persistence
 memory_checkpointer = MemorySaver()
@@ -74,7 +77,7 @@ def update_db_orders_status(pr_number: str, status: str):
         conn.close()
 
 
-def scan_node(state: AgentState) -> Dict[str, Any]:
+def scan_node(state: AgentState) -> dict[str, Any]:
     """
     Node 1: Scan Node
     Scans DuckDB inventory database to detect items below safety stock threshold.
@@ -89,58 +92,100 @@ def scan_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def planner_node(state: AgentState) -> Dict[str, Any]:
+def planner_node(state: AgentState) -> dict[str, Any]:
     """
     Node 2: Planner Node (qwen-35b Planner & Vendor Matcher)
     Analyzes safety stock deficits, selects optimal vendors, and drafts line item justifications.
     """
-    print("[AGENT] [STEP 2: PLANNER] Running Planner Node (qwen-35b) - Vendor matching & budget calculation...")
+    print("[AGENT] [STEP 2: PLANNER] Running Planner Node (qwen-35b) - Vendor matching & budget calculation via LLM...")
     low_stock_items = state.get("low_stock_items", [])
     
-    planned_items: List[RestockItem] = []
+    planned_items: list[RestockItem] = []
     total_budget = 0.0
     
+    if not low_stock_items:
+        return {"planned_items": [], "total_budget": 0.0, "logs": state.get("logs", []) + ["Planner: No items to plan."]}
+
+    # Prepare data for LLM
+    items_data = []
+    for item in low_stock_items:
+        vendor = get_best_vendors(item["item_id"]) or {
+            "vendor_id": "VND-DEFAULT", "name": "Standard Supplier",
+            "unit_price": 10000.0, "lead_time_days": 7, "rating": 4.0
+        }
+        items_data.append({
+            "item_id": item["item_id"],
+            "name": item["name"],
+            "current_stock": item["current_stock"],
+            "min_threshold": item["min_threshold"],
+            "reorder_qty": item["reorder_qty"],
+            "unit": item["unit"],
+            "vendor": vendor
+        })
+
+    prompt = f"""
+You are an expert Procurement Planner AI.
+Analyze the following low stock items and their available vendors.
+Calculate the 'line_total' (reorder_qty * vendor.unit_price) for each item.
+Write a clear, professional 'reason' in Indonesian explaining why this restock is necessary and why this vendor was chosen.
+
+Data:
+{json.dumps(items_data, indent=2)}
+
+Output format must be a JSON object with a key 'items' containing a list of objects. Each object must have:
+- item_id (string)
+- vendor_id (string)
+- vendor_name (string)
+- unit_price (float)
+- line_total (float)
+- reason (string, professional Indonesian)
+"""
+    
+    gateway = ModelGateway()
+    messages = [
+        {"role": "system", "content": "You are a Procurement AI. Always output valid JSON."},
+        {"role": "user", "content": prompt}
+    ]
+    
+    llm_items = {}
+    try:
+        # We use a new event loop because this runs in a FastAPI threadpool
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        response_str = loop.run_until_complete(
+            gateway.chat_completion("qwen-35b", messages, temperature=0.1, response_format_json=True)
+        )
+        loop.close()
+        
+        if response_str.startswith("```json"):
+            response_str = response_str.strip("`").removeprefix("json").strip()
+            
+        llm_output = json.loads(response_str)
+        llm_items = {i["item_id"]: i for i in llm_output.get("items", [])}
+    except Exception as e:
+        print(f"[AGENT] LLM Planner failed: {e}. Falling back to default.")
+
+    # Reconstruct items safely
     for item in low_stock_items:
         item_id = item["item_id"]
-        name = item["name"]
-        category = item["category"]
-        current_stock = item["current_stock"]
-        min_threshold = item["min_threshold"]
-        reorder_qty = item["reorder_qty"]
-        unit = item["unit"]
+        llm_item = llm_items.get(item_id, {})
         
-        # Match best vendor
-        vendor = get_best_vendors(item_id)
-        if vendor:
-            vendor_id = vendor["vendor_id"]
-            vendor_name = vendor["name"]
-            unit_price = float(vendor["unit_price"])
-            lead_time = vendor["lead_time_days"]
-            rating = vendor["rating"]
-        else:
-            vendor_id = "VND-DEFAULT"
-            vendor_name = "Standard Supplier"
-            unit_price = 10000.0
-            lead_time = 7
-            rating = 4.0
-            
-        line_total = unit_price * reorder_qty
+        vendor_id = llm_item.get("vendor_id", "VND-DEFAULT")
+        vendor_name = llm_item.get("vendor_name", "Standard Supplier")
+        unit_price = float(llm_item.get("unit_price", 10000.0))
+        line_total = float(llm_item.get("line_total", unit_price * item["reorder_qty"]))
+        reason = llm_item.get("reason", f"Stok kritis. Restock via {vendor_name}.")
+        
         total_budget += line_total
-        
-        reason = (
-            f"Stok kritis ({current_stock} < min {min_threshold} {unit}). "
-            f"Restock {reorder_qty} {unit} via {vendor_name} "
-            f"(Lead time {lead_time} hari, Rating {rating}/5.0)."
-        )
         
         planned_items.append(RestockItem(
             item_id=item_id,
-            name=name,
-            category=category,
-            current_stock=current_stock,
-            min_threshold=min_threshold,
-            reorder_qty=reorder_qty,
-            unit=unit,
+            name=item["name"],
+            category=item["category"],
+            current_stock=item["current_stock"],
+            min_threshold=item["min_threshold"],
+            reorder_qty=item["reorder_qty"],
+            unit=item["unit"],
             vendor_id=vendor_id,
             vendor_name=vendor_name,
             unit_price=unit_price,
@@ -148,51 +193,83 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
             reason=reason
         ))
         
-    print(f"[AGENT] Planned {len(planned_items)} line items. Subtotal budget: Rp {total_budget:,.0f}")
+    print(f"[AGENT] Planned {len(planned_items)} line items via LLM. Subtotal budget: Rp {total_budget:,.0f}")
     
     return {
         "planned_items": planned_items,
         "total_budget": total_budget,
-        "logs": state.get("logs", []) + [f"Planner: Matched {len(planned_items)} vendors with subtotal Rp {total_budget:,.0f}."]
+        "logs": state.get("logs", []) + [f"Planner (LLM): Matched {len(planned_items)} vendors with subtotal Rp {total_budget:,.0f}."]
     }
 
 
-def audit_node(state: AgentState) -> Dict[str, Any]:
+def audit_node(state: AgentState) -> dict[str, Any]:
     """
     Node 3: Audit Node (nemotron-35 Auditor & Compliance Guardrail)
     Validates budget ceilings, pricing sanity, and vendor procurement compliance.
     """
-    print("[AGENT] [STEP 3: AUDIT] Running Audit Node (nemotron-35) - Compliance & budget guardrail...")
+    print("[AGENT] [STEP 3: AUDIT] Running Audit Node (nemotron-35) - Compliance & budget guardrail via LLM...")
     total_budget = state.get("total_budget", 0.0)
     planned_items = state.get("planned_items", [])
     
     BUDGET_CEILING = 100_000_000.0
     
-    if total_budget <= BUDGET_CEILING and len(planned_items) > 0:
-        auditor_status = "PASSED"
-        auditor_notes = (
-            f"Evaluasi Kepatuhan Lolos (PASSED). Total anggaran Rp {total_budget:,.0f} "
-            f"berada di bawah batas maksimum per siklus (Rp {BUDGET_CEILING:,.0f}). "
-            f"Semua {len(planned_items)} barang telah diverifikasi menggunakan algoritma vendor harga terendah "
-            f"dan batas safety stock dinamis 1.5x."
+    prompt = f"""
+You are a strict Compliance Auditor AI.
+Evaluate the following procurement plan.
+Rules:
+1. The total_budget MUST NOT exceed Rp {BUDGET_CEILING:,.0f}.
+2. If total_budget <= {BUDGET_CEILING:,.0f}, status is 'PASSED'.
+3. If total_budget > {BUDGET_CEILING:,.0f}, status is 'REVISED'.
+4. Write a professional auditor_notes in Indonesian explaining the decision.
+
+Data:
+total_budget: {total_budget}
+num_items: {len(planned_items)}
+
+Output format must be a JSON object with:
+- auditor_status (string: 'PASSED' or 'REVISED')
+- auditor_notes (string, professional Indonesian)
+"""
+
+    gateway = ModelGateway()
+    messages = [
+        {"role": "system", "content": "You are an Auditor AI. Always output valid JSON."},
+        {"role": "user", "content": prompt}
+    ]
+    
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        response_str = loop.run_until_complete(
+            gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
         )
-    else:
-        auditor_status = "REVISED"
-        auditor_notes = (
-            f"Peringatan Anggaran (REVISED): Total anggaran Rp {total_budget:,.0f} melebihi batas alokasi "
-            f"atau tidak ada item valid."
-        )
+        loop.close()
         
-    print(f"[AGENT] Audit Result: {auditor_status} - {auditor_notes}")
+        if response_str.startswith("```json"):
+            response_str = response_str.strip("`").removeprefix("json").strip()
+            
+        llm_output = json.loads(response_str)
+        auditor_status = llm_output.get("auditor_status", "REVISED")
+        auditor_notes = llm_output.get("auditor_notes", "Audit failed to parse response.")
+    except Exception as e:
+        print(f"[AGENT] LLM Audit failed: {e}. Falling back to default.")
+        if total_budget <= BUDGET_CEILING and len(planned_items) > 0:
+            auditor_status = "PASSED"
+            auditor_notes = f"Evaluasi lolos (Fallback). Anggaran Rp {total_budget:,.0f} aman."
+        else:
+            auditor_status = "REVISED"
+            auditor_notes = "Peringatan Anggaran (Fallback). Melebihi batas atau tidak ada item."
+        
+    print(f"[AGENT] Audit Result (LLM): {auditor_status} - {auditor_notes}")
     
     return {
         "auditor_status": auditor_status,
         "auditor_notes": auditor_notes,
-        "logs": state.get("logs", []) + [f"Auditor: Status={auditor_status}."]
+        "logs": state.get("logs", []) + [f"Auditor (LLM): Status={auditor_status}."]
     }
 
 
-def typst_node(state: AgentState) -> Dict[str, Any]:
+def typst_node(state: AgentState) -> dict[str, Any]:
     """
     Node 4: Typst Node
     Compiles initial Purchase Requisition into a PDF and logs pending orders.
@@ -237,7 +314,7 @@ def typst_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def wait_approval_node(state: AgentState) -> Dict[str, Any]:
+def wait_approval_node(state: AgentState) -> dict[str, Any]:
     """
     Node 5: Wait Approval Node (Human-In-The-Loop)
     Reads manager decision (APPROVE / REJECT).
@@ -307,10 +384,10 @@ def create_autorestock_graph() -> StateGraph:
 # Singleton compiled graph
 autorestock_app = create_autorestock_graph()
 
-PR_THREAD_REGISTRY: Dict[str, str] = {}
+PR_THREAD_REGISTRY: dict[str, str] = {}
 
 
-def run_autorestock_cycle(thread_id: Optional[str] = None) -> PurchaseRequisition:
+def run_autorestock_cycle(thread_id: str | None = None) -> PurchaseRequisition:
     """
     Runs cycle up to the HITL interrupt point (Typst Node).
     Returns the generated PurchaseRequisition with status PENDING_APPROVAL.
@@ -349,7 +426,7 @@ def resume_approval(
     action: str = "APPROVE",
     approver_name: str = "Warehouse Operations Manager",
     notes: str = "",
-    thread_id: Optional[str] = None
+    thread_id: str | None = None
 ) -> PurchaseRequisition:
     """
     Resumes the workflow from the checkpoint with either APPROVE or REJECT action.

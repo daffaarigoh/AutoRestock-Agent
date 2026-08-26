@@ -1,5 +1,6 @@
-import duckdb
 from pathlib import Path
+
+import duckdb
 
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 STORAGE_DIR = WORKSPACE_DIR / "storage"

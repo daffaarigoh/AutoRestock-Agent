@@ -6,10 +6,10 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from bot.telegram_bot import telegram_bot
 from starlette.testclient import TestClient
 
 from api.main import app
-from bot.telegram_bot import telegram_bot
 from core.observability import tracer
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
 from docgen.pdf_generator import pdf_generator

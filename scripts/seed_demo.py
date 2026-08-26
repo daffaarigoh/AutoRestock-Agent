@@ -1,8 +1,6 @@
-import os
 import sys
 import time
 from pathlib import Path
-import duckdb
 
 # Fix console encoding on Windows
 if sys.platform == "win32":
@@ -16,9 +14,9 @@ WORKSPACE_DIR = Path(__file__).resolve().parent
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
-from database.seed_data import init_db, seed_data, test_critical_items_query
+from agents.workflow import resume_approval, run_autorestock_cycle
 from database.db import get_db_connection
-from agents.workflow import run_autorestock_cycle, resume_approval
+from database.seed_data import init_db, seed_data, test_critical_items_query
 
 
 def print_banner(title: str):
@@ -83,7 +81,7 @@ def run_interactive_simulation():
         user_choice = input("\n>>> [TINDAKAN MANAJER] Ketik 'Y' untuk APPROVE, atau 'N' untuk REJECT: ").strip().upper()
     except (EOFError, KeyboardInterrupt):
         user_choice = "Y"
-        print(f"\n[Defaulting to APPROVE due to non-interactive environment]")
+        print("\n[Defaulting to APPROVE due to non-interactive environment]")
 
     if user_choice in ["Y", "YES", "APPROVE"]:
         action = "APPROVE"
@@ -107,7 +105,7 @@ def run_interactive_simulation():
         notes=notes
     )
     
-    print(f"[RESUMED] LangGraph selesai mengeksekusi 'wait_approval_node' -> END.")
+    print("[RESUMED] LangGraph selesai mengeksekusi 'wait_approval_node' -> END.")
     print(f"Status PR Akhir   : {approved_pr.status}")
     print(f"Dokumen Final PDF : {approved_pr.pdf_path}")
     

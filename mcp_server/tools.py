@@ -1,5 +1,6 @@
 import math
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 from database.db import get_db_connection
 
 
@@ -14,7 +15,7 @@ def calculate_reorder_quantity(
     lead_time_days: int,
     avg_daily_usage: float,
     current_stock: int,
-    safety_stock: Optional[int] = None
+    safety_stock: int | None = None
 ) -> int:
     """
     Formula: Reorder Qty = (Daily Usage * Lead Time) + Safety Stock - Current Stock
@@ -27,28 +28,22 @@ def calculate_reorder_quantity(
     return max(reorder_qty, 1)
 
 
-def get_low_stock_items() -> List[Dict[str, Any]]:
+def get_low_stock_items(tenant_id: str = "ALL") -> list[dict[str, Any]]:
     """
     Queries DuckDB to retrieve items with stock below the minimum threshold,
-    and computes dynamic safety stock and reorder quantity using Python formulas.
+    filtered by tenant_id.
     """
     conn = get_db_connection(read_only=True)
     try:
         query = """
             SELECT 
-                item_id,
-                name,
-                category,
-                current_stock,
-                min_threshold,
-                avg_daily_usage,
-                lead_time_days,
-                unit
+                item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit
             FROM items
             WHERE current_stock < min_threshold
+            AND (tenant_id = ? OR ? = 'ALL')
             ORDER BY (min_threshold - current_stock) DESC;
         """
-        rows = conn.execute(query).fetchall()
+        rows = conn.execute(query, [tenant_id, tenant_id]).fetchall()
         columns = [desc[0] for desc in conn.description]
         
         low_stock_items = []
@@ -58,7 +53,6 @@ def get_low_stock_items() -> List[Dict[str, Any]]:
             daily_usage = float(item_dict["avg_daily_usage"])
             stock = int(item_dict["current_stock"])
             
-            # Python formula calculation
             safety_stock = calculate_safety_stock(lead_time, daily_usage)
             reorder_qty = calculate_reorder_quantity(lead_time, daily_usage, stock, safety_stock)
             
@@ -70,28 +64,39 @@ def get_low_stock_items() -> List[Dict[str, Any]]:
     finally:
         conn.close()
 
-
-def get_best_vendors(item_id: str) -> Optional[Dict[str, Any]]:
+def get_specific_item_stock(item_name: str, tenant_id: str = "ALL") -> list[dict[str, Any]]:
     """
-    Queries DuckDB vendors table to find the best vendor for a given item_id.
-    Prioritizes: Lowest unit_price ASC, fastest lead_time_days ASC, highest rating DESC.
+    Queries DuckDB to retrieve items matching the item_name.
     """
     conn = get_db_connection(read_only=True)
     try:
         query = """
             SELECT 
-                vendor_id,
-                name,
-                item_id,
-                unit_price,
-                lead_time_days,
-                rating
+                item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit
+            FROM items
+            WHERE lower(name) LIKE ? AND (tenant_id = ? OR ? = 'ALL')
+        """
+        rows = conn.execute(query, [f"%{item_name.lower()}%", tenant_id, tenant_id]).fetchall()
+        columns = [desc[0] for desc in conn.description]
+        return [dict(zip(columns, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_best_vendors(item_id: str, tenant_id: str = "ALL") -> dict[str, Any] | None:
+    """
+    Queries DuckDB vendors table to find the best vendor for a given item_id.
+    """
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT vendor_id, name, item_id, unit_price, lead_time_days, rating
             FROM vendors
-            WHERE item_id = ?
+            WHERE item_id = ? AND (tenant_id = ? OR ? = 'ALL')
             ORDER BY unit_price ASC, lead_time_days ASC, rating DESC
             LIMIT 1;
         """
-        result = conn.execute(query, [item_id]).fetchone()
+        result = conn.execute(query, [item_id, tenant_id, tenant_id]).fetchone()
         if not result:
             return None
         
@@ -101,47 +106,40 @@ def get_best_vendors(item_id: str) -> Optional[Dict[str, Any]]:
         conn.close()
 
 
-def get_all_vendors_for_item(item_id: str) -> List[Dict[str, Any]]:
+def get_all_vendors_for_item(item_id: str, tenant_id: str = "ALL") -> list[dict[str, Any]]:
     """Get all available vendors offering a specific item."""
     conn = get_db_connection(read_only=True)
     try:
         query = """
-            SELECT 
-                vendor_id,
-                name,
-                item_id,
-                unit_price,
-                lead_time_days,
-                rating
+            SELECT vendor_id, name, item_id, unit_price, lead_time_days, rating
             FROM vendors
-            WHERE item_id = ?
+            WHERE item_id = ? AND (tenant_id = ? OR ? = 'ALL')
             ORDER BY unit_price ASC, lead_time_days ASC;
         """
-        rows = conn.execute(query, [item_id]).fetchall()
+        rows = conn.execute(query, [item_id, tenant_id, tenant_id]).fetchall()
         columns = [desc[0] for desc in conn.description]
         return [dict(zip(columns, r)) for r in rows]
     finally:
         conn.close()
 
 
-def get_all_inventory_items() -> List[Dict[str, Any]]:
-    """Retrieve all inventory items from DuckDB."""
+def get_all_inventory_items(tenant_id: str = "ALL") -> list[dict[str, Any]]:
+    """Retrieve all inventory items from DuckDB, filtered by tenant_id."""
     conn = get_db_connection(read_only=True)
     try:
         query = """
             SELECT 
-                item_id,
-                name,
-                category,
-                current_stock,
-                min_threshold,
-                avg_daily_usage,
-                lead_time_days,
-                unit
-            FROM items
-            ORDER BY item_id ASC;
+                i.item_id, i.name, i.category, i.current_stock, i.min_threshold, 
+                i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id,
+                COALESCE(MIN(v.unit_price), 0.0) AS unit_price
+            FROM items i
+            LEFT JOIN vendors v ON i.item_id = v.item_id
+            WHERE i.tenant_id = ? OR ? = 'ALL'
+            GROUP BY i.item_id, i.name, i.category, i.current_stock, i.min_threshold, 
+                     i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id
+            ORDER BY i.item_id ASC;
         """
-        rows = conn.execute(query).fetchall()
+        rows = conn.execute(query, [tenant_id, tenant_id]).fetchall()
         columns = [desc[0] for desc in conn.description]
         return [dict(zip(columns, r)) for r in rows]
     finally:

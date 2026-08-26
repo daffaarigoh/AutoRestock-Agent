@@ -1,7 +1,8 @@
 import base64
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 try:
     import httpx
 except ImportError:
@@ -26,7 +27,7 @@ class ModelGateway:
     async def chat_completion(
         self,
         model_name: str,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.2,
         response_format_json: bool = False,
     ) -> str:
@@ -47,7 +48,7 @@ class ModelGateway:
             "Content-Type": "application/json",
         }
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": model_name,
             "messages": messages,
             "temperature": temperature,
@@ -55,7 +56,7 @@ class ModelGateway:
         if response_format_json:
             payload["response_format"] = {"type": "json_object"}
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             try:
                 res = await client.post(f"{endpoint}/chat/completions", json=payload, headers=headers)
                 res.raise_for_status()
@@ -69,7 +70,7 @@ class ModelGateway:
         self,
         image_bytes: bytes,
         doc_type_hint: str = "SURAT_JALAN"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Calls ocr-lighton to parse structured data from physical documents:
         - Invoices
@@ -106,7 +107,7 @@ class ModelGateway:
     async def vision_shelf_audit(
         self,
         image_bytes: bytes
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Calls qwen-35b-vision to detect empty/depleted shelf slots and locate bounding boxes.
         """
@@ -140,7 +141,7 @@ class ModelGateway:
     # Realistic Mock Engines for Zero-Config Offline Testing
     # -------------------------------------------------------------
 
-    def _mock_vision_shelf_audit(self) -> Dict[str, Any]:
+    def _mock_vision_shelf_audit(self) -> dict[str, Any]:
         return {
             "total_slots_scanned": 4,
             "empty_slots_count": 2,
@@ -183,7 +184,7 @@ class ModelGateway:
         }
 
 
-    def _mock_chat_completion(self, model_name: str, messages: List[Dict[str, str]]) -> str:
+    def _mock_chat_completion(self, model_name: str, messages: list[dict[str, str]]) -> str:
         if "nemotron" in model_name.lower():
             return json.dumps({
                 "auditor_status": "PASSED",
@@ -196,7 +197,7 @@ class ModelGateway:
                 "recommended_vendor_id": "VEND-001"
             })
 
-    def _mock_ocr_document_extraction(self, doc_type_hint: str) -> Dict[str, Any]:
+    def _mock_ocr_document_extraction(self, doc_type_hint: str) -> dict[str, Any]:
         if "KARTU_STOK" in doc_type_hint.upper() or "OPNAME" in doc_type_hint.upper():
             return {
                 "doc_type": "KARTU_STOK_OPNAME",

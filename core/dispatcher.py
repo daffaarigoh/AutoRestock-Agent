@@ -1,12 +1,11 @@
-import os
-import json
 import logging
 import smtplib
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any
+
 import httpx
 
 from core.config import settings
@@ -17,82 +16,20 @@ logger = logging.getLogger(__name__)
 class MultiChannelDispatcher:
     """
     Unified multi-channel integration dispatcher:
-    1. n8n Webhook Hub (Sends event & structured data to n8n workflows)
+    1. DuckDB Database (Saves structured historical data and tracks workflow progress)
     2. Email Dispatcher (Sends SMTP mail with optional PDF attachment / zero-config simulation)
-    3. Telegram Bot (Sends interactive approval alerts)
     """
 
-    @classmethod
-    async def dispatch_to_n8n(
-        cls,
-        event_name: str,
-        payload: Dict[str, Any],
-        custom_webhook_url: Optional[str] = None,
-        base_url: str = "http://127.0.0.1:8000"
-    ) -> Dict[str, Any]:
-        """
-        Sends structured event payload to n8n webhook endpoint with interactive approval links.
-        Falls back to simulation mode if N8N_WEBHOOK_URL is not set.
-        """
-        webhook_url = custom_webhook_url or settings.N8N_WEBHOOK_URL
-        pr_number = payload.get("pr_number", "")
-        
-        # Inject standard interactive action links
-        payload["approve_url"] = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=APPROVE"
-        payload["reject_url"] = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=REJECT"
-        if "pdf_url" not in payload and pr_number:
-            payload["pdf_url"] = f"/api/documents/pr/{pr_number}/download"
-        payload["pdf_download_url"] = f"{base_url}{payload['pdf_url']}" if payload.get("pdf_url") else ""
-
-        envelope = {
-            "source": "AutoRestock-Agent",
-            "event": event_name,
-            "timestamp": payload.get("created_at") or payload.get("timestamp") or "",
-            "data": payload
-        }
-
-        if not webhook_url:
-            msg = f"[n8n SIMULASI] Webhook '{event_name}' siap dikirim ke n8n (Pasang N8N_WEBHOOK_URL di .env untuk pengiriman langsung)."
-            logger.info(msg)
-            return {
-                "channel": "n8n",
-                "status": "simulated",
-                "message": msg,
-                "event": event_name,
-                "payload_preview": envelope
-            }
-
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.post(webhook_url, json=envelope)
-                res.raise_for_status()
-                return {
-                    "channel": "n8n",
-                    "status": "success",
-                    "status_code": res.status_code,
-                    "event": event_name,
-                    "response": res.text
-                }
-        except Exception as e:
-            logger.warning(f"Failed to post to n8n webhook: {e}")
-            return {
-                "channel": "n8n",
-                "status": "error",
-                "message": f"Gagal menghubungi n8n: {str(e)}",
-                "event": event_name
-            }
-
-    @classmethod
     async def dispatch_email(
         cls,
         recipient_email: str,
         subject: str,
         content_text: str,
-        attachment_path: Optional[str] = None,
-        html_content: Optional[str] = None,
-        pr_number: Optional[str] = None,
+        attachment_path: str | None = None,
+        html_content: str | None = None,
+        pr_number: str | None = None,
         base_url: str = "http://127.0.0.1:8000"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Sends a rich HTML email notification with optional PDF attachment and interactive Approve/Reject action buttons.
         Falls back to smart simulation if SMTP credentials are not configured.
@@ -154,7 +91,7 @@ class MultiChannelDispatcher:
                         </div>
                     </div>
                     <div class="footer">
-                        AutoRestock-Agent &bull; Terintegrasi dengan DuckDB, LangGraph, Typst, & n8n
+                        AutoRestock-Agent &bull; Terintegrasi dengan DuckDB, LangGraph & Typst
                     </div>
                 </div>
             </body>
@@ -215,7 +152,7 @@ class MultiChannelDispatcher:
                 "channel": "email",
                 "status": "error",
                 "recipient": recipient,
-                "message": f"Gagal mengirim email via SMTP: {str(e)}"
+                "message": f"Gagal mengirim email via SMTP: {e!s}"
             }
 
 

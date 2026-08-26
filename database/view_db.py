@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-import duckdb
 
 # Fix console encoding on Windows
 if sys.platform == "win32":
@@ -15,6 +14,7 @@ if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
 from database.db import get_db_connection
+
 
 def view_database():
     conn = get_db_connection(read_only=True)

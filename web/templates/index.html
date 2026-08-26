@@ -8,6 +8,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/dashboard.css">
+  <script>
+    if (!localStorage.getItem('access_token')) {
+        window.location.href = '/static/login.html';
+    }
+  </script>
 </head>
 <body class="sidebar-collapsed">
 
@@ -32,6 +37,12 @@
       <div id="apiHealthIndicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #94a3b8; padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 20px;">
         <span id="apiHealthDot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 8px #ef4444; transition: all 0.3s ease;"></span>
         <span id="apiHealthText">API Checking...</span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:8px; background: rgba(59,130,246,0.1); border-radius:8px; padding: 6px 12px; border: 1px solid rgba(59,130,246,0.2);">
+         <span id="displayUsername" style="font-weight:600; font-size:13px; color:#3b82f6;">-</span>
+         <span id="displayTenant" style="font-size:11px; color:#94a3b8; border:1px solid #334155; padding:2px 6px; border-radius:4px; background: #0f172a;">-</span>
+         <button onclick="localStorage.clear(); window.location.href='/static/login.html';" style="background:transparent; border:none; color:#ef4444; cursor:pointer; font-size:12px; margin-left:10px; font-weight:600;">Logout</button>
       </div>
 
       <button class="btn btn-primary btn-sm" id="btnToggleSidebar" onclick="toggleDataSidebar()">

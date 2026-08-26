@@ -1,5 +1,5 @@
-import sys
 from pathlib import Path
+
 from PIL import Image, ImageDraw
 
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent

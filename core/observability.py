@@ -1,7 +1,7 @@
 import logging
-import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -10,25 +10,25 @@ logger = logging.getLogger(__name__)
 class TraceSpan(BaseModel):
     span_id: str
     node_name: str
-    model_name: Optional[str] = None
+    model_name: str | None = None
     started_at: str
-    completed_at: Optional[str] = None
+    completed_at: str | None = None
     duration_ms: float = 0.0
-    input_payload: Optional[Dict[str, Any]] = None
-    output_payload: Optional[Dict[str, Any]] = None
+    input_payload: dict[str, Any] | None = None
+    output_payload: dict[str, Any] | None = None
     status: str = "RUNNING" # RUNNING | SUCCESS | FAILED
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class AgentTrace(BaseModel):
     trace_id: str
     workflow_name: str = "Autonomous-AutoRestock-Cycle"
     started_at: str = Field(default_factory=lambda: datetime.now().isoformat())
-    completed_at: Optional[str] = None
+    completed_at: str | None = None
     total_duration_ms: float = 0.0
-    spans: List[TraceSpan] = []
+    spans: list[TraceSpan] = []
     total_tokens_estimated: int = 0
-    compliance_verdict: Optional[str] = None
+    compliance_verdict: str | None = None
 
 
 class ObservabilityTracer:
@@ -38,8 +38,8 @@ class ObservabilityTracer:
     """
 
     def __init__(self):
-        self._traces: List[AgentTrace] = []
-        self._active_trace: Optional[AgentTrace] = None
+        self._traces: list[AgentTrace] = []
+        self._active_trace: AgentTrace | None = None
 
     def start_trace(self, trace_id: str, workflow_name: str = "Autonomous-AutoRestock-Cycle") -> AgentTrace:
         trace = AgentTrace(trace_id=trace_id, workflow_name=workflow_name)
@@ -47,7 +47,7 @@ class ObservabilityTracer:
         self._traces.append(trace)
         return trace
 
-    def start_span(self, span_id: str, node_name: str, model_name: Optional[str] = None, input_payload: Optional[Dict] = None) -> TraceSpan:
+    def start_span(self, span_id: str, node_name: str, model_name: str | None = None, input_payload: dict | None = None) -> TraceSpan:
         span = TraceSpan(
             span_id=span_id,
             node_name=node_name,
@@ -59,7 +59,7 @@ class ObservabilityTracer:
             self._active_trace.spans.append(span)
         return span
 
-    def end_span(self, span: TraceSpan, output_payload: Optional[Dict] = None, status: str = "SUCCESS", error: Optional[str] = None, tokens: int = 0):
+    def end_span(self, span: TraceSpan, output_payload: dict | None = None, status: str = "SUCCESS", error: str | None = None, tokens: int = 0):
         span.completed_at = datetime.now().isoformat()
         span.output_payload = output_payload or {}
         span.status = status
@@ -73,7 +73,7 @@ class ObservabilityTracer:
         if self._active_trace:
             self._active_trace.total_tokens_estimated += tokens
 
-    def end_trace(self, trace: Optional[AgentTrace] = None, verdict: Optional[str] = None) -> AgentTrace:
+    def end_trace(self, trace: AgentTrace | None = None, verdict: str | None = None) -> AgentTrace:
         active = trace or self._active_trace
         if active:
             active.completed_at = datetime.now().isoformat()
@@ -83,7 +83,7 @@ class ObservabilityTracer:
             active.total_duration_ms = (end_time - start_time).total_seconds() * 1000.0
         return active
 
-    def get_recent_traces(self, limit: int = 10) -> List[AgentTrace]:
+    def get_recent_traces(self, limit: int = 10) -> list[AgentTrace]:
         return self._traces[-limit:]
 
 

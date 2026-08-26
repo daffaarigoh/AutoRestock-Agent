@@ -1,4 +1,5 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
+
 from core.schemas import OCRDocumentResult
 from multimodal.ocr_engine import OCREngine
 

@@ -1,19 +1,21 @@
 import asyncio
 import json
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import datetime
-from typing import AsyncGenerator
-from fastapi import APIRouter
+
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from core.observability import tracer
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
+from core.security import TokenData, get_current_user
 
 router = APIRouter(prefix="/api/stream", tags=["Live Agent Streaming"])
 
 
 @router.get("/inventory-summary")
-async def get_inventory_summary():
+async def get_inventory_summary(current_user: TokenData = Depends(get_current_user)):
     """
     Returns live inventory items and health status directly from DuckDB.
     """
@@ -34,10 +36,11 @@ async def get_inventory_summary():
                 COALESCE(MIN(v.unit_price), 0.0) AS unit_price
             FROM items i
             LEFT JOIN vendors v ON i.item_id = v.item_id
+            WHERE i.tenant_id = ? OR ? = 'ALL'
             GROUP BY i.item_id, i.name, i.category, i.current_stock, i.min_threshold, i.avg_daily_usage, i.lead_time_days, i.unit
             ORDER BY (i.min_threshold - i.current_stock) DESC;
         """
-        rows = conn.execute(query).fetchall()
+        rows = conn.execute(query, [current_user.tenant_id, current_user.tenant_id]).fetchall()
         conn.close()
 
         for r in rows:
@@ -115,7 +118,6 @@ async def agent_thought_generator() -> AsyncGenerator[str, None]:
     # Step 3: Real Agent Execution (Planner & Vendor Matcher)
     from agents.workflow import run_autorestock_cycle
     from api.routers.approval_routes import PR_STORE
-    from core.schemas import PurchaseRequisitionDoc, PurchaseItemRequest
     from docgen.pdf_generator import pdf_generator
 
     pr_doc = run_autorestock_cycle()

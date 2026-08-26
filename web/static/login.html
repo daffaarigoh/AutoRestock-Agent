@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AutoRestock Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Elements */
+        .blob {
+            position: absolute;
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0.5;
+            animation: float 10s infinite ease-in-out;
+        }
+        .blob-1 {
+            width: 400px; height: 400px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            top: -100px; left: -100px;
+            border-radius: 50%;
+        }
+        .blob-2 {
+            width: 500px; height: 500px;
+            background: linear-gradient(135deg, #0ea5e9, #10b981);
+            bottom: -200px; right: -100px;
+            border-radius: 50%;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+        }
+
+        /* Glassmorphism Container */
+        .login-container {
+            position: relative;
+            z-index: 10;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 1rem;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.6);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 1rem;
+            min-height: 20px;
+        }
+        
+        .demo-creds {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding-top: 1rem;
+            border-top: 1px solid var(--glass-border);
+        }
+    </style>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="login-container">
+        <div class="header">
+            <h1>AutoRestock Agent</h1>
+            <p>Sistem Pengadaan Cerdas</p>
+        </div>
+        
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" required autocomplete="username" placeholder="Masukkan username...">
+            </div>
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">Masuk ke Sistem</button>
+            <div class="error-msg" id="errorMsg"></div>
+        </form>
+
+        <div class="demo-creds">
+            <strong>Demo Accounts:</strong><br>
+            Admin: <code>admin</code> / <code>admin123</code><br>
+            User A: <code>usera</code> / <code>user123</code>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const error = document.getElementById('errorMsg');
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            btn.textContent = 'Memverifikasi...';
+            btn.style.opacity = '0.7';
+            error.textContent = '';
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('role', data.role);
+                    localStorage.setItem('tenant_id', data.tenant_id);
+                    localStorage.setItem('username', username);
+                    
+                    if (data.role === 'ADMIN') {
+                        window.location.href = '/static/admin.html';
+                    } else {
+                        window.location.href = '/';
+                    }
+                } else {
+                    error.textContent = data.detail || 'Login gagal.';
+                    btn.textContent = 'Masuk ke Sistem';
+                    btn.style.opacity = '1';
+                }
+            } catch (err) {
+                error.textContent = 'Terjadi kesalahan koneksi.';
+                btn.textContent = 'Masuk ke Sistem';
+                btn.style.opacity = '1';
+            }
+        });
+        
+        // Auto redirect if already logged in
+        if (localStorage.getItem('access_token')) {
+            if (localStorage.getItem('role') === 'ADMIN') {
+                window.location.href = '/static/admin.html';
+            } else {
+                window.location.href = '/';
+            }
+        }
+    </script>
+</body>
+</html>

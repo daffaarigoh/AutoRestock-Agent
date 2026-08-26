@@ -1,8 +1,7 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 # -------------------------------------------------------------
 # Document & OCR Ingestion Schemas (Powered by ocr-lighton)
@@ -17,12 +16,12 @@ class DocumentType(str, Enum):
 class OCRDocumentItem(BaseModel):
     line_no: int
     item_name: str
-    sku: Optional[str] = "N/A"
+    sku: str | None = "N/A"
     qty_recorded: int = Field(default=0, description="Quantity recorded on the physical document")
     unit: str = "pcs"
-    unit_price: Optional[float] = 0.0
-    total_price: Optional[float] = 0.0
-    condition_notes: Optional[str] = "Baik / Sesuai"
+    unit_price: float | None = 0.0
+    total_price: float | None = 0.0
+    condition_notes: str | None = "Baik / Sesuai"
 
     @property
     def qty_received(self) -> int:
@@ -34,8 +33,8 @@ class OCRDocumentResult(BaseModel):
     doc_number: str
     vendor_or_issuer: str
     date_recorded: str
-    inspector_name: Optional[str] = "Petugas Gudang"
-    items: List[OCRDocumentItem]
+    inspector_name: str | None = "Petugas Gudang"
+    items: list[OCRDocumentItem]
     total_amount: float = 0.0
     extraction_confidence: float = 0.96
     summary: str = "Dokumen fisik berhasil diekstrak dan siap disinkronkan ke database."
@@ -69,7 +68,7 @@ class DetectedShelfItem(BaseModel):
     status: StockStatus = StockStatus.NORMAL
     confidence: float = 0.9
     bbox: BoundingBox
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class VisionAuditResult(BaseModel):
@@ -77,8 +76,8 @@ class VisionAuditResult(BaseModel):
     total_slots_scanned: int
     empty_slots_count: int
     low_stock_count: int
-    detected_items: List[DetectedShelfItem]
-    annotated_image_url: Optional[str] = None
+    detected_items: list[DetectedShelfItem]
+    annotated_image_url: str | None = None
     audit_summary: str = "Visual shelf scan completed."
 
 
@@ -113,11 +112,12 @@ class PurchaseItemRequest(BaseModel):
 class PurchaseRequisitionDoc(BaseModel):
     pr_number: str
     created_at: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M"))
-    items: List[PurchaseItemRequest]
+    items: list[PurchaseItemRequest]
     total_budget: float
     auditor_status: str = "PASSED"              # PASSED | REVISED
     auditor_notes: str = "Compliance & budget verified by nemotron-35."
-    pdf_path: Optional[str] = None
+    pdf_path: str | None = None
     status: str = "PENDING"                     # PENDING | APPROVED | REJECTED
+    tenant_id: str = "ALL"
 
 

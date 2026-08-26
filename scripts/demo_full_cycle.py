@@ -10,6 +10,7 @@ if sys.platform == "win32":
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from bot.telegram_bot import telegram_bot
+
 from core.config import settings
 from core.observability import tracer
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
