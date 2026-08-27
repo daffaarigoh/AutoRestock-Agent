@@ -22,5 +22,5 @@ langgraph>=0.2.0
 # Document Typesetting & Image Processing
 typst>=0.11.0
 pillow>=10.2.0
-pymupdf>=1.24.0
+mcp>=2.1.0
 

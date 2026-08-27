@@ -6,7 +6,6 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from bot.telegram_bot import telegram_bot
 from starlette.testclient import TestClient
 
 from api.main import app
@@ -100,24 +99,6 @@ class TestPerson2CompletePipeline(unittest.TestCase):
         pdf_path = pdf_generator.generate_purchase_requisition_pdf(sample_pr, output_filename="PR_TEST_001.pdf")
         self.assertTrue(pdf_path.exists())
         self.assertGreater(pdf_path.stat().st_size, 0)
-
-    def test_telegram_bot_dispatch_simulation(self):
-        """
-        Verifies Telegram Bot dispatch runs cleanly in simulation mode
-        """
-        async def _run():
-            sample_pr = PurchaseRequisitionDoc(
-                pr_number="PR-TEST-002",
-                created_at="2026-08-19 10:00",
-                items=[],
-                total_budget=500000.0,
-                auditor_status="PASSED",
-                auditor_notes="Compliance pass"
-            )
-            result = await telegram_bot.send_restock_approval_request(sample_pr)
-            self.assertIn(result["status"], ["simulated", "sent"])
-
-        asyncio.run(_run())
 
 
 if __name__ == "__main__":

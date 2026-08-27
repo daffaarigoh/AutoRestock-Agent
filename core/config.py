@@ -24,8 +24,7 @@ class Settings(_BaseSettings):
     API_PORT: int = 8000
     DEBUG: bool = True
 
-    # Mock Mode
-    MOCK_MODELS: bool = True
+
 
     # Alternative standard env keys
     LLM_KEY: str | None = None

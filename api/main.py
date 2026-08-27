@@ -18,6 +18,7 @@ from api.routers.auth_routes import router as auth_router
 from api.routers.stream_routes import router as stream_router
 from core.config import settings
 from docgen.pdf_generator import pdf_generator
+from mcp_server.server import mcp
 
 app = FastAPI(
     title="AutoRestock-Agent API",
@@ -57,6 +58,8 @@ app.include_router(stream_router)
 app.include_router(approval_router)
 app.include_router(auth_router)
 
+# Mount MCP Server SSE Endpoint
+app.mount("/mcp", mcp.sse_app())
 
 @app.on_event("startup")
 async def startup_event():

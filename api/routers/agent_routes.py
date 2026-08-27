@@ -250,7 +250,7 @@ def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest):
 
 class CustomPromptRequest(BaseModel):
     prompt: str = Field(..., description="Natural language prompt from user describing restock intent or workflow")
-    destinations: list[str] | None = Field(None, description="Explicit destinations: ['database', 'email', 'telegram', 'pdf']")
+    destinations: list[str] | None = Field(None, description="Explicit destinations: ['database', 'email', 'pdf']")
     recipient_email: str | None = Field(None, description="Optional custom recipient email")
 
 
@@ -357,8 +357,8 @@ def get_prompt_templates():
     return [
         {
             "id": 1,
-            "title": "Restock Darurat Elektronik -> Telegram",
-            "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, pilihkan vendor termurah, buatkan dokumen PDF, dan kirim notifikasi ke Telegram."
+            "title": "Restock Darurat Elektronik -> Email",
+            "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, pilihkan vendor termurah, buatkan dokumen PDF, dan kirim notifikasi ke Email."
         },
         {
             "id": 2,
@@ -367,8 +367,8 @@ def get_prompt_templates():
         },
         {
             "id": 3,
-            "title": "Rekap Stok Kemasan -> Email & Telegram",
-            "prompt": "Buatkan rekap laporan restock barang Packaging dan kirimkan ke email manager@company.com serta telegram."
+            "title": "Rekap Stok Kemasan -> Email",
+            "prompt": "Buatkan rekap laporan restock barang Packaging dan kirimkan ke email manager@company.com."
         },
         {
             "id": 4,

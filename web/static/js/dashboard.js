@@ -1010,7 +1010,7 @@ async function checkApiHealth() {
       dot.style.backgroundColor = '#10b981'; // Green
       dot.style.boxShadow = '0 0 8px #10b981';
       text.textContent = 'API Connected';
-      text.style.color = '#e2e8f0';
+      text.style.color = '#64748b';
     } else {
       throw new Error("Not OK");
     }

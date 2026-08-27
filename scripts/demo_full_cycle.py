@@ -9,13 +9,10 @@ if sys.platform == "win32":
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from bot.telegram_bot import telegram_bot
-
 from core.config import settings
 from core.observability import tracer
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
 from docgen.pdf_generator import pdf_generator
-from multimodal.ocr_engine import OCREngine
 
 
 async def run_full_autonomous_cycle():
@@ -27,31 +24,9 @@ async def run_full_autonomous_cycle():
     trace = tracer.start_trace(trace_id=trace_id)
 
     # -------------------------------------------------------------
-    # Step 1: Document Ingestion (OCR LightOn)
+    # Step 1: Multi-Agent Decision & Planning (qwen-35b)
     # -------------------------------------------------------------
-    print("📂 [STEP 1/5] Ingesting Physical Stock Opname Card (ocr-lighton)...")
-    span_ocr = tracer.start_span("span-1", "OCR-Ingestion", "ocr-lighton")
-    
-    opname_file = settings.SAMPLES_DIR / "sample_kartu_stok.png"
-    if not opname_file.exists():
-        print("   ⚠️ Sample card not found, please run scripts/generate_sample_assets.py first.")
-        return
-
-    with open(opname_file, "rb") as f:
-        img_bytes = f.read()
-
-    ocr_result = await OCREngine.process_document(img_bytes, doc_type_hint="KARTU_STOK_OPNAME")
-    tracer.end_span(span_ocr, output_payload={"doc_number": ocr_result.doc_number}, tokens=180)
-
-    print(f"   ✅ Dokumen: {ocr_result.doc_number} | Petugas: {ocr_result.inspector_name}")
-    for itm in ocr_result.items:
-        print(f"      • {itm.item_name} -> Stok Fisik: {itm.qty_recorded} {itm.unit} ({itm.condition_notes})")
-    print()
-
-    # -------------------------------------------------------------
-    # Step 2: Multi-Agent Decision & Planning (qwen-35b)
-    # -------------------------------------------------------------
-    print("🧠 [STEP 2/5] Running Multi-Agent Procurement Planning (qwen-35b)...")
+    print("🧠 [STEP 1/4] Running Multi-Agent Procurement Planning (qwen-35b)...")
     span_plan = tracer.start_span("span-2", "Procurement-Planner", "qwen-35b")
     await asyncio.sleep(0.5)
 
@@ -88,9 +63,9 @@ async def run_full_autonomous_cycle():
     print()
 
     # -------------------------------------------------------------
-    # Step 3: Compliance & Budget Auditing (nemotron-35)
+    # Step 2: Compliance & Budget Auditing (nemotron-35)
     # -------------------------------------------------------------
-    print("🛡️ [STEP 3/5] Compliance & Budget Auditing (nemotron-35)...")
+    print("🛡️ [STEP 2/4] Compliance & Budget Auditing (nemotron-35)...")
     span_audit = tracer.start_span("span-3", "Compliance-Auditor", "nemotron-35")
     await asyncio.sleep(0.4)
 
@@ -102,9 +77,9 @@ async def run_full_autonomous_cycle():
     print(f"   ✅ Catatan: {auditor_notes}\n")
 
     # -------------------------------------------------------------
-    # Step 4: Typesetting Purchase Requisition PDF (Typst)
+    # Step 3: Typesetting Purchase Requisition PDF (Typst)
     # -------------------------------------------------------------
-    print("📄 [STEP 4/5] Compiling Formal Purchase Requisition (Typst Engine)...")
+    print("📄 [STEP 3/4] Compiling Formal Purchase Requisition (Typst Engine)...")
     pr_doc = PurchaseRequisitionDoc(
         pr_number="PR-2026-0819-001",
         items=purchase_items,
@@ -118,11 +93,9 @@ async def run_full_autonomous_cycle():
     print(f"   ✅ PDF Dokumen Resmi Terbit: {pdf_path.name} ({pdf_path.stat().st_size} bytes)\n")
 
     # -------------------------------------------------------------
-    # Step 5: Human-In-The-Loop Approval (Telegram & Dashboard)
+    # Step 4: Human-In-The-Loop Approval (Dashboard)
     # -------------------------------------------------------------
-    print("📲 [STEP 5/5] Dispatching Human-In-The-Loop Approval Alert...")
-    notify_res = await telegram_bot.send_restock_approval_request(pr_doc)
-    print(f"   ✅ Status Notifikasi: {notify_res['status'].upper()}")
+    print("📲 [STEP 4/4] Dispatching Human-In-The-Loop Approval Alert...")
     print("   ✅ Simulasi Respon Manajer: Menekan tombol [ ✅ Approve PR ]...")
     
     pr_doc.status = "APPROVED"

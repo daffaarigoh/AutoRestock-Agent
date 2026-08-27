@@ -22,7 +22,7 @@ QUERIES = [
     # 1-10: Normal Operations
     "Cek stok barang kritis saat ini",
     "Barang apa saja yang kategorinya Electronics?",
-    "Tolong buatkan PDF untuk barang kritis dan kirim ke telegram",
+    "Tolong buatkan PDF untuk barang kritis dan kirim ke Email",
     "Berapa banyak barang yang stoknya di bawah batas?",
     "Tampilkan barang dengan kategori Consumables",
     "Apakah ada vendor yang memiliki rating di bawah 4?",

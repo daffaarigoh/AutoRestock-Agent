@@ -67,7 +67,6 @@ AutoRestock-Agent/
 ├── api/                     # FastAPI backend application
 │   ├── main.py              # App entrypoint, middleware, & static mounts
 │   └── routers/             # Endpoint routers (agent, approval, ingest, stream)
-├── bot/                     # Telegram interactive approval bot
 ├── core/                    # Konfigurasi, schema kontrak, LLM client gateway
 ├── database/                # DuckDB connection, schema initialization, & seed data
 ├── docgen/                  # Typst typesetting template & compiler engine

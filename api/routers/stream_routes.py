@@ -165,7 +165,7 @@ async def agent_thought_generator() -> AsyncGenerator[str, None]:
     await asyncio.sleep(0.5)
 
     # Step 6: HITL Dispatcher
-    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 6, 'node': 'Human-In-The-Loop Dispatcher', 'model': 'Dashboard & Telegram', 'message': f'Dokumen {pr_doc.pr_number} berhasil diterbitkan dan siap diverifikasi di tab Purchase Requisitions.', 'progress': 100})}\n\n"
+    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 6, 'node': 'Human-In-The-Loop Dispatcher', 'model': 'Dashboard & Email', 'message': f'Dokumen {pr_doc.pr_number} berhasil diterbitkan dan siap diverifikasi di tab Purchase Requisitions.', 'progress': 100})}\n\n"
 
     tracer.end_trace(verdict="PASSED")
     yield f"data: {json.dumps({'event': 'DONE', 'message': f'Autonomous cycle completed. Dokumen {pr_doc.pr_number} siap disetujui.'})}\n\n"

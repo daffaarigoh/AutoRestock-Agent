@@ -9,8 +9,8 @@ Parse the user's natural language prompt into a structured JSON object.
 Rules:
 1. category_filter: Must be one of ["Electronics", "Packaging", "Consumables", "Mechanical", "Hardware"] or null. Map Indonesian terms (e.g., "baut" -> Hardware, "kardus" -> Packaging, "pasta" -> Consumables).
 2. threshold_updates: Extract any requests to update minimum stock thresholds. Output as a list of objects: [{"item_id": "ITM-XXX", "new_threshold": integer}]. Format item_id uppercase.
-3. destinations: Where the report should be sent. Base destinations are ALWAYS "database" and "pdf". User might ask for "email", "telegram".
-   - CRITICAL: Pay strict attention to negations (e.g., "jangan kirim email", "tanpa telegram"). If negated, DO NOT include that destination.
+3. destinations: Where the report should be sent. Base destinations are ALWAYS "database" and "pdf". User might ask for "email".
+   - CRITICAL: Pay strict attention to negations (e.g., "jangan kirim email"). If negated, DO NOT include that destination.
 4. recipient_email: Extract any email address mentioned in the text (string or null).
 5. scan_all: Boolean. Set to true if the user implies scanning all items (laporan/rekap). Set to false if they only update a threshold or check a specific item.
 6. create_pr: Boolean. Set to true ONLY if the user explicitly asks to restock, buy, or create a PR (e.g., "restock", "belikan", "ajukan pembelian"). Set to false if they just want to check stock, view reports, or update thresholds.

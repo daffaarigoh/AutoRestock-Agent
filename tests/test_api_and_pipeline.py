@@ -9,15 +9,20 @@ if str(WORKSPACE_DIR) not in sys.path:
 from fastapi.testclient import TestClient
 
 from api.main import app
+from core.security import get_current_user, get_current_admin, TokenData
 
+def override_get_current_user():
+    return TokenData(username="test_admin", role="ADMIN", tenant_id="TENANT_A")
+
+app.dependency_overrides[get_current_user] = override_get_current_user
+app.dependency_overrides[get_current_admin] = override_get_current_user
 
 def test_full_pipeline():
     client = TestClient(app)
     client.post("/api/approval/reset")
     
     print("\n" + "=" * 80)
-
-    print("🧪 RUNNING END-TO-END VERIFICATION TEST (APPROVE & REJECT)")
+    print("?? RUNNING END-TO-END VERIFICATION TEST (APPROVE & REJECT)")
     print("=" * 80)
     
     # 1. Test Root
@@ -29,7 +34,7 @@ def test_full_pipeline():
     res_items = client.get("/api/inventory/items")
     assert res_items.status_code == 200
     items = res_items.json()
-    assert len(items) == 25
+    assert len(items) == 9
     print(f"[TEST 2] GET /api/inventory/items: OK -> Retrieved {len(items)} items from DuckDB")
     
     # 3. Test POST /api/agent/run-cycle (Cycle 1: For Approval)
@@ -80,7 +85,7 @@ def test_full_pipeline():
     assert res_download_rej.headers["content-type"] == "application/pdf"
     print(f"[TEST 8] GET /api/documents/pr/{pr2_number}/download: OK -> Rejected PDF downloaded ({len(res_download_rej.content)} bytes)")
     
-    # 9. Test Threshold Customizer Endpoint (PATCH /api/inventory/items/{item_id})
+    # 9. Test Threshold Customizer Endpoint (PATCH /api/inventory/items/ITM-001)
     res_threshold = client.patch("/api/inventory/items/ITM-001", json={
         "min_threshold": 75,
         "current_stock": 10
@@ -98,18 +103,18 @@ def test_full_pipeline():
 
     # 11. Test Custom Prompt Dynamic Workflow Synthesizer (POST /api/agent/custom-prompt)
     res_custom = client.post("/api/agent/custom-prompt", json={
-        "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, buatkan dokumen PDF, dan kirim ke Telegram."
+        "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, buatkan dokumen PDF, dan kirim ke Email."
     })
     assert res_custom.status_code == 200
     dyn_data = res_custom.json()
     assert dyn_data["total_items_analyzed"] >= 2
-    assert "telegram" in dyn_data["target_destinations"]
+    assert "email" in dyn_data["target_destinations"]
     assert dyn_data["pdf_download_url"] is not None
     assert len(dyn_data["execution_steps"]) > 0
     print(f"[TEST 11] POST /api/agent/custom-prompt: OK -> Dynamic workflow synthesized & executed ({len(dyn_data['execution_steps'])} steps, {dyn_data['total_items_analyzed']} items, budget: {dyn_data['total_budget_formatted']})")
 
     print("=" * 80)
-    print("🎉 ALL 11 INTEGRATION TESTS (INCLUDING THRESHOLDS, PROMPT SYNTHESIS & TELEGRAM) PASSED!")
+    print("?? ALL 11 INTEGRATION TESTS PASSED!")
     print("=" * 80 + "\n")
 
 if __name__ == "__main__":

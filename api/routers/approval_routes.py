@@ -140,11 +140,11 @@ async def get_all_requisitions(current_user: TokenData = Depends(get_current_use
 async def quick_approval_action(
     pr_number: str,
     action: str = "APPROVE",
-    manager_name: str = "Manager (Email / Telegram)",
+    manager_name: str = "Manager",
     notes: str | None = None
 ):
     """
-    Direct one-click approval/rejection endpoint used by Email & Telegram interactive action buttons.
+    Direct one-click approval/rejection endpoint used by Email interactive action buttons.
     Returns a responsive HTML confirmation landing page.
     """
     clean_action = action.strip().upper()
@@ -286,34 +286,3 @@ async def reset_sample_data():
     return {"status": "reset", "message": "PR-2026-0819-001 reset to PENDING status with all 5 DuckDB critical items."}
 
 
-@router.post("/telegram-webhook")
-async def telegram_webhook_handler(request: Request):
-    """
-    Handles incoming interactive callbacks from Telegram Bot inline buttons.
-    Automatically increments DuckDB inventory stock on APPROVE and keeps stock unchanged on REJECT.
-    """
-    try:
-        data = await request.json()
-    except Exception:
-        return {"status": "ignored"}
-
-    callback = data.get("callback_query")
-    if callback:
-        callback_data = callback.get("data", "")
-        # Format: "approve:PR-2026-0819-001" or "reject:PR-2026-0819-001"
-        parts = callback_data.split(":")
-        if len(parts) == 2:
-            action, pr_num = parts[0].upper(), parts[1]
-            pr = _ensure_pr_in_store(pr_num)
-
-            if pr:
-                pr.status = "APPROVED" if action == "APPROVE" else "REJECTED"
-
-            _update_db_status(pr_num, "APPROVED" if action == "APPROVE" else "REJECTED", pr if action == "APPROVE" else None)
-
-            if pr:
-                _regenerate_pdf(pr)
-
-            return {"status": "processed", "pr_number": pr_num, "action": action}
-
-    return {"status": "ok"}

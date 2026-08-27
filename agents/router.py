@@ -44,4 +44,4 @@ If no workflow matches, return workflow_id: null.
             return parsed
         except Exception as e:
             print(f"[SEMANTIC ROUTER] LLM failed: {e}")
-            return {"workflow_id": None, "threshold_updates": []}
+            raise e
