@@ -8,15 +8,15 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --surface: #1e293b;
-            --surface-light: #334155;
-            --primary: #3b82f6;
+            --bg-dark: #F9FAFB;
+            --surface: #FFFFFF;
+            --surface-light: #F3F4F6;
+            --primary: #2563EB;
             --success: #10b981;
             --danger: #ef4444;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #334155;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
         }
 
         body {
@@ -42,7 +42,7 @@
         .logo {
             font-size: 1.25rem;
             font-weight: 700;
-            background: linear-gradient(to right, #60a5fa, #c084fc);
+            background: #2563EB;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -55,7 +55,7 @@
 
         .badge {
             background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
+            color: #DC2626;
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
             font-size: 0.75rem;
@@ -115,11 +115,11 @@
         textarea {
             width: 100%;
             height: 400px;
-            background: #0b1121;
+            background: #F3F4F6;
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 1.5rem;
-            color: #60a5fa;
+            color: #2563EB;
             font-family: 'Fira Code', monospace;
             font-size: 0.95rem;
             line-height: 1.6;
@@ -329,7 +329,7 @@ Contoh: Periksa stok produk setiap hari. Jika kurang dari batas, hitung ulang ke
                             <div style="background: var(--bg-dark); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px;">
                                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
                                     <div>
-                                        <h3 style="margin: 0; font-size: 1.1rem; color: #60a5fa;">${wf.name}</h3>
+                                        <h3 style="margin: 0; font-size: 1.1rem; color: #2563EB;">${wf.name}</h3>
                                         <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">ID: ${wf.id}</p>
                                     </div>
                                     <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -341,7 +341,7 @@ Contoh: Periksa stok produk setiap hari. Jika kurang dari batas, hitung ulang ke
                                 <p style="font-size: 0.95rem; margin-bottom: 1rem;">${wf.description || 'Tidak ada deskripsi'}</p>
                                 <details style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
                                     <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Lihat Detail JSON Execution</summary>
-                                    <pre style="margin-top: 1rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; color: #a5b4fc; overflow-x: auto;">${JSON.stringify(wf.compiled_json, null, 2)}</pre>
+                                    <pre style="margin-top: 1rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; color: #4F46E5; overflow-x: auto;">${JSON.stringify(wf.compiled_json, null, 2)}</pre>
                                 </details>
                             </div>
                         `;

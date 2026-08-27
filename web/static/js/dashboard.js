@@ -161,28 +161,6 @@ async function triggerVisualRefresh(btnId, callback) {
   }
 }
 
-// --- Media & File Attachment Handlers ---
-function handleFileSelected(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  state.attachedFile = file;
-
-  const preview = document.getElementById('attachedFilePreview');
-  const nameEl = document.getElementById('attachedFileName');
-  if (preview && nameEl) {
-    nameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-    preview.style.display = 'inline-flex';
-  }
-}
-
-function removeAttachedFile() {
-  state.attachedFile = null;
-  const input = document.getElementById('mediaFileInput');
-  if (input) input.value = '';
-  const preview = document.getElementById('attachedFilePreview');
-  if (preview) preview.style.display = 'none';
-}
-
 // --- Dynamic Categories ---
 async function loadCategories() {
   try {
@@ -518,11 +496,7 @@ async function submitPrompt(customText) {
   if (input && !customText) input.value = '';
 
   // 1. Append User Message
-  if (hasFile) {
-    appendUserMessage(`[📎 ${state.attachedFile.name}] ${promptText || 'Proses dokumen ini'}`);
-  } else {
-    appendUserMessage(promptText);
-  }
+  appendUserMessage(promptText);
 
   // 2. Append Loading Placeholder
   const loadingId = appendAgentLoadingBubble();
@@ -539,25 +513,11 @@ async function submitPrompt(customText) {
     try {
       const destinations = [];
 
-    let res;
-    if (hasFile) {
-      const formData = new FormData();
-      formData.append('file', state.attachedFile);
-      formData.append('prompt', promptText || 'Proses dokumen dan sinkronkan data ke katalog stok');
-      formData.append('auto_execute', 'true');
-
-      res = await fetch('/api/ingest/delivery-note', {
-        method: 'POST',
-        body: formData
-      });
-      removeAttachedFile();
-    } else {
-      res = await fetch('/api/agent/custom-prompt', {
+      let res = await fetch('/api/agent/custom-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: promptText, auto_execute: true, destinations: destinations })
       });
-    }
 
     const data = await res.json();
     if (!res.ok) {
@@ -817,45 +777,6 @@ function appendAgentResponseCard(data) {
         </div>
         <div class="action-card-body" style="font-size: 13px; color: #E2E8F0;">
           ${escapeHtml(data.message)}
-        </div>
-      </div>
-    `;
-    loadAllData();
-    openDataSidebar('canvas-inventory');
-  }
-
-  // SCENARIO 5.7: Multimodal Document / Media Ingest (Struk, Nota, Faktur, CSV)
-  else if (actionType === 'doc_ingest') {
-    const lineItems = data.line_items || [];
-    const listHtml = lineItems.map(it => `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.1); font-size: 12.5px;">
-        <div>
-          <span style="font-weight: 600; color: #FFFFFF;">${escapeHtml(it.item_name)}</span>
-          <span style="font-family: var(--font-mono); color: #60A5FA; font-size: 11px; margin-left: 4px;">(${it.sku_guess})</span>
-        </div>
-        <div style="text-align: right;">
-          <strong style="color: #34D399;">${it.quantity} ${it.unit || 'pcs'}</strong>
-          <span style="color: #94A3B8; font-size: 11px; margin-left: 6px;">@ ${formatCurrency(it.unit_price)}</span>
-        </div>
-      </div>
-    `).join('');
-
-    actionHtml = `
-      <div class="action-card" style="border-left: 4px solid #0284C7; background: rgba(2, 132, 199, 0.05);">
-        <div class="action-card-header">
-          <div>
-            <span style="font-weight: 700; font-size: 13px; color: #38BDF8;">DOKUMEN STRUK / NOTA BERHASIL DI-INGEST</span>
-            <div style="font-size: 11px; color: #94A3B8; font-family: var(--font-mono);">${data.doc_number || ''} • ${escapeHtml(data.sender_supplier || '')}</div>
-          </div>
-          <span class="badge badge-approved">${data.total_items_count || lineItems.length} ITEM TERSINKRON</span>
-        </div>
-        <div class="action-card-body" style="padding-top: 6px;">
-          <div style="max-height: 180px; overflow-y: auto; margin-bottom: 10px;">
-            ${listHtml}
-          </div>
-          <div style="font-size: 12px; color: #34D399; font-weight: 600;">
-            ✓ Semua data produk dan saldo stok fisik telah disinkronkan ke katalog database.
-          </div>
         </div>
       </div>
     `;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoRestock V2 - Enterprise AI Operations Copilot</title>
+  <title>AutoRestock V2 - Enterprise Command Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -22,27 +22,28 @@
     <div class="brand-section">
       <div class="brand-logo">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="white"/>
+          <path d="M4 4h16v16H4V4z" fill="#374151"/>
+          <path d="M8 8h8v2H8V8zm0 4h8v2H8v-2z" fill="#fff"/>
         </svg>
       </div>
       <div class="brand-info">
         <div class="brand-name">AutoRestock <span class="brand-badge">V2</span></div>
-        <span class="brand-subtitle">Autonomous AI Procurement Copilot</span>
+        <span class="brand-subtitle">Inventory Management System</span>
       </div>
     </div>
 
     <!-- Right Header Actions (Sidebar Toggle Only) -->
     <div class="header-actions" style="display: flex; align-items: center; gap: 15px;">
       <!-- API Health Indicator -->
-      <div id="apiHealthIndicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #94a3b8; padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 20px;">
-        <span id="apiHealthDot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 8px #ef4444; transition: all 0.3s ease;"></span>
+      <div id="apiHealthIndicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #4B5563; padding: 4px 10px; background: #F3F4F6; border-radius: 20px;">
+        <span id="apiHealthDot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.2); transition: all 0.3s ease;"></span>
         <span id="apiHealthText">API Checking...</span>
       </div>
 
-      <div style="display:flex; align-items:center; gap:8px; background: rgba(59,130,246,0.1); border-radius:8px; padding: 6px 12px; border: 1px solid rgba(59,130,246,0.2);">
-         <span id="displayUsername" style="font-weight:600; font-size:13px; color:#3b82f6;">-</span>
-         <span id="displayTenant" style="font-size:11px; color:#94a3b8; border:1px solid #334155; padding:2px 6px; border-radius:4px; background: #0f172a;">-</span>
-         <button onclick="localStorage.clear(); window.location.href='/static/login.html';" style="background:transparent; border:none; color:#ef4444; cursor:pointer; font-size:12px; margin-left:10px; font-weight:600;">Logout</button>
+      <div style="display:flex; align-items:center; gap:8px; background: #EFF6FF; border-radius:8px; padding: 6px 12px; border: 1px solid #BFDBFE;">
+         <span id="displayUsername" style="font-weight:600; font-size:13px; color:#1D4ED8;">-</span>
+         <span id="displayTenant" style="font-size:11px; color:#4B5563; border:1px solid #D1D5DB; padding:2px 6px; border-radius:4px; background: #F9FAFB;">-</span>
+         <button onclick="localStorage.clear(); window.location.href='/static/login.html';" style="background:transparent; border:none; color:#DC2626; cursor:pointer; font-size:12px; margin-left:10px; font-weight:600;">Logout</button>
       </div>
 
       <button class="btn btn-primary btn-sm" id="btnToggleSidebar" onclick="toggleDataSidebar()">
@@ -57,7 +58,7 @@
   <!-- Main Workspace Layout -->
   <main class="app-layout">
     
-    <!-- CENTER CHAT-FIRST INTERFACE (Google Gemini Style) -->
+    <!-- CENTER CHAT-FIRST INTERFACE -->
     <section class="gemini-chat-container is-empty-state" id="geminiChatContainer">
       
       <!-- Top Chat Action Bar (Inside Chat Area) -->
@@ -66,25 +67,21 @@
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
-          <span>Bersihkan Chat</span>
+          <span>Bersihkan Aktivitas</span>
         </button>
       </div>
 
-      <!-- GEMINI HERO EMPTY STATE (Centered when no messages) -->
+      <!-- HERO EMPTY STATE (Centered when no messages) -->
       <div class="gemini-hero-empty" id="geminiHeroEmpty">
-        <div class="hero-sparkle-icon">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z" fill="url(#heroSparkleGrad)"/>
-            <defs>
-              <linearGradient id="heroSparkleGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#60A5FA"/>
-                <stop offset="1" stop-color="#2563EB"/>
-              </linearGradient>
-            </defs>
+        <div class="hero-sparkle-icon" style="background: #EEF2FF; padding: 12px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 7 4 4 20 4 20 7"></polyline>
+            <line x1="9" y1="20" x2="15" y2="20"></line>
+            <line x1="12" y1="4" x2="12" y2="20"></line>
           </svg>
         </div>
-        <h1 class="hero-title">AutoRestock AI Inventory</h1>
-        <p class="hero-subtitle">Asisten AI multi-flow & otomatisasi gudang. Berikan instruksi seputar restock, audit struk OCR, update stok, pembuatan PR pengadaan, hingga integrasi database.</p>
+        <h1 class="hero-title">Command Center</h1>
+        <p class="hero-subtitle">Sistem manajemen inventaris terpusat. Masukkan perintah pengadaan, update stok, atau jalankan integrasi database.</p>
       </div>
 
       <!-- Conversational Stream (Visible when chat history exists) -->
@@ -98,26 +95,9 @@
       <div class="chat-input-deck" id="chatInputDeck">
         <div class="chat-input-inner">
           
-          <!-- Attached File Preview Chip -->
-          <div id="attachedFilePreview" class="attached-file-chip" style="display: none;">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#60a5fa">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-            </svg>
-            <span id="attachedFileName">file.jpg</span>
-            <button type="button" onclick="removeAttachedFile()" class="btn-remove-file" title="Hapus lampiran">✕</button>
-          </div>
-
           <!-- Main Input Bar -->
           <div class="input-bar-container">
-            <input type="file" id="mediaFileInput" style="display: none;" accept="image/*,.pdf,.csv,.xlsx,.txt" onchange="handleFileSelected(event)">
-            
-            <button type="button" class="btn-icon-attachment" onclick="document.getElementById('mediaFileInput').click()" title="Lampirkan Dokumen / Struk / Nota / CSV">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-              </svg>
-            </button>
-
-            <textarea id="promptInput" class="prompt-textarea" placeholder="Tanyakan inventaris, minta restock, tambah produk, atau lampirkan struk..." rows="1" onkeydown="handleKey(event)"></textarea>
+            <textarea id="promptInput" class="prompt-textarea" placeholder="Tanyakan inventaris, minta restock, tambah produk..." rows="1" onkeydown="handleKey(event)"></textarea>
 
             <button class="btn btn-primary btn-send" id="btnSendPrompt" onclick="submitPrompt()">
               <span>Kirim Perintah</span>
@@ -129,7 +109,7 @@
           
 
           <div class="input-hint">
-            AutoRestock V2 menggunakan Multi-Agent System yang terhubung langsung ke database & eksekusi otomatis.
+            AutoRestock V2 Enterprise System. Terhubung langsung ke database & eksekusi operasional.
           </div>
         </div>
       </div>
@@ -210,7 +190,7 @@
       <!-- TAB 2: Purchase Requisitions -->
       <div class="canvas-tab-content" id="canvas-prs">
         <div class="table-toolbar" style="justify-content: space-between;">
-          <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Dokumen Purchase Requisition Resmi</span>
+          <span style="font-size: 13px; font-weight: 700; color: #111827;">Dokumen Purchase Requisition Resmi</span>
           <button class="btn btn-secondary btn-sm" id="btnRefreshPrs" onclick="triggerVisualRefresh('btnRefreshPrs', loadApprovals)">
             <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -243,7 +223,7 @@
         <div class="terminal-card">
           <div class="terminal-header">
             <span class="terminal-title">AUTONOMOUS REASONING ENGINE - LIVE STREAM</span>
-            <button class="btn btn-secondary btn-sm" style="background: #1e293b; color: #94a3b8; border-color: #334155; padding: 2px 8px; font-size: 11px;" onclick="clearTerminalLogs()">Clear Log</button>
+            <button class="btn btn-secondary btn-sm" style="background: #F3F4F6; color: #4B5563; border-color: #E5E7EB; padding: 2px 8px; font-size: 11px;" onclick="clearTerminalLogs()">Clear Log</button>
           </div>
           <div class="terminal-body" id="liveAgentTerminal"></div>
         </div>
@@ -267,7 +247,7 @@
         <iframe id="pdfPreviewIframe" class="pdf-iframe" src="about:blank"></iframe>
       </div>
       <div class="modal-footer">
-        <div style="font-size: 13.5px; font-weight: 700; color: #0f172a;" id="modalGrandTotal">Total: Rp 0</div>
+        <div style="font-size: 13.5px; font-weight: 700; color: #111827;" id="modalGrandTotal">Total: Rp 0</div>
         <div style="display: flex; gap: 8px;">
           <a href="#" id="modalDownloadBtn" target="_blank" class="btn btn-secondary btn-sm">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">

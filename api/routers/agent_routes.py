@@ -263,6 +263,16 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt tidak boleh kosong.")
 
+    lower_prompt = request.prompt.strip().lower()
+    if lower_prompt in ["hi", "halo", "hello", "tes", "test", "testing"]:
+        return {
+            "parsed_intent": {"workflow_id": "greeting"},
+            "action_type": "general",
+            "message": "Halo! Saya adalah AutoRestock Agent. Ada yang bisa saya bantu terkait persediaan dan restock barang hari ini?",
+            "generated_prs": [],
+            "affected_items": []
+        }
+
     from agents.router import SemanticRouter
     from agents.json_executor import JSONExecutionEngine
     from database.db import get_db_connection

@@ -15,7 +15,6 @@ from api.routers.agent_routes import router as agent_router
 from api.routers.approval_routes import PR_STORE
 from api.routers.approval_routes import router as approval_router
 from api.routers.auth_routes import router as auth_router
-from api.routers.ingest_routes import router as ingest_router
 from api.routers.stream_routes import router as stream_router
 from core.config import settings
 from docgen.pdf_generator import pdf_generator
@@ -46,9 +45,6 @@ STORAGE_DIR = WORKSPACE_DIR / "storage"
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
 
-ANNOTATED_DIR = STORAGE_DIR / "annotated"
-ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/api/annotated", StaticFiles(directory=str(ANNOTATED_DIR)), name="annotated")
 
 SAMPLES_DIR = WORKSPACE_DIR / "data" / "samples"
 SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
@@ -57,7 +53,6 @@ app.mount("/samples", StaticFiles(directory=str(SAMPLES_DIR)), name="samples")
 
 # Include API routers
 app.include_router(agent_router)
-app.include_router(ingest_router)
 app.include_router(stream_router)
 app.include_router(approval_router)
 app.include_router(auth_router)
@@ -92,10 +87,9 @@ def root(request: Request):
         "service": "AutoRestock-Agent API",
         "status": "online",
         "version": "1.0.0",
-        "supported_models": ["qwen-35b", "nemotron-35", "ocr-lighton", "qwen-35b-vision"],
+        "supported_models": ["qwen-35b", "nemotron-35"],
         "modules": [
             "Live Inventory & Dynamic Safety Stock",
-            "Document Ingestion (Surat Jalan, Stock Opname, Invoice)",
             "Multi-Agent Procurement Orchestration",
             "Human-in-the-Loop Approval & Typst DocGen"
         ],
@@ -108,10 +102,6 @@ def root(request: Request):
             "approve_pr":      "POST /api/agent/approve",
             "approval_list":   "GET  /api/approval/list",
             "approval_action": "POST /api/approval/action",
-            "ingest_delivery": "POST /api/ingest/delivery-note",
-            "ingest_opname":   "POST /api/ingest/stock-opname",
-            "ingest_invoice":  "POST /api/ingest/invoice",
-            "ingest_shelf":    "POST /api/ingest/shelf-photo",
             "docs":            "GET  /docs"
         }
     }

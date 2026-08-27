@@ -1,12 +1,11 @@
 # 📦 AutoRestock-Agent
 > **Autonomous Multi-Agent Inventory Replenishment & Procurement System**  
-> Powered by **LangGraph**, `qwen-35b`, `nemotron-35`, `ocr-lighton`, **Typst**, and **DuckDB**.
+> Powered by **LangGraph**, `qwen-35b`, `nemotron-35`, **Typst**, and **DuckDB**.
 
 ---
 
 ## 🌟 Fitur & Keunggulan Utama
-- **Document-to-Database OCR Ingestion (`ocr-lighton`)**: Ekstraksi otomatis fisik Surat Jalan (Delivery Notes), Kartu Stok Opname Gudang, dan Faktur Pembelian langsung tersinkronisasi ke tabel database DuckDB.
-- **Visual Warehouse Shelf Audit (`qwen-35b-vision`)**: Deteksi visual slot rak gudang yang kosong (*depleted/critical empty*) dengan bounding box annotation.
+
 - **Dynamic Safety Stock Algorithm**:
   $$\text{Safety Stock} = \text{Lead Time} \times \text{Daily Usage} \times 1.5$$
   $$\text{Reorder Qty} = (\text{Daily Usage} \times \text{Lead Time}) + \text{Safety Stock} - \text{Current Stock}$$
@@ -16,7 +15,7 @@
   - **Compliance Auditor (`nemotron-35`)**: Evaluasi kepatuhan anggaran dan batas pagu pengadaan.
   - **Typst Document Node**: Kompilasi draf Purchase Requisition (PR) PDF formal dalam hitungan milidetik (<50ms).
   - **Wait Approval Node (Human-In-The-Loop)**: Alur persetujuan manajerial (*APPROVE* / *REJECT*) yang memperbarui database `orders` & `items`.
-- **Modern Web Dashboard**: Pemantauan inventaris real-time, drag-and-drop OCR dropzone, Live Server-Sent Events (SSE) Agent Console, dan in-browser PDF modal previewer.
+- **Modern Web Dashboard**: Pemantauan inventaris real-time, Live Server-Sent Events (SSE) Agent Console, dan in-browser PDF modal previewer.
 
 ---
 
@@ -25,18 +24,13 @@
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Manajer Gudang / User
-    participant OCR as OCR Ingestion (ocr-lighton)
+    participant User as Manajer Gudang / User
     participant DB as DuckDB (items, vendors, orders)
     participant Graph as LangGraph Multi-Agent
     participant Typst as Typst PDF Compiler
     participant UI as Web Dashboard
 
-    Note over User,DB: 1. Ingestion Dokumen Fisik
-    User->>OCR: Upload Surat Jalan / Kartu Stok Opname
-    OCR->>DB: Update stok fisik & sinkronisasi data
-
-    Note over DB,Graph: 2. Autonomous Multi-Agent Cycle
+    Note over DB,Graph: 1. Autonomous Multi-Agent Cycle
     User->>Graph: Trigger "Run Autonomous Restock"
     Graph->>DB: Scan barang kritis (current_stock < min_threshold)
     Graph->>Graph: Planner (qwen-35b) hitung reorder & vendor matching
@@ -46,7 +40,7 @@ sequenceDiagram
     Graph->>DB: Catat order draf ke tabel 'orders'
     Graph-->>UI: Kirim SSE log & tampilkan di daftar PR
 
-    Note over User,UI: 3. Human-In-The-Loop Approval
+    Note over User,UI: 2. Human-In-The-Loop Approval
     User->>UI: Tinjau PDF di Modal Previewer
     alt Manajer APPROVE
         User->>UI: Klik tombol [ Approve ]
@@ -78,7 +72,7 @@ AutoRestock-Agent/
 ├── database/                # DuckDB connection, schema initialization, & seed data
 ├── docgen/                  # Typst typesetting template & compiler engine
 │   └── templates/           # purchase_requisition.typ
-├── multimodal/              # OCR engine (LightOn) & Vision shelf auditor
+
 ├── scripts/                 # Demo scripts & sample asset generators
 ├── storage/                 # Storage runtime PDF documents & images
 ├── tests/                   # Test suites (run_tests.py, test_api_and_pipeline.py)
