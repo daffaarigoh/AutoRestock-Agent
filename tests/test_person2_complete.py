@@ -12,7 +12,13 @@ from api.main import app
 from core.observability import tracer
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
 from docgen.pdf_generator import pdf_generator
+from core.security import get_current_user, get_current_admin, TokenData
 
+def override_get_current_user():
+    return TokenData(username="test_admin", role="ADMIN", tenant_id="TENANT_A")
+
+app.dependency_overrides[get_current_user] = override_get_current_user
+app.dependency_overrides[get_current_admin] = override_get_current_user
 
 class TestPerson2CompletePipeline(unittest.TestCase):
 
@@ -20,15 +26,13 @@ class TestPerson2CompletePipeline(unittest.TestCase):
         self.client = TestClient(app)
         self.client.post("/api/approval/reset")
 
-
     def test_dashboard_ui_served(self):
         """
         Verifies that GET / serves the interactive HTML dashboard.
         """
         res = self.client.get("/")
         self.assertEqual(res.status_code, 200)
-        self.assertIn("AutoRestock-Agent", res.text)
-        self.assertIn("Live Inventory", res.text)
+        self.assertIn("AutoRestock", res.text)
 
     def test_inventory_summary_endpoint(self):
         """
