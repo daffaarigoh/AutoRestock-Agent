@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Response, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -10,8 +10,6 @@ from pydantic import BaseModel, Field
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent.parent
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
-
-from fastapi import Depends
 
 from agents.state import PurchaseRequisition
 from agents.workflow import resume_approval, run_autorestock_cycle
@@ -28,7 +26,7 @@ class ApprovalRequest(BaseModel):
     pr_number: str = Field(..., description="Purchase Requisition number to approve or reject")
     action: str = Field("APPROVE", description="Decision action: 'APPROVE' or 'REJECT'")
     approver_name: str | None = Field("Warehouse Operations Manager", description="Name/Role of approver")
-    notes: str | None = Field("Approved for vendor procurement", description="Manager review notes")
+    notes: str | None = Field(None, description="Optional notes or reason for decision")
 
 
 class ApprovalResponse(BaseModel):
@@ -40,10 +38,13 @@ class ApprovalResponse(BaseModel):
 
 
 @router.get("/api/inventory/items", response_model=list[dict[str, Any]])
-def get_inventory_items(current_user: TokenData = Depends(get_current_user)):
+def get_inventory_items(response: Response, current_user: TokenData = Depends(get_current_user)):
     """
     Retrieve all inventory items from DuckDB.
     """
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     try:
         items = get_all_inventory_items(tenant_id=current_user.tenant_id)
         return items
@@ -111,18 +112,39 @@ def download_pr_document(pr_number: str, inline: bool = False):
     """
     Downloads or previews the generated Typst Purchase Requisition PDF.
     Use ?inline=true to display in-browser (for iframe previews).
-    Checks approved/, rejected/, pending/, and documents/ folders in priority order.
+    Checks status-specific folders first to ensure the served PDF matches true PR status.
     """
     clean_pr_num = pr_number.replace("/", "_").replace("\\", "_")
+    clean_filename = f"{pr_number.replace('-', '_')}.pdf"
     
-    # Priority search locations
-    candidate_paths = [
-        STORAGE_DIR / "approved" / f"{clean_pr_num}.pdf",
-        STORAGE_DIR / "rejected" / f"{clean_pr_num}.pdf",
-        STORAGE_DIR / "pending" / f"{clean_pr_num}.pdf",
-        STORAGE_DIR / "documents" / f"{clean_pr_num.replace('-', '_')}.pdf",
-        STORAGE_DIR / f"{clean_pr_num}.pdf"
-    ]
+    # Check DB/PR_STORE status first
+    from api.routers.approval_routes import _ensure_pr_in_store, _regenerate_pdf
+    pr_doc = _ensure_pr_in_store(pr_number)
+    current_status = (pr_doc.status if pr_doc else "PENDING").upper()
+    
+    candidate_paths = []
+    if "APPROV" in current_status:
+        candidate_paths = [
+            STORAGE_DIR / "approved" / f"{clean_pr_num}.pdf",
+            STORAGE_DIR / "approved" / clean_filename,
+            STORAGE_DIR / "documents" / clean_filename,
+            STORAGE_DIR / "documents" / f"{clean_pr_num}.pdf",
+        ]
+    elif "REJECT" in current_status:
+        candidate_paths = [
+            STORAGE_DIR / "rejected" / f"{clean_pr_num}.pdf",
+            STORAGE_DIR / "rejected" / clean_filename,
+            STORAGE_DIR / "documents" / clean_filename,
+            STORAGE_DIR / "documents" / f"{clean_pr_num}.pdf",
+        ]
+    else:
+        candidate_paths = [
+            STORAGE_DIR / "pending" / f"{clean_pr_num}.pdf",
+            STORAGE_DIR / "pending" / clean_filename,
+            STORAGE_DIR / "documents" / clean_filename,
+            STORAGE_DIR / "documents" / f"{clean_pr_num}.pdf",
+            STORAGE_DIR / f"{clean_pr_num}.pdf"
+        ]
     
     found_path = None
     for path in candidate_paths:
@@ -130,6 +152,17 @@ def download_pr_document(pr_number: str, inline: bool = False):
             found_path = path
             break
             
+    # If not found or if the document needs regeneration for its current status
+    if found_path is None and pr_doc:
+        try:
+            _regenerate_pdf(pr_doc)
+            for path in candidate_paths:
+                if path.exists():
+                    found_path = path
+                    break
+        except Exception as e:
+            print(f"[download_pr_document] Regeneration on-the-fly failed: {e}")
+
     # Recursive wildcard search fallback
     if found_path is None:
         matches = list(STORAGE_DIR.rglob(f"*{clean_pr_num}*.pdf"))
@@ -139,7 +172,7 @@ def download_pr_document(pr_number: str, inline: bool = False):
     if found_path is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Purchase Requisition PDF '{pr_number}' not found in storage (checked approved, rejected, pending, and documents folders)."
+            detail=f"Purchase Requisition PDF '{pr_number}' not found in storage."
         )
             
     return FileResponse(
@@ -301,7 +334,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
         context = {
             "threshold_updates": route_result.get("threshold_updates", []),
             "target_item_name": route_result.get("target_item_name"),
-            "send_email": route_result.get("send_email", False)
+            "send_email": route_result.get("send_email", False),
+            "new_item_data": route_result.get("new_item_data", {})
         }
         result = await JSONExecutionEngine.execute(compiled_json, current_user.tenant_id, custom_context=context)
         
@@ -309,6 +343,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
         action_type = "general"
         if "update_threshold" in compiled_json.get("workflow", ""):
             action_type = "update_threshold"
+        elif "daftar" in compiled_json.get("workflow", "") or "register" in compiled_json.get("workflow", "") or "tambah" in compiled_json.get("workflow", "") or result.get("registered_item"):
+            action_type = "register_product"
         elif result.get("pr_number"):
             action_type = "review_prs"
         elif context.get("send_email") and "email" in str(compiled_json.get("steps", [])):
@@ -316,7 +352,16 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             
         affected = []
         # Return items to dashboard
-        if context.get("low_stock_items"):
+        if result.get("registered_item"):
+            reg = result["registered_item"]
+            new_item = context.get("new_item_data", {})
+            affected = [{
+                "name": reg.get("name", "Item Baru"),
+                "current_stock": new_item.get("current_stock", 0),
+                "min_stock": new_item.get("min_threshold", 0),
+                "unit": new_item.get("unit", "pcs")
+            }]
+        elif context.get("low_stock_items"):
             affected = [{"name": it["name"], "current_stock": it["current_stock"], "min_stock": it.get("min_threshold", 0), "unit": it["unit"]} for it in context["low_stock_items"]]
         elif context.get("specific_items"):
             affected = [{"name": it["name"], "current_stock": it["current_stock"], "min_stock": it.get("min_threshold", 0), "unit": it["unit"]} for it in context["specific_items"]]
@@ -325,8 +370,14 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             "parsed_intent": {"workflow_id": workflow_id},
             "action_type": action_type,
             "message": result.get("summary", ""),
+            "email_sent": result.get("email_sent", False),
             "generated_prs": [],
-            "affected_items": affected
+            "affected_items": affected,
+            "total_items_analyzed": result.get("total_items_analyzed", len(affected)),
+            "target_destinations": result.get("target_destinations", ["database"]),
+            "pdf_download_url": result.get("pdf_download_url"),
+            "execution_steps": result.get("execution_steps", []),
+            "total_budget_formatted": result.get("total_budget_formatted", "Rp 0")
         }
 
         if result.get("pr_number"):
@@ -338,6 +389,7 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
                     "supplier_name": "Multiple Vendors" if len(set(it.vendor_name for it in pr_doc.items)) > 1 else (pr_doc.items[0].vendor_name if pr_doc.items else "Vendor"),
                     "grand_total": pr_doc.total_budget,
                     "status": pr_doc.status.lower(),
+                    "email_sent": result.get("email_sent", False),
                     "items": [{"item_name": it.name, "quantity": it.reorder_qty, "unit": it.unit} for it in pr_doc.items]
                 }]
                 

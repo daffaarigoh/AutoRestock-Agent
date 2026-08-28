@@ -105,7 +105,9 @@
         [
           #text(size: 8pt, fill: status_color, weight: "bold")[DECISION & AUDIT]\
           #v(2pt)
-          #text(size: 11pt, weight: "bold", fill: status_color)[{{AUDITOR_STATUS}} ({{STATUS}})]
+          #text(size: 11pt, weight: "bold", fill: status_color)[
+            #if doc_status == "APPROVED" [APPROVED] else if doc_status == "REJECTED" [REJECTED] else [PASSED (PENDING)]
+          ]
         ]
 
       )

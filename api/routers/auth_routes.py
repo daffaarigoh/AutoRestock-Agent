@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
 from core.security import (
@@ -76,9 +76,12 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
     return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json}
 
 @router.get("/admin/workflows")
-async def get_workflows(admin: TokenData = Depends(get_current_admin)):
+async def get_workflows(response: Response, admin: TokenData = Depends(get_current_admin)):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     conn = get_db_connection(read_only=True)
-    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json FROM workflows").fetchall()
+    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json FROM workflows ORDER BY id ASC").fetchall()
     columns = [desc[0] for desc in conn.description]
     conn.close()
     
@@ -114,3 +117,78 @@ async def edit_workflow(wf_id: str, req: CreateWorkflowRequest, admin: TokenData
     conn.close()
     
     return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json}
+
+
+@router.get("/admin/users")
+async def get_all_users(response: Response, admin: TokenData = Depends(get_current_admin)):
+    """Fetch all registered users and their multi-tenant inventory database stats."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
+    conn = get_db_connection(read_only=True)
+    users = conn.execute("SELECT user_id, username, role, tenant_id FROM users ORDER BY user_id ASC").fetchall()
+    
+    # Per-tenant item statistics
+    stats = conn.execute("""
+        SELECT tenant_id, 
+               COUNT(*) as total_items, 
+               COALESCE(SUM(current_stock), 0) as total_stock, 
+               COALESCE(SUM(CASE WHEN current_stock < min_threshold THEN 1 ELSE 0 END), 0) as low_stock_count
+        FROM items
+        GROUP BY tenant_id
+    """).fetchall()
+    
+    items_rows = conn.execute("""
+        SELECT i.item_id, i.name, i.category, i.current_stock, i.min_threshold, 
+               i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id,
+               COALESCE(v.unit_price, 0) as unit_price
+        FROM items i
+        LEFT JOIN (
+            SELECT item_id, MIN(unit_price) as unit_price 
+            FROM vendors 
+            GROUP BY item_id
+        ) v ON i.item_id = v.item_id
+        ORDER BY i.tenant_id ASC, i.item_id ASC
+    """).fetchall()
+    
+    conn.close()
+    
+    tenant_stats = {r[0]: {"total_items": int(r[1]), "total_stock": int(r[2]), "low_stock_count": int(r[3])} for r in stats}
+    
+    users_list = []
+    for u in users:
+        u_id, username, role, t_id = u
+        st = tenant_stats.get(t_id, {"total_items": 0, "total_stock": 0, "low_stock_count": 0})
+        if t_id == "ALL":
+            all_items = sum(s["total_items"] for s in tenant_stats.values())
+            all_stock = sum(s["total_stock"] for s in tenant_stats.values())
+            all_low = sum(s["low_stock_count"] for s in tenant_stats.values())
+            st = {"total_items": all_items, "total_stock": all_stock, "low_stock_count": all_low}
+            
+        users_list.append({
+            "user_id": u_id,
+            "username": username,
+            "role": role,
+            "tenant_id": t_id,
+            "stats": st
+        })
+        
+    return {
+        "total_users": len(users_list),
+        "users": users_list,
+        "items": [
+            {
+                "item_id": r[0],
+                "name": r[1],
+                "category": r[2],
+                "current_stock": r[3],
+                "min_threshold": r[4],
+                "avg_daily_usage": r[5],
+                "lead_time_days": r[6],
+                "unit": r[7],
+                "tenant_id": r[8],
+                "unit_price": r[9]
+            } for r in items_rows
+        ]
+    }

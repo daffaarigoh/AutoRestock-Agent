@@ -46,10 +46,10 @@ def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
                     SET status = ?
                     WHERE order_id = ?;
                 """, [status, order_id])
-            else:
+                tenant_val = getattr(pr, "tenant_id", None) or "TENANT_A"
                 conn.execute("""
-                    INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+                    INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
                 """, [
                     order_id,
                     pr.pr_number,
@@ -58,16 +58,26 @@ def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
                     item.reorder_qty,
                     item.unit_price,
                     item.total_price,
-                    status
+                    status,
+                    tenant_val
                 ])
     finally:
         conn.close()
 
 
 def update_db_orders_status(pr_number: str, status: str):
-    """Update all orders under a PR number to a new status (e.g. APPROVED, REJECTED)."""
+    """Update all orders under a PR number to a new status (e.g. APPROVED, REJECTED) and update stock on APPROVE."""
     conn = get_db_connection()
     try:
+        if status.upper() == "APPROVED":
+            rows = conn.execute("SELECT item_id, quantity FROM orders WHERE pr_number = ?;", [pr_number]).fetchall()
+            for r in rows:
+                conn.execute("""
+                    UPDATE items
+                    SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
+                    WHERE item_id = ?;
+                """, [r[1], r[0]])
+
         conn.execute("""
             UPDATE orders 
             SET status = ?

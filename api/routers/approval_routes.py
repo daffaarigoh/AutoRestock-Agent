@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
@@ -83,22 +83,35 @@ class ApprovalActionPayload(BaseModel):
 def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | None = None) -> str:
     """Updates DuckDB orders table and optionally increments stock on APPROVE."""
     try:
+        import uuid
         from database.db import get_db_connection
+        is_approve = str(action).upper() in ["APPROVE", "APPROVED"]
+        db_status = "APPROVED" if is_approve else "REJECTED"
         conn = get_db_connection()
         try:
-            if action == "APPROVE" and pr and pr.items:
+            if is_approve and pr and pr.items:
                 for item in pr.items:
                     conn.execute("""
                         UPDATE items
                         SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
-                        WHERE item_id = ? OR name = ?;
+                        WHERE item_id = ? OR lower(name) = lower(?);
                     """, [item.reorder_qty, item.item_id, item.name])
 
-            conn.execute(f"UPDATE orders SET status = '{action}' WHERE pr_number = ?;", [pr_number])
+            # Check if order already exists
+            existing_orders = conn.execute("SELECT COUNT(*) FROM orders WHERE pr_number = ?;", [pr_number]).fetchone()[0]
+            if existing_orders > 0:
+                conn.execute(f"UPDATE orders SET status = '{db_status}' WHERE pr_number = ?;", [pr_number])
+            elif pr and pr.items:
+                for it in pr.items:
+                    ord_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+                    conn.execute("""
+                        INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """, [ord_id, pr_number, it.item_id, it.vendor_id, it.reorder_qty, it.unit_price, it.total_price, db_status, pr.tenant_id or "ALL"])
         finally:
             conn.close()
 
-        if action == "APPROVE":
+        if is_approve:
             return "✅ <strong>Stok Fisik Inventaris DuckDB Berhasil Ditambahkan Otomatis!</strong>"
         return "🔒 <strong>Stok Fisik Inventaris Tetap (Tidak Ada Penambahan).</strong>"
     except Exception as e:
@@ -106,30 +119,132 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
 
 
 def _regenerate_pdf(pr: PurchaseRequisitionDoc):
-    """Regenerates Typst PDF with the current PR status."""
+    """Regenerates Typst PDF with the current PR status and removes stale pending files."""
     try:
-        from docgen.pdf_generator import pdf_generator
+        from core.config import settings
+        from docgen.compiler import generate_pr_pdf
+        clean_pr_num = pr.pr_number.replace("/", "_").replace("\\", "_")
         clean_filename = f"{pr.pr_number.replace('-', '_')}.pdf"
-        pdf_generator.generate_purchase_requisition_pdf(pr, output_filename=clean_filename)
-        pr.pdf_path = f"/storage/documents/{clean_filename}"
-    except Exception:
-        pass
+        
+        # 1. Generate to structured target dir (e.g. storage/approved/ or storage/rejected/)
+        payload = pr.model_dump()
+        target_file = generate_pr_pdf(payload)
+        pr.pdf_path = target_file
+        
+        # 2. Also generate into storage/documents/ and ensure both naming variants exist in target dir
+        settings.DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+        generate_pr_pdf(payload, output_path=settings.DOCUMENTS_DIR / clean_filename)
+        generate_pr_pdf(payload, output_path=settings.DOCUMENTS_DIR / f"{clean_pr_num}.pdf")
+        
+        status_upper = pr.status.upper()
+        if "APPROV" in status_upper:
+            settings.APPROVED_DIR.mkdir(parents=True, exist_ok=True)
+            generate_pr_pdf(payload, output_path=settings.APPROVED_DIR / f"{clean_pr_num}.pdf")
+            generate_pr_pdf(payload, output_path=settings.APPROVED_DIR / clean_filename)
+        elif "REJECT" in status_upper:
+            settings.REJECTED_DIR.mkdir(parents=True, exist_ok=True)
+            generate_pr_pdf(payload, output_path=settings.REJECTED_DIR / f"{clean_pr_num}.pdf")
+            generate_pr_pdf(payload, output_path=settings.REJECTED_DIR / clean_filename)
+        
+        # 3. Clean up old pending files so it won't be served by cache/download
+        for pfile in [settings.PENDING_DIR / f"{clean_pr_num}.pdf", settings.PENDING_DIR / clean_filename]:
+            if pfile.exists():
+                try:
+                    pfile.unlink()
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"[REGENERATE PDF ERROR] {e}")
 
 
 def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
-    """Gets a PR from store, creating a default fallback if it starts with 'PR-'."""
+    """Gets a PR from store, reconstructing from DuckDB if missing, or creating fallback."""
     pr = PR_STORE.get(pr_number)
-    if not pr and pr_number.startswith("PR-"):
+    if pr:
+        return pr
+
+    # Try reconstructing from DuckDB orders
+    try:
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=True)
+        order_rows = conn.execute("""
+            SELECT o.pr_number, o.item_id, o.vendor_id, o.quantity, o.unit_price, o.total_price, o.status, o.tenant_id,
+                   i.name as item_name, i.unit, v.name as vendor_name
+            FROM orders o
+            LEFT JOIN items i ON o.item_id = i.item_id
+            LEFT JOIN vendors v ON o.vendor_id = v.vendor_id AND o.item_id = v.item_id
+            WHERE o.pr_number = ?;
+        """, [pr_number]).fetchall()
+        conn.close()
+
+        if order_rows:
+            items = []
+            total_budget = 0.0
+            db_status = order_rows[0][6] or "PENDING"
+            tenant_id = order_rows[0][7] or "ALL"
+
+            for row in order_rows:
+                qty = row[3]
+                uprice = row[4]
+                tprice = row[5] or (qty * uprice)
+                total_budget += tprice
+                items.append(PurchaseItemRequest(
+                    item_id=row[1],
+                    name=row[8] or f"Item {row[1]}",
+                    reorder_qty=qty,
+                    unit=row[9] or "pcs",
+                    vendor_id=row[2] or "VND-001",
+                    vendor_name=row[10] or "Vendor Terdaftar",
+                    unit_price=uprice,
+                    total_price=tprice,
+                    reason="Reconstructed from DuckDB orders"
+                ))
+
+            clean_filename = f"{pr_number.replace('-', '_')}.pdf"
+            pr_doc = PurchaseRequisitionDoc(
+                pr_number=pr_number,
+                created_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                items=items,
+                total_budget=total_budget,
+                auditor_status="PASSED",
+                auditor_notes="Compliance check: Sesuai alokasi pengadaan inventaris.",
+                pdf_path=f"/storage/documents/{clean_filename}",
+                status=db_status,
+                tenant_id=tenant_id
+            )
+            PR_STORE[pr_number] = pr_doc
+            return pr_doc
+    except Exception as e:
+        print(f"[_ensure_pr_in_store] Error loading from DB: {e}")
+
+    if pr_number.startswith("PR-"):
         PR_STORE[pr_number] = _create_default_pr(pr_number)
-        pr = PR_STORE[pr_number]
-    return pr
+        return PR_STORE[pr_number]
+    return None
 
 
 # --- API Endpoints ---
 
 @router.get("/list", response_model=list[PurchaseRequisitionDoc])
-async def get_all_requisitions(current_user: TokenData = Depends(get_current_user)):
+async def get_all_requisitions(response: Response, current_user: TokenData = Depends(get_current_user)):
     """Returns list of active purchase requisitions filtered by tenant."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    # Sync PRs from DuckDB orders
+    try:
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=True)
+        pr_rows = conn.execute("SELECT DISTINCT pr_number, status FROM orders;").fetchall()
+        conn.close()
+        for pr_num, db_status in pr_rows:
+            if pr_num:
+                pr = _ensure_pr_in_store(pr_num)
+                if pr and db_status and pr.status != db_status:
+                    pr.status = db_status
+    except Exception as e:
+        print(f"[get_all_requisitions] Error syncing from DB: {e}")
+
     if current_user.role == "ADMIN":
         return list(PR_STORE.values())
     
@@ -242,7 +357,7 @@ async def execute_approval_action(payload: ApprovalActionPayload):
     Executes Human-In-The-Loop action (Approve or Reject) for a Purchase Requisition.
     Automatically regenerates the formal Typst PDF document with the updated status.
     """
-    pr = PR_STORE.get(payload.pr_number)
+    pr = _ensure_pr_in_store(payload.pr_number)
     if not pr:
         raise HTTPException(status_code=404, detail="Purchase Requisition not found.")
 

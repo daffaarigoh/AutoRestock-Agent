@@ -1,254 +1,282 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - AutoRestock Agent</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-dark: #F9FAFB;
-            --primary: #2563EB;
-            --primary-hover: #2563eb;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --text-main: #111827;
-            --text-muted: #6B7280;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masuk - AutoRestock V2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
 
-        body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            position: relative;
-        }
+      --bg-dark: #0F172A;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+    }
 
-        /* Animated Background Elements */
-        .blob {
-            position: absolute;
-            filter: blur(80px);
-            z-index: 0;
-            opacity: 0.5;
-            animation: float 10s infinite ease-in-out;
-        }
-        .blob-1 {
-            width: 400px; height: 400px;
-            background: #2563EB;
-            top: -100px; left: -100px;
-            border-radius: 50%;
-        }
-        .blob-2 {
-            width: 500px; height: 500px;
-            background: #059669;
-            bottom: -200px; right: -100px;
-            border-radius: 50%;
-            animation-delay: -5s;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-30px) scale(1.05); }
-        }
+    body {
+      font-family: var(--font-main);
+      background-color: #F8FAFC;
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+      -webkit-font-smoothing: antialiased;
+    }
 
-        /* Glassmorphism Container */
-        .login-container {
-            position: relative;
-            z-index: 10;
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 3rem;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+    /* Ambient Background Mesh */
+    .ambient-bg {
+      position: absolute;
+      inset: 0;
+      background: 
+        radial-gradient(at 15% 20%, rgba(37, 99, 235, 0.10) 0px, transparent 50%),
+        radial-gradient(at 85% 80%, rgba(16, 185, 129, 0.07) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(241, 245, 249, 0.8) 0px, transparent 70%);
+      z-index: 0;
+    }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    .login-card {
+      position: relative;
+      z-index: 10;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+      animation: slideUp 0.3s ease forwards;
+    }
 
-        .header {
-            text-align: center;
-            margin-bottom: 2.5rem;
-        }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-        .header h1 {
-            margin: 0;
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: #2563EB;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+    .brand-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
 
-        .header p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin-top: 0.5rem;
-        }
+    .brand-logo {
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+    }
 
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
 
-        .input-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--text-muted);
-        }
+    .brand-subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
 
-        .input-group input {
-            width: 100%;
-            padding: 1rem;
-            background: #FFFFFF;
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            color: var(--text-main);
-            font-size: 1rem;
-            outline: none;
-            transition: all 0.3s ease;
-            box-sizing: border-box;
-        }
+    .input-group {
+      margin-bottom: 18px;
+    }
 
-        .input-group input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-            background: #FFFFFF;
-        }
+    .input-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #334155;
+    }
 
-        .login-btn {
-            width: 100%;
-            padding: 1rem;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 1rem;
-        }
+    .input-field {
+      width: 100%;
+      padding: 10px 14px;
+      background: #F8FAFC;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-family: var(--font-main);
+      font-size: 13.5px;
+      outline: none;
+      transition: all 0.15s ease;
+    }
 
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.6);
-        }
+    .input-field:focus {
+      background: #FFFFFF;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
 
-        .login-btn:active {
-            transform: translateY(0);
-        }
+    .btn-login {
+      width: 100%;
+      padding: 11px;
+      background: var(--primary);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      font-family: var(--font-main);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      margin-top: 8px;
+      box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+    }
 
-        .error-msg {
-            color: #DC2626;
-            font-size: 0.85rem;
-            text-align: center;
-            margin-top: 1rem;
-            min-height: 20px;
-        }
-        
-        .demo-creds {
-            margin-top: 2rem;
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            padding-top: 1rem;
-            border-top: 1px solid var(--glass-border);
-        }
-    </style>
+    .btn-login:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-box {
+      color: #DC2626;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 14px;
+      display: none;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
 
-    <div class="login-container">
-        <div class="header">
-            <h1>AutoRestock Agent</h1>
-            <p>Sistem Pengadaan Cerdas</p>
-        </div>
-        
-        <form id="loginForm">
-            <div class="input-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" required autocomplete="username" placeholder="Masukkan username...">
-            </div>
-            <div class="input-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
-            </div>
-            
-            <button type="submit" class="login-btn" id="loginBtn">Masuk ke Sistem</button>
-            <div class="error-msg" id="errorMsg"></div>
-        </form>
+  <div class="ambient-bg"></div>
 
-
+  <div class="login-card">
+    <div class="brand-header">
+      <div class="brand-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+      </div>
+      <h1 class="brand-title">AutoRestock V2</h1>
+      <p class="brand-subtitle">Autonomous Inventory & Procurement System</p>
     </div>
+    
+    <form id="loginForm">
+      <div class="input-group">
+        <label class="input-label" for="username">Username</label>
+        <input type="text" id="username" class="input-field" required autocomplete="username" placeholder="Masukkan username...">
+      </div>
+      <div class="input-group">
+        <label class="input-label" for="password">Password</label>
+        <input type="password" id="password" class="input-field" required autocomplete="current-password" placeholder="Masukkan password...">
+      </div>
+      
+      <button type="submit" class="btn-login" id="loginBtn">
+        <span>Masuk ke Sistem</span>
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+        </svg>
+      </button>
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('loginBtn');
-            const error = document.getElementById('errorMsg');
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            btn.textContent = 'Memverifikasi...';
-            btn.style.opacity = '0.7';
-            error.textContent = '';
-            
-            try {
-                const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await res.json();
-                
-                if (res.ok) {
-                    localStorage.setItem('access_token', data.access_token);
-                    localStorage.setItem('role', data.role);
-                    localStorage.setItem('tenant_id', data.tenant_id);
-                    localStorage.setItem('username', username);
-                    
-                    if (data.role === 'ADMIN') {
-                        window.location.href = '/static/admin.html';
-                    } else {
-                        window.location.href = '/';
-                    }
-                } else {
-                    error.textContent = data.detail || 'Login gagal.';
-                    btn.textContent = 'Masuk ke Sistem';
-                    btn.style.opacity = '1';
-                }
-            } catch (err) {
-                error.textContent = 'Terjadi kesalahan koneksi.';
-                btn.textContent = 'Masuk ke Sistem';
-                btn.style.opacity = '1';
-            }
+      <div class="error-box" id="errorMsg"></div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      const error = document.getElementById('errorMsg');
+      
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      
+      btn.innerHTML = '<span>Memverifikasi...</span>';
+      btn.disabled = true;
+      error.style.display = 'none';
+      error.textContent = '';
+      
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
         });
         
-        // Auto redirect if already logged in
-        if (localStorage.getItem('access_token')) {
-            if (localStorage.getItem('role') === 'ADMIN') {
-                window.location.href = '/static/admin.html';
-            } else {
-                window.location.href = '/';
-            }
+        const data = await res.json();
+        
+        if (res.ok) {
+          // Clear any legacy persistent tokens
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('role');
+          localStorage.removeItem('tenant_id');
+          localStorage.removeItem('username');
+
+          // Store in sessionStorage (cleared on browser/tab close)
+          sessionStorage.setItem('access_token', data.access_token);
+          sessionStorage.setItem('role', data.role);
+          sessionStorage.setItem('tenant_id', data.tenant_id);
+          sessionStorage.setItem('username', username);
+          
+          if (data.role === 'ADMIN') {
+            window.location.href = '/static/admin.html';
+          } else {
+            window.location.href = '/';
+          }
+        } else {
+          error.textContent = data.detail || 'Login gagal. Periksa username dan password.';
+          error.style.display = 'block';
+          btn.innerHTML = '<span>Masuk ke Sistem</span><svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
+          btn.disabled = false;
         }
-    </script>
+      } catch (err) {
+        error.textContent = 'Terjadi gangguan koneksi ke server.';
+        error.style.display = 'block';
+        btn.innerHTML = '<span>Masuk ke Sistem</span><svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
+        btn.disabled = false;
+      }
+    });
+    
+    // Auto redirect only if valid session token already exists in current browser session
+    if (sessionStorage.getItem('access_token')) {
+      if (sessionStorage.getItem('role') === 'ADMIN') {
+        window.location.href = '/static/admin.html';
+      } else {
+        window.location.href = '/';
+      }
+    }
+  </script>
 </body>
 </html>

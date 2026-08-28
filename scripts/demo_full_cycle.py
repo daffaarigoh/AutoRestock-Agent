@@ -103,8 +103,7 @@ async def run_full_autonomous_cycle():
 
     print("\n==========================================================================")
     print(f"🎉 SUKSES! Dokumen {pr_doc.pr_number} telah disetujui.")
-    print(f"📊 Total Eksekusi Selesai: {trace.total_duration_ms:.1f}ms | Total Tokens: {trace.total_tokens_estimated}")
-    print("🌐 Dashboard UI siap dibuka di: http://localhost:8000/")
+    print(f"🌐 Dashboard UI siap dibuka di: http://localhost:{settings.API_PORT}/")
     print("==========================================================================")
 
 

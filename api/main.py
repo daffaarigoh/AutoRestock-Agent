@@ -126,5 +126,6 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api.main:app", host="127.0.0.1", port=8000, reload=True)
+    host = "127.0.0.1" if settings.API_HOST == "0.0.0.0" else settings.API_HOST
+    uvicorn.run("api.main:app", host=host, port=settings.API_PORT, reload=settings.DEBUG)
 

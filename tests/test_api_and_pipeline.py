@@ -85,14 +85,20 @@ def test_full_pipeline():
     assert res_download_rej.headers["content-type"] == "application/pdf"
     print(f"[TEST 8] GET /api/documents/pr/{pr2_number}/download: OK -> Rejected PDF downloaded ({len(res_download_rej.content)} bytes)")
     
-    # 9. Test Threshold Customizer Endpoint (PATCH /api/inventory/items/ITM-001)
+    # 9. Test Threshold Customizer Endpoint (PATCH /api/inventory/items/ITM-001 & ITM-002)
     res_threshold = client.patch("/api/inventory/items/ITM-001", json={
         "min_threshold": 75,
         "current_stock": 10
     })
     assert res_threshold.status_code == 200
     assert res_threshold.json()["item"]["min_threshold"] == 75
-    print("[TEST 9] PATCH /api/inventory/items/ITM-001: OK -> Updated threshold to 75 (current: 10)")
+    
+    res_threshold2 = client.patch("/api/inventory/items/ITM-002", json={
+        "min_threshold": 50,
+        "current_stock": 5
+    })
+    assert res_threshold2.status_code == 200
+    print("[TEST 9] PATCH /api/inventory/items/ITM-001 & ITM-002: OK -> Updated thresholds to critical levels")
 
     # 10. Test Prompt Templates Endpoint (GET /api/agent/prompt-templates)
     res_templates = client.get("/api/agent/prompt-templates")

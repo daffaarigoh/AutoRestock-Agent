@@ -9,7 +9,13 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-BASE_URL = "http://localhost:8000"
+from pathlib import Path
+
+# Add project root to sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from core.config import settings
+
+BASE_URL = f"http://localhost:{settings.API_PORT}"
 
 def login(username, password):
     res = requests.post(f"{BASE_URL}/api/auth/login", json={"username": username, "password": password})

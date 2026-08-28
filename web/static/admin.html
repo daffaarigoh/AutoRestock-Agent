@@ -1,393 +1,1296 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - AutoRestock</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-dark: #F9FAFB;
-            --surface: #FFFFFF;
-            --surface-light: #F3F4F6;
-            --primary: #2563EB;
-            --success: #10b981;
-            --danger: #ef4444;
-            --text-main: #111827;
-            --text-muted: #6B7280;
-            --border: #E5E7EB;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - AutoRestock V2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
 
-        body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-        }
+      --bg-app: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-subtle: #F1F5F9;
+      --header-height: 60px;
 
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 2rem;
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --primary-light: #EFF6FF;
+      --primary-border: #BFDBFE;
 
-        .logo {
-            font-size: 1.25rem;
-            font-weight: 700;
-            background: #2563EB;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+      --text-main: #0F172A;
+      --text-secondary: #334155;
+      --text-muted: #64748B;
 
-        .user-controls {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
+      --border-color: #E2E8F0;
+      
+      --success: #16A34A;
+      --success-bg: #ECFDF5;
+      --success-text: #059669;
+      --success-border: #A7F3D0;
 
-        .badge {
-            background: rgba(239, 68, 68, 0.1);
-            color: #DC2626;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
+      --danger: #DC2626;
+      --danger-bg: #FEF2F2;
+      --danger-text: #DC2626;
+      --danger-border: #FECACA;
 
-        .logout-btn {
-            background: transparent;
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+      --warning: #D97706;
+      --warning-bg: #FFFBEB;
+      --warning-text: #B45309;
+      --warning-border: #FDE68A;
 
-        .logout-btn:hover {
-            background: var(--surface-light);
-            color: var(--text-main);
-        }
+      --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08);
+      --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07);
+    }
 
-        .container {
-            max-width: 1000px;
-            margin: 3rem auto;
-            padding: 0 2rem;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-        }
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
+    /* Navbar */
+    .app-header {
+      height: var(--header-height);
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-xs);
+    }
 
-        .card-title {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
 
-        .editor-wrapper {
-            position: relative;
-        }
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
 
-        textarea {
-            width: 100%;
-            height: 400px;
-            background: #F3F4F6;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            color: #2563EB;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            resize: vertical;
-            outline: none;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
+    .brand-title {
+      font-size: 15.5px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
 
-        textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-        }
+    /* Minimalist Tab Navigation in Header */
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-subtle);
+      padding: 4px;
+      border-radius: 9px;
+      border: 1px solid var(--border-color);
+    }
 
-        .save-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
-        }
+    .tab-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: var(--font-main);
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
 
-        .save-btn:hover {
-            background: var(--primary-hover);
-            transform: translateY(-1px);
-        }
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
 
-        .status-toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: var(--success);
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+    .tab-btn.active {
+      background: #FFFFFF;
+      color: var(--primary);
+      box-shadow: var(--shadow-xs);
+      font-weight: 700;
+    }
 
-        .status-toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    </style>
+    .user-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-admin {
+      background: #FEF3C7;
+      color: #B45309;
+      border: 1px solid #FDE68A;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      letter-spacing: 0.03em;
+    }
+
+    .user-name-display {
+      font-weight: 700;
+      font-size: 13px;
+      color: #1E293B;
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-logout:hover {
+      background: var(--danger-bg);
+      border-color: var(--danger-border);
+    }
+
+    /* Main Container & Cards */
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 20px 48px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 22px 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 15.5px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: -6px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    /* Form Fields */
+    .form-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .form-input {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: #FFFFFF;
+      color: var(--text-main);
+      font-family: var(--font-main);
+      font-size: 13px;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    textarea.form-input {
+      width: 100%;
+      height: 150px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      resize: vertical;
+      color: var(--text-main);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-main);
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-secondary {
+      background: #FFFFFF;
+      color: var(--text-secondary);
+      border-color: var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      border-color: #CBD5E1;
+    }
+
+    /* Workflow Item Cards */
+    .workflow-item {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-xs);
+      transition: all 0.15s ease;
+    }
+
+    .workflow-item:hover {
+      border-color: #CBD5E1;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .workflow-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .workflow-name {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #1E40AF;
+    }
+
+    .workflow-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-weight: 600;
+    }
+
+    .workflow-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-action-edit {
+      background: #EFF6FF;
+      color: #2563EB;
+      border: 1px solid #BFDBFE;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-main);
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-action-edit:hover {
+      background: #DBEAFE;
+      color: #1D4ED8;
+    }
+
+    .btn-action-delete {
+      background: #FEF2F2;
+      color: #DC2626;
+      border: 1px solid #FECACA;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-main);
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-action-delete:hover {
+      background: #FEE2E2;
+      color: #B91C1C;
+    }
+
+    .badge-status-active {
+      background: #ECFDF5;
+      color: #059669;
+      border: 1px solid #A7F3D0;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .workflow-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    details.workflow-details {
+      background: #F8FAFC;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    details.workflow-details summary {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    details.workflow-details summary:hover {
+      color: var(--text-main);
+    }
+
+    details.workflow-details pre {
+      margin-top: 8px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #1E293B;
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+
+    /* KPI Summary Stats Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .kpi-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: var(--shadow-xs);
+    }
+
+    .kpi-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Minimalist Table Styling */
+    .data-table-container {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: #FFFFFF;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      text-align: left;
+    }
+
+    table.data-table th {
+      background: #F8FAFC;
+      color: var(--text-muted);
+      font-weight: 700;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    table.data-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      vertical-align: middle;
+    }
+
+    table.data-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.data-table tbody tr:hover {
+      background: #F8FAFC;
+    }
+
+    .badge-tenant {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tenant-all {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+    }
+
+    .tenant-a {
+      background: #F3E8FF;
+      color: #7E22CE;
+      border: 1px solid #E9D5FF;
+    }
+
+    .tenant-b {
+      background: #ECFDF5;
+      color: #047857;
+      border: 1px solid #A7F3D0;
+    }
+
+    .tenant-c {
+      background: #FFF7ED;
+      color: #C2410C;
+      border: 1px solid #FFEDD5;
+    }
+
+    .badge-role-admin {
+      background: #FEF3C7;
+      color: #B45309;
+      border: 1px solid #FDE68A;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    .badge-role-user {
+      background: #F1F5F9;
+      color: #475569;
+      border: 1px solid #E2E8F0;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    .badge-stock-safe {
+      background: #ECFDF5;
+      color: #059669;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-stock-critical {
+      background: #FEF2F2;
+      color: #DC2626;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .tenant-filter-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pill-btn {
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      background: #FFFFFF;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .pill-btn:hover {
+      border-color: #CBD5E1;
+      color: var(--text-main);
+    }
+
+    .pill-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      border-color: var(--primary);
+    }
+
+    /* Toast */
+    .status-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0F172A;
+      border: 1px solid #334155;
+      color: #FFFFFF;
+      padding: 10px 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow-md);
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 200;
+    }
+
+    .status-toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .user-avatar-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 12px;
+      border: 1px solid var(--primary-border);
+    }
+  </style>
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="logo">AutoRestock Admin</div>
-        <div class="user-controls">
-            <span class="badge"><i class="ri-shield-user-fill"></i> SUPERADMIN</span>
-            <span id="usernameDisplay">admin</span>
-            <button class="logout-btn" onclick="logout()">
-                <i class="ri-logout-box-line"></i> Logout
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">AutoRestock Admin</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        <span>Workflow Orchestrator</span>
+      </button>
+      <button class="tab-btn" id="tabUsersBtn" onclick="switchAdminTab('users')">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+        <span>Database Pengguna & Tenant</span>
+      </button>
+    </div>
+
+    <div class="user-controls">
+      <span class="badge-admin">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <span>SUPERADMIN</span>
+      </span>
+
+      <span id="usernameDisplay" class="user-name-display">admin</span>
+
+      <button class="btn-logout" onclick="logout()">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        <span>Keluar</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: WORKFLOW ORCHESTRATOR               -->
+    <!-- ========================================== -->
+    <div id="sectionWorkflows">
+      <!-- Form Workflow Builder -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+          <h2 class="card-title" id="formTitle">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            <span id="formTitleText">Buat Workflow Baru (Data-Driven Engine)</span>
+          </h2>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEdit()" style="display: none;">
+              Batal
             </button>
+            <button class="btn btn-primary" id="createWfBtn" onclick="submitWorkflow()">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+              </svg>
+              <span id="btnSubmitText">Compile & Simpan Workflow</span>
+            </button>
+          </div>
         </div>
-    </nav>
+        
+        <p class="card-subtitle">
+          Tulis instruksi bisnis dalam bahasa natural. Sistem LLM akan menyusun instruksi Anda menjadi struktur graph JSON eksekusi yang terstruktur.
+        </p>
 
-    <div class="container">
-
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title" id="formTitle">Buat Workflow Baru (Data-Driven Engine)</h2>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button class="save-btn" id="cancelEditBtn" onclick="cancelEdit()" style="display: none; background: transparent; color: var(--text-muted); border: 1px solid var(--border);">
-                        Batal
-                    </button>
-                    <button class="save-btn" id="createWfBtn" onclick="submitWorkflow()">
-                        <i class="ri-git-merge-line"></i> Compile Workflow
-                    </button>
-                </div>
-            </div>
-            
-            <p style="color: var(--text-muted); margin-top: -10px; margin-bottom: 20px;">
-                Tulis instruksi bisnis dalam bahasa natural. AI akan meng-compile (menyusun) instruksi Anda menjadi struktur eksekusi JSON yang ketat.
-            </p>
-
-            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                <input type="hidden" id="wfId">
-                <input type="text" id="wfName" placeholder="Nama Workflow (contoh: Cek Stok Harian)" style="flex: 1; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: white;">
-                <input type="text" id="wfDesc" placeholder="Deskripsi Singkat" style="flex: 2; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: white;">
-            </div>
-
-            <div class="editor-wrapper">
-                <textarea id="wfInstruction" style="height: 200px;" placeholder="Tulis aturan bisnis di sini... 
-Contoh: Periksa stok produk setiap hari. Jika kurang dari batas, hitung ulang kebutuhan, buatkan draf PR, dan kirim ke email."></textarea>
-            </div>
+        <div class="form-row">
+          <input type="hidden" id="wfId">
+          <input type="text" id="wfName" class="form-input" placeholder="Nama Workflow (contoh: Pengecekan Stok Kritis Harian)" style="flex: 1;">
+          <input type="text" id="wfDesc" class="form-input" placeholder="Deskripsi Singkat Tujuan Workflow" style="flex: 2;">
         </div>
 
-        <div class="card" style="margin-top: 2rem;">
-            <div class="card-header">
-                <h2 class="card-title">Daftar Workflow Aktif</h2>
-                <button class="save-btn" onclick="loadWorkflows()" style="background: transparent; color: var(--primary); border: 1px solid var(--primary);">
-                    <i class="ri-refresh-line"></i> Refresh
-                </button>
-            </div>
-            
-            <div id="workflowList" style="display: flex; flex-direction: column; gap: 1rem;">
-                <p style="color: var(--text-muted);">Memuat daftar workflow...</p>
-            </div>
+        <div style="margin-top: 8px;">
+          <textarea id="wfInstruction" class="form-input" placeholder="Tulis aturan bisnis pengadaan di sini...&#10;Contoh: Periksa stok produk setiap hari. Jika kurang dari ambang batas minimum, hitung ulang kebutuhan restock, buatkan draft Purchase Requisition (PR), dan kirim notifikasi approval ke manager."></textarea>
         </div>
+      </div>
+
+      <!-- Active Workflows List -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+            <span>Daftar Workflow Aktif</span>
+          </h2>
+          <button class="btn btn-secondary" onclick="loadWorkflows()">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+        
+        <div id="workflowList" style="display: flex; flex-direction: column; gap: 14px;">
+          <p style="color: var(--text-muted); font-size: 13px;">Memuat daftar workflow...</p>
+        </div>
+      </div>
     </div>
 
-    <div class="status-toast" id="toast">
-        <i class="ri-checkbox-circle-fill"></i> <span id="toastMsg">Berhasil!</span>
+    <!-- ========================================== -->
+    <!-- TAB 2: DATABASE PENGGUNA & INVENTARIS      -->
+    <!-- ========================================== -->
+    <div id="sectionUsers" style="display: none;">
+      
+      <!-- KPI Stats -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Akun Terdaftar</div>
+          <div class="kpi-value" id="kpiTotalUsers">0</div>
+          <div class="kpi-sub">Multi-Tenant Credentials</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tenant Domain Aktif</div>
+          <div class="kpi-value" id="kpiTotalTenants">3</div>
+          <div class="kpi-sub">Isolasi Data Database</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Total Master SKU Barang</div>
+          <div class="kpi-value" id="kpiTotalItems">0</div>
+          <div class="kpi-sub">Terkonsolidasi Semua Tenant</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Total Stok Fisik Gudang</div>
+          <div class="kpi-value" id="kpiTotalStock">0</div>
+          <div class="kpi-sub">Kuantitas Fisik Aktif</div>
+        </div>
+      </div>
+
+      <!-- Master Database Users -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+              <span>Master Akun & Hak Akses Pengguna</span>
+            </h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">Seluruh akun pengguna terdaftar yang memiliki akses ke database AutoRestock.</p>
+          </div>
+          <button class="btn btn-secondary" onclick="loadUsersDatabase()">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span>Refresh Data</span>
+          </button>
+        </div>
+
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Tenant</th>
+                <th>Total SKU</th>
+                <th>Stok Fisik</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Memuat data pengguna...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Master Database Inventory Items per Tenant -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+              </svg>
+              <span>Database Master Inventaris Multi-Tenant</span>
+            </h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">Seluruh produk barang yang terdaftar di database DuckDB (storage/inventory.db).</p>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="filter-bar">
+          <div class="tenant-filter-pills" id="tenantFilterPills">
+            <button class="pill-btn active" onclick="filterItemsByTenant('ALL')">Semua Tenant (<span id="countAll">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_A')">Tenant A (<span id="countTenantA">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_B')">Tenant B (<span id="countTenantB">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_C')">Tenant C (<span id="countTenantC">0</span>)</button>
+          </div>
+          <div style="position: relative; width: 260px;">
+            <input type="text" id="itemSearchInput" class="form-input" placeholder="Cari nama barang / SKU..." oninput="filterItemsSearch()" style="width: 100%; padding-left: 32px; font-size: 12.5px;">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="position: absolute; left: 10px; top: 12px; color: var(--text-muted);">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Nama Produk</th>
+                <th>Kategori</th>
+                <th>Tenant</th>
+                <th style="text-align: right;">Stok</th>
+                <th style="text-align: right;">Batas Min/Max</th>
+                <th style="text-align: right;">Harga (IDR)</th>
+                <th style="text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="itemsTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Memuat database barang...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
 
-    <script>
-        // Check Auth
-        const token = localStorage.getItem('access_token');
-        const role = localStorage.getItem('role');
-        
-        if (!token || role !== 'ADMIN') {
-            window.location.href = '/static/login.html';
-        }
+  </main>
 
-        document.getElementById('usernameDisplay').textContent = localStorage.getItem('username');
+  <div class="status-toast" id="toast">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#10B981">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+    <span id="toastMsg">Operasi berhasil</span>
+  </div>
 
-        // Submit Workflow (Create or Update)
-        async function submitWorkflow() {
-            const btn = document.getElementById('createWfBtn');
-            const id = document.getElementById('wfId').value;
-            const name = document.getElementById('wfName').value;
-            const desc = document.getElementById('wfDesc').value;
-            const instruction = document.getElementById('wfInstruction').value;
-            const toast = document.getElementById('toast');
-            
-            if (!name || !instruction) {
-                alert("Nama dan instruksi wajib diisi!");
-                return;
-            }
+  <script>
+    // Auth Validation
+    if (localStorage.getItem('access_token')) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('tenant_id');
+        localStorage.removeItem('username');
+    }
 
-            btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Compiling...';
-            btn.style.opacity = '0.7';
+    const token = sessionStorage.getItem('access_token');
+    const role = sessionStorage.getItem('role');
+    
+    if (!token || role !== 'ADMIN') {
+      window.location.href = '/static/login.html';
+    }
 
-            try {
-                const url = id ? `/api/auth/admin/workflows/${id}` : '/api/auth/admin/workflows';
-                const method = id ? 'PUT' : 'POST';
-                
-                const res = await fetch(url, {
-                    method: method,
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ name: name, description: desc, business_instruction: instruction })
-                });
+    document.getElementById('usernameDisplay').textContent = sessionStorage.getItem('username') || 'admin';
 
-                if (res.ok) {
-                    const data = await res.json();
-                    document.getElementById('toastMsg').textContent = `Workflow ${id ? 'diperbarui' : 'disusun'}: ${data.workflow_id}`;
-                    toast.classList.add('show');
-                    setTimeout(() => toast.classList.remove('show'), 4000);
-                    
-                    cancelEdit(); // Reset form
-                    loadWorkflows(); // Refresh list
-                } else {
-                    alert("Gagal menyimpan workflow.");
-                }
-            } catch (err) {
-                alert("Terjadi kesalahan kompilasi workflow.");
-            } finally {
-                btn.innerHTML = id ? '<i class="ri-edit-line"></i> Update Workflow' : '<i class="ri-git-merge-line"></i> Compile Workflow';
-                btn.style.opacity = '1';
-            }
-        }
-        
-        function cancelEdit() {
-            document.getElementById('wfId').value = '';
-            document.getElementById('wfName').value = '';
-            document.getElementById('wfDesc').value = '';
-            document.getElementById('wfInstruction').value = '';
-            document.getElementById('formTitle').textContent = 'Buat Workflow Baru (Data-Driven Engine)';
-            document.getElementById('createWfBtn').innerHTML = '<i class="ri-git-merge-line"></i> Compile Workflow';
-            document.getElementById('cancelEditBtn').style.display = 'none';
-        }
+    let allLoadedItems = [];
+    let selectedTenantFilter = 'ALL';
 
-        // Load Workflows
-        async function loadWorkflows() {
-            const listDiv = document.getElementById('workflowList');
-            try {
-                const res = await fetch('/api/auth/admin/workflows', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (res.ok) {
-                    const workflows = await res.json();
-                    if (workflows.length === 0) {
-                        listDiv.innerHTML = '<p style="color: var(--text-muted);">Belum ada workflow yang dibuat.</p>';
-                        return;
-                    }
-                    
-                    let html = '';
-                    workflows.forEach(wf => {
-                        html += `
-                            <div style="background: var(--bg-dark); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px;">
-                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                                    <div>
-                                        <h3 style="margin: 0; font-size: 1.1rem; color: #2563EB;">${wf.name}</h3>
-                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">ID: ${wf.id}</p>
-                                    </div>
-                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                        <button onclick='editWf(${JSON.stringify(wf).replace(/'/g, "&#39;")})' style="background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Edit</button>
-                                        <button onclick="deleteWf('${wf.id}')" style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Hapus</button>
-                                        <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2);">ACTIVE</span>
-                                    </div>
-                                </div>
-                                <p style="font-size: 0.95rem; margin-bottom: 1rem;">${wf.description || 'Tidak ada deskripsi'}</p>
-                                <details style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
-                                    <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Lihat Detail JSON Execution</summary>
-                                    <pre style="margin-top: 1rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; color: #4F46E5; overflow-x: auto;">${JSON.stringify(wf.compiled_json, null, 2)}</pre>
-                                </details>
-                            </div>
-                        `;
-                    });
-                    listDiv.innerHTML = html;
-                }
-            } catch (err) {
-                listDiv.innerHTML = '<p style="color: var(--danger);">Gagal memuat workflow.</p>';
-                console.error("Gagal load workflow", err);
-            }
-        }
+    function formatCurrency(val) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
+    }
 
-        function editWf(wf) {
-            document.getElementById('wfId').value = wf.id;
-            document.getElementById('wfName').value = wf.name;
-            document.getElementById('wfDesc').value = wf.description;
-            document.getElementById('wfInstruction').value = wf.business_instruction;
-            document.getElementById('formTitle').textContent = `Edit Workflow: ${wf.id}`;
-            document.getElementById('createWfBtn').innerHTML = '<i class="ri-edit-line"></i> Update Workflow';
-            document.getElementById('cancelEditBtn').style.display = 'block';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+    // Switch Tabs between Workflows and Users Database
+    function switchAdminTab(tabName) {
+      const btnWf = document.getElementById('tabWorkflowsBtn');
+      const btnUsers = document.getElementById('tabUsersBtn');
+      const secWf = document.getElementById('sectionWorkflows');
+      const secUsers = document.getElementById('sectionUsers');
 
-        async function deleteWf(id) {
-            if(!confirm(`Yakin ingin menghapus workflow ${id}?`)) return;
-            try {
-                const res = await fetch(`/api/auth/admin/workflows/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if(res.ok) {
-                    loadWorkflows();
-                } else {
-                    alert("Gagal menghapus.");
-                }
-            } catch (err) {
-                alert("Terjadi kesalahan.");
-            }
-        }
-
-        function logout() {
-            localStorage.clear();
-            window.location.href = '/static/login.html';
-        }
-
+      if (tabName === 'workflows') {
+        btnWf.classList.add('active');
+        btnUsers.classList.remove('active');
+        secWf.style.display = 'block';
+        secUsers.style.display = 'none';
         loadWorkflows();
-    </script>
+      } else {
+        btnUsers.classList.add('active');
+        btnWf.classList.remove('active');
+        secWf.style.display = 'none';
+        secUsers.style.display = 'block';
+        loadUsersDatabase();
+      }
+    }
+
+    // Submit Workflow (Create or Update)
+    async function submitWorkflow() {
+      const btn = document.getElementById('createWfBtn');
+      const btnText = document.getElementById('btnSubmitText');
+      const id = document.getElementById('wfId').value;
+      const name = document.getElementById('wfName').value.trim();
+      const desc = document.getElementById('wfDesc').value.trim();
+      const instruction = document.getElementById('wfInstruction').value.trim();
+      const toast = document.getElementById('toast');
+      
+      if (!name || !instruction) {
+        alert("Nama dan instruksi bisnis wajib diisi!");
+        return;
+      }
+
+      btnText.textContent = 'Menyusun Workflow...';
+      btn.disabled = true;
+
+      try {
+        const url = id ? `/api/auth/admin/workflows/${id}` : '/api/auth/admin/workflows';
+        const method = id ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+          method: method,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ name: name, description: desc, business_instruction: instruction })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('toastMsg').textContent = `Workflow ${id ? 'berhasil diperbarui' : 'berhasil disusun'}: ${data.workflow_id || data.id || name}`;
+          toast.classList.add('show');
+          setTimeout(() => toast.classList.remove('show'), 3500);
+          
+          cancelEdit();
+          loadWorkflows();
+        } else {
+          alert("Gagal menyimpan workflow.");
+        }
+      } catch (err) {
+        alert("Terjadi kesalahan kompilasi workflow.");
+      } finally {
+        btnText.textContent = id ? 'Update Workflow' : 'Compile & Simpan Workflow';
+        btn.disabled = false;
+      }
+    }
+    
+    function cancelEdit() {
+      document.getElementById('wfId').value = '';
+      document.getElementById('wfName').value = '';
+      document.getElementById('wfDesc').value = '';
+      document.getElementById('wfInstruction').value = '';
+      document.getElementById('formTitleText').textContent = 'Buat Workflow Baru (Data-Driven Engine)';
+      document.getElementById('btnSubmitText').textContent = 'Compile & Simpan Workflow';
+      document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+
+    // Load Workflows
+    async function loadWorkflows() {
+      const listDiv = document.getElementById('workflowList');
+      try {
+        const res = await fetch(`/api/auth/admin/workflows?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const workflows = await res.json();
+          if (workflows.length === 0) {
+            listDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Belum ada workflow yang dibuat.</p>';
+            return;
+          }
+          
+          let html = '';
+          workflows.forEach(wf => {
+            const escapedJson = JSON.stringify(wf.compiled_json || {}, null, 2);
+            html += `
+              <div class="workflow-item">
+                <div class="workflow-header">
+                  <div>
+                    <h3 class="workflow-name">${escapeHtml(wf.name)}</h3>
+                    <p class="workflow-id">ID: ${escapeHtml(wf.id)}</p>
+                  </div>
+                  <div class="workflow-actions-group">
+                    <button class="btn-action-edit" onclick='editWf(${JSON.stringify(wf).replace(/'/g, "&#39;")})'>
+                      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                      <span>Edit</span>
+                    </button>
+                    <button class="btn-action-delete" onclick="deleteWf('${wf.id}')">
+                      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                      <span>Hapus</span>
+                    </button>
+                    <span class="badge-status-active">ACTIVE</span>
+                  </div>
+                </div>
+                <p class="workflow-desc">${escapeHtml(wf.description || 'Tidak ada deskripsi.')}</p>
+                <details class="workflow-details">
+                  <summary>Lihat Detail JSON Execution</summary>
+                  <pre>${escapeHtml(escapedJson)}</pre>
+                </details>
+              </div>
+            `;
+          });
+          listDiv.innerHTML = html;
+        }
+      } catch (err) {
+        listDiv.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Gagal memuat workflow.</p>';
+      }
+    }
+
+    function editWf(wf) {
+      document.getElementById('wfId').value = wf.id;
+      document.getElementById('wfName').value = wf.name;
+      document.getElementById('wfDesc').value = wf.description || '';
+      document.getElementById('wfInstruction').value = wf.business_instruction || '';
+      document.getElementById('formTitleText').textContent = `Edit Workflow: ${wf.name}`;
+      document.getElementById('btnSubmitText').textContent = 'Update Workflow';
+      document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deleteWf(id) {
+      if(!confirm(`Apakah Anda yakin ingin menghapus workflow ${id}?`)) return;
+      try {
+        const res = await fetch(`/api/auth/admin/workflows/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if(res.ok) {
+          loadWorkflows();
+        } else {
+          alert("Gagal menghapus workflow.");
+        }
+      } catch (err) {
+        alert("Terjadi kesalahan.");
+      }
+    }
+
+    // ==========================================
+    // LOAD ALL USERS & MULTI-TENANT DATABASE
+    // ==========================================
+    async function loadUsersDatabase() {
+      const usersTbody = document.getElementById('usersTableBody');
+      try {
+        const res = await fetch(`/api/auth/admin/users?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const users = data.users || [];
+          allLoadedItems = data.items || [];
+
+          // KPI Updates
+          document.getElementById('kpiTotalUsers').textContent = users.length;
+          document.getElementById('kpiTotalItems').textContent = allLoadedItems.length;
+          
+          const totalStock = allLoadedItems.reduce((acc, it) => acc + (it.current_stock || 0), 0);
+          document.getElementById('kpiTotalStock').textContent = Number(totalStock).toLocaleString('id-ID');
+
+          // Render Users Table
+          let usersHtml = '';
+          users.forEach(u => {
+            const initial = u.username.charAt(0).toUpperCase();
+            const roleBadge = u.role === 'ADMIN' 
+              ? `<span class="badge-role-admin">SUPERADMIN</span>` 
+              : `<span class="badge-role-user">USER</span>`;
+            
+            let tenantBadge = `<span class="badge-tenant tenant-all">${u.tenant_id} (Global)</span>`;
+            if (u.tenant_id === 'TENANT_A') tenantBadge = `<span class="badge-tenant tenant-a">TENANT A</span>`;
+            if (u.tenant_id === 'TENANT_B') tenantBadge = `<span class="badge-tenant tenant-b">TENANT B</span>`;
+            if (u.tenant_id === 'TENANT_C') tenantBadge = `<span class="badge-tenant tenant-c">TENANT C</span>`;
+
+            const lowCount = u.stats ? u.stats.low_stock_count : 0;
+            const stockStatus = lowCount > 0 
+              ? `<span class="badge-stock-critical">${lowCount} Menipis</span>` 
+              : `<span class="badge-stock-safe">Normal</span>`;
+
+            usersHtml += `
+              <tr>
+                <td><span style="font-family: var(--font-mono); font-weight: 700; color: #1E40AF;">${escapeHtml(u.user_id)}</span></td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="user-avatar-circle">${initial}</div>
+                    <span style="font-weight: 700; color: var(--text-main);">${escapeHtml(u.username)}</span>
+                  </div>
+                </td>
+                <td>${roleBadge}</td>
+                <td>${tenantBadge}</td>
+                <td><span style="font-weight: 700;">${u.stats ? u.stats.total_items : 0} SKU</span></td>
+                <td><span style="font-family: var(--font-mono);">${u.stats ? Number(u.stats.total_stock).toLocaleString('id-ID') : 0} Unit</span></td>
+                <td>${stockStatus}</td>
+                <td>
+                  <button class="btn-action-edit" onclick="filterItemsByTenant('${u.tenant_id}')" style="padding: 3px 8px; font-size: 11.5px;">
+                    Filter Item
+                  </button>
+                </td>
+              </tr>
+            `;
+          });
+          usersTbody.innerHTML = usersHtml;
+
+          // Update counts on filter buttons
+          document.getElementById('countAll').textContent = allLoadedItems.length;
+          document.getElementById('countTenantA').textContent = allLoadedItems.filter(i => i.tenant_id === 'TENANT_A').length;
+          document.getElementById('countTenantB').textContent = allLoadedItems.filter(i => i.tenant_id === 'TENANT_B').length;
+          document.getElementById('countTenantC').textContent = allLoadedItems.filter(i => i.tenant_id === 'TENANT_C').length;
+
+          renderItemsTable();
+        }
+      } catch (err) {
+        usersTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 20px;">Gagal memuat database pengguna.</td></tr>`;
+      }
+    }
+
+    function filterItemsByTenant(tenant) {
+      selectedTenantFilter = tenant;
+      
+      // Update active pill button
+      const pills = document.querySelectorAll('#tenantFilterPills .pill-btn');
+      pills.forEach((p, idx) => {
+        p.classList.remove('active');
+        if (tenant === 'ALL' && idx === 0) p.classList.add('active');
+        if (tenant === 'TENANT_A' && idx === 1) p.classList.add('active');
+        if (tenant === 'TENANT_B' && idx === 2) p.classList.add('active');
+        if (tenant === 'TENANT_C' && idx === 3) p.classList.add('active');
+      });
+
+      renderItemsTable();
+    }
+
+    function filterItemsSearch() {
+      renderItemsTable();
+    }
+
+    function renderItemsTable() {
+      const itemsTbody = document.getElementById('itemsTableBody');
+      const searchQuery = (document.getElementById('itemSearchInput').value || '').toLowerCase().trim();
+
+      let filtered = allLoadedItems.filter(item => {
+        const matchesTenant = (selectedTenantFilter === 'ALL' || selectedTenantFilter === 'ALL (Global)') ? true : item.tenant_id === selectedTenantFilter;
+        const matchesSearch = !searchQuery || 
+          item.name.toLowerCase().includes(searchQuery) || 
+          item.item_id.toLowerCase().includes(searchQuery) ||
+          item.category.toLowerCase().includes(searchQuery);
+        return matchesTenant && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        itemsTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Tidak ada barang yang sesuai kriteria pencarian.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(it => {
+        let tenantBadge = `<span class="badge-tenant tenant-a">TENANT A</span>`;
+        if (it.tenant_id === 'TENANT_B') tenantBadge = `<span class="badge-tenant tenant-b">TENANT B</span>`;
+        if (it.tenant_id === 'TENANT_C') tenantBadge = `<span class="badge-tenant tenant-c">TENANT C</span>`;
+
+        let statusBadge = `<span class="badge-stock-safe">Normal</span>`;
+        if (it.current_stock === 0) {
+          statusBadge = `<span class="badge-stock-critical">Habis</span>`;
+        } else if (it.current_stock <= it.min_threshold) {
+          statusBadge = `<span class="badge-stock-critical">Menipis</span>`;
+        }
+
+        const maxThreshold = (it.min_threshold || 1) * 3;
+
+        html += `
+          <tr>
+            <td>
+              <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 11.5px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(it.item_id)}</span>
+            </td>
+            <td>
+              <div style="font-weight: 600; color: #0F172A;">${escapeHtml(it.name)}</div>
+            </td>
+            <td>
+              <span style="font-size: 11px; background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; padding: 2px 6px; border-radius: 4px;">${escapeHtml(it.category)}</span>
+            </td>
+            <td>${tenantBadge}</td>
+            <td style="text-align: right; font-weight: 700; color: #0F172A;">${it.current_stock} <span style="font-size: 10px; font-weight: 500; color: var(--text-muted);">${escapeHtml(it.unit)}</span></td>
+            <td style="text-align: right; font-size: 11px; color: var(--text-muted);">${it.min_threshold} / ${maxThreshold}</td>
+            <td style="text-align: right; font-weight: 600; color: #0F172A;">${formatCurrency(it.unit_price || 0)}</td>
+            <td style="text-align: center;">${statusBadge}</td>
+          </tr>
+        `;
+      });
+      itemsTbody.innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      localStorage.clear();
+      window.location.href = '/static/login.html';
+    }
+
+    // Default Load
+    loadWorkflows();
+  </script>
 </body>
 </html>

@@ -106,12 +106,12 @@ python database/seed_data.py
 Jalankan dev server FastAPI menggunakan Uvicorn:
 
 ```bash
-python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8050 --reload
 ```
 
 Buka browser Anda di:
-- 🌐 **Web Dashboard UI**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- 📑 **Interactive API Docs (Swagger)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- 🌐 **Web Dashboard UI**: [http://127.0.0.1:8050](http://127.0.0.1:8050)
+- 📑 **Interactive API Docs (Swagger)**: [http://127.0.0.1:8050/docs](http://127.0.0.1:8050/docs)
 
 ---
 

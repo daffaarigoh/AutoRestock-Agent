@@ -1,6 +1,11 @@
+import sys
+from pathlib import Path
 import requests
 
-BASE_URL = "http://localhost:8000"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from core.config import settings
+
+BASE_URL = f"http://localhost:{settings.API_PORT}"
 
 def test_login(username, password):
     res = requests.post(f"{BASE_URL}/api/auth/login", json={"username": username, "password": password})

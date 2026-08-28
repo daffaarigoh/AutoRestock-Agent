@@ -21,7 +21,7 @@ class Settings(_BaseSettings):
     APP_NAME: str = "AutoRestock-Agent"
     APP_ENV: str = "development"
     API_HOST: str = "0.0.0.0"
-    API_PORT: int = 8000
+    API_PORT: int = 8050
     DEBUG: bool = True
 
 
