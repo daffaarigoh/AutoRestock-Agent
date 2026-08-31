@@ -4,27 +4,21 @@ from typing import Any
 from database.db import get_db_connection
 
 
-def calculate_safety_stock(lead_time_days: int, avg_daily_usage: float) -> int:
+def calculate_safety_stock(min_threshold: int) -> int:
     """
-    Formula: Safety Stock = Lead Time * Daily Usage * 1.5
+    Legacy function, now just returns min_threshold.
     """
-    return int(math.ceil(lead_time_days * avg_daily_usage * 1.5))
+    return min_threshold
 
 
 def calculate_reorder_quantity(
-    lead_time_days: int,
-    avg_daily_usage: float,
     current_stock: int,
-    safety_stock: int | None = None
+    max_threshold: int
 ) -> int:
     """
-    Formula: Reorder Qty = (Daily Usage * Lead Time) + Safety Stock - Current Stock
+    Formula: Reorder Qty = Max Threshold - Current Stock
     """
-    if safety_stock is None:
-        safety_stock = calculate_safety_stock(lead_time_days, avg_daily_usage)
-        
-    expected_usage = avg_daily_usage * lead_time_days
-    reorder_qty = int(math.ceil(expected_usage + safety_stock - current_stock))
+    reorder_qty = max_threshold - current_stock
     return max(reorder_qty, 1)
 
 
@@ -37,9 +31,9 @@ def get_low_stock_items(tenant_id: str = "ALL") -> list[dict[str, Any]]:
     try:
         query = """
             SELECT 
-                item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit
+                item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit
             FROM items
-            WHERE current_stock < min_threshold
+            WHERE current_stock <= min_threshold
             AND (tenant_id = ? OR ? = 'ALL')
             ORDER BY (min_threshold - current_stock) DESC;
         """
@@ -49,12 +43,12 @@ def get_low_stock_items(tenant_id: str = "ALL") -> list[dict[str, Any]]:
         low_stock_items = []
         for row in rows:
             item_dict = dict(zip(columns, row))
-            lead_time = int(item_dict["lead_time_days"])
-            daily_usage = float(item_dict["avg_daily_usage"])
             stock = int(item_dict["current_stock"])
+            min_threshold = int(item_dict["min_threshold"])
+            max_threshold = int(item_dict["max_threshold"])
             
-            safety_stock = calculate_safety_stock(lead_time, daily_usage)
-            reorder_qty = calculate_reorder_quantity(lead_time, daily_usage, stock, safety_stock)
+            safety_stock = calculate_safety_stock(min_threshold)
+            reorder_qty = calculate_reorder_quantity(stock, max_threshold)
             
             item_dict["safety_stock"] = safety_stock
             item_dict["reorder_qty"] = reorder_qty
@@ -72,7 +66,7 @@ def get_specific_item_stock(item_name: str, tenant_id: str = "ALL") -> list[dict
     try:
         query = """
             SELECT 
-                item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit
+                item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit
             FROM items
             WHERE lower(name) LIKE ? AND (tenant_id = ? OR ? = 'ALL')
         """
@@ -129,13 +123,13 @@ def get_all_inventory_items(tenant_id: str = "ALL") -> list[dict[str, Any]]:
     try:
         query = """
             SELECT 
-                i.item_id, i.name, i.category, i.current_stock, i.min_threshold, 
+                i.item_id, i.name, i.category, i.current_stock, i.min_threshold, i.max_threshold,
                 i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id,
                 COALESCE(MIN(v.unit_price), 0.0) AS unit_price
             FROM items i
             LEFT JOIN vendors v ON i.item_id = v.item_id
             WHERE i.tenant_id = ? OR ? = 'ALL'
-            GROUP BY i.item_id, i.name, i.category, i.current_stock, i.min_threshold, 
+            GROUP BY i.item_id, i.name, i.category, i.current_stock, i.min_threshold, i.max_threshold,
                      i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id
             ORDER BY i.item_id ASC;
         """

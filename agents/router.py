@@ -12,7 +12,7 @@ def _extract_item_attributes_from_text(prompt: str) -> dict:
     name_match = re.search(r'(?:nama\s+produk|nama\s+barang|nama|produk|barang)\s*[:=]?\s*([A-Za-z0-9\s\-]+?)(?=,\s*|\s+kategori|\s+stok|\s+batas|\s+min|\s+harga|\s+dam|$)', prompt, re.IGNORECASE)
     if name_match:
         name_val = name_match.group(1).strip()
-        name_val = re.sub(r'^(?:baru\s+|tambah\s+|tambahkan\s+)', '', name_val, flags=re.IGNORECASE).strip()
+        name_val = re.sub(r'^(?:baru\s+|tambah\s+|tambahkan\s+|bernama\s+)+', '', name_val, flags=re.IGNORECASE).strip()
         if name_val and name_val.lower() not in ["baru", "produk", "barang"]:
             item["name"] = name_val
             
@@ -31,10 +31,14 @@ def _extract_item_attributes_from_text(prompt: str) -> dict:
     if stock_match:
         item["current_stock"] = int(stock_match.group(1))
         
-    # 4. Extract Min Threshold
-    min_match = re.search(r'(?:batas\s+min(?:imum)?|min(?:imum)?\s+threshold|threshold|min)\s*[:=]?\s*(\d+)', prompt, re.IGNORECASE)
+    # 4. Extract Min/Max Threshold
+    min_match = re.search(r'(?:batas\s+min(?:imum)?|min(?:imum)?\s+threshold|threshold\s+min(?:imal)?|min)\s*[:=]?\s*(\d+)', prompt, re.IGNORECASE)
     if min_match:
         item["min_threshold"] = int(min_match.group(1))
+        
+    max_match = re.search(r'(?:batas\s+mak(?:simal)?|mak(?:simal)?\s+threshold|threshold\s+mak(?:simal)?|max)\s*[:=]?\s*(\d+)', prompt, re.IGNORECASE)
+    if max_match:
+        item["max_threshold"] = int(max_match.group(1))
         
     # 5. Extract Burn Rate / Daily Usage
     usage_match = re.search(r'(?:konsumsi|burn\s+rate|daily\s+usage|pakai)\s*[:=]?\s*([\d\.]+)', prompt, re.IGNORECASE)
@@ -57,6 +61,12 @@ def _extract_item_attributes_from_text(prompt: str) -> dict:
     else:
         item["unit"] = "pcs"
         
+    # 8. Extract Unit Price
+    price_match = re.search(r'harga\s*[:=]?\s*(?:rp|rp\.|idr)?\s*(\d+(?:\.\d+)*)', prompt, re.IGNORECASE)
+    if price_match:
+        price_str = price_match.group(1).replace('.', '') # remove dots if any
+        item["unit_price"] = int(price_str)
+        
     return item
 
 
@@ -77,8 +87,8 @@ Match the user's prompt to one of the following predefined workflows:
 
 {workflows_str}
 
-If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}} (extract whatever fields the user provided, leaving unmentioned fields out).
-If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_threshold": 100}}].
+If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "max_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}} (extract whatever fields the user provided, leaving unmentioned fields out).
+If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}]. Include only the thresholds the user specified.
 If the user specifies an item name to check, extract it as "target_item_name".
 If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
 Do not assume any default workflow. Carefully match the prompt's intent to the descriptions provided above.
@@ -132,7 +142,7 @@ If no workflow matches, return workflow_id: null.
         if any(k in prompt_lower for k in ["seluruh gudang", "audit"]) and not any(k in prompt_lower for k in ["pdf", "dokumen", "pr", "restock", "buatkan"]):
             for row in workflows:
                 if row[0] == "WF-004" or "audit" in row[1].lower():
-                    return {"workflow_id": row[0], "send_email": True}
+                    return {"workflow_id": row[0], "send_email": False}
                     
         # 4. PR / Restock / Menipis / Kritis / Pengadaan / PDF
         matched_wf_id = None

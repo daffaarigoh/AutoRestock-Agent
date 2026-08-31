@@ -226,6 +226,7 @@ def approve_pr_requisition(request: ApprovalRequest):
 
 class UpdateItemThresholdRequest(BaseModel):
     min_threshold: int | None = Field(None, description="New minimum safety threshold")
+    max_threshold: int | None = Field(None, description="New maximum safety threshold")
     current_stock: int | None = Field(None, description="Optional update to current physical stock")
     avg_daily_usage: float | None = Field(None, description="Optional update to daily usage burn rate")
     lead_time_days: int | None = Field(None, description="Optional update to vendor lead time")
@@ -238,7 +239,7 @@ def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest):
     """
     conn = get_db_connection()
     try:
-        existing = conn.execute("SELECT item_id, name, min_threshold, current_stock FROM items WHERE item_id = ?", [item_id]).fetchone()
+        existing = conn.execute("SELECT item_id, name, min_threshold, max_threshold, current_stock FROM items WHERE item_id = ?", [item_id]).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail=f"Item with ID '{item_id}' not found in inventory.")
 
@@ -247,6 +248,9 @@ def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest):
         if payload.min_threshold is not None:
             updates.append("min_threshold = ?")
             params.append(payload.min_threshold)
+        if payload.max_threshold is not None:
+            updates.append("max_threshold = ?")
+            params.append(payload.max_threshold)
         if payload.current_stock is not None:
             updates.append("current_stock = ?")
             params.append(payload.current_stock)
@@ -266,7 +270,7 @@ def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest):
 
         # Retrieve updated record
         updated_row = conn.execute("""
-            SELECT item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit
+            SELECT item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit
             FROM items WHERE item_id = ?;
         """, [item_id]).fetchone()
         columns = [d[0] for d in conn.description]

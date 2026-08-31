@@ -140,19 +140,35 @@ class JSONExecutionEngine:
                         
                         conn = get_db_connection()
                         conn.execute("""
-                            INSERT INTO items (item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                            INSERT INTO items (item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                         """, [
                             item_id,
                             new_item.get("name", "Unnamed Item"),
                             new_item.get("category", "General"),
                             int(new_item.get("current_stock", 0)),
                             int(new_item.get("min_threshold", 0)),
+                            int(new_item.get("max_threshold", int(new_item.get("min_threshold", 0)) * 3)),
                             float(new_item.get("avg_daily_usage", 1.0)),
                             int(new_item.get("lead_time_days", 3)),
                             new_item.get("unit", "pcs"),
                             effective_tenant
                         ])
+                        
+                        unit_price = float(new_item.get("unit_price", 0))
+                        conn.execute("""
+                            INSERT INTO vendors (vendor_id, name, item_id, unit_price, lead_time_days, rating, tenant_id)
+                            VALUES (?, ?, ?, ?, ?, ?, ?);
+                        """, [
+                            f"VND-{item_id[-4:]}",
+                            "Default Supplier",
+                            item_id,
+                            unit_price,
+                            int(new_item.get("lead_time_days", 3)),
+                            5.0,
+                            effective_tenant
+                        ])
+                        
                         conn.close()
                         
                         context["registered_item"] = {
@@ -216,11 +232,22 @@ class JSONExecutionEngine:
                             identifier = upd.get("item_name") or upd.get("item_id")
                             if not identifier:
                                 continue
-                            conn.execute("""
-                                UPDATE items 
-                                SET min_threshold = ? 
-                                WHERE (item_id = ? OR lower(name) LIKE ?) AND (tenant_id = ? OR ? = 'ALL')
-                            """, [upd["new_threshold"], identifier, f"%{str(identifier).lower()}%", tenant_id, tenant_id])
+                                
+                            set_clauses = []
+                            params = []
+                            if "new_min_threshold" in upd or "new_threshold" in upd:
+                                set_clauses.append("min_threshold = ?")
+                                params.append(upd.get("new_min_threshold", upd.get("new_threshold")))
+                            if "new_max_threshold" in upd:
+                                set_clauses.append("max_threshold = ?")
+                                params.append(upd.get("new_max_threshold"))
+                                
+                            if not set_clauses:
+                                continue
+                                
+                            params.extend([identifier, f"%{str(identifier).lower()}%", tenant_id, tenant_id])
+                            sql = f"UPDATE items SET {', '.join(set_clauses)} WHERE (item_id = ? OR lower(name) LIKE ?) AND (tenant_id = ? OR ? = 'ALL')"
+                            conn.execute(sql, params)
                         conn.close()
                         execution_results.append({
                             "step_number": i,
@@ -381,8 +408,10 @@ class JSONExecutionEngine:
             summary = "Stok saat ini: " + ", ".join(item_msgs)
         elif len(context.get("specific_items", [])) == 0 and "specific_items" in context:
             summary = "Barang tersebut tidak ditemukan di gudang."
-        elif context.get("low_stock_items"):
+        elif "low_stock_items" in context:
             summary = f"Ditemukan {len(context['low_stock_items'])} barang yang stoknya menipis."
+        elif "all_inventory_items" in context:
+            summary = f"Audit selesai. Terdapat {len(context['all_inventory_items'])} macam barang di dalam inventaris Anda saat ini."
         else:
             summary = "Workflow berhasil dieksekusi."
         

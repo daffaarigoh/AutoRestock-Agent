@@ -330,7 +330,7 @@ async function loadInventoryItems() {
         current_stock: Number(it.current_stock) || 0,
         unit: it.unit || 'pcs',
         min_stock: Number(it.min_threshold) || 0,
-        max_stock: (Number(it.min_threshold) || 1) * 3,
+        max_stock: Number(it.max_threshold) || 0,
         unit_price: Number(it.unit_price) || 0
       }));
       filterCatalogTable();

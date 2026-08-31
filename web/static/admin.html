@@ -1249,7 +1249,7 @@
           statusBadge = `<span class="badge-stock-critical">Menipis</span>`;
         }
 
-        const maxThreshold = (it.min_threshold || 1) * 3;
+        const maxThreshold = it.max_threshold || 0;
 
         html += `
           <tr>

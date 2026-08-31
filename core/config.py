@@ -33,8 +33,6 @@ class Settings(_BaseSettings):
     # Model URLs
     MODEL_QWEN_URL: str = "http://localhost:8001/v1"
     MODEL_NEMOTRON_URL: str = "http://localhost:8002/v1"
-    MODEL_OCR_LIGHTON_URL: str = "http://localhost:8003/v1"
-    MODEL_QWEN_VISION_URL: str = "http://localhost:8004/v1"
     MODEL_API_KEY: str = "dummy-key"
 
     # Integrations & Dispatchers (Email)
@@ -53,7 +51,6 @@ class Settings(_BaseSettings):
     PENDING_DIR: Path = BASE_DIR / "storage" / "pending"
     APPROVED_DIR: Path = BASE_DIR / "storage" / "approved"
     REJECTED_DIR: Path = BASE_DIR / "storage" / "rejected"
-    ANNOTATED_DIR: Path = BASE_DIR / "storage" / "annotated"
     DATA_DIR: Path = BASE_DIR / "data"
     SAMPLES_DIR: Path = BASE_DIR / "data" / "samples"
 
@@ -69,8 +66,6 @@ class Settings(_BaseSettings):
                 base_url = f"{base_url}/v1"
             self.MODEL_QWEN_URL = base_url
             self.MODEL_NEMOTRON_URL = base_url
-            self.MODEL_OCR_LIGHTON_URL = base_url
-            self.MODEL_QWEN_VISION_URL = base_url
 
 
 settings = Settings()
@@ -81,7 +76,6 @@ settings.DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
 settings.PENDING_DIR.mkdir(parents=True, exist_ok=True)
 settings.APPROVED_DIR.mkdir(parents=True, exist_ok=True)
 settings.REJECTED_DIR.mkdir(parents=True, exist_ok=True)
-settings.ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
 settings.SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
 

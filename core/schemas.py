@@ -16,6 +16,7 @@ class InventoryItem(BaseModel):
     category: str
     current_stock: int
     min_threshold: int
+    max_threshold: int
     unit: str = "pcs"
     avg_daily_usage: float
     lead_time_days: int

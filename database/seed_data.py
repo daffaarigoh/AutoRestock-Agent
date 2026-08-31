@@ -52,6 +52,7 @@ def init_db(db_path: Path = DB_PATH):
             category VARCHAR NOT NULL,
             current_stock INTEGER NOT NULL,
             min_threshold INTEGER NOT NULL,
+            max_threshold INTEGER NOT NULL,
             avg_daily_usage FLOAT NOT NULL,
             lead_time_days INTEGER NOT NULL,
             unit VARCHAR NOT NULL,
@@ -158,16 +159,14 @@ def seed_data(conn: duckdb.DuckDBPyConnection):
         "workflow": "laporan_stok_kritis",
         "version": 1,
         "steps": [
-            {"type": "tool", "tool": "inventory.get_low_stock_products"},
-            {"type": "tool", "tool": "notification.send_email"}
+            {"type": "tool", "tool": "inventory.get_low_stock_products"}
         ]
     }
     wf_4_json = {
         "workflow": "audit_seluruh_gudang",
         "version": 1,
         "steps": [
-            {"type": "tool", "tool": "inventory.get_all_products"},
-            {"type": "tool", "tool": "notification.send_email"}
+            {"type": "tool", "tool": "inventory.get_all_products"}
         ]
     }
     
@@ -195,43 +194,43 @@ def seed_data(conn: duckdb.DuckDBPyConnection):
 
     # 25 Items distributed across Tenants
     items_data = [
-        # (item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
+        # (item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
         # TENANT_A (Items 1-9)
-        ("ITM-001", "Microcontroller STM32F401", "Electronics", 12, 50, 8.5, 7, "pcs", "TENANT_A"),
-        ("ITM-002", "ESP32-WROOM-32D Module", "Electronics", 8, 40, 6.0, 5, "pcs", "TENANT_A"),
-        ("ITM-003", "Thermal Paste Arctic MX-4 4g", "Consumables", 5, 25, 3.2, 4, "tube", "TENANT_A"),
-        ("ITM-004", "Cardboard Box 30x20x15cm", "Packaging", 35, 150, 25.0, 3, "pcs", "TENANT_A"),
-        ("ITM-005", "Bubble Wrap Roll 50m x 50cm", "Packaging", 4, 15, 2.0, 3, "roll", "TENANT_A"),
-        ("ITM-006", "Solder Wire Lead-Free 0.8mm 500g", "Consumables", 28, 20, 1.5, 5, "spool", "TENANT_A"),
-        ("ITM-007", "Lithium Polymer Battery 3.7V 1200mAh", "Electronics", 85, 50, 5.0, 10, "pcs", "TENANT_A"),
-        ("ITM-008", "Stepper Motor NEMA 17", "Mechanical", 45, 30, 3.0, 8, "pcs", "TENANT_A"),
-        ("ITM-009", "Linear Rail MGN12H 300mm", "Mechanical", 22, 15, 1.2, 12, "set", "TENANT_A"),
+        ("ITM-001", "Microcontroller STM32F401", "Electronics", 12, 50, 150, 8.5, 7, "pcs", "TENANT_A"),
+        ("ITM-002", "ESP32-WROOM-32D Module", "Electronics", 8, 40, 120, 6.0, 5, "pcs", "TENANT_A"),
+        ("ITM-003", "Thermal Paste Arctic MX-4 4g", "Consumables", 5, 25, 75, 3.2, 4, "tube", "TENANT_A"),
+        ("ITM-004", "Cardboard Box 30x20x15cm", "Packaging", 35, 150, 450, 25.0, 3, "pcs", "TENANT_A"),
+        ("ITM-005", "Bubble Wrap Roll 50m x 50cm", "Packaging", 4, 15, 45, 2.0, 3, "roll", "TENANT_A"),
+        ("ITM-006", "Solder Wire Lead-Free 0.8mm 500g", "Consumables", 28, 20, 60, 1.5, 5, "spool", "TENANT_A"),
+        ("ITM-007", "Lithium Polymer Battery 3.7V 1200mAh", "Electronics", 85, 50, 150, 5.0, 10, "pcs", "TENANT_A"),
+        ("ITM-008", "Stepper Motor NEMA 17", "Mechanical", 45, 30, 90, 3.0, 8, "pcs", "TENANT_A"),
+        ("ITM-009", "Linear Rail MGN12H 300mm", "Mechanical", 22, 15, 45, 1.2, 12, "set", "TENANT_A"),
         
         # TENANT_B (Items 10-17)
-        ("ITM-010", "PLA 3D Printer Filament 1kg", "Raw Materials", 60, 35, 4.0, 4, "spool", "TENANT_B"),
-        ("ITM-011", "PETG Filament Black 1kg", "Raw Materials", 32, 20, 2.5, 4, "spool", "TENANT_B"),
-        ("ITM-012", "Kapton Tape 20mm x 33m", "Consumables", 40, 25, 2.0, 5, "roll", "TENANT_B"),
-        ("ITM-013", "Industrial Isopropyl Alcohol 99% 5L", "Chemicals", 18, 10, 1.0, 3, "canister", "TENANT_B"),
-        ("ITM-014", "Anti-Static ESD Gloves (M)", "Safety", 120, 60, 8.0, 3, "pair", "TENANT_B"),
-        ("ITM-015", "Heat Shrink Tubing Assortment Box", "Consumables", 55, 30, 3.5, 6, "box", "TENANT_B"),
-        ("ITM-016", "USB-C to USB-A Cable 1m", "Cables", 90, 40, 4.0, 5, "pcs", "TENANT_B"),
-        ("ITM-017", "Silica Gel Desiccant Packets 5g", "Packaging", 450, 200, 30.0, 2, "pack", "TENANT_B"),
+        ("ITM-010", "PLA 3D Printer Filament 1kg", "Raw Materials", 60, 35, 105, 4.0, 4, "spool", "TENANT_B"),
+        ("ITM-011", "PETG Filament Black 1kg", "Raw Materials", 32, 20, 60, 2.5, 4, "spool", "TENANT_B"),
+        ("ITM-012", "Kapton Tape 20mm x 33m", "Consumables", 40, 25, 75, 2.0, 5, "roll", "TENANT_B"),
+        ("ITM-013", "Industrial Isopropyl Alcohol 99% 5L", "Chemicals", 18, 10, 30, 1.0, 3, "canister", "TENANT_B"),
+        ("ITM-014", "Anti-Static ESD Gloves (M)", "Safety", 120, 60, 180, 8.0, 3, "pair", "TENANT_B"),
+        ("ITM-015", "Heat Shrink Tubing Assortment Box", "Consumables", 55, 30, 90, 3.5, 6, "box", "TENANT_B"),
+        ("ITM-016", "USB-C to USB-A Cable 1m", "Cables", 90, 40, 120, 4.0, 5, "pcs", "TENANT_B"),
+        ("ITM-017", "Silica Gel Desiccant Packets 5g", "Packaging", 450, 200, 600, 30.0, 2, "pack", "TENANT_B"),
         
         # TENANT_C (Items 18-25)
-        ("ITM-018", "M3 Hex Socket Screws Kit 500pcs", "Hardware", 25, 15, 1.5, 4, "kit", "TENANT_C"),
-        ("ITM-019", "Aluminum Heat Sink 20x20x6mm", "Electronics", 210, 100, 12.0, 7, "pcs", "TENANT_C"),
-        ("ITM-020", "DC Brushless Cooling Fan 12V 4010", "Electronics", 65, 30, 3.0, 6, "pcs", "TENANT_C"),
-        ("ITM-021", "Shipping Label Thermal Paper 100x150mm", "Packaging", 80, 50, 6.0, 3, "roll", "TENANT_C"),
-        ("ITM-022", "Flux Pen No-Clean 10ml", "Consumables", 35, 20, 1.8, 5, "pcs", "TENANT_C"),
-        ("ITM-023", "Multimeter Test Leads Probe Set", "Tools", 28, 15, 0.8, 6, "set", "TENANT_C"),
-        ("ITM-024", "Desoldering Wick Braid 2.5mm", "Consumables", 48, 25, 2.2, 4, "roll", "TENANT_C"),
-        ("ITM-025", "Barcoding Scanner Wireless 2.4G", "Equipment", 14, 8, 0.4, 10, "unit", "TENANT_C")
+        ("ITM-018", "M3 Hex Socket Screws Kit 500pcs", "Hardware", 25, 15, 45, 1.5, 4, "kit", "TENANT_C"),
+        ("ITM-019", "Aluminum Heat Sink 20x20x6mm", "Electronics", 210, 100, 300, 12.0, 7, "pcs", "TENANT_C"),
+        ("ITM-020", "DC Brushless Cooling Fan 12V 4010", "Electronics", 65, 30, 90, 3.0, 6, "pcs", "TENANT_C"),
+        ("ITM-021", "Shipping Label Thermal Paper 100x150mm", "Packaging", 80, 50, 150, 6.0, 3, "roll", "TENANT_C"),
+        ("ITM-022", "Flux Pen No-Clean 10ml", "Consumables", 35, 20, 60, 1.8, 5, "pcs", "TENANT_C"),
+        ("ITM-023", "Multimeter Test Leads Probe Set", "Tools", 28, 15, 45, 0.8, 6, "set", "TENANT_C"),
+        ("ITM-024", "Desoldering Wick Braid 2.5mm", "Consumables", 48, 25, 75, 2.2, 4, "roll", "TENANT_C"),
+        ("ITM-025", "Barcoding Scanner Wireless 2.4G", "Equipment", 14, 8, 24, 0.4, 10, "unit", "TENANT_C")
     ]
     item_count = conn.execute("SELECT COUNT(*) FROM items;").fetchone()[0]
     if item_count == 0:
         conn.executemany("""
-            INSERT INTO items (item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            INSERT INTO items (item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """, items_data)
         print(f"[OK] Successfully inserted {len(items_data)} items into 'items' table.")
 

@@ -55,7 +55,7 @@ class ModelGateway:
         if response_format_json:
             payload["response_format"] = {"type": "json_object"}
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=2.5)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=5.0)) as client:
             try:
                 res = await client.post(f"{endpoint}/chat/completions", json=payload, headers=headers)
                 res.raise_for_status()

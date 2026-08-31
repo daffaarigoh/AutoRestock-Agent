@@ -390,6 +390,9 @@ async def reset_sample_data():
     try:
         from database.seed_data import init_db, seed_data
         conn = init_db()
+        conn.execute("DELETE FROM orders;")
+        conn.execute("DELETE FROM vendors;")
+        conn.execute("DELETE FROM items;")
         seed_data(conn)
         conn.close()
     except Exception as e:

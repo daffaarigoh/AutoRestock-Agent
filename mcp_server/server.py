@@ -13,14 +13,14 @@ from mcp_server.tools import (
 mcp = MCPServer("AutoRestock-MCP")
 
 @mcp.tool()
-def safety_stock(lead_time_days: int, avg_daily_usage: float) -> int:
+def safety_stock(min_threshold: int) -> int:
     """Calculate the safety stock needed for an item."""
-    return calculate_safety_stock(lead_time_days, avg_daily_usage)
+    return calculate_safety_stock(min_threshold)
 
 @mcp.tool()
-def reorder_quantity(lead_time_days: int, avg_daily_usage: float, current_stock: int, safety_stock_val: int = 0) -> int:
+def reorder_quantity(current_stock: int, max_threshold: int) -> int:
     """Calculate the optimal reorder quantity for an item."""
-    return calculate_reorder_quantity(lead_time_days, avg_daily_usage, current_stock, safety_stock_val if safety_stock_val else None)
+    return calculate_reorder_quantity(current_stock, max_threshold)
 
 @mcp.tool()
 def fetch_low_stock(tenant_id: str = "ALL") -> list[dict]:
