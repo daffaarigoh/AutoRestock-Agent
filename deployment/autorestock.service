@@ -1,0 +1,14 @@
+[Unit]
+Description=AutoRestock-Agent FastAPI Service
+After=network.target
+
+[Service]
+User={{USER}}
+WorkingDirectory={{PWD}}
+Environment="PATH={{PWD}}/.venv/bin"
+ExecStart={{PWD}}/.venv/bin/gunicorn -k uvicorn.workers.UvicornWorker api.main:app --bind 0.0.0.0:8050 --workers 2 --timeout 120
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
