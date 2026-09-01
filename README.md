@@ -1,135 +1,154 @@
-# 📦 AutoRestock-Agent
-> **Autonomous Multi-Agent Inventory Replenishment & Procurement System**  
-> Powered by **LangGraph**, `qwen-35b`, `nemotron-35`, **Typst**, and **DuckDB**.
+<div align="center">
+  <h1>📦 AutoRestock-Agent</h1>
+  <p><strong>Autonomous Multi-Agent Inventory Replenishment & Procurement System</strong></p>
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Python Version" />
+    <img src="https://img.shields.io/badge/FastAPI-0.100+-green.svg" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/LangGraph-AI-purple.svg" alt="LangGraph" />
+    <img src="https://img.shields.io/badge/DuckDB-Database-yellow.svg" alt="DuckDB" />
+    <img src="https://img.shields.io/badge/Typst-PDF-orange.svg" alt="Typst" />
+  </p>
+</div>
 
 ---
 
-## 🌟 Fitur & Keunggulan Utama
+## 📝 Description
 
-- **Dynamic Safety Stock Algorithm**:
-  $$\text{Safety Stock} = \text{Lead Time} \times \text{Daily Usage} \times 1.5$$
-  $$\text{Reorder Qty} = (\text{Daily Usage} \times \text{Lead Time}) + \text{Safety Stock} - \text{Current Stock}$$
-- **Multi-Agent Orchestration (LangGraph)**:
-  - **Scan Node**: Memindai inventaris kritis (`current_stock < min_threshold`) di DuckDB.
-  - **Planner Agent (`qwen-35b`)**: Mencocokkan vendor terbaik berdasarkan harga terendah, lead time, dan rating.
-  - **Compliance Auditor (`nemotron-35`)**: Evaluasi kepatuhan anggaran dan batas pagu pengadaan.
-  - **Typst Document Node**: Kompilasi draf Purchase Requisition (PR) PDF formal dalam hitungan milidetik (<50ms).
-  - **Wait Approval Node (Human-In-The-Loop)**: Alur persetujuan manajerial (*APPROVE* / *REJECT*) yang memperbarui database `orders` & `items`.
-- **Modern Web Dashboard**: Pemantauan inventaris real-time, Live Server-Sent Events (SSE) Agent Console, dan in-browser PDF modal previewer.
+**AutoRestock-Agent** is an intelligent, autonomous inventory management and procurement system. Built on a multi-agent architecture using **LangGraph**, it continuously monitors inventory levels (via **DuckDB**) and triggers automated workflows when stock falls below a safety threshold. The system intelligently matches vendors, audits budgets, and compiles formal Purchase Requisition (PR) documents dynamically using **Typst**. The final decision is delegated to a Human-in-the-Loop (HITL) approval process via a modern web dashboard.
+
+### 🏷️ Topics
+`Artificial Intelligence`, `LangGraph`, `Multi-Agent Systems`, `FastAPI`, `DuckDB`, `Inventory Management`, `Procurement`, `Typst`, `Python`, `Automated Workflow`
 
 ---
 
-## 🔄 Alur Kerja Project (Workflow)
+## ✨ Features & Capabilities
+
+| Feature | Description | Technology Stack |
+| :--- | :--- | :--- |
+| **🤖 Multi-Agent AI Orchestration** | Autonomous agents (Planner, Auditor) that calculate reorder quantities and verify budgets. | LangGraph, Qwen-35b, Nemotron-35 |
+| **📊 Dynamic Safety Stock Algorithm** | Calculates optimal restock quantities based on lead time and daily usage dynamically. | Python / DuckDB |
+| **📄 Blazing-Fast PDF Generation** | Compiles formal Purchase Requisition drafts in under 50ms using modern typesetting. | Typst |
+| **👥 Human-in-the-Loop (HITL)** | Intercepts agent workflows to await managerial approval (Approve/Reject) on the generated PR. | FastAPI, SSE, Web Dashboard |
+| **🌐 Modern Web Dashboard** | A responsive UI for real-time inventory monitoring and PR document previews. | HTML5, CSS3, JavaScript |
+
+---
+
+## 🔄 System Architecture & Workflow
+
+The following flowchart illustrates the autonomous procurement lifecycle, from detecting critical stock levels to the final human approval.
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    participant User as Manajer Gudang / User
-    participant DB as DuckDB (items, vendors, orders)
-    participant Graph as LangGraph Multi-Agent
-    participant Typst as Typst PDF Compiler
-    participant UI as Web Dashboard
-
-    Note over DB,Graph: 1. Autonomous Multi-Agent Cycle
-    User->>Graph: Trigger "Run Autonomous Restock"
-    Graph->>DB: Scan barang kritis (current_stock < min_threshold)
-    Graph->>Graph: Planner (qwen-35b) hitung reorder & vendor matching
-    Graph->>Graph: Auditor (nemotron-35) verifikasi anggaran
-    Graph->>Typst: Kompilasi dokumen formal PDF
-    Typst-->>Graph: Draf PR ({pr_number}.pdf) status PENDING
-    Graph->>DB: Catat order draf ke tabel 'orders'
-    Graph-->>UI: Kirim SSE log & tampilkan di daftar PR
-
-    Note over User,UI: 2. Human-In-The-Loop Approval
-    User->>UI: Tinjau PDF di Modal Previewer
-    alt Manajer APPROVE
-        User->>UI: Klik tombol [ Approve ]
-        UI->>Graph: Resume LangGraph (action="APPROVE")
-        Graph->>DB: Update status orders='APPROVED' & tambah current_stock
-        Graph->>Typst: Re-compile PDF dengan stamp APPROVED
-    else Manajer REJECT
-        User->>UI: Klik tombol [ Reject ]
-        UI->>Graph: Resume LangGraph (action="REJECT")
-        Graph->>DB: Update status orders='REJECTED'
-        Graph->>Typst: Re-compile PDF dengan stamp REJECTED
+flowchart TD
+    subgraph Autonomous Agent Loop
+        A[(DuckDB)] -->|Scan Stock < Min| B(LangGraph Trigger)
+        B --> C[Planner Agent: Qwen-35b<br/>Vendor Matching & Reorder Math]
+        C --> D[Auditor Agent: Nemotron-35<br/>Budget Compliance]
+        D --> E{Typst Engine}
+        E -->|Compile PR| F(Draft PDF Generated)
     end
+    
+    subgraph Human-In-The-Loop (HITL)
+        F -.->|SSE Alert| G[Web Dashboard]
+        G --> H{Manager Review}
+        H -->|Approve| I[Update Stock & Stamp APPROVED]
+        H -->|Reject| J[Cancel Order & Stamp REJECTED]
+    end
+    
+    style A fill:#f9d0c4,stroke:#333,stroke-width:2px
+    style B fill:#d4edda,stroke:#333,stroke-width:2px
+    style C fill:#d1ecf1,stroke:#333,stroke-width:2px
+    style D fill:#d1ecf1,stroke:#333,stroke-width:2px
+    style E fill:#fff3cd,stroke:#333,stroke-width:2px
+    style G fill:#e2e3e5,stroke:#333,stroke-width:2px
 ```
 
 ---
 
-## 📁 Struktur Direktori
+## 🧮 Safety Stock Algorithm
 
-```text
-AutoRestock-Agent/
-├── agents/                  # LangGraph multi-agent core & state schemas
-│   ├── state.py             # Shared state & models (RestockItem, PurchaseRequisition)
-│   └── workflow.py          # StateGraph (Scan -> Planner -> Auditor -> Typst -> HITL)
-├── api/                     # FastAPI backend application
-│   ├── main.py              # App entrypoint, middleware, & static mounts
-│   └── routers/             # Endpoint routers (agent, approval, ingest, stream)
-├── core/                    # Konfigurasi, schema kontrak, LLM client gateway
-├── database/                # DuckDB connection, schema initialization, & seed data
-├── docgen/                  # Typst typesetting template & compiler engine
-│   └── templates/           # purchase_requisition.typ
+The system employs a robust mathematical model to determine optimal restock volumes:
 
-├── scripts/                 # Demo scripts & sample asset generators
-├── storage/                 # Storage runtime PDF documents & images
-├── tests/                   # Test suites (run_tests.py, test_api_and_pipeline.py)
-├── web/                     # Web dashboard frontend (HTML, CSS, JS)
-├── requirements.txt         # Python dependencies
-└── seed_demo.py             # Interactive CLI simulation script
-```
+$$ \text{Safety Stock} = \text{Lead Time} \times \text{Daily Usage} \times 1.5 $$
+$$ \text{Reorder Qty} = (\text{Daily Usage} \times \text{Lead Time}) + \text{Safety Stock} - \text{Current Stock} $$
 
 ---
 
-## 🚀 Panduan Menjalankan Project (Tanpa Docker)
+## 🚀 Getting Started
 
-### 1. Persiapan Environment Python
-Pastikan Python 3.10+ telah terpasang di laptop Anda.
+### Prerequisites
+- Python 3.10 or higher
+- Git
 
-```bash
-# Masuk ke direktori project
-cd d:\Code\AutoRestock-Agent
+### Installation
 
-# Install dependensi (cukup sekali)
-pip install -r requirements.txt
-```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/daffaarigoh/AutoRestock-Agent.git
+   cd AutoRestock-Agent
+   ```
 
-### 2. Inisialisasi Database & Seeding Data
-Jalankan perintah ini untuk membuat database DuckDB (`storage/inventory.db`) dan mengisi 25 data inventaris realistis:
+2. **Set up the virtual environment:**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+   ```
 
-```bash
-python database/seed_data.py
-```
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 3. Menjalankan Web Dashboard & API Server
-Jalankan dev server FastAPI menggunakan Uvicorn:
+4. **Initialize Database & Seed Data:**
+   Creates a DuckDB instance (`storage/inventory.db`) with 25 realistic mock products.
+   ```bash
+   python database/seed_data.py
+   ```
+
+### Running the Application
+
+Start the FastAPI application server:
 
 ```bash
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8050 --reload
 ```
 
-Buka browser Anda di:
-- 🌐 **Web Dashboard UI**: [http://127.0.0.1:8050](http://127.0.0.1:8050)
-- 📑 **Interactive API Docs (Swagger)**: [http://127.0.0.1:8050/docs](http://127.0.0.1:8050/docs)
+- **Web Dashboard UI**: [http://127.0.0.1:8050](http://127.0.0.1:8050)
+- **API Documentation**: [http://127.0.0.1:8050/docs](http://127.0.0.1:8050/docs)
 
 ---
 
-## 🧪 Menjalankan Pengujian & Simulasi
+## 🧪 Testing & Simulation
 
-### Opsi A: Simulasi Interaktif CLI
-Untuk melihat seluruh proses multi-agent dan mengambil keputusan *APPROVE/REJECT* langsung di terminal:
+The project includes both an interactive CLI simulator and a comprehensive test suite.
+
+### Interactive CLI Simulation
+Run a complete multi-agent cycle directly in your terminal to see how the Planner and Auditor nodes interact before Human approval.
 ```bash
 python seed_demo.py
 ```
 
-### Opsi B: Menjalankan Unit & Integration Tests
-Untuk menjalankan seluruh 11 unit test dan 8 integration test:
+### Running Unit & Integration Tests
+Ensure system integrity by running the test suite:
 ```bash
-# Menjalankan seluruh test suite
+# Run all tests
 python -m unittest discover -s tests -p "test_*.py"
 
-# Atau menjalankan end-to-end API pipeline test
+# Run end-to-end API pipeline integration test
 python tests/test_api_and_pipeline.py
 ```
 
+---
+
+## 📁 Repository Structure
+
+```text
+AutoRestock-Agent/
+├── agents/                  # LangGraph multi-agent logic (Planner, Auditor, HITL)
+├── api/                     # FastAPI backend application & routers
+├── core/                    # System configurations & LLM integrations
+├── database/                # DuckDB schema and seeding logic
+├── docgen/                  # Typst templates & rendering engine
+├── storage/                 # Local storage for DuckDB and Generated PDFs
+├── tests/                   # Unit & E2E Integration tests
+└── web/                     # Frontend Dashboard (HTML, CSS, JS)
+```
