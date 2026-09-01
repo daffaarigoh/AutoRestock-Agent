@@ -64,15 +64,6 @@ flowchart TD
 
 ---
 
-## 🧮 Safety Stock Algorithm
-
-The system employs a robust mathematical model to determine optimal restock volumes:
-
-$$ \text{Safety Stock} = \text{Lead Time} \times \text{Daily Usage} \times 1.5 $$
-$$ \text{Reorder Qty} = (\text{Daily Usage} \times \text{Lead Time}) + \text{Safety Stock} - \text{Current Stock} $$
-
----
-
 ## 🚀 Getting Started
 
 ### Prerequisites
