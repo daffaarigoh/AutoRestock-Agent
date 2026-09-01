@@ -47,7 +47,7 @@ flowchart TD
         E -->|Compile PR| F(Draft PDF Generated)
     end
     
-    subgraph Human-In-The-Loop (HITL)
+    subgraph Human-In-The-Loop
         F -.->|SSE Alert| G[Web Dashboard]
         G --> H{Manager Review}
         H -->|Approve| I[Update Stock & Stamp APPROVED]
