@@ -325,7 +325,7 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             workflow_id = "WF-001"
             
         # Fetch workflow from DB
-        conn = get_db_connection(read_only=True)
+        conn = get_db_connection()
         wf_row = conn.execute("SELECT compiled_json FROM workflows WHERE id = ?", [workflow_id]).fetchone()
         conn.close()
         
