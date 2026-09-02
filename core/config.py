@@ -23,7 +23,7 @@ class Settings(_BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8050
     DEBUG: bool = True
-
+    PUBLIC_URL: str | None = None
 
 
     # Alternative standard env keys

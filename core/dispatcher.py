@@ -34,8 +34,11 @@ class MultiChannelDispatcher:
         Sends a rich HTML email notification with optional PDF attachment and interactive Approve/Reject action buttons.
         Falls back to smart simulation if SMTP credentials are not configured.
         """
-        host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
-        base_url = base_url or f"http://{host}:{settings.API_PORT}"
+        if settings.PUBLIC_URL:
+            base_url = base_url or settings.PUBLIC_URL.rstrip("/")
+        else:
+            host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
+            base_url = base_url or f"http://{host}:{settings.API_PORT}"
         recipient = recipient_email or settings.DEFAULT_RECIPIENT_EMAIL
         is_smtp_configured = bool(settings.SMTP_EMAIL and settings.SMTP_PASSWORD)
 
