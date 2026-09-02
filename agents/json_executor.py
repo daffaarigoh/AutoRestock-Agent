@@ -169,6 +169,7 @@ class JSONExecutionEngine:
                             effective_tenant
                         ])
                         
+                        conn.commit()
                         conn.close()
                         
                         context["registered_item"] = {
@@ -248,6 +249,7 @@ class JSONExecutionEngine:
                             params.extend([identifier, f"%{str(identifier).lower()}%", tenant_id, tenant_id])
                             sql = f"UPDATE items SET {', '.join(set_clauses)} WHERE (item_id = ? OR lower(name) LIKE ?) AND (tenant_id = ? OR ? = 'ALL')"
                             conn.execute(sql, params)
+                        conn.commit()
                         conn.close()
                         execution_results.append({
                             "step_number": i,
@@ -326,11 +328,8 @@ class JSONExecutionEngine:
                         auditor_notes="Auto-approved draft",
                         status="PENDING"
                     )
-                    pdf_path = generate_pr_pdf(pr_doc)
-                    context["pr_number"] = pr_number
-                    context["pdf_path"] = str(pdf_path)
                     
-                    # Sync DB
+                    # Sync DB First (Before PDF generation to avoid Uvicorn reload wiping it)
                     conn = get_db_connection()
                     for it in planned_items:
                         order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
@@ -341,31 +340,41 @@ class JSONExecutionEngine:
                     from api.routers.approval_routes import PR_STORE
                     from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
                     clean_filename = f"{pr_number.replace('-', '_')}.pdf"
-                    PR_STORE[pr_number] = PurchaseRequisitionDoc(
-                        pr_number=pr_number,
-                        created_at=pr_doc.created_at,
-                        items=[
-                            PurchaseItemRequest(
-                                item_id=it.item_id,
-                                name=it.name,
-                                reorder_qty=it.reorder_qty,
-                                unit=it.unit,
-                                vendor_id=it.vendor_id,
-                                vendor_name=it.vendor_name,
-                                unit_price=it.unit_price,
-                                total_price=it.total_price,
-                                reason=it.reason
-                            ) for it in planned_items
-                        ],
-                        total_budget=context["total_budget"],
-                        auditor_status="PASSED",
-                        auditor_notes="Audit passed.",
-                        pdf_path=f"/storage/documents/{clean_filename}",
-                        status="PENDING",
-                        tenant_id=tenant_id
-                    )
+                    try:
+                        PR_STORE[pr_number] = PurchaseRequisitionDoc(
+                            pr_number=pr_number,
+                            created_at=pr_doc.created_at,
+                            items=[
+                                PurchaseItemRequest(
+                                    item_id=it.item_id,
+                                    name=it.name,
+                                    reorder_qty=it.reorder_qty,
+                                    unit=it.unit,
+                                    vendor_id=it.vendor_id,
+                                    vendor_name=it.vendor_name,
+                                    unit_price=it.unit_price,
+                                    total_price=it.total_price,
+                                    reason=it.reason
+                                ) for it in planned_items
+                            ],
+                            total_budget=context.get("total_budget", 0.0),
+                            auditor_status="PASSED",
+                            auditor_notes="Audit passed.",
+                            pdf_path=f"/storage/documents/{clean_filename}",
+                            status="PENDING",
+                            tenant_id=tenant_id
+                        )
+                    except Exception as e:
+                        print(f"Error saving to PR_STORE: {e}")
 
+                    conn.commit()
                     conn.close()
+
+                    # Now generate PDF
+                    from docgen.compiler import generate_pr_pdf
+                    pdf_path = generate_pr_pdf(pr_doc)
+                    context["pr_number"] = pr_number
+                    context["pdf_path"] = str(pdf_path)
                     
                     execution_results.append({
                         "step_number": i,

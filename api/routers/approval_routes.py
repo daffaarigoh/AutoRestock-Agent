@@ -81,7 +81,7 @@ class ApprovalActionPayload(BaseModel):
 # --- Helper: Update DuckDB order status & optionally add stock ---
 
 def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | None = None) -> str:
-    """Updates DuckDB orders table and optionally increments stock on APPROVE."""
+    """Updates DuckDB orders table and optionally increments stock on APPROVE, ensuring idempotency."""
     try:
         import uuid
         from database.db import get_db_connection
@@ -89,7 +89,12 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
         db_status = "APPROVED" if is_approve else "REJECTED"
         conn = get_db_connection()
         try:
-            if is_approve and pr and pr.items:
+            # Check if order already exists and its current status
+            existing_order = conn.execute("SELECT status FROM orders WHERE pr_number = ? LIMIT 1;", [pr_number]).fetchone()
+            already_approved = existing_order and existing_order[0] == "APPROVED"
+            
+            # Only increment stock if we are approving AND it wasn't already approved
+            if is_approve and pr and pr.items and not already_approved:
                 for item in pr.items:
                     conn.execute("""
                         UPDATE items
@@ -97,9 +102,7 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
                         WHERE item_id = ? OR lower(name) = lower(?);
                     """, [item.reorder_qty, item.item_id, item.name])
 
-            # Check if order already exists
-            existing_orders = conn.execute("SELECT COUNT(*) FROM orders WHERE pr_number = ?;", [pr_number]).fetchone()[0]
-            if existing_orders > 0:
+            if existing_order:
                 conn.execute(f"UPDATE orders SET status = '{db_status}' WHERE pr_number = ?;", [pr_number])
             elif pr and pr.items:
                 for it in pr.items:
@@ -109,6 +112,7 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
                     """, [ord_id, pr_number, it.item_id, it.vendor_id, it.reorder_qty, it.unit_price, it.total_price, db_status, pr.tenant_id or "ALL"])
         finally:
+            conn.commit()
             conn.close()
 
         if is_approve:
@@ -166,7 +170,7 @@ def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
     # Try reconstructing from DuckDB orders
     try:
         from database.db import get_db_connection
-        conn = get_db_connection(read_only=True)
+        conn = get_db_connection()
         order_rows = conn.execute("""
             SELECT o.pr_number, o.item_id, o.vendor_id, o.quantity, o.unit_price, o.total_price, o.status, o.tenant_id,
                    i.name as item_name, i.unit, v.name as vendor_name
@@ -217,7 +221,7 @@ def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
     except Exception as e:
         print(f"[_ensure_pr_in_store] Error loading from DB: {e}")
 
-    if pr_number.startswith("PR-"):
+    if pr_number == "PR-2026-0819-001":
         PR_STORE[pr_number] = _create_default_pr(pr_number)
         return PR_STORE[pr_number]
     return None
@@ -234,7 +238,7 @@ async def get_all_requisitions(response: Response, current_user: TokenData = Dep
     # Sync PRs from DuckDB orders
     try:
         from database.db import get_db_connection
-        conn = get_db_connection(read_only=True)
+        conn = get_db_connection()
         pr_rows = conn.execute("SELECT DISTINCT pr_number, status FROM orders;").fetchall()
         conn.close()
         for pr_num, db_status in pr_rows:
