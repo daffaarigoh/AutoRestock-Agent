@@ -433,3 +433,57 @@ def get_prompt_templates():
         }
     ]
 
+
+
+@router.get("/api/agent/tools", tags=["Agent Configuration"])
+def get_agent_tools():
+    '''
+    Returns the comprehensive list of tools (APIs) available to the AI model
+    for executing autonomous workflows.
+    '''
+    return {
+        "status": "success",
+        "available_tools": [
+            {
+                "tool_name": "inventory.register_product",
+                "description": "Registers and inserts new product items into the active tenant's inventory database."
+            },
+            {
+                "tool_name": "inventory.get_low_stock_products",
+                "description": "Queries products that have fallen below their minimum safety threshold."
+            },
+            {
+                "tool_name": "inventory.get_all_products",
+                "description": "Queries all products for full warehouse audits."
+            },
+            {
+                "tool_name": "inventory.check_specific_stock",
+                "description": "Queries the current stock level of a specific product."
+            },
+            {
+                "tool_name": "inventory.update_threshold",
+                "description": "Updates the safety stock threshold bounds for a product."
+            },
+            {
+                "tool_name": "inventory.crud_record",
+                "description": "Performs generic database record operations."
+            },
+            {
+                "tool_name": "notification.dispatch",
+                "description": "Dispatches system alerts to configured notification channels."
+            },
+            {
+                "tool_name": "notification.send_email",
+                "description": "Sends detailed HTML email notifications to stakeholders."
+            },
+            {
+                "tool_name": "docgen.compile",
+                "description": "Compiles raw data into formal Typst PDF documents."
+            },
+            {
+                "tool_name": "purchase_order.create_draft",
+                "description": "Generates a draft Purchase Requisition (PR) document based on low stock data."
+            }
+        ]
+    }
+
