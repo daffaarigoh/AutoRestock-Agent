@@ -95,22 +95,26 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
             
             # Only increment stock if we are approving AND it wasn't already approved
             if is_approve and pr and pr.items and not already_approved:
-                for item in pr.items:
-                    conn.execute("""
-                        UPDATE items
-                        SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
-                        WHERE item_id = ? OR lower(name) = lower(?);
-                    """, [item.reorder_qty, item.item_id, item.name])
+                update_items_params = [
+                    (item.reorder_qty, item.item_id, item.name) for item in pr.items
+                ]
+                conn.executemany("""
+                    UPDATE items
+                    SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
+                    WHERE item_id = ? OR lower(name) = lower(?);
+                """, update_items_params)
 
             if existing_order:
-                conn.execute(f"UPDATE orders SET status = '{db_status}' WHERE pr_number = ?;", [pr_number])
+                conn.execute("UPDATE orders SET status = ? WHERE pr_number = ?;", [db_status, pr_number])
             elif pr and pr.items:
-                for it in pr.items:
-                    ord_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-                    conn.execute("""
-                        INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-                    """, [ord_id, pr_number, it.item_id, it.vendor_id, it.reorder_qty, it.unit_price, it.total_price, db_status, pr.tenant_id or "ALL"])
+                insert_orders_params = [
+                    (f"ORD-{uuid.uuid4().hex[:8].upper()}", pr_number, it.item_id, it.vendor_id, it.reorder_qty, it.unit_price, it.total_price, db_status, pr.tenant_id or "ALL")
+                    for it in pr.items
+                ]
+                conn.executemany("""
+                    INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, insert_orders_params)
         finally:
             conn.commit()
             conn.close()
@@ -155,8 +159,8 @@ def _regenerate_pdf(pr: PurchaseRequisitionDoc):
             if pfile.exists():
                 try:
                     pfile.unlink()
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[REGENERATE PDF WARN] Failed to delete stale pending PDF {pfile}: {e}")
     except Exception as e:
         print(f"[REGENERATE PDF ERROR] {e}")
 

@@ -37,31 +37,35 @@ def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
 
     conn = get_db_connection()
     try:
+        update_params = []
+        insert_params = []
+        tenant_val = getattr(pr, "tenant_id", None) or "TENANT_A"
+
         for item in pr.items:
             order_id = f"ORD-{pr.pr_number}-{item.item_id}"
             existing = conn.execute("SELECT order_id FROM orders WHERE order_id = ?", [order_id]).fetchone()
             if existing:
-                conn.execute("""
-                    UPDATE orders 
-                    SET status = ?
-                    WHERE order_id = ?;
-                """, [status, order_id])
-                tenant_val = getattr(pr, "tenant_id", None) or "TENANT_A"
-                conn.execute("""
-                    INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
-                """, [
-                    order_id,
-                    pr.pr_number,
-                    item.item_id,
-                    item.vendor_id,
-                    item.reorder_qty,
-                    item.unit_price,
-                    item.total_price,
-                    status,
-                    tenant_val
-                ])
+                update_params.append((status, order_id))
+            else:
+                insert_params.append((
+                    order_id, pr.pr_number, item.item_id, item.vendor_id,
+                    item.reorder_qty, item.unit_price, item.total_price, status, tenant_val
+                ))
+        
+        if update_params:
+            conn.executemany("""
+                UPDATE orders 
+                SET status = ?
+                WHERE order_id = ?;
+            """, update_params)
+            
+        if insert_params:
+            conn.executemany("""
+                INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+            """, insert_params)
     finally:
+        conn.commit()
         conn.close()
 
 
@@ -71,12 +75,13 @@ def update_db_orders_status(pr_number: str, status: str):
     try:
         if status.upper() == "APPROVED":
             rows = conn.execute("SELECT item_id, quantity FROM orders WHERE pr_number = ?;", [pr_number]).fetchall()
-            for r in rows:
-                conn.execute("""
+            if rows:
+                update_items_params = [(r[1], r[0]) for r in rows]
+                conn.executemany("""
                     UPDATE items
                     SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
                     WHERE item_id = ?;
-                """, [r[1], r[0]])
+                """, update_items_params)
 
         conn.execute("""
             UPDATE orders 
@@ -84,6 +89,7 @@ def update_db_orders_status(pr_number: str, status: str):
             WHERE pr_number = ?;
         """, [status, pr_number])
     finally:
+        conn.commit()
         conn.close()
 
 
