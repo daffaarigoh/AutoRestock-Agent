@@ -75,26 +75,33 @@ class SemanticRouter:
     async def route_prompt(cls, prompt: str, tenant_id: str = "ALL") -> dict:
         """
         Matches user prompt to a predefined workflow ID and extracts context parameters.
+        Returns workflow_id: None and is_unrelated: True if the prompt is out of scope.
         """
         conn = get_db_connection(read_only=True)
-        workflows = conn.execute("SELECT id, name, description FROM workflows").fetchall()
+        workflows = conn.execute(
+            "SELECT id, name, description FROM workflows WHERE tenant_id IN (?, 'ALL') ORDER BY id ASC", 
+            [tenant_id]
+        ).fetchall()
         conn.close()
         
         workflows_str = "\n".join([f"- ID: {row[0]}, Name: {row[1]}, Desc: {row[2]}" for row in workflows])
         
-        system_prompt = f"""You are a Semantic Router for an Enterprise Inventory & Restock system.
+        system_prompt = f"""You are a strict Semantic Router for an Enterprise Inventory & Restock system.
 Match the user's prompt to one of the following predefined workflows:
 
 {workflows_str}
 
-If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "max_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}} (extract whatever fields the user provided, leaving unmentioned fields out).
-If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}]. Include only the thresholds the user specified.
-If the user specifies an item name to check, extract it as "target_item_name".
-If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
-Do not assume any default workflow. Carefully match the prompt's intent to the descriptions provided above.
+CRITICAL RULES:
+1. If the user's prompt is UNRELATED to inventory operations, stock checking, threshold updates, adding new products, or purchase requisitions/restock (e.g. general chit-chat, programming questions, destructive database commands, weather, jokes, or out-of-scope requests), you MUST return:
+   {{"workflow_id": null, "is_unrelated": true}}
+2. DO NOT force or default any prompt to a workflow unless it clearly matches the intent of that workflow.
+3. If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "max_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}} (extract whatever fields the user provided, leaving unmentioned fields out).
+4. If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}]. Include only the thresholds the user specified.
+5. If the user specifies an item name to check, extract it as "target_item_name".
+6. If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
 
-Output strictly valid JSON with exact keys: "workflow_id", "new_item_data" (optional object), "threshold_updates" (optional array), "target_item_name" (optional string), "send_email" (boolean).
-If no workflow matches, return workflow_id: null.
+Output strictly valid JSON with exact keys: "workflow_id" (string or null), "is_unrelated" (boolean), "new_item_data" (optional object), "threshold_updates" (optional array), "target_item_name" (optional string), "send_email" (boolean).
+If no workflow matches or the request is unrelated, return "workflow_id": null, "is_unrelated": true.
 """
         gateway = ModelGateway()
         messages = [
@@ -121,8 +128,15 @@ If no workflow matches, return workflow_id: null.
             if json_match:
                 response_str = json_match.group(0)
             parsed = json.loads(response_str)
-            if parsed.get("workflow_id"):
+            valid_ids = [r[0] for r in workflows]
+            if parsed.get("workflow_id") and parsed["workflow_id"] in valid_ids:
                 return parsed
+            if parsed.get("is_unrelated") or parsed.get("workflow_id") is None:
+                return {
+                    "workflow_id": None,
+                    "is_unrelated": True,
+                    "send_email": False
+                }
         except Exception as e:
             print(f"[SEMANTIC ROUTER] LLM unavailable ({e}). Using intelligent heuristic fallback matcher.")
             
@@ -145,20 +159,28 @@ If no workflow matches, return workflow_id: null.
                     return {"workflow_id": row[0], "send_email": False}
                     
         # 4. PR / Restock / Menipis / Kritis / Pengadaan / PDF
-        matched_wf_id = None
-        for row in workflows:
-            if ("email" in row[1].lower() or "final" in row[1].lower()) and ("pr" in row[1].lower() or "restock" in row[1].lower()):
-                matched_wf_id = row[0]
-                break
-            elif "restock" in row[1].lower() or "pr" in row[1].lower():
-                matched_wf_id = row[0]
-        
-        if not matched_wf_id and len(workflows) > 0:
-            matched_wf_id = workflows[0][0]
+        restock_keywords = ["restock", "menipis", "kritis", "habis", "reorder", "pengadaan", "pesan barang", "draf pr", "draft pr", "purchase requisition", "buatkan pr", "bikin pr", "terbitkan pr"]
+        if any(k in prompt_lower for k in restock_keywords):
+            matched_wf_id = None
+            for row in workflows:
+                if ("email" in row[1].lower() or "final" in row[1].lower()) and ("pr" in row[1].lower() or "restock" in row[1].lower()):
+                    matched_wf_id = row[0]
+                    break
+                elif "restock" in row[1].lower() or "pr" in row[1].lower():
+                    matched_wf_id = row[0]
             
+            if matched_wf_id:
+                return {
+                    "workflow_id": matched_wf_id,
+                    "send_email": True,
+                    "threshold_updates": [],
+                    "target_item_name": None
+                }
+
+        # If not matching any inventory actions, IT IS UNRELATED!
+        # Do NOT force to default workflow!
         return {
-            "workflow_id": matched_wf_id or "WF-001",
-            "send_email": True,
-            "threshold_updates": [],
-            "target_item_name": None
+            "workflow_id": None,
+            "is_unrelated": True,
+            "send_email": False
         }

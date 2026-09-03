@@ -301,11 +301,29 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
         raise HTTPException(status_code=400, detail="Prompt tidak boleh kosong.")
 
     lower_prompt = request.prompt.strip().lower()
-    if lower_prompt in ["hi", "halo", "hello", "tes", "test", "testing"]:
+    
+    # 1. Pure thank-you / pleasantries check
+    thanks_keywords = ["terima kasih", "terimakasih", "makasih", "thank you", "thanks", "tq", "matur nuwun", "hatur nuhun", "syukron", "arigato", "thx"]
+    action_keywords = ["restock", "stok", "stock", "beli", "pesan", "order", "pr", "tambah", "daftar", "update", "threshold", "ambang", "audit", "gudang", "barang", "produk", "sku"]
+
+    is_pure_thanks = any(k in lower_prompt for k in thanks_keywords) and not any(k in lower_prompt for k in action_keywords)
+    if is_pure_thanks:
+        return {
+            "parsed_intent": {"workflow_id": "pleasantry"},
+            "action_type": "general",
+            "message": "Sama-sama! Senang bisa membantu Anda. Jika ada kebutuhan cek stok barang, update batas minimum stok, atau pengadaan lainnya, silakan beri tahu saya.",
+            "generated_prs": [],
+            "affected_items": []
+        }
+
+    # 2. Pure greeting check
+    greeting_keywords = ["hi", "halo", "hello", "hei", "hey", "selamat pagi", "selamat siang", "selamat sore", "selamat malam", "pagi", "siang", "sore", "malam", "tes", "test", "testing"]
+    is_pure_greeting = (lower_prompt in greeting_keywords or any(lower_prompt.startswith(k + " ") for k in greeting_keywords)) and not any(k in lower_prompt for k in action_keywords) and len(lower_prompt.split()) <= 6
+    if is_pure_greeting:
         return {
             "parsed_intent": {"workflow_id": "greeting"},
             "action_type": "general",
-            "message": "Halo! Saya adalah AutoRestock Agent. Ada yang bisa saya bantu terkait persediaan dan restock barang hari ini?",
+            "message": "Halo! Saya adalah AutoRestock Agent untuk manajemen inventaris dan pengadaan. Ada yang bisa saya bantu terkait persediaan dan restock barang hari ini?",
             "generated_prs": [],
             "affected_items": []
         }
@@ -320,9 +338,25 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
         route_result = await SemanticRouter.route_prompt(request.prompt, current_user.tenant_id)
         workflow_id = route_result.get("workflow_id")
         
-        if not workflow_id:
-            # Default to WF-001 (Auto Restock) if nothing matches or LLM failed
-            workflow_id = "WF-001"
+        # If no workflow matches or prompt is out of scope / unrelated:
+        if not workflow_id or route_result.get("is_unrelated"):
+            conn = get_db_connection()
+            avail_wfs = conn.execute(
+                "SELECT name, description FROM workflows WHERE tenant_id IN (?, 'ALL') ORDER BY id ASC",
+                [current_user.tenant_id]
+            ).fetchall()
+            conn.close()
+
+            available_list = [{"name": r[0], "description": r[1] or "", "example_prompt": r[0]} for r in avail_wfs]
+
+            return {
+                "parsed_intent": {"workflow_id": None},
+                "action_type": "unrecognized_intent",
+                "message": "Mohon maaf, permintaan yang Anda masukkan tidak berkaitan dengan alur kerja sistem inventaris atau berada di luar cakupan wewenang akun Anda. Saya hanya dapat memproses instruksi yang berkaitan dengan manajemen stok, pembaruan batas stok (threshold), pendaftaran barang baru, dan penerbitan dokumen Purchase Requisition (PR).",
+                "available_workflows": available_list,
+                "generated_prs": [],
+                "affected_items": []
+            }
             
         # Fetch workflow from DB
         conn = get_db_connection()
