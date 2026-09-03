@@ -931,10 +931,10 @@
           <input type="hidden" id="wfId">
           <input type="text" id="wfName" class="form-input" placeholder="Nama Workflow (contoh: Pengecekan Stok Kritis Harian)" style="flex: 2; min-width: 200px;">
           <select id="wfTenantId" class="form-input" style="flex: 1.5; min-width: 230px; font-weight: 600; cursor: pointer; color: #1E40AF;">
-            <option value="ALL">🌍 Global (Semua User / Tenant)</option>
-            <option value="TENANT_A">🏭 User A: Manufaktur Elektronika (SAP/ERP)</option>
-            <option value="TENANT_B">💊 User B: Farmasi & F&B (WMS Batch)</option>
-            <option value="TENANT_C">🚛 User C: Logistik Armada (CMMS Fleet)</option>
+            <option value="ALL">Global (Semua User / Tenant)</option>
+            <option value="TENANT_A">User A: Manufaktur Elektronika (SAP/ERP)</option>
+            <option value="TENANT_B">User B: Farmasi & F&B (WMS Batch)</option>
+            <option value="TENANT_C">User C: Logistik Armada (CMMS Fleet)</option>
           </select>
           <input type="text" id="wfDesc" class="form-input" placeholder="Deskripsi Singkat Tujuan Workflow" style="flex: 2; min-width: 200px;">
         </div>
@@ -1148,16 +1148,16 @@
 
         <!-- Search and Filter Bar -->
         <div style="display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
-          <input type="text" id="toolSearchInput" class="form-input" placeholder="🔍 Cari tool (misal: get_low_stock, email, compile)..." style="flex: 1; min-width: 250px;" oninput="filterTools()">
+          <input type="text" id="toolSearchInput" class="form-input" placeholder="Cari nama tool atau deskripsi (misal: get_low_stock, email, compile)..." style="flex: 1; min-width: 250px;" oninput="filterTools()">
         </div>
 
         <!-- Category Pills -->
         <div class="filter-pills" id="toolCategoryPills">
           <button class="filter-pill active" onclick="setToolCategoryFilter('ALL')">Semua Building Blocks</button>
-          <button class="filter-pill" onclick="setToolCategoryFilter('Inventory Operations')">📦 Inventory Operations</button>
-          <button class="filter-pill" onclick="setToolCategoryFilter('Reasoning & Validation')">🧠 Reasoning & Validation</button>
-          <button class="filter-pill" onclick="setToolCategoryFilter('Document Generation')">📄 Document Generation</button>
-          <button class="filter-pill" onclick="setToolCategoryFilter('Notification & Dispatch')">🔔 Notification & Dispatch</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('Inventory Operations')">Inventory Operations</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('Reasoning & Validation')">Reasoning & Validation</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('Document Generation')">Document Generation</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('Notification & Dispatch')">Notification & Dispatch</button>
         </div>
 
         <!-- Grid Container -->
@@ -1325,13 +1325,13 @@
             const escapedJson = JSON.stringify(wf.compiled_json || {}, null, 2);
             
             // Badge Tenant Scoping
-            let tenantBadge = '<span class="badge-tenant-all">🌍 GLOBAL (ALL USERS)</span>';
+            let tenantBadge = '<span class="badge-tenant-all">GLOBAL (ALL USERS)</span>';
             if (wf.tenant_id === 'TENANT_A') {
-              tenantBadge = '<span class="badge-tenant-a">🏭 KHUSUS: USER A (ELEKTRONIK)</span>';
+              tenantBadge = '<span class="badge-tenant-a">USER A: ELEKTRONIK</span>';
             } else if (wf.tenant_id === 'TENANT_B') {
-              tenantBadge = '<span class="badge-tenant-b">💊 KHUSUS: USER B (FARMASI/WMS)</span>';
+              tenantBadge = '<span class="badge-tenant-b">USER B: FARMASI/WMS</span>';
             } else if (wf.tenant_id === 'TENANT_C') {
-              tenantBadge = '<span class="badge-tenant-c">🚛 KHUSUS: USER C (ARMADA/ALAT BERAT)</span>';
+              tenantBadge = '<span class="badge-tenant-c">USER C: ARMADA/ALAT BERAT</span>';
             }
 
             html += `
@@ -1691,10 +1691,10 @@
 
       let html = '';
       filtered.forEach(it => {
-        let tenantBadge = `<span class="badge-tenant-a">🏭 USER A: ELEKTRONIK</span>`;
-        if (it.tenant_id === 'TENANT_B') tenantBadge = `<span class="badge-tenant-b">💊 USER B: FARMASI/WMS</span>`;
-        else if (it.tenant_id === 'TENANT_C') tenantBadge = `<span class="badge-tenant-c">🚛 USER C: ARMADA/FLEET</span>`;
-        else if (it.tenant_id === 'ALL') tenantBadge = `<span class="badge-tenant-all">🌍 GLOBAL</span>`;
+        let tenantBadge = `<span class="badge-tenant-a">USER A: ELEKTRONIK</span>`;
+        if (it.tenant_id === 'TENANT_B') tenantBadge = `<span class="badge-tenant-b">USER B: FARMASI/WMS</span>`;
+        else if (it.tenant_id === 'TENANT_C') tenantBadge = `<span class="badge-tenant-c">USER C: ARMADA/FLEET</span>`;
+        else if (it.tenant_id === 'ALL') tenantBadge = `<span class="badge-tenant-all">GLOBAL</span>`;
 
         let statusBadge = `<span class="badge-stock-safe">Normal</span>`;
         if (it.current_stock === 0) {

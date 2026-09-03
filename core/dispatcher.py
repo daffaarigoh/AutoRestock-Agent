@@ -70,7 +70,7 @@ class MultiChannelDispatcher:
             <body>
                 <div class="card">
                     <div class="header">
-                        <h2 style="margin:0; font-size: 20px;">🚨 Permintaan Persetujuan Restock Otomatis</h2>
+                        <h2 style="margin:0; font-size: 20px;">Permintaan Persetujuan Restock Otomatis</h2>
                         <p style="margin: 6px 0 0 0; font-size: 14px; color: #94a3b8;">AutoRestock-Agent Procurement System</p>
                     </div>
                     <div class="body">
@@ -82,17 +82,17 @@ class MultiChannelDispatcher:
                         </div>
 
                         <div class="note">
-                            💡 <strong>Interaksi Satu-Klik:</strong><br>
+                            <strong>Instruksi Persetujuan:</strong><br>
                             • Klik <strong>Setujui (APPROVE)</strong>: Stok inventaris di database DuckDB akan langsung ditambahkan otomatis.<br>
                             • Klik <strong>Tolak (REJECT)</strong>: Pengadaan dibatalkan dan stok gudang tetap.
                         </div>
 
                         <div class="btn-group">
-                            <a href="{approve_link}" class="btn btn-approve" target="_blank">✅ SETUJUI (APPROVE)</a>
-                            <a href="{reject_link}" class="btn btn-reject" target="_blank">❌ TOLAK (REJECT)</a>
+                            <a href="{approve_link}" class="btn btn-approve" target="_blank">SETUJUI (APPROVE)</a>
+                            <a href="{reject_link}" class="btn btn-reject" target="_blank">TOLAK (REJECT)</a>
                         </div>
                         <div style="text-align: center; margin-top: 12px;">
-                            <a href="{pdf_link}" class="btn btn-pdf" target="_blank">📄 Unduh Dokumen PDF Resmi</a>
+                            <a href="{pdf_link}" class="btn btn-pdf" target="_blank">Unduh Dokumen PDF Resmi</a>
                         </div>
                     </div>
                     <div class="footer">
@@ -202,13 +202,13 @@ class MultiChannelDispatcher:
             reject_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=REJECT"
             pdf_link = f"{base_url}/api/documents/pr/{pr_number}/download"
             msg_text = (
-                f"🚨 *AutoRestock-Agent: Permintaan Persetujuan*\n\n"
+                f"*AutoRestock-Agent: Permintaan Persetujuan*\n\n"
                 f"{text}\n\n"
-                f"📋 *No. PR:* `{pr_number}`\n\n"
-                f"⚡ *Aksi Persetujuan:*\n"
-                f"✅ [SETUJUI (APPROVE)]({approve_link})\n"
-                f"❌ [TOLAK (REJECT)]({reject_link})\n\n"
-                f"📄 [Unduh Draf PDF]({pdf_link})"
+                f"*No. PR:* `{pr_number}`\n\n"
+                f"*Aksi Persetujuan:*\n"
+                f"[SETUJUI (APPROVE)]({approve_link})\n"
+                f"[TOLAK (REJECT)]({reject_link})\n\n"
+                f"[Unduh Draf PDF]({pdf_link})"
             )
 
         try:
@@ -227,7 +227,7 @@ class MultiChannelDispatcher:
                     try:
                         with open(attachment_path, "rb") as f:
                             files = {"document": (Path(attachment_path).name, f, "application/pdf")}
-                            data = {"chat_id": chat_id, "caption": f"📄 Dokumen PR Resmi: {pr_number or Path(attachment_path).name}"}
+                            data = {"chat_id": chat_id, "caption": f"Dokumen PR Resmi: {pr_number or Path(attachment_path).name}"}
                             await client.post(f"{telegram_api}/sendDocument", data=data, files=files)
                     except Exception as doc_err:
                         logger.warning(f"Could not send PDF to Telegram: {doc_err}")

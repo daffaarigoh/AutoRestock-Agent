@@ -835,8 +835,8 @@ function appendAgentResponseCard(data) {
               const textStr = typeof s === 'string' ? s : (s.name || s.workflow || 'Alur Kerja');
               const promptStr = typeof s === 'object' && s.example_prompt ? s.example_prompt : textStr;
               return `
-                <button type="button" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: flex-start; font-size: 12px; background: #FFFDF5; border-color: #FDE68A; color: #78350F; cursor: pointer;" onclick="useCopilotSuggestion('${escapeHtml(promptStr).replace(/'/g, "\\'")}')">
-                  <span style="color: #D97706; margin-right: 4px;">⚡</span>
+                <button type="button" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: flex-start; font-size: 12px; background: #FFFDF5; border-color: #FDE68A; color: #78350F; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="useCopilotSuggestion('${escapeHtml(promptStr).replace(/'/g, "\\'")}')">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#D97706" style="flex-shrink: 0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                   <span>${escapeHtml(textStr)}</span>
                 </button>
               `;
