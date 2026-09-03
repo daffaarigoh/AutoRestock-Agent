@@ -930,11 +930,11 @@
         <div class="form-row" style="flex-wrap: wrap;">
           <input type="hidden" id="wfId">
           <input type="text" id="wfName" class="form-input" placeholder="Nama Workflow (contoh: Pengecekan Stok Kritis Harian)" style="flex: 2; min-width: 200px;">
-          <select id="wfTenantId" class="form-input" style="flex: 1.5; min-width: 230px; font-weight: 600; cursor: pointer; color: #1E40AF;">
-            <option value="ALL">Global (Semua User / Tenant)</option>
-            <option value="TENANT_A">User A: Manufaktur Elektronika (SAP/ERP)</option>
-            <option value="TENANT_B">User B: Farmasi & F&B (WMS Batch)</option>
-            <option value="TENANT_C">User C: Logistik Armada (CMMS Fleet)</option>
+          <select id="wfTenantId" class="form-input" style="flex: 1; min-width: 140px; font-weight: 600; cursor: pointer; color: #1E40AF;">
+            <option value="ALL">all</option>
+            <option value="TENANT_A">usera</option>
+            <option value="TENANT_B">userb</option>
+            <option value="TENANT_C">userc</option>
           </select>
           <input type="text" id="wfDesc" class="form-input" placeholder="Deskripsi Singkat Tujuan Workflow" style="flex: 2; min-width: 200px;">
         </div>
@@ -1056,10 +1056,10 @@
         <!-- Filter & Search Bar -->
         <div class="filter-bar">
           <div class="tenant-filter-pills" id="tenantFilterPills">
-            <button class="pill-btn active" onclick="filterItemsByTenant('ALL')">Semua Tenant (<span id="countAll">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_A')">Tenant A (<span id="countTenantA">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_B')">Tenant B (<span id="countTenantB">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_C')">Tenant C (<span id="countTenantC">0</span>)</button>
+            <button class="pill-btn active" onclick="filterItemsByTenant('ALL')">all (<span id="countAll">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_A')">usera (<span id="countTenantA">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_B')">userb (<span id="countTenantB">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_C')">userc (<span id="countTenantC">0</span>)</button>
           </div>
           <div style="position: relative; width: 260px;">
             <input type="text" id="itemSearchInput" class="form-input" placeholder="Cari nama barang / SKU..." oninput="filterItemsSearch()" style="width: 100%; padding-left: 32px; font-size: 12.5px;">
@@ -1325,13 +1325,14 @@
             const escapedJson = JSON.stringify(wf.compiled_json || {}, null, 2);
             
             // Badge Tenant Scoping
-            let tenantBadge = '<span class="badge-tenant-all">GLOBAL (ALL USERS)</span>';
-            if (wf.tenant_id === 'TENANT_A') {
-              tenantBadge = '<span class="badge-tenant-a">USER A: ELEKTRONIK</span>';
-            } else if (wf.tenant_id === 'TENANT_B') {
-              tenantBadge = '<span class="badge-tenant-b">USER B: FARMASI/WMS</span>';
-            } else if (wf.tenant_id === 'TENANT_C') {
-              tenantBadge = '<span class="badge-tenant-c">USER C: ARMADA/ALAT BERAT</span>';
+            let tenantBadge = '<span class="badge-tenant-all">all</span>';
+            const tid = (wf.tenant_id || 'ALL').toUpperCase();
+            if (tid === 'TENANT_A' || tid === 'USERA') {
+              tenantBadge = '<span class="badge-tenant-a">usera</span>';
+            } else if (tid === 'TENANT_B' || tid === 'USERB') {
+              tenantBadge = '<span class="badge-tenant-b">userb</span>';
+            } else if (tid === 'TENANT_C' || tid === 'USERC') {
+              tenantBadge = '<span class="badge-tenant-c">userc</span>';
             }
 
             html += `
@@ -1380,7 +1381,16 @@
       document.getElementById('wfName').value = wf.name;
       document.getElementById('wfDesc').value = wf.description || '';
       document.getElementById('wfInstruction').value = wf.business_instruction || '';
-      document.getElementById('wfTenantId').value = wf.tenant_id || 'ALL';
+      const tid = (wf.tenant_id || 'ALL').toUpperCase();
+      if (tid === 'TENANT_A' || tid === 'USERA') {
+        document.getElementById('wfTenantId').value = 'TENANT_A';
+      } else if (tid === 'TENANT_B' || tid === 'USERB') {
+        document.getElementById('wfTenantId').value = 'TENANT_B';
+      } else if (tid === 'TENANT_C' || tid === 'USERC') {
+        document.getElementById('wfTenantId').value = 'TENANT_C';
+      } else {
+        document.getElementById('wfTenantId').value = 'ALL';
+      }
       document.getElementById('formTitleText').textContent = `Edit Workflow: ${wf.name}`;
       document.getElementById('btnSubmitText').textContent = 'Update Workflow';
       document.getElementById('cancelEditBtn').style.display = 'inline-flex';
@@ -1691,10 +1701,10 @@
 
       let html = '';
       filtered.forEach(it => {
-        let tenantBadge = `<span class="badge-tenant-a">USER A: ELEKTRONIK</span>`;
-        if (it.tenant_id === 'TENANT_B') tenantBadge = `<span class="badge-tenant-b">USER B: FARMASI/WMS</span>`;
-        else if (it.tenant_id === 'TENANT_C') tenantBadge = `<span class="badge-tenant-c">USER C: ARMADA/FLEET</span>`;
-        else if (it.tenant_id === 'ALL') tenantBadge = `<span class="badge-tenant-all">GLOBAL</span>`;
+        let tenantBadge = `<span class="badge-tenant-a">usera</span>`;
+        if (it.tenant_id === 'TENANT_B' || it.tenant_id === 'userb') tenantBadge = `<span class="badge-tenant-b">userb</span>`;
+        else if (it.tenant_id === 'TENANT_C' || it.tenant_id === 'userc') tenantBadge = `<span class="badge-tenant-c">userc</span>`;
+        else if (it.tenant_id === 'ALL' || it.tenant_id === 'all') tenantBadge = `<span class="badge-tenant-all">all</span>`;
 
         let statusBadge = `<span class="badge-stock-safe">Normal</span>`;
         if (it.current_stock === 0) {

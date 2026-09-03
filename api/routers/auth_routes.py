@@ -63,11 +63,22 @@ def _ensure_workflow_tenant_column(conn):
         pass
 
 
+def _normalize_tenant_id(val: str) -> str:
+    v = (val or "").strip()
+    mapping = {
+        "all": "ALL", "ALL": "ALL",
+        "usera": "TENANT_A", "USERA": "TENANT_A", "TENANT_A": "TENANT_A",
+        "userb": "TENANT_B", "USERB": "TENANT_B", "TENANT_B": "TENANT_B",
+        "userc": "TENANT_C", "USERC": "TENANT_C", "TENANT_C": "TENANT_C"
+    }
+    return mapping.get(v, mapping.get(v.upper(), "ALL"))
+
+
 class CreateWorkflowRequest(BaseModel):
     name: str
     description: str
     business_instruction: str
-    tenant_id: str = "ALL"  # ALL, TENANT_A, TENANT_B, TENANT_C
+    tenant_id: str = "ALL"  # ALL, TENANT_A, TENANT_B, TENANT_C, usera, userb, userc
 
 @router.post("/admin/workflows")
 async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends(get_current_admin)):
@@ -78,7 +89,7 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
     
     wf_id = f"WF-{uuid.uuid4().hex[:6].upper()}"
-    tenant_val = req.tenant_id if req.tenant_id in ["ALL", "TENANT_A", "TENANT_B", "TENANT_C"] else "ALL"
+    tenant_val = _normalize_tenant_id(req.tenant_id)
     
     conn = get_db_connection(read_only=False)
     _ensure_workflow_tenant_column(conn)
@@ -128,7 +139,7 @@ async def edit_workflow(wf_id: str, req: CreateWorkflowRequest, admin: TokenData
     import json
     
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
-    tenant_val = req.tenant_id if req.tenant_id in ["ALL", "TENANT_A", "TENANT_B", "TENANT_C"] else "ALL"
+    tenant_val = _normalize_tenant_id(req.tenant_id)
     
     conn = get_db_connection(read_only=False)
     _ensure_workflow_tenant_column(conn)
