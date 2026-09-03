@@ -20,19 +20,25 @@ class Settings(_BaseSettings):
     # General
     APP_NAME: str = "AutoRestock-Agent"
     APP_ENV: str = "development"
-    API_HOST: str = "0.0.0.0"
+    API_HOST: str = "127.0.0.1"
     API_PORT: int = 8050
     DEBUG: bool = True
     PUBLIC_URL: str | None = None
+    MOCK_MODELS: bool = False
 
-
-    # Alternative standard env keys
+    # Corporate LLM Gateway & standard env keys
     LLM_KEY: str | None = None
     LLM_URL: str | None = None
 
-    # Model URLs
+    # Model Names
+    MODEL_QWEN_NAME: str = "qwen-35b"
+    MODEL_NEMOTRON_NAME: str = "nemotron-35"
+    MODEL_OCR_NAME: str = "ocr-lighton"
+
+    # Model URLs & API Key
     MODEL_QWEN_URL: str = "http://localhost:8001/v1"
     MODEL_NEMOTRON_URL: str = "http://localhost:8002/v1"
+    MODEL_OCR_LIGHTON_URL: str | None = None
     MODEL_API_KEY: str = "dummy-key"
 
     # Integrations & Dispatchers (Email)
@@ -43,6 +49,9 @@ class Settings(_BaseSettings):
     SMTP_EMAIL: str | None = None
     DEFAULT_RECIPIENT_EMAIL: str | None = None
 
+    # Integrations (Telegram)
+    TELEGRAM_BOT_TOKEN: str | None = None
+    TELEGRAM_CHAT_ID: str | None = None
 
     # File Paths
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
@@ -55,17 +64,46 @@ class Settings(_BaseSettings):
     SAMPLES_DIR: Path = BASE_DIR / "data" / "samples"
 
     def model_post_init(self, __context: Any) -> None:
+        def _clean(val: Any) -> Any:
+            if isinstance(val, str):
+                return val.strip().strip('"').strip("'")
+            return val
+
+        self.APP_NAME = _clean(self.APP_NAME)
+        self.API_HOST = _clean(self.API_HOST)
+        self.LLM_KEY = _clean(self.LLM_KEY)
+        self.LLM_URL = _clean(self.LLM_URL)
+        self.MODEL_QWEN_NAME = _clean(self.MODEL_QWEN_NAME)
+        self.MODEL_NEMOTRON_NAME = _clean(self.MODEL_NEMOTRON_NAME)
+        self.MODEL_OCR_NAME = _clean(self.MODEL_OCR_NAME)
+        self.MODEL_API_KEY = _clean(self.MODEL_API_KEY)
+        self.MODEL_QWEN_URL = _clean(self.MODEL_QWEN_URL)
+        self.MODEL_NEMOTRON_URL = _clean(self.MODEL_NEMOTRON_URL)
+        self.MODEL_OCR_LIGHTON_URL = _clean(self.MODEL_OCR_LIGHTON_URL)
+        self.SMTP_SERVER = _clean(self.SMTP_SERVER)
+        self.SMTP_EMAIL = _clean(self.SMTP_EMAIL)
+        self.SMTP_PASSWORD = _clean(self.SMTP_PASSWORD)
+        self.SMTP_USERNAME = _clean(self.SMTP_USERNAME) or self.SMTP_EMAIL
+        self.DEFAULT_RECIPIENT_EMAIL = _clean(self.DEFAULT_RECIPIENT_EMAIL) or self.SMTP_EMAIL
+        self.TELEGRAM_BOT_TOKEN = _clean(self.TELEGRAM_BOT_TOKEN)
+        if self.TELEGRAM_CHAT_ID is not None:
+            self.TELEGRAM_CHAT_ID = str(self.TELEGRAM_CHAT_ID).strip().strip('"').strip("'")
+
         # If LLM_KEY is provided, sync with MODEL_API_KEY
-        if self.LLM_KEY and (self.MODEL_API_KEY == "dummy-key" or not self.MODEL_API_KEY):
-            self.MODEL_API_KEY = self.LLM_KEY.strip().strip('"').strip("'")
+        if self.LLM_KEY and (self.MODEL_API_KEY in ["dummy-key", "dummy-key-for-local", "", None]):
+            self.MODEL_API_KEY = self.LLM_KEY
         
         # If LLM_URL is provided, sync with model base URLs
         if self.LLM_URL:
-            base_url = self.LLM_URL.strip().strip('"').strip("'").rstrip("/")
+            base_url = self.LLM_URL.rstrip("/")
             if "/v1" not in base_url:
                 base_url = f"{base_url}/v1"
-            self.MODEL_QWEN_URL = base_url
-            self.MODEL_NEMOTRON_URL = base_url
+            if not self.MODEL_QWEN_URL or "localhost" in self.MODEL_QWEN_URL:
+                self.MODEL_QWEN_URL = base_url
+            if not self.MODEL_NEMOTRON_URL or "localhost" in self.MODEL_NEMOTRON_URL:
+                self.MODEL_NEMOTRON_URL = base_url
+            if not self.MODEL_OCR_LIGHTON_URL or "localhost" in self.MODEL_OCR_LIGHTON_URL:
+                self.MODEL_OCR_LIGHTON_URL = base_url
 
 
 settings = Settings()

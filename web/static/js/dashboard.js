@@ -798,6 +798,58 @@ function appendAgentResponseCard(data) {
   const container = document.createElement('div');
   container.className = 'agent-response-box';
 
+  // Scenario 0: Safe Fallback / Anti-Halusinasi (Out of Scope / Unrecognized Intent)
+  if (actionType === 'unrecognized_intent' || actionType === 'out_of_scope') {
+    const defaultSuggestions = [
+      "Periksa stok produk menipis dan buatkan draft PR",
+      "Cek status stok barang kritis gudang",
+      "Perbarui batas ambang safety stock"
+    ];
+    const availableWfs = data.available_workflows || [];
+    const suggestions = availableWfs.length > 0
+      ? availableWfs.map(w => w.name || w)
+      : defaultSuggestions;
+
+    container.innerHTML = `
+      <div class="agent-plan-box" style="border-left: 4px solid #F59E0B; background: #FFFBEB; border: 1px solid #FDE68A;">
+        <div class="action-card-header" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#D97706">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <span style="font-weight: 700; font-size: 13px; color: #B45309;">INSTRUKSI DI LUAR LINGKUP ALUR KERJA</span>
+          </div>
+          <span class="badge" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D;">OUT OF SCOPE</span>
+        </div>
+        
+        <div style="font-size: 13px; color: #92400E; line-height: 1.5; margin-bottom: 12px;">
+          ${escapeHtml(data.message || 'Instruksi yang Anda masukkan tidak sesuai dengan wewenang atau alur kerja terdaftar pada domain akun Anda.')}
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #FDE68A; border-radius: 8px; padding: 12px;">
+          <div style="font-size: 11px; font-weight: 700; color: #B45309; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
+            Alur Kerja Resmi yang Dapat Anda Gunakan:
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            ${suggestions.map(s => {
+              const textStr = typeof s === 'string' ? s : (s.name || s.workflow || 'Alur Kerja');
+              const promptStr = typeof s === 'object' && s.example_prompt ? s.example_prompt : textStr;
+              return `
+                <button type="button" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: flex-start; font-size: 12px; background: #FFFDF5; border-color: #FDE68A; color: #78350F; cursor: pointer;" onclick="useCopilotSuggestion('${escapeHtml(promptStr).replace(/'/g, "\\'")}')">
+                  <span style="color: #D97706; margin-right: 4px;">⚡</span>
+                  <span>${escapeHtml(textStr)}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    feed.appendChild(container);
+    feed.scrollTop = feed.scrollHeight;
+    return;
+  }
+
   // Scenario 1: General message / greeting / simple response
   if (actionType === 'general' && prs.length === 0 && items.length === 0 && actionType !== 'update_threshold') {
     container.innerHTML = `
@@ -1092,3 +1144,12 @@ async function checkApiHealth() {
 
 checkApiHealth();
 setInterval(checkApiHealth, 6000);
+
+function useCopilotSuggestion(promptText) {
+  const input = document.getElementById('promptInput');
+  if (input) {
+    input.value = promptText;
+    input.focus();
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}

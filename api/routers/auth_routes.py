@@ -53,10 +53,21 @@ async def get_me(current_user: TokenData = Depends(get_current_user)):
 
 
 
+def _ensure_workflow_tenant_column(conn):
+    """Ensure the workflows table has the tenant_id column for user-scoped workflows."""
+    try:
+        cols = [r[0] for r in conn.execute("DESCRIBE workflows;").fetchall()]
+        if "tenant_id" not in cols:
+            conn.execute("ALTER TABLE workflows ADD COLUMN tenant_id VARCHAR DEFAULT 'ALL';")
+    except Exception as e:
+        pass
+
+
 class CreateWorkflowRequest(BaseModel):
     name: str
     description: str
     business_instruction: str
+    tenant_id: str = "ALL"  # ALL, TENANT_A, TENANT_B, TENANT_C
 
 @router.post("/admin/workflows")
 async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends(get_current_admin)):
@@ -67,21 +78,26 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
     
     wf_id = f"WF-{uuid.uuid4().hex[:6].upper()}"
+    tenant_val = req.tenant_id if req.tenant_id in ["ALL", "TENANT_A", "TENANT_B", "TENANT_C"] else "ALL"
     
     conn = get_db_connection(read_only=False)
-    conn.execute("INSERT INTO workflows (id, name, description, business_instruction, compiled_json) VALUES (?, ?, ?, ?, ?)", 
-                 [wf_id, req.name, req.description, req.business_instruction, json.dumps(compiled_json)])
+    _ensure_workflow_tenant_column(conn)
+    conn.execute(
+        "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id) VALUES (?, ?, ?, ?, ?, ?)", 
+        [wf_id, req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val]
+    )
     conn.close()
     
-    return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json}
+    return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json, "tenant_id": tenant_val}
 
 @router.get("/admin/workflows")
 async def get_workflows(response: Response, admin: TokenData = Depends(get_current_admin)):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    conn = get_db_connection(read_only=True)
-    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json FROM workflows ORDER BY id ASC").fetchall()
+    conn = get_db_connection(read_only=False)
+    _ensure_workflow_tenant_column(conn)
+    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id FROM workflows ORDER BY id ASC").fetchall()
     columns = [desc[0] for desc in conn.description]
     conn.close()
     
@@ -89,6 +105,8 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
     import json
     for r in rows:
         wf = dict(zip(columns, r))
+        if not wf.get("tenant_id"):
+            wf["tenant_id"] = "ALL"
         try:
             wf["compiled_json"] = json.loads(wf["compiled_json"])
         except:
@@ -110,13 +128,17 @@ async def edit_workflow(wf_id: str, req: CreateWorkflowRequest, admin: TokenData
     import json
     
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
+    tenant_val = req.tenant_id if req.tenant_id in ["ALL", "TENANT_A", "TENANT_B", "TENANT_C"] else "ALL"
     
     conn = get_db_connection(read_only=False)
-    conn.execute("UPDATE workflows SET name = ?, description = ?, business_instruction = ?, compiled_json = ? WHERE id = ?", 
-                 [req.name, req.description, req.business_instruction, json.dumps(compiled_json), wf_id])
+    _ensure_workflow_tenant_column(conn)
+    conn.execute(
+        "UPDATE workflows SET name = ?, description = ?, business_instruction = ?, compiled_json = ?, tenant_id = ? WHERE id = ?", 
+        [req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val, wf_id]
+    )
     conn.close()
     
-    return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json}
+    return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json, "tenant_id": tenant_val}
 
 
 @router.get("/admin/users")

@@ -114,8 +114,10 @@ def root(request: Request):
 async def health_check():
     import httpx
     from fastapi import HTTPException
+    if settings.MOCK_MODELS:
+        return {"status": "healthy", "llm_connected": True, "mode": "mock"}
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
+        async with httpx.AsyncClient(timeout=4.0) as client:
             headers = {"Authorization": f"Bearer {settings.MODEL_API_KEY}"}
             res = await client.get(f"{settings.MODEL_QWEN_URL}/models", headers=headers)
             res.raise_for_status()

@@ -673,6 +673,168 @@
       font-size: 12px;
       border: 1px solid var(--primary-border);
     }
+
+    /* Tenant Badges */
+    .badge-tenant-all {
+      background: #F1F5F9;
+      color: #475569;
+      border: 1px solid #CBD5E1;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .badge-tenant-a {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .badge-tenant-b {
+      background: #F0FDF4;
+      color: #15803D;
+      border: 1px solid #BBF7D0;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .badge-tenant-c {
+      background: #FFFBEB;
+      color: #B45309;
+      border: 1px solid #FDE68A;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Tools Registry Grid & Cards */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+    }
+    .tool-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--shadow-xs);
+      transition: all 0.15s ease;
+    }
+    .tool-card:hover {
+      border-color: #93C5FD;
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+    .tool-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+    .tool-name-tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: #1E40AF;
+      background: #EFF6FF;
+      border: 1px solid #DBEAFE;
+      padding: 3px 8px;
+      border-radius: 6px;
+      word-break: break-word;
+    }
+    .tool-cat-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .cat-reasoning { background: #FAF5FF; color: #7E22CE; border: 1px solid #E9D5FF; }
+    .cat-inventory { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+    .cat-notification { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+    .cat-docgen { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+
+    .tool-desc-text {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .tool-meta-box {
+      background: #F8FAFC;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 11.5px;
+      margin-bottom: 12px;
+    }
+    .tool-meta-label {
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .tool-meta-code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #0F172A;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      padding: 4px 6px;
+      border-radius: 4px;
+      display: block;
+      overflow-x: auto;
+    }
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 6px 0;
+    }
+    .filter-pill {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-main);
+    }
+    .filter-pill:hover, .filter-pill.active {
+      background: #2563EB;
+      color: #FFFFFF;
+      border-color: #2563EB;
+    }
   </style>
 </head>
 <body>
@@ -704,6 +866,13 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
         </svg>
         <span>Database Pengguna & Tenant</span>
+      </button>
+      <button class="tab-btn" id="tabToolsBtn" onclick="switchAdminTab('tools')">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span>Agent Tools Registry</span>
       </button>
     </div>
 
@@ -758,10 +927,16 @@
           Tulis instruksi bisnis dalam bahasa natural. Sistem LLM akan menyusun instruksi Anda menjadi struktur graph JSON eksekusi yang terstruktur.
         </p>
 
-        <div class="form-row">
+        <div class="form-row" style="flex-wrap: wrap;">
           <input type="hidden" id="wfId">
-          <input type="text" id="wfName" class="form-input" placeholder="Nama Workflow (contoh: Pengecekan Stok Kritis Harian)" style="flex: 1;">
-          <input type="text" id="wfDesc" class="form-input" placeholder="Deskripsi Singkat Tujuan Workflow" style="flex: 2;">
+          <input type="text" id="wfName" class="form-input" placeholder="Nama Workflow (contoh: Pengecekan Stok Kritis Harian)" style="flex: 2; min-width: 200px;">
+          <select id="wfTenantId" class="form-input" style="flex: 1.5; min-width: 230px; font-weight: 600; cursor: pointer; color: #1E40AF;">
+            <option value="ALL">🌍 Global (Semua User / Tenant)</option>
+            <option value="TENANT_A">🏭 User A: Manufaktur Elektronika (SAP/ERP)</option>
+            <option value="TENANT_B">💊 User B: Farmasi & F&B (WMS Batch)</option>
+            <option value="TENANT_C">🚛 User C: Logistik Armada (CMMS Fleet)</option>
+          </select>
+          <input type="text" id="wfDesc" class="form-input" placeholder="Deskripsi Singkat Tujuan Workflow" style="flex: 2; min-width: 200px;">
         </div>
 
         <div style="margin-top: 8px;">
@@ -919,6 +1094,80 @@
 
     </div>
 
+    <!-- ========================================== -->
+    <!-- TAB 3: AGENT TOOLS REGISTRY               -->
+    <!-- ========================================== -->
+    <div id="sectionTools" style="display: none;">
+      
+      <!-- KPI Stats Tools -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Tools Terdaftar</div>
+          <div class="kpi-value" id="kpiTotalTools">10</div>
+          <div class="kpi-sub">Katalog Agen Otonom</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Building Block Kategori</div>
+          <div class="kpi-value">4 Kategori</div>
+          <div class="kpi-sub">Komponen Alur Kerja</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Execution Engine</div>
+          <div class="kpi-value" style="font-size: 15px; color: #15803D; font-weight: 800; margin-top: 4px;">ACTIVE (MCP)</div>
+          <div class="kpi-sub">LangGraph & Model Gateway</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Multi-Tenant Scoping</div>
+          <div class="kpi-value" style="font-size: 15px; color: #2563EB; font-weight: 800; margin-top: 4px;">ISOLATED</div>
+          <div class="kpi-sub">A, B, C & Global Guardrail</div>
+        </div>
+      </div>
+
+      <!-- Main Tools Explorer Card -->
+      <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 class="card-title">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>Agent Tools Registry (Building Blocks Explorer)</span>
+            </h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">
+              Daftar fungsi resmi yang dapat digunakan LLM Compiler dalam alur kerja otonom. Setiap building block memiliki tanggung jawab spesifik dan skema input yang tervalidasi.
+            </p>
+          </div>
+          <button class="btn btn-secondary" onclick="loadAgentTools()">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span>Refresh Tools</span>
+          </button>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div style="display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+          <input type="text" id="toolSearchInput" class="form-input" placeholder="🔍 Cari tool (misal: get_low_stock, email, compile)..." style="flex: 1; min-width: 250px;" oninput="filterTools()">
+        </div>
+
+        <!-- Category Pills -->
+        <div class="filter-pills" id="toolCategoryPills">
+          <button class="filter-pill active" onclick="setToolCategoryFilter('ALL')">Semua Building Blocks</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('Inventory Operations')">📦 Inventory Operations</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('Reasoning & Validation')">🧠 Reasoning & Validation</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('Document Generation')">📄 Document Generation</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('Notification & Dispatch')">🔔 Notification & Dispatch</button>
+        </div>
+
+        <!-- Grid Container -->
+        <div class="tools-grid" id="toolsListContainer">
+          <p style="color: var(--text-muted); font-size: 13px;">Memuat katalog tools...</p>
+        </div>
+      </div>
+
+    </div>
+
   </main>
 
   <div class="status-toast" id="toast">
@@ -953,25 +1202,38 @@
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
     }
 
-    // Switch Tabs between Workflows and Users Database
+    let allLoadedTools = [];
+    let currentToolCategoryFilter = 'ALL';
+
+    // Switch Tabs between Workflows, Users Database, and Tools Registry
     function switchAdminTab(tabName) {
       const btnWf = document.getElementById('tabWorkflowsBtn');
       const btnUsers = document.getElementById('tabUsersBtn');
+      const btnTools = document.getElementById('tabToolsBtn');
       const secWf = document.getElementById('sectionWorkflows');
       const secUsers = document.getElementById('sectionUsers');
+      const secTools = document.getElementById('sectionTools');
+
+      btnWf.classList.remove('active');
+      btnUsers.classList.remove('active');
+      if (btnTools) btnTools.classList.remove('active');
+
+      secWf.style.display = 'none';
+      secUsers.style.display = 'none';
+      if (secTools) secTools.style.display = 'none';
 
       if (tabName === 'workflows') {
         btnWf.classList.add('active');
-        btnUsers.classList.remove('active');
         secWf.style.display = 'block';
-        secUsers.style.display = 'none';
         loadWorkflows();
-      } else {
+      } else if (tabName === 'users') {
         btnUsers.classList.add('active');
-        btnWf.classList.remove('active');
-        secWf.style.display = 'none';
         secUsers.style.display = 'block';
         loadUsersDatabase();
+      } else if (tabName === 'tools') {
+        if (btnTools) btnTools.classList.add('active');
+        if (secTools) secTools.style.display = 'block';
+        loadAgentTools();
       }
     }
 
@@ -983,6 +1245,7 @@
       const name = document.getElementById('wfName').value.trim();
       const desc = document.getElementById('wfDesc').value.trim();
       const instruction = document.getElementById('wfInstruction').value.trim();
+      const tenantId = document.getElementById('wfTenantId').value || 'ALL';
       const toast = document.getElementById('toast');
       
       if (!name || !instruction) {
@@ -1003,7 +1266,12 @@
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ name: name, description: desc, business_instruction: instruction })
+          body: JSON.stringify({ 
+            name: name, 
+            description: desc, 
+            business_instruction: instruction,
+            tenant_id: tenantId 
+          })
         });
 
         if (res.ok) {
@@ -1030,6 +1298,7 @@
       document.getElementById('wfName').value = '';
       document.getElementById('wfDesc').value = '';
       document.getElementById('wfInstruction').value = '';
+      document.getElementById('wfTenantId').value = 'ALL';
       document.getElementById('formTitleText').textContent = 'Buat Workflow Baru (Data-Driven Engine)';
       document.getElementById('btnSubmitText').textContent = 'Compile & Simpan Workflow';
       document.getElementById('cancelEditBtn').style.display = 'none';
@@ -1054,11 +1323,25 @@
           let html = '';
           workflows.forEach(wf => {
             const escapedJson = JSON.stringify(wf.compiled_json || {}, null, 2);
+            
+            // Badge Tenant Scoping
+            let tenantBadge = '<span class="badge-tenant-all">🌍 GLOBAL (ALL USERS)</span>';
+            if (wf.tenant_id === 'TENANT_A') {
+              tenantBadge = '<span class="badge-tenant-a">🏭 KHUSUS: USER A (ELEKTRONIK)</span>';
+            } else if (wf.tenant_id === 'TENANT_B') {
+              tenantBadge = '<span class="badge-tenant-b">💊 KHUSUS: USER B (FARMASI/WMS)</span>';
+            } else if (wf.tenant_id === 'TENANT_C') {
+              tenantBadge = '<span class="badge-tenant-c">🚛 KHUSUS: USER C (ARMADA/ALAT BERAT)</span>';
+            }
+
             html += `
               <div class="workflow-item">
-                <div class="workflow-header">
+                <div class="workflow-header" style="flex-wrap: wrap; gap: 8px;">
                   <div>
-                    <h3 class="workflow-name">${escapeHtml(wf.name)}</h3>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <h3 class="workflow-name">${escapeHtml(wf.name)}</h3>
+                      ${tenantBadge}
+                    </div>
                     <p class="workflow-id">ID: ${escapeHtml(wf.id)}</p>
                   </div>
                   <div class="workflow-actions-group">
@@ -1097,6 +1380,7 @@
       document.getElementById('wfName').value = wf.name;
       document.getElementById('wfDesc').value = wf.description || '';
       document.getElementById('wfInstruction').value = wf.business_instruction || '';
+      document.getElementById('wfTenantId').value = wf.tenant_id || 'ALL';
       document.getElementById('formTitleText').textContent = `Edit Workflow: ${wf.name}`;
       document.getElementById('btnSubmitText').textContent = 'Update Workflow';
       document.getElementById('cancelEditBtn').style.display = 'inline-flex';
@@ -1118,6 +1402,175 @@
       } catch (err) {
         alert("Terjadi kesalahan.");
       }
+    }
+
+    // ==========================================
+    // AGENT TOOLS REGISTRY LOGIC
+    // ==========================================
+    async function loadAgentTools() {
+      const container = document.getElementById('toolsListContainer');
+      try {
+        const res = await fetch('/api/agent/tools', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        allLoadedTools = data.available_tools || [];
+        document.getElementById('kpiTotalTools').textContent = allLoadedTools.length;
+        renderToolsGrid(allLoadedTools);
+      } catch (err) {
+        console.error("Gagal memuat tools:", err);
+        container.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Gagal memuat katalog tools dari backend.</p>';
+      }
+    }
+
+    function getToolCategory(toolName) {
+      if (toolName.startsWith('inventory.')) return 'Inventory Operations';
+      if (toolName.startsWith('notification.')) return 'Notification & Dispatch';
+      if (toolName.startsWith('docgen.') || toolName.startsWith('purchase_order.')) return 'Document Generation';
+      return 'Reasoning & Validation';
+    }
+
+    function getCategoryBadgeClass(category) {
+      switch (category) {
+        case 'Inventory Operations': return 'cat-inventory';
+        case 'Notification & Dispatch': return 'cat-notification';
+        case 'Document Generation': return 'cat-docgen';
+        default: return 'cat-reasoning';
+      }
+    }
+
+    function getToolMetadata(toolName) {
+      const meta = {
+        'inventory.register_product': {
+          params: 'item_data: object { name, category, current_stock, min_threshold, unit, unit_price }, tenant_id: string',
+          example: '{"type": "tool", "tool": "inventory.register_product"}'
+        },
+        'inventory.get_low_stock_products': {
+          params: 'tenant_id: string = "ALL"',
+          example: '{"type": "tool", "tool": "inventory.get_low_stock_products"}'
+        },
+        'inventory.get_all_products': {
+          params: 'tenant_id: string = "ALL"',
+          example: '{"type": "tool", "tool": "inventory.get_all_products"}'
+        },
+        'inventory.check_specific_stock': {
+          params: 'item_name: string, tenant_id: string = "ALL"',
+          example: '{"type": "tool", "tool": "inventory.check_specific_stock"}'
+        },
+        'inventory.update_threshold': {
+          params: 'item_id: string, min_threshold?: int, max_threshold?: int',
+          example: '{"type": "tool", "tool": "inventory.update_threshold"}'
+        },
+        'inventory.crud_record': {
+          params: 'table: string, action: "insert" | "update" | "delete", data: object',
+          example: '{"type": "tool", "tool": "inventory.crud_record"}'
+        },
+        'purchase_order.create_draft': {
+          params: 'items: list[RestockItem], total_budget: float',
+          example: '{"type": "tool", "tool": "purchase_order.create_draft"}'
+        },
+        'docgen.compile': {
+          params: 'template: "purchase_requisition", data: PurchaseRequisitionDoc',
+          example: '{"type": "tool", "tool": "docgen.compile"}'
+        },
+        'notification.send_email': {
+          params: 'recipient_email?: string, pr_number?: string, content_text: string',
+          example: '{"type": "tool", "tool": "notification.send_email"}'
+        },
+        'notification.dispatch': {
+          params: 'channels: ["email", "telegram"], pr_number?: string, content_text: string',
+          example: '{"type": "tool", "tool": "notification.dispatch"}'
+        }
+      };
+      return meta[toolName] || {
+        params: 'payload: object, tenant_id: string',
+        example: `{"type": "tool", "tool": "${toolName}"}`
+      };
+    }
+
+    function renderToolsGrid(tools) {
+      const container = document.getElementById('toolsListContainer');
+      if (!tools || tools.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Tidak ada tools yang cocok dengan filter pencarian.</p>';
+        return;
+      }
+
+      let html = '';
+      tools.forEach(tool => {
+        const name = tool.tool_name || '';
+        const desc = tool.description || 'Tidak ada deskripsi.';
+        const category = getToolCategory(name);
+        const catBadgeClass = getCategoryBadgeClass(category);
+        const meta = getToolMetadata(name);
+
+        html += `
+          <div class="tool-card">
+            <div>
+              <div class="tool-card-header">
+                <span class="tool-name-tag">${escapeHtml(name)}</span>
+                <span class="tool-cat-badge ${catBadgeClass}">${escapeHtml(category)}</span>
+              </div>
+              <p class="tool-desc-text">${escapeHtml(desc)}</p>
+              
+              <div class="tool-meta-box">
+                <div class="tool-meta-label">Parameter Input (Schema):</div>
+                <code class="tool-meta-code">${escapeHtml(meta.params)}</code>
+              </div>
+
+              <div class="tool-meta-box" style="margin-bottom: 0;">
+                <div class="tool-meta-label">Contoh Format Workflow:</div>
+                <code class="tool-meta-code">${escapeHtml(meta.example)}</code>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+              <button class="btn btn-secondary" style="font-size: 11.5px; padding: 5px 10px;" onclick="useToolInWorkflow('${escapeHtml(name)}')">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Gunakan di Form</span>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function setToolCategoryFilter(category) {
+      currentToolCategoryFilter = category;
+      const pills = document.querySelectorAll('#toolCategoryPills .filter-pill');
+      pills.forEach(p => {
+        if (p.textContent.includes(category) || (category === 'ALL' && p.textContent.includes('Semua'))) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+      filterTools();
+    }
+
+    function filterTools() {
+      const q = (document.getElementById('toolSearchInput').value || '').toLowerCase().trim();
+      const filtered = allLoadedTools.filter(tool => {
+        const name = (tool.tool_name || '').toLowerCase();
+        const desc = (tool.description || '').toLowerCase();
+        const category = getToolCategory(tool.tool_name);
+        
+        const matchQuery = !q || name.includes(q) || desc.includes(q);
+        const matchCategory = currentToolCategoryFilter === 'ALL' || category === currentToolCategoryFilter;
+        return matchQuery && matchCategory;
+      });
+      renderToolsGrid(filtered);
+    }
+
+    function useToolInWorkflow(toolName) {
+      switchAdminTab('workflows');
+      const textarea = document.getElementById('wfInstruction');
+      const currentVal = textarea.value.trim();
+      const addition = `Gunakan tool '${toolName}'.`;
+      textarea.value = currentVal ? `${currentVal}\n${addition}` : addition;
+      textarea.focus();
     }
 
     // ==========================================
@@ -1238,9 +1691,10 @@
 
       let html = '';
       filtered.forEach(it => {
-        let tenantBadge = `<span class="badge-tenant tenant-a">TENANT A</span>`;
-        if (it.tenant_id === 'TENANT_B') tenantBadge = `<span class="badge-tenant tenant-b">TENANT B</span>`;
-        if (it.tenant_id === 'TENANT_C') tenantBadge = `<span class="badge-tenant tenant-c">TENANT C</span>`;
+        let tenantBadge = `<span class="badge-tenant-a">🏭 USER A: ELEKTRONIK</span>`;
+        if (it.tenant_id === 'TENANT_B') tenantBadge = `<span class="badge-tenant-b">💊 USER B: FARMASI/WMS</span>`;
+        else if (it.tenant_id === 'TENANT_C') tenantBadge = `<span class="badge-tenant-c">🚛 USER C: ARMADA/FLEET</span>`;
+        else if (it.tenant_id === 'ALL') tenantBadge = `<span class="badge-tenant-all">🌍 GLOBAL</span>`;
 
         let statusBadge = `<span class="badge-stock-safe">Normal</span>`;
         if (it.current_stock === 0) {
