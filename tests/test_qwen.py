@@ -32,4 +32,5 @@ async def main():
     await test('Coba cek stok Silica Gel Desiccant Packets 5g')
     await test('Restock Silica Gel')
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

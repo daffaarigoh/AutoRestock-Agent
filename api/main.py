@@ -115,13 +115,13 @@ async def health_check():
     import httpx
     from fastapi import HTTPException
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
+        async with httpx.AsyncClient(timeout=5.0) as client:
             headers = {"Authorization": f"Bearer {settings.MODEL_API_KEY}"}
             res = await client.get(f"{settings.MODEL_QWEN_URL}/models", headers=headers)
             res.raise_for_status()
-        return {"status": "healthy", "llm_connected": True}
+        return {"status": "healthy", "llm_connected": True, "llm_url": settings.MODEL_QWEN_URL}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"LLM Disconnected: {e!s}")
+        raise HTTPException(status_code=503, detail=f"LLM Disconnected ({settings.MODEL_QWEN_URL}): {e!s}")
 
 
 if __name__ == "__main__":

@@ -10,13 +10,13 @@ if sys.platform == "win32":
         pass
 
 # Workspace setup
-WORKSPACE_DIR = Path(__file__).resolve().parent
+WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
 from agents.workflow import resume_approval, run_autorestock_cycle
 from database.db import get_db_connection
-from database.seed_data import init_db, seed_data, test_critical_items_query
+from database.seed_data import init_db, seed_data
 
 
 def print_banner(title: str):
@@ -43,7 +43,8 @@ def run_interactive_simulation():
     print_section("FASE 1: Inisialisasi Database DuckDB & Seeding Data")
     conn = init_db()
     seed_data(conn)
-    test_critical_items_query(conn)
+    critical_count = conn.execute("SELECT COUNT(*) FROM items WHERE current_stock <= min_threshold;").fetchone()[0]
+    print(f"Total Critical Items Found in Legacy/Shared Table: {critical_count}")
     conn.close()
     
     # -------------------------------------------------------------
