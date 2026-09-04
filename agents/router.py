@@ -74,16 +74,29 @@ class SemanticRouter:
     @classmethod
     async def route_prompt(cls, prompt: str, tenant_id: str = "ALL") -> dict:
         """
-        Matches user prompt to a predefined workflow ID and extracts context parameters.
+        Matches user prompt strictly to a predefined workflow ID allowed for this tenant.
+        Does NOT hallucinate or pick an arbitrary workflow if intent is out-of-scope.
         """
         conn = get_db_connection(read_only=True)
-        workflows = conn.execute("SELECT id, name, description FROM workflows").fetchall()
+        workflows = conn.execute("""
+            SELECT id, name, description, tenant_id 
+            FROM workflows 
+            WHERE tenant_id = ? OR tenant_id = 'ALL'
+        """, [tenant_id]).fetchall()
         conn.close()
         
+        if not workflows:
+            return {
+                "workflow_id": None,
+                "send_email": False,
+                "threshold_updates": [],
+                "target_item_name": None
+            }
+
         workflows_str = "\n".join([f"- ID: {row[0]}, Name: {row[1]}, Desc: {row[2]}" for row in workflows])
         
-        system_prompt = f"""You are a Semantic Router for an Enterprise Inventory & Restock system.
-Match the user's prompt to one of the following predefined workflows:
+        system_prompt = f"""You are a Strict Semantic Router for an Enterprise Inventory & Restock system.
+Match the user's prompt ONLY to one of the following permitted workflows:
 
 {workflows_str}
 
@@ -91,10 +104,12 @@ If the user wants to register, add, or create a new inventory item, extract "new
 If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}]. Include only the thresholds the user specified.
 If the user specifies an item name to check, extract it as "target_item_name".
 If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
-Do not assume any default workflow. Carefully match the prompt's intent to the descriptions provided above.
+If the user asks to generate, create, or compile a PDF, Purchase Requisition (PR), or document, you MUST match it to a restock workflow that creates PR documents (e.g. WF-001 or tenant-specific restock workflow like WF-A01, WF-B01, WF-C01), NOT a report-only workflow.
+
+CRITICAL GUARDRAIL:
+Do not assume any default workflow. If the prompt does NOT clearly relate to any of the workflows listed above (for example, chit-chat, poetry, general questions, unrelated tasks), you MUST return "workflow_id": null.
 
 Output strictly valid JSON with exact keys: "workflow_id", "new_item_data" (optional object), "threshold_updates" (optional array), "target_item_name" (optional string), "send_email" (boolean).
-If no workflow matches, return workflow_id: null.
 """
         gateway = ModelGateway()
         messages = [
@@ -104,7 +119,7 @@ If no workflow matches, return workflow_id: null.
         
         prompt_lower = prompt.lower()
 
-        # Check for product registration intent first (to prioritize user workflow)
+        # Check for product registration intent first (only if user workflow has registration)
         if any(k in prompt_lower for k in ["tambah", "tambahkan", "daftar", "daftarkan", "registrasi", "masukkan produk", "tambah produk", "tambah barang", "tambahkan nama produk", "buat barang"]):
             for row in workflows:
                 if any(w in row[1].lower() for w in ["daftar", "pendaftaran", "tambah", "registrasi", "register"]):
@@ -121,16 +136,31 @@ If no workflow matches, return workflow_id: null.
             if json_match:
                 response_str = json_match.group(0)
             parsed = json.loads(response_str)
-            if parsed.get("workflow_id"):
+            # Verify parsed workflow_id is actually in the permitted list
+            valid_ids = {r[0] for r in workflows}
+            if parsed.get("workflow_id") in valid_ids:
                 return parsed
+            elif parsed.get("workflow_id") is None:
+                return {
+                    "workflow_id": None,
+                    "send_email": False,
+                    "threshold_updates": [],
+                    "target_item_name": None
+                }
         except Exception as e:
-            print(f"[SEMANTIC ROUTER] LLM unavailable ({e}). Using intelligent heuristic fallback matcher.")
+            print(f"[SEMANTIC ROUTER] LLM unavailable ({e}). Using intelligent heuristic matcher.")
             
-        # 1. Check for specific item stock query (only if not asking for PR/PDF)
-        if any(k in prompt_lower for k in ["berapa", "cek stok", "lihat stok", "status stok"]) and not any(k in prompt_lower for k in ["pdf", "dokumen", "pr", "restock", "buatkan"]):
+        # 1. Check for specific item stock query (only if explicitly asking stock check)
+        is_stock_query = (
+            any(k in prompt_lower for k in ["cek stok", "lihat stok", "status stok", "cek ketersediaan", "stok barang"])
+            or ("berapa" in prompt_lower and any(w in prompt_lower for w in ["stok", "sisa", "unit", "persediaan", "tersedia", "ada barang", "part", "item", "produk"]))
+        ) and not any(k in prompt_lower for k in ["pdf", "dokumen", "pr", "restock", "buatkan"])
+
+        if is_stock_query:
             for row in workflows:
                 if row[0] == "WF-005" or "spesifik" in row[1].lower() or "cek" in row[1].lower():
-                    return {"workflow_id": row[0], "target_item_name": prompt.replace("berapa", "").replace("cek stok", "").strip(), "send_email": False}
+                    clean_target = prompt.lower().replace("berapa", "").replace("cek stok", "").replace("stok", "").strip()
+                    return {"workflow_id": row[0], "target_item_name": clean_target, "send_email": False}
         
         # 2. Check for threshold update
         if any(k in prompt_lower for k in ["threshold", "ambang", "ubah batas"]):
@@ -138,27 +168,36 @@ If no workflow matches, return workflow_id: null.
                 if row[0] == "WF-002" or "threshold" in row[1].lower():
                     return {"workflow_id": row[0], "threshold_updates": [], "send_email": False}
         
-        # 3. Check for warehouse audit (only if not asking for PDF/PR/restock)
-        if any(k in prompt_lower for k in ["seluruh gudang", "audit"]) and not any(k in prompt_lower for k in ["pdf", "dokumen", "pr", "restock", "buatkan"]):
+        # 3. Check for warehouse audit
+        if any(k in prompt_lower for k in ["seluruh gudang", "audit", "rekap seluruh"]):
             for row in workflows:
-                if row[0] == "WF-004" or "audit" in row[1].lower():
+                if row[3] == tenant_id and "audit" in row[1].lower():
+                    return {"workflow_id": row[0], "send_email": False}
+            for row in workflows:
+                if row[0] in ["WF-004", "WF-B01"] or "audit" in row[1].lower():
                     return {"workflow_id": row[0], "send_email": False}
                     
-        # 4. PR / Restock / Menipis / Kritis / Pengadaan / PDF
-        matched_wf_id = None
-        for row in workflows:
-            if ("email" in row[1].lower() or "final" in row[1].lower()) and ("pr" in row[1].lower() or "restock" in row[1].lower()):
-                matched_wf_id = row[0]
-                break
-            elif "restock" in row[1].lower() or "pr" in row[1].lower():
-                matched_wf_id = row[0]
-        
-        if not matched_wf_id and len(workflows) > 0:
-            matched_wf_id = workflows[0][0]
-            
+        # 4. Check for restock / pengadaan / menipis / kritis / PR
+        is_restock_intent = any(k in prompt_lower for k in [
+            "restock", "menipis", "kritis", "pengadaan", "pesan barang", "beli barang", "order barang", "purchase requisition", "kehabisan"
+        ]) or bool(re.search(r'\bpr\b', prompt_lower))
+
+        if is_restock_intent:
+            # Check tenant-specific restock workflow first
+            for row in workflows:
+                if row[3] == tenant_id and any(w in row[1].lower() for w in ["restock", "pengadaan"]):
+                    return {"workflow_id": row[0], "send_email": "email" in prompt_lower or "notifikasi" in prompt_lower}
+
+            # Fallback to global restock if allowed
+            for row in workflows:
+                if "restock" in row[1].lower() or bool(re.search(r'\bpr\b', row[1].lower())):
+                    return {"workflow_id": row[0], "send_email": True}
+
+        # 5. ANTI-HALUSINASI GUARDRAIL:
+        # If no recognized intent matched, return workflow_id: None! Do NOT pick a default workflow!
         return {
-            "workflow_id": matched_wf_id or "WF-001",
-            "send_email": True,
+            "workflow_id": None,
+            "send_email": False,
             "threshold_updates": [],
             "target_item_name": None
         }

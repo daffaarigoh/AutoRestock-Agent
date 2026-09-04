@@ -316,23 +316,54 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
     import json
     
     try:
-        # Route prompt to workflow ID
+        # Route prompt to workflow ID strictly scoped by tenant_id
         route_result = await SemanticRouter.route_prompt(request.prompt, current_user.tenant_id)
         workflow_id = route_result.get("workflow_id")
         
+        # ANTI-HALUSINASI GUARDRAIL: Do not execute default workflow if intent is unrecognized
         if not workflow_id:
-            # Default to WF-001 (Auto Restock) if nothing matches or LLM failed
-            workflow_id = "WF-001"
+            conn = get_db_connection(read_only=True)
+            user_wfs = conn.execute(
+                "SELECT id, name, description FROM workflows WHERE tenant_id = ? OR tenant_id = 'ALL' ORDER BY id ASC",
+                [current_user.tenant_id]
+            ).fetchall()
+            conn.close()
+
+            wf_list_msg = "\n".join([f"• **{r[1]}**: {r[2]}" for r in user_wfs])
+            return {
+                "parsed_intent": {"workflow_id": None},
+                "action_type": "unrecognized_intent",
+                "message": (
+                    f"Instruksi yang Anda masukkan belum dapat dipetakan ke alur kerja aktif akun Anda.\n\n"
+                    f"Alur kerja yang tersedia untuk domain akun Anda ({current_user.tenant_id}):\n{wf_list_msg}\n\n"
+                    f"Silakan sesuaikan instruksi Anda dengan salah satu alur kerja di atas."
+                ),
+                "available_workflows": [{"id": r[0], "name": r[1], "description": r[2]} for r in user_wfs],
+                "email_sent": False,
+                "generated_prs": [],
+                "affected_items": [],
+                "total_items_analyzed": 0,
+                "execution_steps": [],
+                "target_destinations": [],
+                "total_budget_formatted": "Rp 0"
+            }
             
-        # Fetch workflow from DB
+        # Fetch workflow from DB and verify tenant authorization
         conn = get_db_connection()
-        wf_row = conn.execute("SELECT compiled_json FROM workflows WHERE id = ?", [workflow_id]).fetchone()
+        wf_row = conn.execute("SELECT compiled_json, tenant_id FROM workflows WHERE id = ?", [workflow_id]).fetchone()
         conn.close()
         
         if not wf_row:
             raise Exception(f"Workflow {workflow_id} not found in database.")
             
-        compiled_json = json.loads(wf_row[0])
+        compiled_json_str, wf_tenant = wf_row
+        if wf_tenant and wf_tenant not in [current_user.tenant_id, "ALL"] and current_user.role != "ADMIN":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Akses ditolak: Alur kerja {workflow_id} dikhususkan untuk {wf_tenant} dan tidak dapat diakses oleh akun Anda ({current_user.tenant_id})."
+            )
+            
+        compiled_json = json.loads(compiled_json_str)
         
         # Execute workflow
         context = {

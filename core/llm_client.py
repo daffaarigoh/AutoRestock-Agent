@@ -1,12 +1,7 @@
-import base64
-import json
 import logging
 from typing import Any
 
-try:
-    import httpx
-except ImportError:
-    import httpx2 as httpx
+import httpx
 
 from core.config import settings
 

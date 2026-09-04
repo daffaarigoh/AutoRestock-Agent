@@ -30,8 +30,12 @@ wheels/
 # Storage & Temporary files
 storage/
 data/inventory.duckdb*
+test.db
+*.db
+scratch/
 *.log
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 
