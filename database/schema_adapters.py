@@ -140,6 +140,45 @@ class TenantSchemaAdapter:
                         "raw_source_table": "fleet_maintenance_parts"
                     })
 
+            # Dynamic low-stock items from table 'items'
+            low_custom_rows = conn.execute("""
+                SELECT i.item_id, i.name, i.category, i.current_stock, i.min_threshold, i.max_threshold,
+                       i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id,
+                       COALESCE(v.unit_price, 0.0) as unit_price
+                FROM items i
+                LEFT JOIN (
+                    SELECT item_id, MIN(unit_price) as unit_price 
+                    FROM vendors 
+                    GROUP BY item_id
+                ) v ON i.item_id = v.item_id
+                WHERE (i.tenant_id = ? OR ? = 'ALL') 
+                  AND i.current_stock <= i.min_threshold
+                  AND (i.item_id NOT LIKE 'ITM-0%' OR v.unit_price > 0)
+                ORDER BY (i.min_threshold - i.current_stock) DESC;
+            """, [tenant_id, tenant_id]).fetchall()
+            existing_low_ids = {it["item_id"] for it in results}
+            for r in low_custom_rows:
+                if r[0] not in existing_low_ids:
+                    stock_val = int(r[3])
+                    min_val = int(r[4])
+                    reorder_qty = max(min_val * 2 - stock_val, 1)
+                    results.append({
+                        "item_id": r[0],
+                        "name": r[1],
+                        "category": r[2],
+                        "current_stock": stock_val,
+                        "min_threshold": min_val,
+                        "max_threshold": int(r[5]) if r[5] else min_val * 3,
+                        "avg_daily_usage": float(r[6]) if r[6] else 1.0,
+                        "lead_time_days": int(r[7]) if r[7] else 3,
+                        "unit": r[8] or "pcs",
+                        "unit_price": float(r[10]) if r[10] else 0.0,
+                        "safety_stock": min_val,
+                        "reorder_qty": reorder_qty,
+                        "tenant_id": r[9],
+                        "raw_source_table": "items"
+                    })
+
             return results
         finally:
             conn.close()
@@ -215,6 +254,38 @@ class TenantSchemaAdapter:
                         "unit": "set",
                         "unit_price": float(r[6]),
                         "tenant_id": "TENANT_C"
+                    })
+
+            # Include dynamically registered items from table 'items'
+            custom_rows = conn.execute("""
+                SELECT i.item_id, i.name, i.category, i.current_stock, i.min_threshold, i.max_threshold,
+                       i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id,
+                       COALESCE(v.unit_price, 0.0) as unit_price
+                FROM items i
+                LEFT JOIN (
+                    SELECT item_id, MIN(unit_price) as unit_price 
+                    FROM vendors 
+                    GROUP BY item_id
+                ) v ON i.item_id = v.item_id
+                WHERE (i.tenant_id = ? OR ? = 'ALL')
+                  AND (i.item_id NOT LIKE 'ITM-0%' OR v.unit_price > 0)
+                ORDER BY i.item_id ASC;
+            """, [tenant_id, tenant_id]).fetchall()
+            existing_ids = {it["item_id"] for it in items}
+            for r in custom_rows:
+                if r[0] not in existing_ids:
+                    items.append({
+                        "item_id": r[0],
+                        "name": r[1],
+                        "category": r[2],
+                        "current_stock": int(r[3]),
+                        "min_threshold": int(r[4]),
+                        "max_threshold": int(r[5]) if r[5] else int(r[4]) * 3,
+                        "avg_daily_usage": float(r[6]) if r[6] else 1.0,
+                        "lead_time_days": int(r[7]) if r[7] else 3,
+                        "unit": r[8] or "pcs",
+                        "unit_price": float(r[10]) if r[10] else 0.0,
+                        "tenant_id": r[9]
                     })
 
             return items
