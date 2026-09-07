@@ -174,8 +174,9 @@ class MultiChannelDispatcher:
                 "message": f"Gagal mengirim email via SMTP: {e!s}"
             }
 
+    @classmethod
     async def dispatch_telegram(
-        self,
+        cls,
         text: str,
         attachment_path: str | None = None,
         pr_number: str | None = None,
