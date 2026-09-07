@@ -28,12 +28,14 @@ class PurchaseRequisition(BaseModel):
     auditor_notes: str = Field("", description="Audit notes and compliance evaluation from auditor")
     pdf_path: str | None = Field(None, description="Path to generated Typst PDF document")
     status: str = Field("PENDING", description="Requisition status: PENDING | APPROVED | REJECTED")
+    tenant_id: str = Field("ALL", description="Tenant owner of the purchase requisition")
     thread_id: str | None = Field(None, description="LangGraph execution thread identifier")
 
 
 
 class AgentState(TypedDict, total=False):
     thread_id: str
+    tenant_id: str
     low_stock_items: list[dict[str, Any]]
     planned_items: list[RestockItem]
     total_budget: float

@@ -135,42 +135,10 @@ class JSONExecutionEngine:
                         })
                     else:
                         new_item = context.get("new_item_data", {})
-                        item_id = f"ITM-{uuid.uuid4().hex[:6].upper()}"
                         effective_tenant = tenant_id if tenant_id and tenant_id != "ALL" else "TENANT_A"
-                        
-                        conn = get_db_connection()
-                        conn.execute("""
-                            INSERT INTO items (item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                        """, [
-                            item_id,
-                            new_item.get("name", "Unnamed Item"),
-                            new_item.get("category", "General"),
-                            int(new_item.get("current_stock", 0)),
-                            int(new_item.get("min_threshold", 0)),
-                            int(new_item.get("max_threshold", int(new_item.get("min_threshold", 0)) * 3)),
-                            float(new_item.get("avg_daily_usage", 1.0)),
-                            int(new_item.get("lead_time_days", 3)),
-                            new_item.get("unit", "pcs"),
-                            effective_tenant
-                        ])
-                        
-                        unit_price = float(new_item.get("unit_price", 0))
-                        conn.execute("""
-                            INSERT INTO vendors (vendor_id, name, item_id, unit_price, lead_time_days, rating, tenant_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?);
-                        """, [
-                            f"VND-{item_id[-4:]}",
-                            "Default Supplier",
-                            item_id,
-                            unit_price,
-                            int(new_item.get("lead_time_days", 3)),
-                            5.0,
-                            effective_tenant
-                        ])
-                        
-                        conn.commit()
-                        conn.close()
+                        from database.schema_adapters import TenantSchemaAdapter
+                        registered = TenantSchemaAdapter.register_new_product(new_item, tenant_id=effective_tenant)
+                        item_id = registered["item_id"]
                         
                         context["registered_item"] = {
                             "item_id": item_id,
@@ -228,29 +196,15 @@ class JSONExecutionEngine:
                 elif step_type == "tool" and action == "inventory.update_threshold":
                     updates = context.get("threshold_updates", [])
                     if updates:
-                        conn = get_db_connection()
+                        from database.schema_adapters import TenantSchemaAdapter
                         for upd in updates:
                             identifier = upd.get("item_name") or upd.get("item_id")
                             if not identifier:
                                 continue
-                                
-                            set_clauses = []
-                            params = []
-                            if "new_min_threshold" in upd or "new_threshold" in upd:
-                                set_clauses.append("min_threshold = ?")
-                                params.append(upd.get("new_min_threshold", upd.get("new_threshold")))
-                            if "new_max_threshold" in upd:
-                                set_clauses.append("max_threshold = ?")
-                                params.append(upd.get("new_max_threshold"))
-                                
-                            if not set_clauses:
-                                continue
-                                
-                            params.extend([identifier, f"%{str(identifier).lower()}%", tenant_id, tenant_id])
-                            sql = f"UPDATE items SET {', '.join(set_clauses)} WHERE (item_id = ? OR lower(name) LIKE ?) AND (tenant_id = ? OR ? = 'ALL')"
-                            conn.execute(sql, params)
-                        conn.commit()
-                        conn.close()
+                            new_val = upd.get("new_min_threshold", upd.get("new_threshold"))
+                            if new_val is not None:
+                                TenantSchemaAdapter.update_item_threshold(identifier, int(new_val), tenant_id=tenant_id)
+
                         execution_results.append({
                             "step_number": i,
                             "title": "Update Threshold",

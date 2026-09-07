@@ -56,7 +56,7 @@ def get_inventory_items(response: Response, current_user: TokenData = Depends(ge
 
 
 @router.post("/api/agent/run-cycle", response_model=PurchaseRequisition)
-def run_agent_cycle():
+def run_agent_cycle(current_user: TokenData = Depends(get_current_user)):
     """
     Triggers the LangGraph multi-agent workflow:
     1. Scan items below safety threshold.
@@ -66,38 +66,15 @@ def run_agent_cycle():
     5. Graph pauses before Wait Approval Node (HITL).
     """
     try:
-        pr_document = run_autorestock_cycle()
+        tenant_id = current_user.tenant_id if current_user else "ALL"
+        pr_document = run_autorestock_cycle(tenant_id=tenant_id)
         if pr_document:
             from api.routers.approval_routes import PR_STORE
-            from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
-            from docgen.pdf_generator import pdf_generator
+            from docgen.compiler import generate_pr_pdf
             
-            items_req = [
-                PurchaseItemRequest(
-                    item_id=it.item_id,
-                    name=it.name,
-                    reorder_qty=it.reorder_qty,
-                    unit=it.unit,
-                    vendor_id=it.vendor_id,
-                    vendor_name=it.vendor_name,
-                    unit_price=it.unit_price,
-                    total_price=it.total_price,
-                    reason=it.reason
-                )
-                for it in pr_document.items
-            ]
             clean_filename = f"{pr_document.pr_number.replace('-', '_')}.pdf"
-            PR_STORE[pr_document.pr_number] = PurchaseRequisitionDoc(
-                pr_number=pr_document.pr_number,
-                created_at=pr_document.created_at,
-                items=items_req,
-                total_budget=pr_document.total_budget,
-                auditor_status=pr_document.auditor_status or "PASSED",
-                auditor_notes=pr_document.auditor_notes or "Audit passed.",
-                pdf_path=f"/storage/documents/{clean_filename}",
-                status=pr_document.status or "PENDING"
-            )
-            pdf_generator.generate_purchase_requisition_pdf(PR_STORE[pr_document.pr_number], output_filename=clean_filename)
+            PR_STORE[pr_document.pr_number] = pr_document
+            generate_pr_pdf(pr_document, output_path=f"storage/documents/{clean_filename}")
         return pr_document
     except Exception as e:
         raise HTTPException(
@@ -233,16 +210,38 @@ class UpdateItemThresholdRequest(BaseModel):
 
 
 @router.patch("/api/inventory/items/{item_id}")
-def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest):
+def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest, current_user: TokenData = Depends(get_current_user)):
     """
     Updates threshold and inventory parameters for a specific item in DuckDB.
+    Supports real heterogeneous tenant tables and legacy items.
     """
+    from database.schema_adapters import TenantSchemaAdapter
+    tenant_id = current_user.tenant_id if current_user else "ALL"
+    
+    # 1. Look up existing item in real tenant tables or legacy items
+    matching_items = TenantSchemaAdapter.get_specific_item_stock(item_id, tenant_id=tenant_id)
+    if matching_items:
+        existing_name = matching_items[0]["name"]
+        cur_stock = matching_items[0].get("current_stock", 0)
+        old_min = matching_items[0].get("min_threshold", 0)
+    else:
+        conn = get_db_connection(read_only=True)
+        legacy = conn.execute("SELECT item_id, name, min_threshold, max_threshold, current_stock FROM items WHERE item_id = ? OR lower(name) LIKE ?", [item_id, f"%{item_id.lower()}%"]).fetchone()
+        conn.close()
+        if not legacy:
+            raise HTTPException(status_code=404, detail=f"Item with ID '{item_id}' not found in inventory.")
+        existing_name = legacy[1]
+        cur_stock = legacy[4]
+        old_min = legacy[2]
+
+    # 2. Apply threshold update if provided
+    new_min = payload.min_threshold if payload.min_threshold is not None else old_min
+    if payload.min_threshold is not None:
+        TenantSchemaAdapter.update_item_threshold(item_id, payload.min_threshold, tenant_id=tenant_id)
+
+    # 3. Update legacy items table if extra fields provided
     conn = get_db_connection()
     try:
-        existing = conn.execute("SELECT item_id, name, min_threshold, max_threshold, current_stock FROM items WHERE item_id = ?", [item_id]).fetchone()
-        if not existing:
-            raise HTTPException(status_code=404, detail=f"Item with ID '{item_id}' not found in inventory.")
-
         updates = []
         params = []
         if payload.min_threshold is not None:
@@ -261,28 +260,23 @@ def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest):
             updates.append("lead_time_days = ?")
             params.append(payload.lead_time_days)
 
-        if not updates:
-            return {"status": "no_change", "message": "No parameters provided to update."}
-
-        params.append(item_id)
-        sql = f"UPDATE items SET {', '.join(updates)} WHERE item_id = ?;"
-        conn.execute(sql, params)
-
-        # Retrieve updated record
-        updated_row = conn.execute("""
-            SELECT item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit
-            FROM items WHERE item_id = ?;
-        """, [item_id]).fetchone()
-        columns = [d[0] for d in conn.description]
-        updated_item = dict(zip(columns, updated_row))
-
-        return {
-            "status": "success",
-            "message": f"Berhasil memperbarui {existing[1]} ({item_id}).",
-            "item": updated_item
-        }
+        if updates:
+            params.extend([item_id, f"%{item_id.lower()}%"])
+            conn.execute(f"UPDATE items SET {', '.join(updates)} WHERE item_id = ? OR lower(name) LIKE ?;", params)
+            conn.commit()
     finally:
         conn.close()
+
+    return {
+        "status": "success",
+        "message": f"Berhasil memperbarui {existing_name} ({item_id}).",
+        "item": {
+            "item_id": item_id,
+            "name": existing_name,
+            "min_threshold": new_min,
+            "current_stock": payload.current_stock if payload.current_stock is not None else cur_stock
+        }
+    }
 
 
 class CustomPromptRequest(BaseModel):

@@ -17,35 +17,16 @@ router = APIRouter(prefix="/api/stream", tags=["Live Agent Streaming"])
 @router.get("/inventory-summary")
 async def get_inventory_summary(current_user: TokenData = Depends(get_current_user)):
     """
-    Returns live inventory items and health status directly from DuckDB.
+    Returns live inventory items and health status directly from DuckDB via TenantSchemaAdapter.
     """
     items = []
     try:
-        from database.db import get_db_connection
-        conn = get_db_connection(read_only=True)
-        query = """
-            SELECT 
-                i.item_id,
-                i.name,
-                i.category,
-                i.current_stock,
-                i.min_threshold,
-                i.avg_daily_usage,
-                i.lead_time_days,
-                i.unit,
-                COALESCE(MIN(v.unit_price), 0.0) AS unit_price
-            FROM items i
-            LEFT JOIN vendors v ON i.item_id = v.item_id
-            WHERE i.tenant_id = ? OR ? = 'ALL'
-            GROUP BY i.item_id, i.name, i.category, i.current_stock, i.min_threshold, i.avg_daily_usage, i.lead_time_days, i.unit
-            ORDER BY (i.min_threshold - i.current_stock) DESC;
-        """
-        rows = conn.execute(query, [current_user.tenant_id, current_user.tenant_id]).fetchall()
-        conn.close()
+        from database.schema_adapters import TenantSchemaAdapter
+        raw_items = TenantSchemaAdapter.get_all_inventory_items(tenant_id=current_user.tenant_id)
 
-        for r in rows:
-            cur_stock = r[3]
-            min_thresh = r[4]
+        for r in raw_items:
+            cur_stock = r.get("current_stock", 0)
+            min_thresh = r.get("min_threshold", 0)
             if cur_stock < min_thresh:
                 health = "CRITICAL"
             elif cur_stock <= min_thresh * 1.3:
@@ -54,24 +35,24 @@ async def get_inventory_summary(current_user: TokenData = Depends(get_current_us
                 health = "HEALTHY"
 
             items.append({
-                "item_id": r[0],
-                "name": r[1],
-                "category": r[2],
+                "item_id": r.get("item_id"),
+                "name": r.get("name"),
+                "category": r.get("category", "General"),
                 "current_stock": cur_stock,
                 "min_threshold": min_thresh,
-                "avg_daily_usage": float(r[5]),
-                "lead_time_days": int(r[6]),
-                "unit": r[7],
-                "unit_price": float(r[8]),
+                "avg_daily_usage": float(r.get("avg_daily_usage", 1.0)),
+                "lead_time_days": int(r.get("lead_time_days", 3)),
+                "unit": r.get("unit", "pcs"),
+                "unit_price": float(r.get("unit_price", 0.0)),
                 "health": health
             })
-    except Exception:
-        pass
+    except Exception as e:
+        items = []
 
     total_items = len(items)
-    critical_items = sum(1 for item in items if item["health"] == "CRITICAL")
-    warning_items = sum(1 for item in items if item["health"] == "WARNING")
-    healthy_items = sum(1 for item in items if item["health"] == "HEALTHY")
+    critical_items = sum(1 for i in items if i["health"] == "CRITICAL")
+    warning_items = sum(1 for i in items if i["health"] == "WARNING")
+    healthy_items = sum(1 for i in items if i["health"] == "HEALTHY")
 
     return {
         "total_sku": total_items,
@@ -83,22 +64,22 @@ async def get_inventory_summary(current_user: TokenData = Depends(get_current_us
 
 
 
-async def agent_thought_generator() -> AsyncGenerator[str, None]:
+async def agent_thought_generator(tenant_id: str = "ALL") -> AsyncGenerator[str, None]:
     """
     Dynamically executes and streams the live multi-agent decision steps with Server-Sent Events (SSE)
-    connected directly to DuckDB and LangGraph multi-agent workflow.
+    connected directly to DuckDB and LangGraph multi-agent workflow scoped by tenant.
     """
     trace_id = f"trace-{uuid.uuid4().hex[:8]}"
     tracer.start_trace(trace_id=trace_id)
 
     # Step 1: Real Scan from DuckDB
     from mcp_server.tools import get_low_stock_items
-    low_stock = get_low_stock_items()
+    low_stock = get_low_stock_items(tenant_id=tenant_id)
     num_low = len(low_stock)
     item_names = [it.get("name", it.get("item_id", "")) for it in low_stock]
     item_summary_str = ", ".join(item_names[:3]) + (f" dan {num_low - 3} SKU lainnya" if num_low > 3 else "")
 
-    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 1, 'node': 'Scanner Node (DuckDB)', 'model': 'DuckDB-Engine', 'message': f'Memindai 25 inventaris di DuckDB... Ditemukan {num_low} SKU dengan stok kritis di bawah threshold: {item_summary_str}.', 'progress': 16})}\n\n"
+    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 1, 'node': 'Scanner Node (DuckDB)', 'model': 'DuckDB-Engine', 'message': f'Memindai inventaris ({tenant_id}) di DuckDB... Ditemukan {num_low} SKU dengan stok kritis di bawah threshold: {item_summary_str}.', 'progress': 16})}\n\n"
     await asyncio.sleep(0.6)
 
     # Step 2: Real Dynamic Stock Calculator
@@ -118,9 +99,9 @@ async def agent_thought_generator() -> AsyncGenerator[str, None]:
     # Step 3: Real Agent Execution (Planner & Vendor Matcher)
     from agents.workflow import run_autorestock_cycle
     from api.routers.approval_routes import PR_STORE
-    from docgen.pdf_generator import pdf_generator
+    from docgen.compiler import generate_pr_pdf
 
-    pr_doc = run_autorestock_cycle()
+    pr_doc = run_autorestock_cycle(tenant_id=tenant_id)
     
     vendor_names = list(set([it.vendor_name for it in pr_doc.items]))[:2]
     vendor_str = " & ".join([f"'{v}'" for v in vendor_names]) if vendor_names else "supplier terverifikasi"
@@ -135,31 +116,8 @@ async def agent_thought_generator() -> AsyncGenerator[str, None]:
 
     # Step 5: Typst Engine
     clean_filename = f"{pr_doc.pr_number.replace('-', '_')}.pdf"
-    items_req = [
-        PurchaseItemRequest(
-            item_id=it.item_id,
-            name=it.name,
-            reorder_qty=it.reorder_qty,
-            unit=it.unit,
-            vendor_id=it.vendor_id,
-            vendor_name=it.vendor_name,
-            unit_price=it.unit_price,
-            total_price=it.total_price,
-            reason=it.reason
-        )
-        for it in pr_doc.items
-    ]
-    PR_STORE[pr_doc.pr_number] = PurchaseRequisitionDoc(
-        pr_number=pr_doc.pr_number,
-        created_at=pr_doc.created_at,
-        items=items_req,
-        total_budget=pr_doc.total_budget,
-        auditor_status=pr_doc.auditor_status or "PASSED",
-        auditor_notes=pr_doc.auditor_notes or "Audit passed.",
-        pdf_path=f"/storage/documents/{clean_filename}",
-        status=pr_doc.status or "PENDING"
-    )
-    pdf_generator.generate_purchase_requisition_pdf(PR_STORE[pr_doc.pr_number], output_filename=clean_filename)
+    PR_STORE[pr_doc.pr_number] = pr_doc
+    generate_pr_pdf(pr_doc, output_path=f"storage/documents/{clean_filename}")
 
     yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 5, 'node': 'Document Engine (Typst)', 'model': 'Typst-Compiler', 'message': f'Typst berhasil menyusun dan meng-compile dokumen {clean_filename} dengan status PENDING.', 'progress': 85})}\n\n"
     await asyncio.sleep(0.5)
@@ -174,12 +132,12 @@ async def agent_thought_generator() -> AsyncGenerator[str, None]:
 
 
 @router.get("/agent-run")
-async def stream_agent_execution():
+async def stream_agent_execution(tenant_id: str = "ALL"):
     """
     Server-Sent Events endpoint streaming live agent reasoning traces to the frontend console.
     """
     return StreamingResponse(
-        agent_thought_generator(),
+        agent_thought_generator(tenant_id=tenant_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -28,40 +28,46 @@ def view_database():
     print("\nDAFTAR TABEL:")
     print(tables.to_string(index=False))
     
-    # 2. Show Items summary
+    # 2. Show 3 Real Heterogeneous Tenant Tables
     print("\n" + "-" * 90)
-    print("TABEL 'items' (Total: {} baris)".format(conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]))
+    print("3 SKEMA REAL-WORLD HETEROGEN (Multi-Tenant):")
     print("-" * 90)
-    df_items = conn.execute("SELECT item_id, name, category, current_stock, min_threshold, avg_daily_usage, lead_time_days, unit FROM items LIMIT 10").df()
-    print(df_items.to_string(index=False))
-    print("... (menampilkan 10 dari 25 barang)")
-    
-    # 3. Show Vendors summary
+    try:
+        cnt_a = conn.execute("SELECT COUNT(*) FROM mfg_electronics_inventory;").fetchone()[0]
+        crit_a = conn.execute("SELECT COUNT(*) FROM mfg_electronics_inventory WHERE Stock_Quantity <= Min_Safety_Stock;").fetchone()[0]
+        print(f"1. User A (TENANT_A - Electronics Manufacturing): {cnt_a} SKU ({crit_a} Kritis)")
+        df_a = conn.execute("SELECT Part_Number, Component_Name, Stock_Quantity, Min_Safety_Stock FROM mfg_electronics_inventory LIMIT 3;").df()
+        print(df_a.to_string(index=False))
+    except Exception as e:
+        print(f"Error loading User A table: {e}")
+
+    try:
+        cnt_b = conn.execute("SELECT COUNT(*) FROM pharma_fmcg_inventory;").fetchone()[0]
+        crit_b = conn.execute("SELECT COUNT(*) FROM pharma_fmcg_inventory WHERE Shortage_Flag = 1 OR Closing_Stock <= 150;").fetchone()[0]
+        print(f"\n2. User B (TENANT_B - Pharma & FMCG WMS): {cnt_b} SKU ({crit_b} Kritis)")
+        df_b = conn.execute("SELECT Drug_Name, Brand_Name, Closing_Stock, Shortage_Flag FROM pharma_fmcg_inventory LIMIT 3;").df()
+        print(df_b.to_string(index=False))
+    except Exception as e:
+        print(f"Error loading User B table: {e}")
+
+    try:
+        cnt_c = conn.execute("SELECT COUNT(*) FROM fleet_maintenance_parts;").fetchone()[0]
+        crit_c = conn.execute("SELECT COUNT(*) FROM fleet_maintenance_parts WHERE Stock_On_Shelf <= Critical_Threshold;").fetchone()[0]
+        print(f"\n3. User C (TENANT_C - Fleet Logistics & Heavy Equipment): {cnt_c} SKU ({crit_c} Kritis)")
+        df_c = conn.execute("SELECT Vehicle_Model, Invoice_Line_Text, Stock_On_Shelf, Critical_Threshold FROM fleet_maintenance_parts LIMIT 3;").df()
+        print(df_c.to_string(index=False))
+    except Exception as e:
+        print(f"Error loading User C table: {e}")
+
+    # 3. Show Orders summary
     print("\n" + "-" * 90)
-    print("TABEL 'vendors' (Total: {} relasi)".format(conn.execute("SELECT COUNT(*) FROM vendors").fetchone()[0]))
-    print("-" * 90)
-    df_vendors = conn.execute("SELECT vendor_id, name, item_id, unit_price, lead_time_days, rating FROM vendors LIMIT 10").df()
-    print(df_vendors.to_string(index=False))
-    print("... (menampilkan 10 dari 31 vendor)")
-    
-    # 4. Critical Stock Alert
-    print("\n" + "=" * 90)
-    print("BARANG KRITIS PERLU RESTOCK (current_stock < min_threshold):")
-    print("=" * 90)
-    critical_query = """
-        SELECT 
-            item_id,
-            name,
-            current_stock,
-            min_threshold,
-            (min_threshold - current_stock) AS deficit,
-            unit
-        FROM items
-        WHERE current_stock < min_threshold
-        ORDER BY deficit DESC;
-    """
-    df_critical = conn.execute(critical_query).df()
-    print(df_critical.to_string(index=False))
+    try:
+        cnt_orders = conn.execute("SELECT COUNT(*) FROM orders;").fetchone()[0]
+        print(f"TABEL 'orders' (Total: {cnt_orders} order lines):")
+        df_orders = conn.execute("SELECT order_id, pr_number, item_id, quantity, total_price, status, tenant_id FROM orders ORDER BY created_at DESC LIMIT 5;").df()
+        print(df_orders.to_string(index=False))
+    except Exception as e:
+        print(f"Orders table error: {e}")
     print("=" * 90 + "\n")
     
     conn.close()

@@ -70,18 +70,15 @@ def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
 
 
 def update_db_orders_status(pr_number: str, status: str):
-    """Update all orders under a PR number to a new status (e.g. APPROVED, REJECTED) and update stock on APPROVE."""
+    """Update all orders under a PR number to a new status (e.g. APPROVED, REJECTED) and update physical stock via TenantSchemaAdapter on APPROVE."""
+    from database.schema_adapters import TenantSchemaAdapter
     conn = get_db_connection()
     try:
         if status.upper() == "APPROVED":
-            rows = conn.execute("SELECT item_id, quantity FROM orders WHERE pr_number = ?;", [pr_number]).fetchall()
-            if rows:
-                update_items_params = [(r[1], r[0]) for r in rows]
-                conn.executemany("""
-                    UPDATE items
-                    SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
-                    WHERE item_id = ?;
-                """, update_items_params)
+            rows = conn.execute("SELECT item_id, quantity, tenant_id FROM orders WHERE pr_number = ?;", [pr_number]).fetchall()
+            for r in rows:
+                item_id, qty, tenant_val = r[0], r[1], r[2] or "ALL"
+                TenantSchemaAdapter.update_item_stock(item_id=item_id, qty_to_add=qty, tenant_id=tenant_val)
 
         conn.execute("""
             UPDATE orders 
@@ -96,15 +93,16 @@ def update_db_orders_status(pr_number: str, status: str):
 def scan_node(state: AgentState) -> dict[str, Any]:
     """
     Node 1: Scan Node
-    Scans DuckDB inventory database to detect items below safety stock threshold.
+    Scans DuckDB inventory database to detect items below safety stock threshold for the active tenant.
     """
-    print("\n[AGENT] [STEP 1: SCAN] Scanning inventory database for low stock items...")
-    low_stock_items = get_low_stock_items()
+    tenant_id = state.get("tenant_id", "ALL")
+    print(f"\n[AGENT] [STEP 1: SCAN] Scanning inventory database for low stock items (Tenant: {tenant_id})...")
+    low_stock_items = get_low_stock_items(tenant_id=tenant_id)
     print(f"[AGENT] Found {len(low_stock_items)} items requiring replenishment.")
     
     return {
         "low_stock_items": low_stock_items,
-        "logs": state.get("logs", []) + [f"Scanned inventory: identified {len(low_stock_items)} critical items."]
+        "logs": state.get("logs", []) + [f"Scanned inventory ({tenant_id}): identified {len(low_stock_items)} critical items."]
     }
 
 
@@ -115,6 +113,7 @@ def planner_node(state: AgentState) -> dict[str, Any]:
     """
     print("[AGENT] [STEP 2: PLANNER] Running Planner Node (qwen-35b) - Vendor matching & budget calculation via LLM...")
     low_stock_items = state.get("low_stock_items", [])
+    tenant_id = state.get("tenant_id", "ALL")
     
     planned_items: list[RestockItem] = []
     total_budget = 0.0
@@ -125,7 +124,7 @@ def planner_node(state: AgentState) -> dict[str, Any]:
     # Prepare data for LLM
     items_data = []
     for item in low_stock_items:
-        vendor = get_best_vendors(item["item_id"]) or {
+        vendor = get_best_vendors(item["item_id"], tenant_id=tenant_id) or {
             "vendor_id": "VND-DEFAULT", "name": "Standard Supplier",
             "unit_price": 10000.0, "lead_time_days": 7, "rating": 4.0
         }
@@ -300,6 +299,7 @@ def typst_node(state: AgentState) -> dict[str, Any]:
     total_budget = state.get("total_budget", 0.0)
     auditor_status = state.get("auditor_status", "PASSED")
     auditor_notes = state.get("auditor_notes", "")
+    tenant_id = state.get("tenant_id", "ALL")
     
     pr_doc = PurchaseRequisition(
         pr_number=pr_number,
@@ -309,6 +309,7 @@ def typst_node(state: AgentState) -> dict[str, Any]:
         auditor_status=auditor_status,
         auditor_notes=auditor_notes,
         status="PENDING",
+        tenant_id=tenant_id,
         thread_id=thread_id
     )
     
@@ -403,9 +404,9 @@ autorestock_app = create_autorestock_graph()
 PR_THREAD_REGISTRY: dict[str, str] = {}
 
 
-def run_autorestock_cycle(thread_id: str | None = None) -> PurchaseRequisition:
+def run_autorestock_cycle(thread_id: str | None = None, tenant_id: str = "ALL") -> PurchaseRequisition:
     """
-    Runs cycle up to the HITL interrupt point (Typst Node).
+    Runs cycle up to the HITL interrupt point (Typst Node) scoped by tenant_id.
     Returns the generated PurchaseRequisition with status PENDING_APPROVAL.
     """
     if thread_id is None:
@@ -413,6 +414,7 @@ def run_autorestock_cycle(thread_id: str | None = None) -> PurchaseRequisition:
         
     initial_state: AgentState = {
         "thread_id": thread_id,
+        "tenant_id": tenant_id,
         "low_stock_items": [],
         "planned_items": [],
         "total_budget": 0.0,

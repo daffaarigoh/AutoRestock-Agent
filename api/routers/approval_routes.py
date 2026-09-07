@@ -95,14 +95,15 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
             
             # Only increment stock if we are approving AND it wasn't already approved
             if is_approve and pr and pr.items and not already_approved:
-                update_items_params = [
-                    (item.reorder_qty, item.item_id, item.name) for item in pr.items
-                ]
-                conn.executemany("""
-                    UPDATE items
-                    SET current_stock = GREATEST(current_stock + ?, min_threshold + 5)
-                    WHERE item_id = ? OR lower(name) = lower(?);
-                """, update_items_params)
+                from database.schema_adapters import TenantSchemaAdapter
+                effective_tenant = getattr(pr, "tenant_id", "ALL") or "ALL"
+                for item in pr.items:
+                    TenantSchemaAdapter.update_item_stock(
+                        item_id=item.item_id,
+                        qty_to_add=item.reorder_qty,
+                        item_name=item.name,
+                        tenant_id=effective_tenant
+                    )
 
             if existing_order:
                 conn.execute("UPDATE orders SET status = ? WHERE pr_number = ?;", [db_status, pr_number])
