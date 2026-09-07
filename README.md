@@ -25,7 +25,7 @@
 
 | Feature | Description | Technology Stack |
 | :--- | :--- | :--- |
-| **🤖 Multi-Agent AI Orchestration** | Autonomous agents (Planner, Auditor) that calculate reorder quantities and verify budgets. | LangGraph, Qwen-35b, Nemotron-35 |
+| **🤖 Multi-Agent AI Orchestration** | Autonomous agents (Planner, Auditor) that calculate reorder quantities and verify budgets. | LangGraph, Nemotron-35 |
 | **📊 Dynamic Safety Stock Algorithm** | Calculates optimal restock quantities based on lead time and daily usage dynamically. | Python / DuckDB |
 | **📄 Blazing-Fast PDF Generation** | Compiles formal Purchase Requisition drafts in under 50ms using modern typesetting. | Typst |
 | **👥 Human-in-the-Loop (HITL)** | Intercepts agent workflows to await managerial approval (Approve/Reject) on the generated PR. | FastAPI, SSE, Web Dashboard |
@@ -41,7 +41,7 @@ The following flowchart illustrates the autonomous procurement lifecycle, from d
 flowchart TD
     subgraph Autonomous Agent Loop
         A[(DuckDB)] -->|Scan Stock < Min| B(LangGraph Trigger)
-        B --> C[Planner Agent: Qwen-35b<br/>Vendor Matching & Reorder Math]
+        B --> C[Planner Agent: Nemotron-35<br/>Vendor Matching & Reorder Math]
         C --> D[Auditor Agent: Nemotron-35<br/>Budget Compliance]
         D --> E{Typst Engine}
         E -->|Compile PR| F(Draft PDF Generated)

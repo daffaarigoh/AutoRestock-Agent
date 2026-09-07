@@ -937,7 +937,7 @@ function appendAgentResponseCard(data) {
     return;
   }
 
-  // Scenario 4: Email / Telegram Notification
+  // Scenario 4: Email Notification
   if (actionType === 'notify_email') {
     container.innerHTML = `
       <div class="agent-plan-box">

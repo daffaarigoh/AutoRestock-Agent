@@ -35,7 +35,7 @@ def run_interactive_simulation():
     start_time = time.time()
     
     print_banner("AUTORESTOCK-AGENT: FULL INTERACTIVE HITL SIMULATION")
-    print("Multi-Agent Architecture: Scan -> Qwen-35b (Planner) -> Nemotron-35 (Auditor) -> Typst (DocGen) -> HITL Approval")
+    print("Multi-Agent Architecture: Scan -> Nemotron-35 (Planner) -> Nemotron-35 (Auditor) -> Typst (DocGen) -> HITL Approval")
     
     # -------------------------------------------------------------
     # 1. Database Initialization & Seeding
@@ -53,7 +53,7 @@ def run_interactive_simulation():
     print_section("FASE 2 & 3: Menjalankan LangGraph Multi-Agent Cycle")
     print("Memicu alur otomasi:")
     print("  1. Scan Node: Identifikasi stok < threshold")
-    print("  2. Planner Node (qwen-35b): Vendor matching & kalkulasi Dynamic Safety Stock")
+    print("  2. Planner Node (nemotron-35): Vendor matching & kalkulasi Dynamic Safety Stock")
     print("  3. Audit Node (nemotron-35): Validasi anggaran & compliance guardrail")
     print("  4. Typst Node: Kompilasi dokumen formal PDF Purchase Requisition")
     

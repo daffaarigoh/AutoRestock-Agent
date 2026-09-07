@@ -90,7 +90,7 @@ def root(request: Request):
         "service": "AutoRestock-Agent API",
         "status": "online",
         "version": "1.0.0",
-        "supported_models": ["qwen-35b", "nemotron-35"],
+        "supported_models": ["nemotron-35"],
         "modules": [
             "Live Inventory & Dynamic Safety Stock",
             "Multi-Agent Procurement Orchestration",
@@ -114,16 +114,14 @@ def root(request: Request):
 async def health_check():
     import httpx
     from fastapi import HTTPException
-    if settings.MOCK_MODELS:
-        return {"status": "healthy", "llm_connected": True, "mode": "mock"}
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             headers = {"Authorization": f"Bearer {settings.MODEL_API_KEY}"}
-            res = await client.get(f"{settings.MODEL_QWEN_URL}/models", headers=headers)
+            res = await client.get(f"{settings.MODEL_URL}/models", headers=headers)
             res.raise_for_status()
-        return {"status": "healthy", "llm_connected": True, "llm_url": settings.MODEL_QWEN_URL}
+        return {"status": "healthy", "llm_connected": True, "llm_url": settings.MODEL_URL}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"LLM Disconnected ({settings.MODEL_QWEN_URL}): {e!s}")
+        raise HTTPException(status_code=503, detail=f"LLM Disconnected ({settings.MODEL_URL}): {e!s}")
 
 
 if __name__ == "__main__":

@@ -60,7 +60,7 @@ def run_agent_cycle(current_user: TokenData = Depends(get_current_user)):
     """
     Triggers the LangGraph multi-agent workflow:
     1. Scan items below safety threshold.
-    2. Planner (qwen-35b) matches optimal vendors & calculates budget.
+    2. Planner (nemotron-35) matches optimal vendors & calculates budget.
     3. Auditor (nemotron-35) enforces compliance guardrails.
     4. Typst compiles the formal Purchase Requisition PDF.
     5. Graph pauses before Wait Approval Node (HITL).

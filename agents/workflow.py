@@ -108,10 +108,10 @@ def scan_node(state: AgentState) -> dict[str, Any]:
 
 def planner_node(state: AgentState) -> dict[str, Any]:
     """
-    Node 2: Planner Node (qwen-35b Planner & Vendor Matcher)
+    Node 2: Planner Node (nemotron-35 Planner & Vendor Matcher)
     Analyzes safety stock deficits, selects optimal vendors, and drafts line item justifications.
     """
-    print("[AGENT] [STEP 2: PLANNER] Running Planner Node (qwen-35b) - Vendor matching & budget calculation via LLM...")
+    print("[AGENT] [STEP 2: PLANNER] Running Planner Node (nemotron-35) - Vendor matching & budget calculation via LLM...")
     low_stock_items = state.get("low_stock_items", [])
     tenant_id = state.get("tenant_id", "ALL")
     
@@ -168,7 +168,7 @@ Output format must be a JSON object with a key 'items' containing a list of obje
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         response_str = loop.run_until_complete(
-            gateway.chat_completion("qwen-35b", messages, temperature=0.1, response_format_json=True)
+            gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
         )
         loop.close()
         

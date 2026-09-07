@@ -104,16 +104,6 @@ class MultiChannelDispatcher:
             </html>
             """
 
-        # Also automatically dispatch to Telegram if configured
-        telegram_res = None
-        if settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID:
-            telegram_res = await cls.dispatch_telegram(
-                text=content_text,
-                attachment_path=attachment_path,
-                pr_number=pr_number,
-                base_url=base_url
-            )
-
         if not is_smtp_configured:
             attach_info = f" (dengan lampiran: {Path(attachment_path).name})" if attachment_path and Path(attachment_path).exists() else ""
             msg = f"[EMAIL SIMULASI] Email berhasil disimulasikan ke '{recipient}' | Subjek: '{subject}'{attach_info}."
@@ -125,7 +115,6 @@ class MultiChannelDispatcher:
                 "subject": subject,
                 "message": msg,
                 "content_preview": content_text[:150] + "..." if len(content_text) > 150 else content_text,
-                "telegram": telegram_res,
                 "interactive_actions": {
                     "approve_url": f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=APPROVE" if pr_number else "",
                     "reject_url": f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=REJECT" if pr_number else ""
@@ -161,7 +150,6 @@ class MultiChannelDispatcher:
                 "status": "success",
                 "recipient": recipient,
                 "subject": subject,
-                "telegram": telegram_res,
                 "message": f"Email interaktif berhasil dikirim ke {recipient}."
             }
         except Exception as e:
@@ -170,83 +158,7 @@ class MultiChannelDispatcher:
                 "channel": "email",
                 "status": "error",
                 "recipient": recipient,
-                "telegram": telegram_res,
                 "message": f"Gagal mengirim email via SMTP: {e!s}"
-            }
-
-    @classmethod
-    async def dispatch_telegram(
-        cls,
-        text: str,
-        attachment_path: str | None = None,
-        pr_number: str | None = None,
-        base_url: str | None = None
-    ) -> dict[str, Any]:
-        """
-        Sends a notification to Telegram Bot chat with action buttons and optional PDF document.
-        """
-        if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
-            return {"channel": "telegram", "status": "skipped", "message": "Telegram not configured"}
-
-        if settings.PUBLIC_URL:
-            base_url = base_url or settings.PUBLIC_URL.rstrip("/")
-        else:
-            host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
-            base_url = base_url or f"http://{host}:{settings.API_PORT}"
-
-        token = settings.TELEGRAM_BOT_TOKEN
-        chat_id = settings.TELEGRAM_CHAT_ID
-        telegram_api = f"https://api.telegram.org/bot{token}"
-
-        msg_text = text
-        if pr_number:
-            approve_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=APPROVE"
-            reject_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=REJECT"
-            pdf_link = f"{base_url}/api/documents/pr/{pr_number}/download"
-            msg_text = (
-                f"*AutoRestock-Agent: Permintaan Persetujuan*\n\n"
-                f"{text}\n\n"
-                f"*No. PR:* `{pr_number}`\n\n"
-                f"*Aksi Persetujuan:*\n"
-                f"[SETUJUI (APPROVE)]({approve_link})\n"
-                f"[TOLAK (REJECT)]({reject_link})\n\n"
-                f"[Unduh Draf PDF]({pdf_link})"
-            )
-
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                payload = {
-                    "chat_id": chat_id,
-                    "text": msg_text,
-                    "parse_mode": "Markdown",
-                    "disable_web_page_preview": False
-                }
-                res = await client.post(f"{telegram_api}/sendMessage", json=payload)
-                res_json = res.json()
-
-                # If PDF attachment exists, send document
-                if attachment_path and Path(attachment_path).exists():
-                    try:
-                        with open(attachment_path, "rb") as f:
-                            files = {"document": (Path(attachment_path).name, f, "application/pdf")}
-                            data = {"chat_id": chat_id, "caption": f"Dokumen PR Resmi: {pr_number or Path(attachment_path).name}"}
-                            await client.post(f"{telegram_api}/sendDocument", data=data, files=files)
-                    except Exception as doc_err:
-                        logger.warning(f"Could not send PDF to Telegram: {doc_err}")
-
-                return {
-                    "channel": "telegram",
-                    "status": "success" if res_json.get("ok") else "error",
-                    "chat_id": chat_id,
-                    "message": "Notifikasi Telegram berhasil dikirim." if res_json.get("ok") else res_json.get("description", "Error")
-                }
-        except Exception as e:
-            logger.error(f"Failed to send Telegram notification: {e}")
-            return {
-                "channel": "telegram",
-                "status": "error",
-                "chat_id": chat_id,
-                "message": f"Gagal mengirim Telegram: {e!s}"
             }
 
 

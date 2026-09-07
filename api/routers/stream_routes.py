@@ -107,7 +107,7 @@ async def agent_thought_generator(tenant_id: str = "ALL") -> AsyncGenerator[str,
     vendor_str = " & ".join([f"'{v}'" for v in vendor_names]) if vendor_names else "supplier terverifikasi"
     total_budget_fmt = f"Rp {pr_doc.total_budget:,.0f}".replace(",", ".")
 
-    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 3, 'node': 'Procurement Planner Node', 'model': 'qwen-35b', 'message': f'qwen-35b mencocokkan supplier: Memilih {vendor_str} berdasarkan harga termurah & lead time tercepat.', 'progress': 50})}\n\n"
+    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 3, 'node': 'Procurement Planner Node', 'model': 'nemotron-35', 'message': f'nemotron-35 mencocokkan supplier: Memilih {vendor_str} berdasarkan harga termurah & lead time tercepat.', 'progress': 50})}\n\n"
     await asyncio.sleep(0.7)
 
     # Step 4: Compliance Auditor

@@ -135,7 +135,7 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                     }
 
         try:
-            response_str = await gateway.chat_completion("qwen-35b", messages, temperature=0.1, response_format_json=True)
+            response_str = await gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
             json_match = re.search(r'\{.*\}', response_str, re.DOTALL)
             if json_match:
                 response_str = json_match.group(0)

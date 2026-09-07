@@ -176,7 +176,7 @@
       #text(size: 8.5pt, fill: rgb("#64748b"))[Prepared By:]\
       #v(30pt)
       #line(length: 80%, stroke: 0.8pt + rgb("#94a3b8"))
-      #text(size: 8.5pt, weight: "bold")[Qwen-35b (AI Planner)]\
+      #text(size: 8.5pt, weight: "bold")[Nemotron-35 (AI Planner)]\
       #text(size: 7.5pt, fill: rgb("#64748b"))[AutoRestock Workflow]
     ],
     [
