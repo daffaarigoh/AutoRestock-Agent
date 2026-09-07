@@ -1,0 +1,16 @@
+Part_Number,Component_Name,Manufacturer,Package_Footprint,Stock_Quantity,Min_Safety_Stock,Lead_Time_Days,Unit_Price_USD
+STM32F401RE,Microcontroller ARM Cortex-M4 84MHz 512KB,STMicroelectronics,LQFP-64,45,200,14,4.85
+ESP32-WROOM-32D,Wi-Fi & Bluetooth Dual Core MCU Module,Espressif Systems,SMD-38,80,300,7,3.20
+AMS1117-3.3,Low Dropout Linear Voltage Regulator 3.3V,Advanced Monolithic,SOT-223,120,500,5,0.25
+ATMEGA328P-AU,8-bit AVR Microcontroller 32KB Flash,Microchip Technology,TQFP-32,15,100,10,2.15
+LM2596S-5.0,Step-Down Voltage Switching Regulator 5V 3A,Texas Instruments,TO-263,30,80,8,1.45
+CH340G,USB to Serial UART Interface Controller,WCH Qinheng,SOP-16,210,150,5,0.60
+MPU-6050,6-Axis Motion Tracking Gyroscope & Accelerometer,TDK InvenSense,QFN-24,25,120,12,2.80
+DS3231SN,High Precision Real-Time Clock RTC I2C,Analog Devices Maxim,SO-16,8,50,9,3.50
+TP4056,1A Standalone Lithium-Ion Battery Charger,Top Power ASIC,SOP-8,350,200,4,0.18
+NRF24L01P,2.4GHz Ultra Low Power RF Transceiver,Nordic Semiconductor,QFN-20,18,80,7,1.10
+PCF8574T,Remote 8-Bit I/O Expander for I2C Bus,NXP Semiconductors,SO-16,40,90,6,0.95
+ULN2003AD,High-Voltage High-Current Darlington Transistor Array,STMicroelectronics,SO-16,65,150,5,0.40
+BME280,Digital Humidity Pressure Temperature Sensor,Bosch Sensortec,LGA-8,12,60,15,4.20
+OLED-0.96-SSD1306,Monochrome Graphic Display Module 128x64,Solomon Systech,I2C 4-Pin,22,70,8,2.75
+NE555P,Precision Timer Pulse Generator Oscillator,Texas Instruments,DIP-8,180,100,3,0.30

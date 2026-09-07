@@ -1,0 +1,16 @@
+Drug_Name,Brand_Name,Strength,Opening_Stock,Issued_Qty,Closing_Stock,Shortage_Flag,Lead_Time_Days,Unit_Price_USD
+Metformin Hydrochloride,Glilcomet,500mg,500,4280,704,0,7,4.50
+Amoxicillin Trihydrate,Amoxil,500mg,250,1800,85,1,10,6.20
+Paracetamol,Panadol Extra,500mg,800,5500,120,1,5,2.10
+Omeprazole,Prilosec,20mg,150,950,40,1,8,8.40
+Atorvastatin Calcium,Lipitor,20mg,300,1400,210,0,6,12.50
+Ciprofloxacin,Cipro XR,500mg,80,620,18,1,12,9.80
+Azithromycin Dihydrate,Zithromax,250mg,120,800,32,1,9,14.20
+Amlodipine Besylate,Norvasc,5mg,400,1600,340,0,7,5.60
+Ibuprofen,Brufen,400mg,600,3200,150,1,4,3.15
+Salbutamol Sulfate,Ventolin Inhaler,100mcg/dose,90,450,15,1,11,7.80
+Cetirizine Hydrochloride,Zyrtec,10mg,350,1200,280,0,5,4.00
+Losartan Potassium,Cozaar,50mg,280,980,195,0,8,11.00
+Doxycycline Hyclate,Vibramycin,100mg,110,750,25,1,10,6.50
+Ranitidine Hydrochloride,Zantac,150mg,220,1100,60,1,6,3.80
+Insulin Glargine,Lantus SoloStar,100units/ml,45,180,8,1,14,28.50

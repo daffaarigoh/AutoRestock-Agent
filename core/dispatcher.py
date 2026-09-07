@@ -20,11 +20,12 @@ class MultiChannelDispatcher:
     2. Email Dispatcher (Sends SMTP mail with optional PDF attachment / zero-config simulation)
     """
 
+    @classmethod
     async def dispatch_email(
         cls,
-        recipient_email: str,
-        subject: str,
-        content_text: str,
+        recipient_email: str | None = None,
+        subject: str = "Notifikasi Pengadaan Inventaris",
+        content_text: str = "",
         attachment_path: str | None = None,
         html_content: str | None = None,
         pr_number: str | None = None,

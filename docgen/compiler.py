@@ -29,10 +29,13 @@ def format_currency(amount: float) -> str:
 
 
 def escape_typst(text: str) -> str:
-    """Escape special characters for Typst text blocks."""
+    """Escape special characters for Typst text blocks to prevent unclosed delimiter syntax errors."""
     if text is None:
         return ""
-    return str(text).replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]").replace("$", "\\$").replace("#", "\\#")
+    s = str(text).replace("\\", "\\\\")
+    for char in ["[", "]", "_", "*", "@", "$", "#"]:
+        s = s.replace(char, "\\" + char)
+    return s
 
 
 def get_target_directory(status: str) -> Path:

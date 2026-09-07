@@ -423,8 +423,30 @@ class JSONExecutionEngine:
             summary = f"Audit selesai. Terdapat {len(context['all_inventory_items'])} macam barang di dalam inventaris Anda saat ini."
         else:
             summary = "Workflow berhasil dieksekusi."
-        
-        has_email = any(s.get("tool") in ["notification.send_email", "notification.dispatch"] for s in steps)
+
+        # If user explicitly requested email notification and it hasn't been sent yet in steps
+        if context.get("send_email") and not context.get("email_sent"):
+            pr_num = context.get("pr_number")
+            msg = f"Laporan eksekusi alur kerja '{compiled_json.get('workflow', 'Pengadaan')}' telah selesai."
+            if pr_num:
+                msg = f"Dokumen PR #{pr_num} telah diterbitkan dan menunggu persetujuan Anda."
+            dispatch_res = await dispatcher.dispatch_email(
+                recipient_email=None,
+                subject=f"Permintaan Persetujuan Restock: {pr_num}" if pr_num else "Notifikasi Pengadaan Inventaris",
+                content_text=msg,
+                attachment_path=context.get("pdf_path"),
+                pr_number=pr_num
+            )
+            context["email_sent"] = True
+            context["email_dispatch_res"] = dispatch_res
+            execution_results.append({
+                "step_number": len(steps) + 1,
+                "title": "Send Notification / Email (Permintaan Pengguna)",
+                "status": "COMPLETED",
+                "details": f"Notification dispatched to {dispatch_res.get('recipient', 'manager')}. Status: {dispatch_res.get('status')}."
+            })
+
+        has_email = any(s.get("tool") in ["notification.send_email", "notification.dispatch"] for s in steps) or bool(context.get("send_email")) or bool(context.get("email_sent"))
         return {
             "workflow_title": compiled_json.get("workflow", "Dynamic Workflow"),
             "target_destinations": ["database"] + (["email"] if has_email else []),

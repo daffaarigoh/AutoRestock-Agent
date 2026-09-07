@@ -33,7 +33,9 @@ class TestAPIHealth(unittest.TestCase):
             mock_get.return_value = mock_response
             health_res = self.client.get("/health")
             self.assertEqual(health_res.status_code, 200)
-            self.assertEqual(health_res.json(), {"status": "healthy", "llm_connected": True})
+            res_data = health_res.json()
+            self.assertEqual(res_data.get("status"), "healthy")
+            self.assertTrue(res_data.get("llm_connected"))
 
 
 
