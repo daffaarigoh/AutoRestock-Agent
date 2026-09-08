@@ -115,9 +115,12 @@ async def health_check():
     import httpx
     from fastapi import HTTPException
     try:
+        base_url = (settings.MODEL_URL or "").rstrip("/")
+        models_endpoint = base_url if base_url.endswith("/models") else f"{base_url}/models"
+
         async with httpx.AsyncClient(timeout=5.0) as client:
             headers = {"Authorization": f"Bearer {settings.MODEL_API_KEY}"}
-            res = await client.get(f"{settings.MODEL_URL}/models", headers=headers)
+            res = await client.get(models_endpoint, headers=headers)
             res.raise_for_status()
         return {"status": "healthy", "llm_connected": True, "llm_url": settings.MODEL_URL}
     except Exception as e:
@@ -126,6 +129,6 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    host = "127.0.0.1" if settings.API_HOST == "0.0.0.0" else settings.API_HOST
+    host = settings.API_HOST or "0.0.0.0"
     uvicorn.run("api.main:app", host=host, port=settings.API_PORT, reload=settings.DEBUG)
 

@@ -29,7 +29,9 @@ class ModelGateway:
         Calls configured LLM model (nemotron-35) using settings from .env.
         """
         actual_model = settings.MODEL_NAME or "nemotron-35"
-        endpoint = settings.MODEL_URL
+        endpoint = (settings.MODEL_URL or "http://localhost:8001/v1").rstrip("/")
+        if endpoint.endswith("/models"):
+            endpoint = endpoint[:-7]
 
         headers = {
             "Authorization": f"Bearer {settings.MODEL_API_KEY}",

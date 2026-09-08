@@ -75,13 +75,20 @@ class Settings(_BaseSettings):
         if self.LLM_KEY and (self.MODEL_API_KEY in ["dummy-key", "dummy-key-for-local", "", None]):
             self.MODEL_API_KEY = self.LLM_KEY
         
+        # Normalize MODEL_URL if provided
+        if self.MODEL_URL:
+            self.MODEL_URL = self.MODEL_URL.rstrip("/")
+            if self.MODEL_URL.endswith("/models"):
+                self.MODEL_URL = self.MODEL_URL[:-7]
+
         # If LLM_URL is provided, sync with MODEL_URL
         if self.LLM_URL:
             base_url = self.LLM_URL.rstrip("/")
+            if base_url.endswith("/models"):
+                base_url = base_url[:-7]
             if "/v1" not in base_url:
                 base_url = f"{base_url}/v1"
-            if not self.MODEL_URL or "localhost" in self.MODEL_URL:
-                self.MODEL_URL = base_url
+            self.MODEL_URL = base_url
 
 
 settings = Settings()
