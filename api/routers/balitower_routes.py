@@ -1,0 +1,799 @@
+"""
+Bali Tower API Router
+Menyediakan REST API untuk 3 Modul Operasional PT Bali Towerindo Sentra Tbk:
+1. Inventory & Logistik Material Tower/FO
+2. HR & Field Workforce Management (Absensi Geofencing, Cuti, Rekrutmen K3)
+3. Finance & Laporan Keuangan (Invoices Sewa Menara, Biaya OPEX, List Transaksi Kas)
+
+Dilengkapi sistem otorisasi multi-tenant ketat:
+- Admin (tenant ALL): Akses penuh ke seluruh modul dan tabel.
+- User Inventory (tenant INVENTORY): Hanya boleh akses modul Inventory & Logistik.
+- User HR (tenant HR): Hanya boleh akses modul HR & Field Workforce.
+- User Finance (tenant FINANCE): Hanya boleh akses modul Finance & Accounting.
+"""
+
+from typing import Any
+from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel
+from core.security import TokenData, get_current_user
+from database.db import get_db_connection
+
+router = APIRouter(tags=["Bali Tower Enterprise System"])
+
+
+# ==============================================================================
+# RBAC & STRICT MULTI-TENANT ACCESS GUARDS
+# ==============================================================================
+
+def require_inventory_access(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+    """Memastikan user memiliki wewenang divisi Inventory atau Super Admin."""
+    role = (current_user.role or "").upper()
+    tenant = (current_user.tenant_id or "").upper()
+    username = (current_user.username or "").lower()
+    if role in ["ADMIN", "MANAGER"] or tenant in ["ALL", "INVENTORY", "TENANT_A"] or username in ["admin", "usera", "user_inventory"]:
+        return current_user
+    raise HTTPException(
+        status_code=403,
+        detail=f"Akses ditolak: Akun Anda ({current_user.username} - Divisi {current_user.tenant_id}) tidak memiliki izin untuk mengakses modul Inventory & Logistik."
+    )
+
+
+def require_hr_access(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+    """Memastikan user memiliki wewenang divisi HR atau Super Admin."""
+    role = (current_user.role or "").upper()
+    tenant = (current_user.tenant_id or "").upper()
+    username = (current_user.username or "").lower()
+    if role in ["ADMIN", "MANAGER"] or tenant in ["ALL", "HR", "TENANT_B"] or username in ["admin", "userb", "user_hr"]:
+        return current_user
+    raise HTTPException(
+        status_code=403,
+        detail=f"Akses ditolak: Akun Anda ({current_user.username} - Divisi {current_user.tenant_id}) tidak memiliki izin untuk mengakses modul HR & Field Workforce."
+    )
+
+
+def require_finance_access(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+    """Memastikan user memiliki wewenang divisi Finance atau Super Admin."""
+    role = (current_user.role or "").upper()
+    tenant = (current_user.tenant_id or "").upper()
+    username = (current_user.username or "").lower()
+    if role in ["ADMIN", "MANAGER"] or tenant in ["ALL", "FINANCE", "TENANT_C"] or username in ["admin", "userc", "user_finance"]:
+        return current_user
+    raise HTTPException(
+        status_code=403,
+        detail=f"Akses ditolak: Akun Anda ({current_user.username} - Divisi {current_user.tenant_id}) tidak memiliki izin untuk mengakses modul Finance & Akuntansi."
+    )
+
+
+# ==============================================================================
+# SCOPE 1: INVENTORY & LOGISTIK (5 TABEL UTAMA)
+# ==============================================================================
+
+@router.get("/api/balitower/inventory/items")
+def get_inventory_items(
+    category: str | None = None,
+    warehouse_id: str | None = None,
+    current_user: TokenData = Depends(require_inventory_access)
+):
+    """Tabel 1: inventory_items - Katalog lengkap material tower & FO beserta saldo stok aktual."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                i.item_id,
+                i.item_code,
+                i.item_name AS name,
+                i.category,
+                i.unit,
+                i.unit_price,
+                i.min_stock,
+                i.safety_stock,
+                i.lead_time_days,
+                s.supplier_name,
+                COALESCE(SUM(sb.quantity_on_hand), 0) AS total_stock,
+                COALESCE(SUM(sb.quantity_reserved), 0) AS total_reserved,
+                CASE 
+                    WHEN COALESCE(SUM(sb.quantity_on_hand), 0) <= i.min_stock * 0.5 THEN 'CRITICAL'
+                    WHEN COALESCE(SUM(sb.quantity_on_hand), 0) <= i.min_stock THEN 'LOW_STOCK'
+                    ELSE 'NORMAL'
+                END AS stock_status
+            FROM inventory_items i
+            LEFT JOIN suppliers s ON i.supplier_id = s.supplier_id
+            LEFT JOIN stock_balances sb ON i.item_id = sb.item_id
+            WHERE 1=1
+        """
+        params = []
+        if category:
+            query += " AND i.category = ?"
+            params.append(category)
+        if warehouse_id:
+            query += " AND sb.warehouse_id = ?"
+            params.append(warehouse_id)
+            
+        query += " GROUP BY i.item_id, i.item_code, i.item_name, i.category, i.unit, i.unit_price, i.min_stock, i.safety_stock, i.lead_time_days, s.supplier_name ORDER BY i.item_id ASC"
+        
+        rows = conn.execute(query, params).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/inventory/stock-balances")
+def get_stock_balances(
+    warehouse_id: str | None = None,
+    current_user: TokenData = Depends(require_inventory_access)
+):
+    """Tabel 2: stock_balances - Rincian saldo fisik material per gudang penyimpanan."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                sb.balance_id,
+                sb.item_id,
+                i.item_code,
+                i.item_name,
+                i.category,
+                i.unit,
+                w.warehouse_id,
+                w.warehouse_name,
+                w.region,
+                sb.quantity_on_hand,
+                sb.quantity_reserved,
+                sb.reorder_point,
+                sb.stock_status,
+                sb.last_updated
+            FROM stock_balances sb
+            JOIN inventory_items i ON sb.item_id = i.item_id
+            JOIN warehouses w ON sb.warehouse_id = w.warehouse_id
+            WHERE 1=1
+        """
+        params = []
+        if warehouse_id:
+            query += " AND sb.warehouse_id = ?"
+            params.append(warehouse_id)
+        query += " ORDER BY sb.balance_id ASC;"
+        rows = conn.execute(query, params).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/inventory/warehouses")
+def get_warehouses(current_user: TokenData = Depends(require_inventory_access)):
+    """Tabel 3: warehouses - Daftar gudang regional dan kapasitas logistik."""
+    conn = get_db_connection(read_only=True)
+    try:
+        rows = conn.execute("SELECT * FROM warehouses ORDER BY warehouse_id ASC;").fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/inventory/suppliers")
+def get_suppliers(current_user: TokenData = Depends(require_inventory_access)):
+    """Tabel 4: suppliers - Master supplier rekanan pengadaan barang."""
+    conn = get_db_connection(read_only=True)
+    try:
+        rows = conn.execute("""
+            SELECT 
+                supplier_id,
+                supplier_name,
+                category,
+                phone,
+                email,
+                rating,
+                payment_terms
+            FROM suppliers 
+            ORDER BY supplier_id ASC;
+        """).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/inventory/purchase-orders")
+def get_purchase_orders(current_user: TokenData = Depends(require_inventory_access)):
+    """Tabel 5: purchase_orders - Riwayat pesanan pembelian resmi pengadaan."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                po.po_id,
+                po.po_number,
+                po.supplier_id,
+                s.supplier_name,
+                po.item_id,
+                i.item_name,
+                po.order_quantity,
+                po.unit_price,
+                po.total_amount,
+                po.order_date,
+                po.expected_delivery,
+                po.status AS po_status
+            FROM purchase_orders po
+            JOIN suppliers s ON po.supplier_id = s.supplier_id
+            JOIN inventory_items i ON po.item_id = i.item_id
+            ORDER BY po.order_date DESC;
+        """
+        rows = conn.execute(query).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/inventory/critical-stock")
+def get_critical_stock(current_user: TokenData = Depends(require_inventory_access)):
+    """Peringatan material yang membutuhkan restock segera."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                sb.balance_id,
+                w.warehouse_name,
+                i.item_id,
+                i.item_code,
+                i.item_name,
+                i.category,
+                sb.quantity_on_hand,
+                sb.reorder_point,
+                sb.stock_status,
+                i.unit,
+                i.unit_price,
+                (sb.reorder_point * 2 - sb.quantity_on_hand) AS recommended_restock_qty,
+                ((sb.reorder_point * 2 - sb.quantity_on_hand) * i.unit_price) AS estimated_cost
+            FROM stock_balances sb
+            JOIN inventory_items i ON sb.item_id = i.item_id
+            JOIN warehouses w ON sb.warehouse_id = w.warehouse_id
+            WHERE sb.stock_status IN ('CRITICAL', 'LOW_STOCK')
+            ORDER BY sb.stock_status ASC, sb.quantity_on_hand ASC;
+        """
+        rows = conn.execute(query).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+# ==============================================================================
+# SCOPE 2: HR & FIELD WORKFORCE (6 TABEL UTAMA)
+# ==============================================================================
+
+@router.get("/api/balitower/hr/summary")
+def get_hr_summary(current_user: TokenData = Depends(require_hr_access)):
+    """Mengambil KPI ringkas ketenagakerjaan dan teknisi lapangan."""
+    conn = get_db_connection(read_only=True)
+    try:
+        total_employees = conn.execute("SELECT COUNT(*) FROM employees;").fetchone()[0]
+        field_techs = conn.execute("SELECT COUNT(*) FROM employees WHERE department = 'Field Operations';").fetchone()[0]
+        certified_k3 = conn.execute("SELECT COUNT(*) FROM employees WHERE k3_certification IN ('TKPK 1', 'TKPK 2');").fetchone()[0]
+        total_sites = conn.execute("SELECT COUNT(*) FROM telecom_sites;").fetchone()[0]
+        total_overtime_hours = conn.execute("SELECT COALESCE(SUM(overtime_hours), 0) FROM attendances;").fetchone()[0]
+        pending_leaves = conn.execute("SELECT COUNT(*) FROM leave_requests WHERE approval_status = 'PENDING_APPROVAL';").fetchone()[0]
+        open_jobs = conn.execute("SELECT COUNT(*) FROM job_postings WHERE status = 'OPEN';").fetchone()[0]
+
+        return {
+            "total_employees": total_employees,
+            "field_technicians": field_techs,
+            "certified_k3_tkpk": certified_k3,
+            "telecom_sites_monitored": total_sites,
+            "total_overtime_hours": round(float(total_overtime_hours), 1),
+            "pending_leave_requests": pending_leaves,
+            "open_job_vacancies": open_jobs
+        }
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/hr/employees")
+def get_employees(
+    department: str | None = None,
+    k3_only: bool = False,
+    current_user: TokenData = Depends(require_hr_access)
+):
+    """Tabel 6: employees - Master data karyawan, status sertifikasi K3, dan hak cuti."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                employee_id,
+                full_name,
+                department,
+                job_title,
+                employment_status,
+                k3_certification,
+                k3_cert_expiry,
+                leave_balance AS leave_balance_days,
+                hourly_overtime_rate
+            FROM employees 
+            WHERE 1=1
+        """
+        params = []
+        if department:
+            query += " AND department = ?"
+            params.append(department)
+        if k3_only:
+            query += " AND k3_certification IN ('TKPK 1', 'TKPK 2')"
+            
+        query += " ORDER BY employee_id ASC"
+        rows = conn.execute(query, params).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/hr/attendances")
+def get_attendances(
+    limit: int = 100,
+    site_id: str | None = None,
+    overtime_only: bool = False,
+    current_user: TokenData = Depends(require_hr_access)
+):
+    """Tabel 7: attendances - Log absensi geofencing site menara dan jam lembur teknisi."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                a.attendance_id,
+                a.date,
+                a.clock_in,
+                a.clock_out,
+                e.employee_id,
+                e.full_name AS employee_name,
+                e.job_title,
+                a.site_id,
+                COALESCE(s.site_name, 'Kantor Pusat / NOC') AS site_name,
+                a.distance_to_site_m,
+                a.attendance_type,
+                a.overtime_hours,
+                a.status
+            FROM attendances a
+            JOIN employees e ON a.employee_id = e.employee_id
+            LEFT JOIN telecom_sites s ON a.site_id = s.site_id
+            WHERE 1=1
+        """
+        params = []
+        if site_id:
+            query += " AND a.site_id = ?"
+            params.append(site_id)
+        if overtime_only:
+            query += " AND a.overtime_hours > 0"
+            
+        query += " ORDER BY a.date DESC, a.attendance_id DESC LIMIT ?"
+        params.append(limit)
+
+        rows = conn.execute(query, params).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/hr/leave-requests")
+def get_leave_requests(current_user: TokenData = Depends(require_hr_access)):
+    """Tabel 8: leave_requests - Riwayat dan status perizinan/cuti teknisi dan karyawan."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                l.leave_id,
+                l.employee_id,
+                e.full_name AS applicant_name,
+                e.job_title,
+                l.leave_type,
+                l.start_date,
+                l.end_date,
+                l.days_requested,
+                l.reason,
+                l.substitute_employee_id,
+                COALESCE(sub.full_name, '-') AS substitute_name,
+                l.approval_status,
+                COALESCE(appr.full_name, '-') AS approved_by_name
+            FROM leave_requests l
+            JOIN employees e ON l.employee_id = e.employee_id
+            LEFT JOIN employees sub ON l.substitute_employee_id = sub.employee_id
+            LEFT JOIN employees appr ON l.approved_by = appr.employee_id
+            ORDER BY l.leave_id DESC;
+        """
+        rows = conn.execute(query).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+class LeaveActionRequest(BaseModel):
+    action: str  # APPROVE / REJECT
+    manager_name: str | None = "HR Manager"
+
+
+@router.post("/api/balitower/hr/leave-requests/{leave_id}/action")
+def update_leave_status(
+    leave_id: str,
+    payload: LeaveActionRequest,
+    current_user: TokenData = Depends(require_hr_access)
+):
+    """Menyetujui atau menolak pengajuan cuti."""
+    conn = get_db_connection()
+    try:
+        new_status = "APPROVED" if payload.action.upper() == "APPROVE" else "REJECTED"
+        conn.execute(
+            "UPDATE leave_requests SET approval_status = ?, approved_by = 'EMP-BLT-005' WHERE leave_id = ?",
+            [new_status, leave_id]
+        )
+        return {"leave_id": leave_id, "status": new_status, "message": f"Pengajuan cuti berhasil di-{new_status.lower()}"}
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/hr/candidates")
+def get_candidates(
+    job_id: str | None = None,
+    fit_only: bool = False,
+    current_user: TokenData = Depends(require_hr_access)
+):
+    """Tabel 9: candidates - Daftar pelamar dengan screening sertifikat K3 dan kelayakan medis ketinggian."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                c.candidate_id,
+                c.full_name,
+                j.job_title,
+                c.current_city,
+                c.k3_cert_held,
+                c.years_of_experience,
+                c.medical_checkup_status,
+                c.technical_score,
+                c.recruitment_stage,
+                c.email,
+                c.phone
+            FROM candidates c
+            JOIN job_postings j ON c.job_id = j.job_id
+            WHERE 1=1
+        """
+        params = []
+        if job_id:
+            query += " AND c.job_id = ?"
+            params.append(job_id)
+        if fit_only:
+            query += " AND c.medical_checkup_status = 'FIT_FOR_HEIGHT'"
+            
+        query += " ORDER BY c.technical_score DESC"
+        rows = conn.execute(query, params).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/hr/job-postings")
+def get_job_postings(current_user: TokenData = Depends(require_hr_access)):
+    """Tabel 10: job_postings - Daftar lowongan kerja teknis yang dibuka."""
+    conn = get_db_connection(read_only=True)
+    try:
+        rows = conn.execute("""
+            SELECT 
+                job_id,
+                job_title,
+                department,
+                required_k3_cert,
+                min_experience_years,
+                location AS work_location,
+                quota AS open_positions,
+                status
+            FROM job_postings
+            ORDER BY job_id ASC;
+        """).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/hr/sites")
+def get_sites(current_user: TokenData = Depends(require_hr_access)):
+    """Tabel 11: telecom_sites - Master daftar menara BTS/MCP dan koordinat GPS."""
+    conn = get_db_connection(read_only=True)
+    try:
+        rows = conn.execute("""
+            SELECT 
+                s.site_id,
+                s.site_name,
+                s.site_type,
+                s.region,
+                s.latitude,
+                s.longitude,
+                s.tower_height_m AS height_meters,
+                'Monopole / SST' AS structure_type,
+                (SELECT COUNT(*) FROM mla_contracts m WHERE m.site_id = s.site_id) AS tenant_count,
+                s.status
+            FROM telecom_sites s
+            ORDER BY s.site_id ASC;
+        """).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+# ==============================================================================
+# SCOPE 3: FINANCE & LAPORAN KEUANGAN (6 TABEL UTAMA)
+# ==============================================================================
+
+@router.get("/api/balitower/finance/summary")
+def get_finance_summary(current_user: TokenData = Depends(require_finance_access)):
+    """Ringkasan eksekutif keuangan: Pendapatan, Tagihan, OPEX, dan Net Cashflow."""
+    conn = get_db_connection(read_only=True)
+    try:
+        total_billed = conn.execute("SELECT COALESCE(SUM(total_billed), 0) FROM revenue_invoices;").fetchone()[0]
+        total_paid = conn.execute("SELECT COALESCE(SUM(total_billed), 0) FROM revenue_invoices WHERE payment_status = 'PAID';").fetchone()[0]
+        total_unpaid = conn.execute("SELECT COALESCE(SUM(total_billed), 0) FROM revenue_invoices WHERE payment_status = 'UNPAID';").fetchone()[0]
+
+        inflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'INFLOW';").fetchone()[0]
+        outflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'OUTFLOW';").fetchone()[0]
+
+        pln_cost = conn.execute("SELECT COALESCE(SUM(pln_cost), 0) FROM site_utilities_cost;").fetchone()[0]
+        genset_cost = conn.execute("SELECT COALESCE(SUM(genset_fuel_cost), 0) FROM site_utilities_cost;").fetchone()[0]
+        land_leases_cost = conn.execute("SELECT COALESCE(SUM(annual_lease_cost), 0) FROM site_land_leases;").fetchone()[0]
+
+        return {
+            "total_revenue_billed_idr": int(total_billed),
+            "total_revenue_collected_idr": int(total_paid),
+            "outstanding_accounts_receivable_idr": int(total_unpaid),
+            "cash_inflow_idr": int(inflow),
+            "cash_outflow_idr": int(outflow),
+            "net_cash_flow_idr": int(inflow - outflow),
+            "opex_pln_electricity_idr": int(pln_cost),
+            "opex_genset_fuel_idr": int(genset_cost),
+            "annual_land_leases_idr": int(land_leases_cost)
+        }
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/invoices")
+def get_invoices(
+    status: str | None = None,
+    current_user: TokenData = Depends(require_finance_access)
+):
+    """Tabel 12: revenue_invoices - Daftar invoice tagihan sewa menara ke operator telekomunikasi."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                i.invoice_id,
+                i.invoice_number,
+                c.client_name,
+                c.client_type,
+                i.period_covered,
+                i.amount_subtotal,
+                i.tax_ppn,
+                i.total_billed,
+                i.invoice_date,
+                i.due_date,
+                i.payment_status,
+                i.payment_date
+            FROM revenue_invoices i
+            JOIN telecom_clients c ON i.client_id = c.client_id
+            WHERE 1=1
+        """
+        params = []
+        if status:
+            query += " AND i.payment_status = ?"
+            params.append(status.upper())
+            
+        query += " ORDER BY i.due_date DESC"
+        rows = conn.execute(query, params).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/clients")
+def get_clients(current_user: TokenData = Depends(require_finance_access)):
+    """Tabel 13: telecom_clients - Master klien operator penyewa infrastruktur menara."""
+    conn = get_db_connection(read_only=True)
+    try:
+        rows = conn.execute("""
+            SELECT 
+                c.client_id,
+                c.client_name,
+                c.client_type,
+                c.npwp,
+                c.billing_email,
+                c.payment_terms AS payment_terms_days,
+                (SELECT COUNT(*) FROM mla_contracts m WHERE m.client_id = c.client_id) AS active_lease_sites,
+                2500000000 AS credit_limit_idr
+            FROM telecom_clients c
+            ORDER BY c.client_id ASC;
+        """).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/mla-contracts")
+def get_mla_contracts(current_user: TokenData = Depends(require_finance_access)):
+    """Tabel 14: mla_contracts - Master Lease Agreement kontrak sewa menara per site."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                m.contract_id,
+                m.client_id,
+                c.client_name,
+                m.site_id,
+                s.site_name,
+                m.monthly_rate,
+                m.billing_frequency,
+                m.start_date,
+                m.end_date,
+                m.status,
+                1 AS electricity_included
+            FROM mla_contracts m
+            JOIN telecom_clients c ON m.client_id = c.client_id
+            JOIN telecom_sites s ON m.site_id = s.site_id
+            ORDER BY m.contract_id ASC;
+        """
+        rows = conn.execute(query).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/land-leases")
+def get_land_leases(current_user: TokenData = Depends(require_finance_access)):
+    """Tabel 15: site_land_leases - Daftar sewa lahan menara dan masa berlaku sewa."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                l.lease_id,
+                l.site_id,
+                s.site_name,
+                s.region,
+                l.landowner_name,
+                l.annual_lease_cost,
+                l.lease_duration_years,
+                l.start_date,
+                l.end_date,
+                l.status
+            FROM site_land_leases l
+            JOIN telecom_sites s ON l.site_id = s.site_id
+            ORDER BY l.annual_lease_cost DESC;
+        """
+        rows = conn.execute(query).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/site-utilities")
+def get_site_utilities(current_user: TokenData = Depends(require_finance_access)):
+    """Tabel 16: site_utilities_cost - Beban listrik PLN shelter dan bahan bakar genset per site."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                u.utility_id,
+                u.site_id,
+                s.site_name,
+                u.billing_period,
+                u.pln_meter_id,
+                u.pln_kwh_used,
+                u.pln_cost,
+                u.genset_fuel_liters,
+                u.genset_fuel_cost,
+                u.total_utility_cost,
+                u.payment_status AS paid_status
+            FROM site_utilities_cost u
+            JOIN telecom_sites s ON u.site_id = s.site_id
+            ORDER BY u.utility_id ASC;
+        """
+        rows = conn.execute(query).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/transactions")
+def get_transactions(
+    trx_type: str | None = None,
+    limit: int = 100,
+    current_user: TokenData = Depends(require_finance_access)
+):
+    """Tabel 17: financial_transactions - Buku besar mutasi kas masuk (inflow) dan keluar (outflow)."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = "SELECT * FROM financial_transactions WHERE 1=1"
+        params = []
+        if trx_type:
+            query += " AND trx_type = ?"
+            params.append(trx_type.upper())
+            
+        query += " ORDER BY trx_date DESC, trx_id DESC LIMIT ?"
+        params.append(limit)
+
+        rows = conn.execute(query, params).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/chart-of-accounts")
+def get_chart_of_accounts(current_user: TokenData = Depends(require_finance_access)):
+    """Tabel 18: chart_of_accounts - Bagan akun standar akuntansi (COA)."""
+    conn = get_db_connection(read_only=True)
+    try:
+        rows = conn.execute("""
+            SELECT 
+                account_code,
+                account_name,
+                account_type,
+                normal_balance,
+                'Akun standar akuntansi operasional PT Bali Towerindo Sentra Tbk' AS description
+            FROM chart_of_accounts
+            ORDER BY account_code ASC;
+        """).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/revenue-breakdown")
+def get_revenue_breakdown(current_user: TokenData = Depends(require_finance_access)):
+    """Rekapitulasi pendapatan sewa per operator telekomunikasi."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                c.client_name,
+                COUNT(i.invoice_id) AS total_invoices,
+                CAST(SUM(i.total_billed) AS BIGINT) AS total_billed,
+                CAST(SUM(CASE WHEN i.payment_status = 'PAID' THEN i.total_billed ELSE 0 END) AS BIGINT) AS paid_amount,
+                CAST(SUM(CASE WHEN i.payment_status = 'UNPAID' THEN i.total_billed ELSE 0 END) AS BIGINT) AS outstanding_ar
+            FROM revenue_invoices i
+            JOIN telecom_clients c ON i.client_id = c.client_id
+            GROUP BY c.client_name
+            ORDER BY total_billed DESC;
+        """
+        rows = conn.execute(query).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/api/balitower/finance/opex-breakdown")
+def get_opex_breakdown(current_user: TokenData = Depends(require_finance_access)):
+    """Rincian beban operasional pengeluaran site."""
+    conn = get_db_connection(read_only=True)
+    try:
+        query = """
+            SELECT 
+                account_code,
+                account_name AS expense_category,
+                COUNT(*) AS transaction_count,
+                CAST(SUM(amount) AS BIGINT) AS total_expense
+            FROM financial_transactions
+            WHERE trx_type = 'OUTFLOW'
+            GROUP BY account_code, account_name
+            ORDER BY total_expense DESC;
+        """
+        rows = conn.execute(query).fetchall()
+        cols = [desc[0] for desc in conn.description]
+        return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()

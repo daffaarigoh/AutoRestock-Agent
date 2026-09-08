@@ -4,7 +4,7 @@ import duckdb
 
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 STORAGE_DIR = WORKSPACE_DIR / "storage"
-DB_PATH = STORAGE_DIR / "inventory.db"
+DB_PATH = STORAGE_DIR / "balitower.db"
 
 
 import time

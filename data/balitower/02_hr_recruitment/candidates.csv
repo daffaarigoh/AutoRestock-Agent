@@ -1,0 +1,9 @@
+candidate_id,job_id,full_name,email,phone,current_city,k3_cert_held,years_of_experience,medical_checkup_status,technical_score,recruitment_stage
+CND-2026-001,JOB-2026-01,Ilham Ramadhan,ilham.ramadhan@email.com,08128891001,Jakarta Selatan,TKPK 1,3,FIT_FOR_HEIGHT,92.5,INTERVIEW
+CND-2026-002,JOB-2026-01,Bagus Triatmodjo,bagus.tri@email.com,08137782910,Depok,TKPK 2,4,FIT_FOR_HEIGHT,95.0,TRIAL
+CND-2026-003,JOB-2026-01,Ari Wibowo,ari.wib@email.com,08569918231,Tangerang,NONE,1,UNFIT (Hipertensi),60.0,REJECTED
+CND-2026-004,JOB-2026-01,Faris Kurnia,faris.kurnia@email.com,08129988112,Bekasi,TKPK 1,2,PENDING_MCU,84.0,SCREENED
+CND-2026-005,JOB-2026-02,Ketut Suardika,ketut.suardika@email.com,08192288331,Denpasar,K3 Umum,3,FIT_FOR_HEIGHT,91.0,TRIAL
+CND-2026-006,JOB-2026-02,Gede Wira Sanjaya,gede.wira@email.com,08183399120,Badung,K3 Umum,2,FIT_FOR_HEIGHT,88.5,SCREENED
+CND-2026-007,JOB-2026-03,Nadia Putri,nadia.putri@email.com,08127711223,Jakarta Timur,NONE,2,FIT_FOR_HEIGHT,89.0,INTERVIEW
+CND-2026-008,JOB-2026-03,Kevin Aditya,kevin.aditya@email.com,08139900112,Jakarta Pusat,NONE,1,FIT_FOR_HEIGHT,82.0,APPLIED

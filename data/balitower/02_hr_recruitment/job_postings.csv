@@ -1,0 +1,5 @@
+job_id,job_title,department,required_k3_cert,min_experience_years,location,quota,status
+JOB-2026-01,Tower Rigger / Climber Technician,Field Operations,TKPK 1,2,Jakarta Selatan,3,OPEN
+JOB-2026-02,Fiber Optic Splicing Engineer,Field Operations,K3 Umum,1,Denpasar Bali,2,OPEN
+JOB-2026-03,NOC Surveillance Specialist 24/7,NOC & Infrastructure,NONE,1,Jakarta Pusat,2,OPEN
+JOB-2026-04,Site Acquisition & Permit Officer,Project Engineering,NONE,2,Bandung,1,CLOSED

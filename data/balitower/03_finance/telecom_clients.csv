@@ -1,0 +1,6 @@
+client_id,client_name,client_type,npwp,billing_email,payment_terms
+CLI-001,PT Telekomunikasi Selular (Telkomsel),OPERATOR_SELULER,01.000.123.4-091.000,billing@telkomsel.co.id,Net 30
+CLI-002,PT Indosat Ooredoo Hutchison Tbk,OPERATOR_SELULER,01.000.456.7-092.000,finance.tower@ioh.co.id,Net 45
+CLI-003,PT XL Axiata Tbk,OPERATOR_SELULER,01.000.789.0-093.000,sitelease@xl.co.id,Net 30
+CLI-004,PT Smartfren Telecom Tbk,OPERATOR_SELULER,01.000.321.9-094.000,ar-inquiry@smartfren.com,Net 60
+CLI-005,PT Bank Central Asia Tbk (Corporate FO),ENTERPRISE,01.000.999.1-011.000,it-procurement@bca.co.id,Net 30

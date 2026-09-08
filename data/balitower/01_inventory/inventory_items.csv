@@ -1,0 +1,15 @@
+item_id,item_code,item_name,category,unit,unit_price,min_stock,safety_stock,lead_time_days,supplier_id
+BLT-INV-001,FO-ADSS-24C,Kabel Fiber Optic ADSS 24 Core Single Mode,Fiber Optic & Cable,meter,14500,2000,1000,7,SUP-001
+BLT-INV-002,FO-ADSS-48C,Kabel Fiber Optic ADSS 48 Core Single Mode,Fiber Optic & Cable,meter,22000,1500,800,7,SUP-001
+BLT-INV-003,FO-CLOSURE-48,Optical Splice Closure 48 Core Dome Type,Fiber Optic & Cable,unit,480000,25,10,5,SUP-001
+BLT-INV-004,ODC-144-MOD,Optical Distribution Cabinet 144 Port Outdoor,Fiber Optic & Cable,unit,4200000,10,4,14,SUP-001
+BLT-INV-005,BAT-LITH-48V,Baterai Backup Lithium-Ion LiFePO4 48V 100Ah,Power & Battery,unit,18500000,15,6,21,SUP-002
+BLT-INV-006,RECT-MOD-48V,Rectifier System Module 48V 50A Hot-Swappable,Power & Battery,unit,12000000,12,5,28,SUP-002
+BLT-INV-007,BAT-VRLA-12V,Baterai VRLA Deep Cycle 12V 100Ah,Power & Battery,unit,3200000,30,12,10,SUP-002
+BLT-INV-008,TWR-BOLT-M24,Baut Angkur Struktur Tower Grade 8.8 M24 Galv,Tower Structure,set,85000,200,80,5,SUP-003
+BLT-INV-009,ANT-BRK-UNIV,Universal Antenna Mounting Bracket 3-Sector,Tower Structure,set,1450000,40,15,10,SUP-003
+BLT-INV-010,GRD-COP-50MM,Kabel Tembaga Grounding BC 50mm Anti-Petir,Tower Structure,meter,95000,300,100,4,SUP-003
+BLT-INV-011,AC-INV-1.5PK,AC Inverter Heavy Duty Shelter 1.5 PK Dual Auto,Shelter & HVAC,unit,7500000,8,3,12,SUP-004
+BLT-INV-012,GEN-FILT-OIL,Filter Oli & Solar Genset Perkins 15kVA,Shelter & HVAC,set,650000,35,15,4,SUP-004
+BLT-INV-013,SFP-10G-LR,Transceiver SFP+ 10G 1310nm 10km LC SMF,RF & Transmission,pcs,750000,50,20,14,SUP-005
+BLT-INV-014,FEED-COAX-78,Kabel Coaxial Feeder 7/8 Low Loss 50 Ohm,RF & Transmission,meter,82000,500,200,14,SUP-005

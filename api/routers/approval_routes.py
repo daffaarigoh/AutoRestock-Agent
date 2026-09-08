@@ -121,10 +121,10 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
             conn.close()
 
         if is_approve:
-            return "✅ <strong>Stok Fisik Inventaris DuckDB Berhasil Ditambahkan Otomatis!</strong>"
-        return "🔒 <strong>Stok Fisik Inventaris Tetap (Tidak Ada Penambahan).</strong>"
+            return "<strong>Stok Fisik Inventaris DuckDB Berhasil Ditambahkan Otomatis!</strong>"
+        return "<strong>Stok Fisik Inventaris Tetap (Tidak Ada Penambahan).</strong>"
     except Exception as e:
-        return f"⚠️ Catatan database: {e!s}"
+        return f"Catatan database: {e!s}"
 
 
 def _regenerate_pdf(pr: PurchaseRequisitionDoc):
@@ -284,7 +284,7 @@ async def quick_approval_action(
                 for item in pr.items
             ]
         stock_delta_info = _update_db_status(pr_number, "APPROVED", pr)
-        status_badge = '<span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; padding: 6px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.9rem;">✅ DISETUJUI (APPROVED)</span>'
+        status_badge = '<span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; padding: 6px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.9rem;">DISETUJUI (APPROVED)</span>'
         title_color = "#22c55e"
         heading_text = "Pengadaan Barang Telah Disetujui"
         desc_text = f"Dokumen <strong>{pr_number}</strong> telah resmi disetujui. Status pesanan diperbarui ke APPROVED dan pengadaan dilanjutkan ke vendor terkait."
@@ -292,7 +292,7 @@ async def quick_approval_action(
         if pr:
             pr.status = "REJECTED"
         stock_delta_info = _update_db_status(pr_number, "REJECTED", pr)
-        status_badge = '<span style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; padding: 6px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.9rem;">❌ DITOLAK (REJECTED)</span>'
+        status_badge = '<span style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; padding: 6px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.9rem;">DITOLAK (REJECTED)</span>'
         title_color = "#ef4444"
         heading_text = "Pengadaan Barang Ditolak"
         desc_text = f"Dokumen <strong>{pr_number}</strong> telah ditolak. Anggaran pengadaan dibatalkan dan stok fisik gudang tidak berubah."
@@ -341,8 +341,8 @@ async def quick_approval_action(
             {'<div class="items-box"><div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Rincian Barang Terkait:</div><ul>' + items_html + '</ul></div>' if clean_action == 'APPROVE' else ''}
             <div class="stock-alert">{stock_delta_info}</div>
             <div class="btn-group">
-                <a href="{pdf_download_url}" class="btn btn-secondary" target="_blank">📄 Unduh Dokumen PDF</a>
-                <a href="/" class="btn btn-primary">🌐 Buka Web Dashboard</a>
+                <a href="{pdf_download_url}" class="btn btn-secondary" target="_blank">Unduh Dokumen PDF</a>
+                <a href="/" class="btn btn-primary">Buka Web Dashboard</a>
             </div>
         </div>
     </body>

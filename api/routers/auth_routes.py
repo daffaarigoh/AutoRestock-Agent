@@ -160,76 +160,143 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
     response.headers["Expires"] = "0"
     
     conn = get_db_connection(read_only=True)
-    users = conn.execute("SELECT user_id, username, role, tenant_id FROM users ORDER BY user_id ASC").fetchall()
+    users_rows = conn.execute("SELECT user_id, username, role, tenant_id FROM users ORDER BY user_id ASC").fetchall()
+
+    # Scope 1: Inventory Items (for usera)
+    inv_rows = conn.execute("""
+        SELECT 
+            i.item_id,
+            i.item_code,
+            i.item_name,
+            i.category,
+            COALESCE(SUM(sb.quantity_on_hand), 0) AS current_stock,
+            i.min_stock AS min_threshold,
+            i.min_stock * 3 AS max_threshold,
+            i.unit,
+            i.unit_price,
+            s.supplier_name
+        FROM inventory_items i
+        LEFT JOIN stock_balances sb ON i.item_id = sb.item_id
+        LEFT JOIN suppliers s ON i.supplier_id = s.supplier_id
+        GROUP BY i.item_id, i.item_code, i.item_name, i.category, i.min_stock, i.unit, i.unit_price, s.supplier_name
+        ORDER BY i.item_id ASC;
+    """).fetchall()
+
+    # Scope 2: HR Employees (for userb)
+    emp_rows = conn.execute("""
+        SELECT employee_id, full_name, department, job_title, employment_status, k3_certification, leave_balance
+        FROM employees
+        ORDER BY employee_id ASC;
+    """).fetchall()
+
+    # Scope 3: Finance Invoices (for userc)
+    invc_rows = conn.execute("""
+        SELECT r.invoice_number, COALESCE(c.client_name, r.client_id) AS client_name, r.period_covered, r.due_date, r.total_billed, r.payment_status
+        FROM revenue_invoices r
+        LEFT JOIN telecom_clients c ON r.client_id = c.client_id
+        ORDER BY r.invoice_number ASC;
+    """).fetchall()
     conn.close()
 
-    from database.schema_adapters import TenantSchemaAdapter
-    adapter_items = TenantSchemaAdapter.get_all_inventory_items("ALL")
-
-    if adapter_items:
-        items_list = adapter_items
-        # Calculate stats dynamically from heterogeneous tables
-        tenant_stats = {}
-        for it in items_list:
-            t = it.get("tenant_id", "UNKNOWN")
-            if t not in tenant_stats:
-                tenant_stats[t] = {"total_items": 0, "total_stock": 0, "low_stock_count": 0}
-            tenant_stats[t]["total_items"] += 1
-            tenant_stats[t]["total_stock"] += it.get("current_stock", 0)
-            if it.get("current_stock", 0) <= it.get("min_threshold", 0):
-                tenant_stats[t]["low_stock_count"] += 1
-    else:
-        # Fallback to legacy items table
-        conn = get_db_connection(read_only=True)
-        stats = conn.execute("""
-            SELECT tenant_id, 
-                   COUNT(*) as total_items, 
-                   COALESCE(SUM(current_stock), 0) as total_stock, 
-                   COALESCE(SUM(CASE WHEN current_stock <= min_threshold THEN 1 ELSE 0 END), 0) as low_stock_count
-            FROM items
-            GROUP BY tenant_id
-        """).fetchall()
-        
-        items_rows = conn.execute("""
-            SELECT i.item_id, i.name, i.category, i.current_stock, i.min_threshold, 
-                   i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id,
-                   COALESCE(v.unit_price, 0) as unit_price
-            FROM items i
-            LEFT JOIN (
-                SELECT item_id, MIN(unit_price) as unit_price 
-                FROM vendors 
-                GROUP BY item_id
-            ) v ON i.item_id = v.item_id
-            ORDER BY i.tenant_id ASC, i.item_id ASC
-        """).fetchall()
-        conn.close()
-        
-        tenant_stats = {r[0]: {"total_items": int(r[1]), "total_stock": int(r[2]), "low_stock_count": int(r[3])} for r in stats}
-        items_list = [
-            {
-                "item_id": r[0],
-                "name": r[1],
-                "category": r[2],
-                "current_stock": r[3],
-                "min_threshold": r[4],
-                "avg_daily_usage": r[5],
-                "lead_time_days": r[6],
-                "unit": r[7],
-                "tenant_id": r[8],
-                "unit_price": r[9]
-            } for r in items_rows
-        ]
+    # Build items_list for multi-tenant table view
+    items_list = []
     
+    # 1. usera - Material Inventory (14 items)
+    usera_total_stock = 0
+    usera_low_stock = 0
+    for r in inv_rows:
+        item_id, item_code, name, cat, stock, min_thresh, max_thresh, unit, price, supp_name = r
+        stock_val = int(stock)
+        min_val = int(min_thresh)
+        usera_total_stock += stock_val
+        if stock_val <= min_val:
+            usera_low_stock += 1
+        items_list.append({
+            "domain": "INVENTORY",
+            "tenant_id": "usera",
+            "sku": item_code or item_id,
+            "item_id": item_id,
+            "name": name,
+            "category": cat,
+            "supplier_name": supp_name or "-",
+            "current_stock": stock_val,
+            "unit": unit or "pcs",
+            "min_threshold": min_val,
+            "max_threshold": int(max_thresh),
+            "unit_price": float(price or 0.0),
+            "status": "Menipis" if stock_val <= min_val else "Normal"
+        })
+
+    # 2. userb - HR Workforce (12 employees)
+    userb_riggers = 0
+    for r in emp_rows:
+        emp_id, full_name, dept, job, emp_status, k3_cert, leave_bal = r
+        if "rigger" in (job or "").lower() or "teknisi" in (job or "").lower():
+            userb_riggers += 1
+        items_list.append({
+            "domain": "HR",
+            "tenant_id": "userb",
+            "item_id": emp_id,
+            "employee_id": emp_id,
+            "name": full_name,
+            "full_name": full_name,
+            "department": dept,
+            "category": dept,
+            "job_title": job,
+            "employment_status": emp_status or "PERMANENT",
+            "k3_certification": k3_cert or "NON_CERTIFIED",
+            "leave_balance": int(leave_bal or 0),
+            "status": "Aktif",
+            "unit": "orang",
+            "current_stock": 1,
+            "unit_price": 0.0
+        })
+
+    # 3. userc - Finance Invoices (8 invoices)
+    userc_unpaid = 0
+    userc_revenue = 0.0
+    for r in invc_rows:
+        inv_no, client, period, due_date, amount, pay_status = r
+        amt = float(amount or 0.0)
+        userc_revenue += amt
+        if (pay_status or "").upper() in ["UNPAID", "OVERDUE"]:
+            userc_unpaid += 1
+        items_list.append({
+            "domain": "FINANCE",
+            "tenant_id": "userc",
+            "item_id": inv_no,
+            "invoice_number": inv_no,
+            "name": f"{client} ({period})",
+            "client_name": client,
+            "category": "Tagihan Operator",
+            "period_covered": period,
+            "due_date": due_date or "-",
+            "total_billed": amt,
+            "unit_price": amt,
+            "payment_status": pay_status or "PAID",
+            "status": pay_status or "PAID",
+            "unit": "invoice",
+            "current_stock": 1
+        })
+
+    # Map stats for each registered user
+    tenant_stats = {
+        "INVENTORY": {"total_items": len(inv_rows), "total_stock": usera_total_stock, "low_stock_count": usera_low_stock},
+        "TENANT_A": {"total_items": len(inv_rows), "total_stock": usera_total_stock, "low_stock_count": usera_low_stock},
+        "usera": {"total_items": len(inv_rows), "total_stock": usera_total_stock, "low_stock_count": usera_low_stock},
+        "HR": {"total_items": len(emp_rows), "total_stock": userb_riggers, "low_stock_count": 0},
+        "TENANT_B": {"total_items": len(emp_rows), "total_stock": userb_riggers, "low_stock_count": 0},
+        "userb": {"total_items": len(emp_rows), "total_stock": userb_riggers, "low_stock_count": 0},
+        "FINANCE": {"total_items": len(invc_rows), "total_stock": int(userc_revenue // 1_000_000_000), "low_stock_count": userc_unpaid},
+        "TENANT_C": {"total_items": len(invc_rows), "total_stock": int(userc_revenue // 1_000_000_000), "low_stock_count": userc_unpaid},
+        "userc": {"total_items": len(invc_rows), "total_stock": int(userc_revenue // 1_000_000_000), "low_stock_count": userc_unpaid},
+        "ALL": {"total_items": len(items_list), "total_stock": usera_total_stock, "low_stock_count": usera_low_stock}
+    }
+
     users_list = []
-    for u in users:
+    for u in users_rows:
         u_id, username, role, t_id = u
-        st = tenant_stats.get(t_id, {"total_items": 0, "total_stock": 0, "low_stock_count": 0})
-        if t_id == "ALL":
-            all_items = sum(s["total_items"] for s in tenant_stats.values())
-            all_stock = sum(s["total_stock"] for s in tenant_stats.values())
-            all_low = sum(s["low_stock_count"] for s in tenant_stats.values())
-            st = {"total_items": all_items, "total_stock": all_stock, "low_stock_count": all_low}
-            
+        st = tenant_stats.get(t_id, tenant_stats.get(username, {"total_items": 0, "total_stock": 0, "low_stock_count": 0}))
         users_list.append({
             "user_id": u_id,
             "username": username,

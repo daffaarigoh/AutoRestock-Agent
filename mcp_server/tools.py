@@ -93,17 +93,38 @@ def get_best_vendors(item_id: str, tenant_id: str = "ALL") -> dict[str, Any] | N
     """
     conn = get_db_connection(read_only=True)
     try:
-        query = """
-            SELECT vendor_id, name, item_id, unit_price, lead_time_days, rating
-            FROM vendors
-            WHERE item_id = ? AND (tenant_id = ? OR ? = 'ALL')
-            ORDER BY unit_price ASC, lead_time_days ASC, rating DESC
-            LIMIT 1;
-        """
-        result = conn.execute(query, [item_id, tenant_id, tenant_id]).fetchone()
-        if result:
-            columns = [desc[0] for desc in conn.description]
-            return dict(zip(columns, result))
+        existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        if "suppliers" in existing_tables and "inventory_items" in existing_tables:
+            query_bt = """
+                SELECT 
+                    s.supplier_id AS vendor_id,
+                    s.supplier_name AS name,
+                    i.item_id,
+                    i.unit_price,
+                    i.lead_time_days,
+                    s.rating
+                FROM suppliers s
+                JOIN inventory_items i ON s.supplier_id = i.supplier_id
+                WHERE i.item_id = ?
+                LIMIT 1;
+            """
+            result_bt = conn.execute(query_bt, [item_id]).fetchone()
+            if result_bt:
+                columns = [desc[0] for desc in conn.description]
+                return dict(zip(columns, result_bt))
+
+        if "vendors" in existing_tables:
+            query = """
+                SELECT vendor_id, name, item_id, unit_price, lead_time_days, rating
+                FROM vendors
+                WHERE item_id = ? AND (tenant_id = ? OR ? = 'ALL')
+                ORDER BY unit_price ASC, lead_time_days ASC, rating DESC
+                LIMIT 1;
+            """
+            result = conn.execute(query, [item_id, tenant_id, tenant_id]).fetchone()
+            if result:
+                columns = [desc[0] for desc in conn.description]
+                return dict(zip(columns, result))
             
         # Domain-aware fallback suppliers
         if tenant_id == "TENANT_A":

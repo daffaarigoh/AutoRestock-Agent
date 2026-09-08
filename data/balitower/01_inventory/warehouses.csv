@@ -1,0 +1,5 @@
+warehouse_id,warehouse_name,warehouse_type,region,address,capacity_sqm,supervisor
+WH-JKT-01,Central Logistics Warehouse Sunter,Central Warehouse,DKI Jakarta,Jl. Danau Sunter Selatan No. 12,2500,Agus Sutanto
+WH-DPS-01,Regional Logistics Hub Denpasar,Regional Hub,Bali & Nusa Tenggara,Jl. Gatot Subroto Timur No. 88,1200,I Made Sudirga
+WH-BDG-01,Regional Logistics Hub Bandung,Regional Hub,Jawa Barat,Jl. Soekarno Hatta No. 402,1000,Ahmad Sofyan
+WH-MOB-01,Mobile Emergency Response Van JKT,Mobile Van,DKI Jakarta,Fleet Unit B 9182 PQA,50,Budi Santoso

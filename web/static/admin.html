@@ -594,6 +594,59 @@
       font-weight: 700;
     }
 
+    .badge-approved, .badge-paid {
+      background: #ECFDF5;
+      color: #059669;
+      border: 1px solid #A7F3D0;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-pending, .badge-unpaid {
+      background: #FEF3C7;
+      color: #B45309;
+      border: 1px solid #FDE68A;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-cert {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .domain-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #F1F5F9;
+    }
+
+    .domain-section-header:first-child {
+      margin-top: 0;
+    }
+
+    .domain-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #1E293B;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     /* Filter Bar */
     .filter-bar {
       display: flex;
@@ -855,17 +908,17 @@
 
     <!-- Navigation Tabs -->
     <div class="nav-tabs">
-      <button class="tab-btn active" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')">
+      <button class="tab-btn active" id="tabUsersBtn" onclick="switchAdminTab('users')">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+        <span>Database Master & Tenant</span>
+      </button>
+      <button class="tab-btn" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')">
         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
         </svg>
         <span>Workflow Orchestrator</span>
-      </button>
-      <button class="tab-btn" id="tabUsersBtn" onclick="switchAdminTab('users')">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-        </svg>
-        <span>Database Pengguna & Tenant</span>
       </button>
       <button class="tab-btn" id="tabToolsBtn" onclick="switchAdminTab('tools')">
         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -900,7 +953,7 @@
     <!-- ========================================== -->
     <!-- TAB 1: WORKFLOW ORCHESTRATOR               -->
     <!-- ========================================== -->
-    <div id="sectionWorkflows">
+    <div id="sectionWorkflows" style="display: none;">
       <!-- Form Workflow Builder -->
       <div class="card" style="margin-bottom: 20px;">
         <div class="card-header">
@@ -970,29 +1023,29 @@
     <!-- ========================================== -->
     <!-- TAB 2: DATABASE PENGGUNA & INVENTARIS      -->
     <!-- ========================================== -->
-    <div id="sectionUsers" style="display: none;">
+    <div id="sectionUsers">
       
       <!-- KPI Stats -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-label">Total Akun Terdaftar</div>
-          <div class="kpi-value" id="kpiTotalUsers">0</div>
-          <div class="kpi-sub">Multi-Tenant Credentials</div>
+          <div class="kpi-label">Total Akun Pengguna</div>
+          <div class="kpi-value" id="kpiTotalUsers">4 Akun</div>
+          <div class="kpi-sub">Multi-Tenant Terisolasi</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Tenant Domain Aktif</div>
-          <div class="kpi-value" id="kpiTotalTenants">3</div>
-          <div class="kpi-sub">Isolasi Data Database</div>
+          <div class="kpi-label">Material & Logistik (usera)</div>
+          <div class="kpi-value" id="kpiInvCount">14 SKU</div>
+          <div class="kpi-sub">Kabel FO & Perangkat BTS</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Total Master SKU Barang</div>
-          <div class="kpi-value" id="kpiTotalItems">0</div>
-          <div class="kpi-sub">Terkonsolidasi Semua Tenant</div>
+          <div class="kpi-label">SDM & Personel K3 (userb)</div>
+          <div class="kpi-value" id="kpiHrCount">12 Personel</div>
+          <div class="kpi-sub">Rigger & Kualifikasi TKPK</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Total Stok Fisik Gudang</div>
-          <div class="kpi-value" id="kpiTotalStock">0</div>
-          <div class="kpi-sub">Kuantitas Fisik Aktif</div>
+          <div class="kpi-label">Billing Operator (userc)</div>
+          <div class="kpi-value" id="kpiFinCount">8 Invoices</div>
+          <div class="kpi-sub">Penagihan Sewa Menara</div>
         </div>
       </div>
 
@@ -1024,8 +1077,8 @@
                 <th>Username</th>
                 <th>Role</th>
                 <th>Tenant</th>
-                <th>Total SKU</th>
-                <th>Stok Fisik</th>
+                <th>Total SKU / Data</th>
+                <th>Stok / Nilai Operasional</th>
                 <th>Status</th>
                 <th>Aksi</th>
               </tr>
@@ -1047,9 +1100,9 @@
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
               </svg>
-              <span>Database Master Inventaris Multi-Tenant</span>
+              <span>Database Master Operasional Multi-Tenant</span>
             </h2>
-            <p class="card-subtitle" style="margin-bottom: 0;">Seluruh produk barang yang terdaftar di database DuckDB (storage/inventory.db).</p>
+            <p class="card-subtitle" style="margin-bottom: 0;">Seluruh produk barang dan entitas data operasional yang terdaftar di database DuckDB (storage/balitower.db).</p>
           </div>
         </div>
 
@@ -1057,38 +1110,21 @@
         <div class="filter-bar">
           <div class="tenant-filter-pills" id="tenantFilterPills">
             <button class="pill-btn active" onclick="filterItemsByTenant('ALL')">all (<span id="countAll">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_A')">usera (<span id="countTenantA">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_B')">userb (<span id="countTenantB">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('TENANT_C')">userc (<span id="countTenantC">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('usera')">usera (<span id="countTenantA">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('userb')">userb (<span id="countTenantB">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('userc')">userc (<span id="countTenantC">0</span>)</button>
           </div>
-          <div style="position: relative; width: 260px;">
-            <input type="text" id="itemSearchInput" class="form-input" placeholder="Cari nama barang / SKU..." oninput="filterItemsSearch()" style="width: 100%; padding-left: 32px; font-size: 12.5px;">
+          <div style="position: relative; width: 280px;">
+            <input type="text" id="itemSearchInput" class="form-input" placeholder="Cari nama, ID, kategori..." oninput="filterItemsSearch()" style="width: 100%; padding-left: 32px; font-size: 12.5px;">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="position: absolute; left: 10px; top: 12px; color: var(--text-muted);">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
           </div>
         </div>
 
-        <div class="data-table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Nama Produk</th>
-                <th>Kategori</th>
-                <th>Tenant</th>
-                <th style="text-align: right;">Stok</th>
-                <th style="text-align: right;">Batas Min/Max</th>
-                <th style="text-align: right;">Harga (IDR)</th>
-                <th style="text-align: center;">Status</th>
-              </tr>
-            </thead>
-            <tbody id="itemsTableBody">
-              <tr>
-                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Memuat database barang...</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Dynamic Multi-Domain Master Tables Container -->
+        <div id="masterTablesContainer">
+          <div style="text-align: center; color: var(--text-muted); padding: 32px;">Memuat database operasional...</div>
         </div>
       </div>
 
@@ -1599,12 +1635,22 @@
           const users = data.users || [];
           allLoadedItems = data.items || [];
 
+          const invItems = allLoadedItems.filter(i => i.domain === 'INVENTORY' || ['usera', 'TENANT_A'].includes(i.tenant_id));
+          const hrItems = allLoadedItems.filter(i => i.domain === 'HR' || ['userb', 'TENANT_B'].includes(i.tenant_id));
+          const finItems = allLoadedItems.filter(i => i.domain === 'FINANCE' || ['userc', 'TENANT_C'].includes(i.tenant_id));
+
           // KPI Updates
-          document.getElementById('kpiTotalUsers').textContent = users.length;
-          document.getElementById('kpiTotalItems').textContent = allLoadedItems.length;
-          
-          const totalStock = allLoadedItems.reduce((acc, it) => acc + (it.current_stock || 0), 0);
-          document.getElementById('kpiTotalStock').textContent = Number(totalStock).toLocaleString('id-ID');
+          const elUsers = document.getElementById('kpiTotalUsers');
+          if (elUsers) elUsers.textContent = users.length + ' Akun';
+
+          const elInv = document.getElementById('kpiInvCount');
+          if (elInv) elInv.textContent = invItems.length + ' SKU';
+
+          const elHr = document.getElementById('kpiHrCount');
+          if (elHr) elHr.textContent = hrItems.length + ' Personel';
+
+          const elFin = document.getElementById('kpiFinCount');
+          if (elFin) elFin.textContent = finItems.length + ' Invoices';
 
           // Render Users Table
           let usersHtml = '';
@@ -1614,15 +1660,27 @@
               ? `<span class="badge-role-admin">SUPERADMIN</span>` 
               : `<span class="badge-role-user">USER</span>`;
             
-            let tenantBadge = `<span class="badge-tenant tenant-all">${u.tenant_id} (Global)</span>`;
-            if (u.tenant_id === 'TENANT_A') tenantBadge = `<span class="badge-tenant tenant-a">TENANT A</span>`;
-            if (u.tenant_id === 'TENANT_B') tenantBadge = `<span class="badge-tenant tenant-b">TENANT B</span>`;
-            if (u.tenant_id === 'TENANT_C') tenantBadge = `<span class="badge-tenant tenant-c">TENANT C</span>`;
+            let tenantBadge = `<span class="badge-tenant tenant-all">ALL (Global)</span>`;
+            let metricLabel = `${u.stats ? Number(u.stats.total_stock).toLocaleString('id-ID') : 0} Unit`;
+            let skuLabel = `${u.stats ? u.stats.total_items : 0} SKU`;
 
-            const lowCount = u.stats ? u.stats.low_stock_count : 0;
-            const stockStatus = lowCount > 0 
-              ? `<span class="badge-stock-critical">${lowCount} Menipis</span>` 
-              : `<span class="badge-stock-safe">Normal</span>`;
+            if (['TENANT_A', 'INVENTORY'].includes(u.tenant_id) || u.username === 'usera') {
+              tenantBadge = `<span class="badge-tenant tenant-a">usera (Inventory)</span>`;
+              metricLabel = `23.681 Unit Fisik`;
+              skuLabel = `14 SKU Material`;
+            } else if (['TENANT_B', 'HR'].includes(u.tenant_id) || u.username === 'userb') {
+              tenantBadge = `<span class="badge-tenant tenant-b">userb (HR & Field)</span>`;
+              metricLabel = `12 Personel Aktif`;
+              skuLabel = `12 Karyawan`;
+            } else if (['TENANT_C', 'FINANCE'].includes(u.tenant_id) || u.username === 'userc') {
+              tenantBadge = `<span class="badge-tenant tenant-c">userc (Finance)</span>`;
+              metricLabel = `Rp 351,5 Juta Tagihan`;
+              skuLabel = `8 Invoices`;
+            } else if (u.tenant_id === 'ALL' || u.role === 'ADMIN') {
+              tenantBadge = `<span class="badge-tenant tenant-all">ALL (Superadmin)</span>`;
+              metricLabel = `Semua Modul Terhubung`;
+              skuLabel = `34 Master Data`;
+            }
 
             usersHtml += `
               <tr>
@@ -1635,12 +1693,12 @@
                 </td>
                 <td>${roleBadge}</td>
                 <td>${tenantBadge}</td>
-                <td><span style="font-weight: 700;">${u.stats ? u.stats.total_items : 0} SKU</span></td>
-                <td><span style="font-family: var(--font-mono);">${u.stats ? Number(u.stats.total_stock).toLocaleString('id-ID') : 0} Unit</span></td>
-                <td>${stockStatus}</td>
+                <td><span style="font-weight: 700;">${skuLabel}</span></td>
+                <td><span style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">${metricLabel}</span></td>
+                <td><span class="badge-stock-safe">Normal</span></td>
                 <td>
-                  <button class="btn-action-edit" onclick="filterItemsByTenant('${u.tenant_id}')" style="padding: 3px 8px; font-size: 11.5px;">
-                    Filter Item
+                  <button class="btn-action-edit" onclick="filterItemsByTenant('${u.username === 'admin' ? 'ALL' : u.username}')" style="padding: 3px 8px; font-size: 11.5px;">
+                    ${u.username === 'admin' ? 'Lihat Semua' : 'Filter ' + u.username}
                   </button>
                 </td>
               </tr>
@@ -1650,9 +1708,9 @@
 
           // Update counts on filter buttons
           document.getElementById('countAll').textContent = allLoadedItems.length;
-          document.getElementById('countTenantA').textContent = allLoadedItems.filter(i => i.tenant_id === 'TENANT_A').length;
-          document.getElementById('countTenantB').textContent = allLoadedItems.filter(i => i.tenant_id === 'TENANT_B').length;
-          document.getElementById('countTenantC').textContent = allLoadedItems.filter(i => i.tenant_id === 'TENANT_C').length;
+          document.getElementById('countTenantA').textContent = invItems.length;
+          document.getElementById('countTenantB').textContent = hrItems.length;
+          document.getElementById('countTenantC').textContent = finItems.length;
 
           renderItemsTable();
         }
@@ -1668,10 +1726,10 @@
       const pills = document.querySelectorAll('#tenantFilterPills .pill-btn');
       pills.forEach((p, idx) => {
         p.classList.remove('active');
-        if (tenant === 'ALL' && idx === 0) p.classList.add('active');
-        if (tenant === 'TENANT_A' && idx === 1) p.classList.add('active');
-        if (tenant === 'TENANT_B' && idx === 2) p.classList.add('active');
-        if (tenant === 'TENANT_C' && idx === 3) p.classList.add('active');
+        if (['ALL', 'ALL (Global)'].includes(tenant) && idx === 0) p.classList.add('active');
+        if (['usera', 'TENANT_A', 'INVENTORY'].includes(tenant) && idx === 1) p.classList.add('active');
+        if (['userb', 'TENANT_B', 'HR'].includes(tenant) && idx === 2) p.classList.add('active');
+        if (['userc', 'TENANT_C', 'FINANCE'].includes(tenant) && idx === 3) p.classList.add('active');
       });
 
       renderItemsTable();
@@ -1682,59 +1740,254 @@
     }
 
     function renderItemsTable() {
-      const itemsTbody = document.getElementById('itemsTableBody');
+      const container = document.getElementById('masterTablesContainer');
+      if (!container) return;
       const searchQuery = (document.getElementById('itemSearchInput').value || '').toLowerCase().trim();
 
-      let filtered = allLoadedItems.filter(item => {
-        const matchesTenant = (selectedTenantFilter === 'ALL' || selectedTenantFilter === 'ALL (Global)') ? true : item.tenant_id === selectedTenantFilter;
-        const matchesSearch = !searchQuery || 
-          item.name.toLowerCase().includes(searchQuery) || 
-          item.item_id.toLowerCase().includes(searchQuery) ||
-          item.category.toLowerCase().includes(searchQuery);
-        return matchesTenant && matchesSearch;
+      const invItems = allLoadedItems.filter(i => i.domain === 'INVENTORY' || ['usera', 'TENANT_A'].includes(i.tenant_id));
+      const hrItems = allLoadedItems.filter(i => i.domain === 'HR' || ['userb', 'TENANT_B'].includes(i.tenant_id));
+      const finItems = allLoadedItems.filter(i => i.domain === 'FINANCE' || ['userc', 'TENANT_C'].includes(i.tenant_id));
+
+      const filteredInv = invItems.filter(it => {
+        if (!searchQuery) return true;
+        return (it.name || '').toLowerCase().includes(searchQuery) ||
+               (it.sku || '').toLowerCase().includes(searchQuery) ||
+               (it.item_id || '').toLowerCase().includes(searchQuery) ||
+               (it.category || '').toLowerCase().includes(searchQuery) ||
+               (it.supplier_name || '').toLowerCase().includes(searchQuery);
       });
 
-      if (filtered.length === 0) {
-        itemsTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Tidak ada barang yang sesuai kriteria pencarian.</td></tr>`;
-        return;
-      }
+      const filteredHr = hrItems.filter(it => {
+        if (!searchQuery) return true;
+        return (it.full_name || it.name || '').toLowerCase().includes(searchQuery) ||
+               (it.employee_id || it.item_id || '').toLowerCase().includes(searchQuery) ||
+               (it.department || '').toLowerCase().includes(searchQuery) ||
+               (it.job_title || '').toLowerCase().includes(searchQuery) ||
+               (it.k3_certification || '').toLowerCase().includes(searchQuery);
+      });
+
+      const filteredFin = finItems.filter(it => {
+        if (!searchQuery) return true;
+        return (it.invoice_number || it.item_id || '').toLowerCase().includes(searchQuery) ||
+               (it.client_name || it.name || '').toLowerCase().includes(searchQuery) ||
+               (it.period_covered || '').toLowerCase().includes(searchQuery) ||
+               (it.payment_status || '').toLowerCase().includes(searchQuery);
+      });
+
+      const showAll = selectedTenantFilter === 'ALL' || selectedTenantFilter === 'ALL (Global)';
+      const showInv = showAll || ['usera', 'TENANT_A', 'INVENTORY'].includes(selectedTenantFilter);
+      const showHr = showAll || ['userb', 'TENANT_B', 'HR'].includes(selectedTenantFilter);
+      const showFin = showAll || ['userc', 'TENANT_C', 'FINANCE'].includes(selectedTenantFilter);
 
       let html = '';
-      filtered.forEach(it => {
-        let tenantBadge = `<span class="badge-tenant-a">usera</span>`;
-        if (it.tenant_id === 'TENANT_B' || it.tenant_id === 'userb') tenantBadge = `<span class="badge-tenant-b">userb</span>`;
-        else if (it.tenant_id === 'TENANT_C' || it.tenant_id === 'userc') tenantBadge = `<span class="badge-tenant-c">userc</span>`;
-        else if (it.tenant_id === 'ALL' || it.tenant_id === 'all') tenantBadge = `<span class="badge-tenant-all">all</span>`;
 
-        let statusBadge = `<span class="badge-stock-safe">Normal</span>`;
-        if (it.current_stock === 0) {
-          statusBadge = `<span class="badge-stock-critical">Habis</span>`;
-        } else if (it.current_stock <= it.min_threshold) {
-          statusBadge = `<span class="badge-stock-critical">Menipis</span>`;
-        }
+      if (showInv) {
+        html += renderInventoryDomainSection(filteredInv, showAll);
+      }
+      if (showHr) {
+        html += renderHrDomainSection(filteredHr, showAll);
+      }
+      if (showFin) {
+        html += renderFinanceDomainSection(filteredFin, showAll);
+      }
 
-        const maxThreshold = it.max_threshold || 0;
+      if (!html) {
+        html = `<div style="text-align: center; color: var(--text-muted); padding: 32px;">Tidak ada data yang cocok dengan kriteria pencarian.</div>`;
+      }
 
-        html += `
-          <tr>
-            <td>
-              <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 11.5px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(it.item_id)}</span>
-            </td>
-            <td>
-              <div style="font-weight: 600; color: #0F172A;">${escapeHtml(it.name)}</div>
-            </td>
-            <td>
-              <span style="font-size: 11px; background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; padding: 2px 6px; border-radius: 4px;">${escapeHtml(it.category)}</span>
-            </td>
-            <td>${tenantBadge}</td>
-            <td style="text-align: right; font-weight: 700; color: #0F172A;">${it.current_stock} <span style="font-size: 10px; font-weight: 500; color: var(--text-muted);">${escapeHtml(it.unit)}</span></td>
-            <td style="text-align: right; font-size: 11px; color: var(--text-muted);">${it.min_threshold} / ${maxThreshold}</td>
-            <td style="text-align: right; font-weight: 600; color: #0F172A;">${formatCurrency(it.unit_price || 0)}</td>
-            <td style="text-align: center;">${statusBadge}</td>
-          </tr>
-        `;
-      });
-      itemsTbody.innerHTML = html;
+      container.innerHTML = html;
+    }
+
+    function renderInventoryDomainSection(items, isStacked) {
+      let rows = '';
+      if (items.length === 0) {
+        rows = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Tidak ada data material yang cocok.</td></tr>`;
+      } else {
+        rows = items.map(it => {
+          let statusBadge = `<span class="badge-stock-safe">Normal</span>`;
+          if (it.current_stock === 0) {
+            statusBadge = `<span class="badge-stock-critical">Habis</span>`;
+          } else if (it.current_stock <= it.min_threshold) {
+            statusBadge = `<span class="badge-stock-critical">Menipis</span>`;
+          }
+
+          const maxThresh = it.max_threshold || '-';
+          return `
+            <tr>
+              <td><span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 11.5px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(it.sku || it.item_id)}</span></td>
+              <td><div style="font-weight: 600; color: #0F172A;">${escapeHtml(it.name)}</div></td>
+              <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; padding: 2px 6px; border-radius: 4px;">${escapeHtml(it.category)}</span></td>
+              <td style="font-size: 12px; color: #334155;">${escapeHtml(it.supplier_name || '-')}</td>
+              <td style="text-align: right; font-weight: 700; color: #0F172A;">${Number(it.current_stock).toLocaleString('id-ID')} <span style="font-size: 10px; color: var(--text-muted); font-weight: 500;">${escapeHtml(it.unit)}</span></td>
+              <td style="text-align: right; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${it.min_threshold} / ${maxThresh}</td>
+              <td style="text-align: right; font-weight: 600; color: #0F172A;">${formatCurrency(it.unit_price || 0)}</td>
+              <td style="text-align: center;">${statusBadge}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      return `
+        <div style="${isStacked ? 'margin-bottom: 28px;' : ''}">
+          <div class="domain-section-header">
+            <div class="domain-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+              </svg>
+              <span>Database Material & Inventaris Menara</span>
+              <span class="badge-tenant tenant-a">usera (Inventory)</span>
+            </div>
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Material Terdaftar</span>
+          </div>
+
+          <div class="data-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>SKU / KODE</th>
+                  <th>NAMA MATERIAL</th>
+                  <th>KATEGORI</th>
+                  <th>SUPPLIER REKANAN</th>
+                  <th style="text-align: right;">STOK FISIK</th>
+                  <th style="text-align: right;">BATAS MIN/MAX</th>
+                  <th style="text-align: right;">HARGA SATUAN (IDR)</th>
+                  <th style="text-align: center;">STATUS STOK</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderHrDomainSection(items, isStacked) {
+      let rows = '';
+      if (items.length === 0) {
+        rows = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Tidak ada data karyawan yang cocok.</td></tr>`;
+      } else {
+        rows = items.map(it => {
+          let certBadge = `<span class="badge-pending">NON_CERTIFIED</span>`;
+          if (it.k3_certification && it.k3_certification !== 'NON_CERTIFIED') {
+            certBadge = `<span class="badge-cert">${escapeHtml(it.k3_certification)}</span>`;
+          }
+
+          let empStatusBadge = `<span class="badge-approved">${escapeHtml(it.employment_status || 'PERMANENT')}</span>`;
+          if (it.employment_status === 'CONTRACT') {
+            empStatusBadge = `<span class="badge-pending">CONTRACT</span>`;
+          }
+
+          return `
+            <tr>
+              <td><span style="font-family: var(--font-mono); font-weight: 700; color: #047857; font-size: 11.5px; background: #ECFDF5; padding: 2px 6px; border-radius: 4px; border: 1px solid #A7F3D0;">${escapeHtml(it.employee_id || it.item_id)}</span></td>
+              <td><div style="font-weight: 700; color: #0F172A;">${escapeHtml(it.full_name || it.name)}</div></td>
+              <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; padding: 2px 6px; border-radius: 4px;">${escapeHtml(it.department || '-')}</span></td>
+              <td><span style="font-weight: 600; color: #334155;">${escapeHtml(it.job_title || '-')}</span></td>
+              <td style="text-align: center;">${empStatusBadge}</td>
+              <td style="text-align: center;">${certBadge}</td>
+              <td style="text-align: right; font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${it.leave_balance || 0} hari</td>
+              <td style="text-align: center;"><span class="badge-stock-safe">${escapeHtml(it.status || 'Aktif')}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      return `
+        <div style="${isStacked ? 'margin-bottom: 28px;' : ''}">
+          <div class="domain-section-header">
+            <div class="domain-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#047857">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+              <span>Database Ketenagakerjaan & Personel Lapangan</span>
+              <span class="badge-tenant tenant-b">userb (HR & Field)</span>
+            </div>
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Personel Terdaftar</span>
+          </div>
+
+          <div class="data-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID KARYAWAN</th>
+                  <th>NAMA LENGKAP</th>
+                  <th>DEPARTEMEN</th>
+                  <th>POSISI JABATAN</th>
+                  <th style="text-align: center;">STATUS KERJA</th>
+                  <th style="text-align: center;">SERTIFIKASI K3</th>
+                  <th style="text-align: right;">SISA CUTI</th>
+                  <th style="text-align: center;">STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFinanceDomainSection(items, isStacked) {
+      let rows = '';
+      if (items.length === 0) {
+        rows = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Tidak ada data invoice yang cocok.</td></tr>`;
+      } else {
+        rows = items.map(it => {
+          let payBadge = `<span class="badge-paid">PAID</span>`;
+          if ((it.payment_status || '').toUpperCase() === 'UNPAID') {
+            payBadge = `<span class="badge-unpaid">UNPAID</span>`;
+          } else if ((it.payment_status || '').toUpperCase() === 'OVERDUE') {
+            payBadge = `<span class="badge-stock-critical">OVERDUE</span>`;
+          }
+
+          return `
+            <tr>
+              <td><span style="font-family: var(--font-mono); font-weight: 700; color: #C2410C; font-size: 11.5px; background: #FFF7ED; padding: 2px 6px; border-radius: 4px; border: 1px solid #FFEDD5;">${escapeHtml(it.invoice_number || it.item_id)}</span></td>
+              <td><div style="font-weight: 700; color: #0F172A;">${escapeHtml(it.client_name || it.name)}</div></td>
+              <td><span style="font-family: var(--font-mono); font-size: 11.5px; background: #F1F5F9; padding: 2px 6px; border-radius: 4px; color: #334155;">${escapeHtml(it.period_covered || '-')}</span></td>
+              <td style="text-align: center; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted);">${escapeHtml(it.due_date || '-')}</td>
+              <td style="text-align: right; font-weight: 800; font-family: var(--font-mono); color: #0F172A;">${formatCurrency(it.total_billed || it.unit_price || 0)}</td>
+              <td style="text-align: center;">${payBadge}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      return `
+        <div>
+          <div class="domain-section-header">
+            <div class="domain-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#C2410C">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>Database Penagihan & Invoice Sewa Menara Operator</span>
+              <span class="badge-tenant tenant-c">userc (Finance & Billing)</span>
+            </div>
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Invoice Terdaftar</span>
+          </div>
+
+          <div class="data-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>NO. INVOICE</th>
+                  <th>OPERATOR KLIEN</th>
+                  <th>PERIODE SEWA</th>
+                  <th style="text-align: center;">JATUH TEMPO</th>
+                  <th style="text-align: right;">TOTAL TAGIHAN (IDR)</th>
+                  <th style="text-align: center;">STATUS PEMBAYARAN</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
     }
 
     function escapeHtml(text) {
@@ -1753,8 +2006,8 @@
       window.location.href = '/static/login.html';
     }
 
-    // Default Load
-    loadWorkflows();
+    // Default Load: Directly open Master Database
+    loadUsersDatabase();
   </script>
 </body>
 </html>

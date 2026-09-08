@@ -1,0 +1,6 @@
+supplier_id,supplier_name,category,rating,payment_terms,email,phone
+SUP-001,PT Fiber Teknologi Nusantara,Fiber Optic & Cable,4.8,Net 30,sales@fibertek.co.id,021-5582910
+SUP-002,PT Power Mandiri Prima,Power & Battery,4.7,Net 45,corporate@powermandiri.com,021-8891240
+SUP-003,PT Tower Steel Abadi,Tower Structure & Steel,4.5,Net 60,b2b@towersteel.co.id,021-4478129
+SUP-004,PT Delta Cooling System,Shelter & HVAC,4.6,Net 30,support@deltacooling.id,022-7201882
+SUP-005,PT Surya RF Komunikasi,RF & Transmission,4.9,Net 30,rf-sales@suryarf.com,021-7890123

@@ -12,22 +12,38 @@ const state = {
   isResizing: false
 };
 
+function getEffectiveTenant() {
+  const rawTenant = (sessionStorage.getItem('tenant_id') || '').toUpperCase().trim();
+  const rawUsername = (sessionStorage.getItem('username') || '').toLowerCase().trim();
+
+  if (rawUsername === 'usera' || rawTenant === 'INVENTORY' || rawTenant === 'TENANT_A') {
+    return 'INVENTORY';
+  }
+  if (rawUsername === 'userb' || rawTenant === 'HR' || rawTenant === 'TENANT_B') {
+    return 'HR';
+  }
+  if (rawUsername === 'userc' || rawTenant === 'FINANCE' || rawTenant === 'TENANT_C') {
+    return 'FINANCE';
+  }
+  return 'ALL';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const uName = sessionStorage.getItem('username');
-  const uTenant = sessionStorage.getItem('tenant_id');
   const uRole = sessionStorage.getItem('role');
+  const effectiveTenant = getEffectiveTenant();
 
   if (uName) {
     const el = document.getElementById('displayUsername');
     if (el) el.textContent = uName;
   }
-  if (uTenant) {
-    const el = document.getElementById('displayTenant');
-    if (el) el.textContent = uTenant;
+  const elTenant = document.getElementById('displayTenant');
+  if (elTenant) {
+    elTenant.textContent = effectiveTenant;
   }
-  if (uRole === 'ADMIN') {
-    const adminNav = document.getElementById('btnAdminNav');
-    if (adminNav) adminNav.style.display = 'inline-flex';
+  if (uRole === 'ADMIN' || (uName && uName.toLowerCase() === 'admin')) {
+    window.location.href = '/static/admin.html';
+    return;
   }
 
   // Set initial sidebar toggle button text
@@ -40,10 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initSidebarResizer();
   restoreUiCustomizations();
   restoreCopilotFeed();
+  applyTenantSecurityAndPersonalization();
   loadAllData();
   
-  // Real-time synchronization (2s interval + instant refresh on window focus)
-  setInterval(loadAllData, 2000);
+  // Real-time synchronization (10s interval + instant refresh on window focus)
+  setInterval(loadAllData, 10000);
   window.addEventListener('focus', () => loadAllData());
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) loadAllData();
@@ -96,11 +113,13 @@ function initSidebarResizer() {
   const sidebar = document.getElementById('dataSidebar');
   if (!resizer || !sidebar) return;
 
-  // Restore saved width from localStorage
+  // Restore saved width from localStorage (defaulting comfortably to 580px for multi-column data)
   const savedWidth = localStorage.getItem('ar_sidebar_width');
   if (savedWidth && !isNaN(Number(savedWidth))) {
-    const w = Math.max(320, Math.min(window.innerWidth * 0.8, Number(savedWidth)));
+    const w = Math.max(520, Math.min(window.innerWidth * 0.85, Number(savedWidth)));
     document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
+  } else {
+    document.documentElement.style.setProperty('--sidebar-width', '580px');
   }
 
   let startX = 0;
@@ -125,13 +144,13 @@ function initSidebarResizer() {
     let newWidth = startWidth + deltaX;
 
     // Minimum collapse threshold (slide left into hidden state)
-    if (newWidth < 220) {
+    if (newWidth < 240) {
       closeDataSidebar();
       return;
     }
 
-    // Constraints: min 320px, max 80% of screen width (max 1000px)
-    newWidth = Math.max(320, Math.min(window.innerWidth * 0.8, Math.min(1000, newWidth)));
+    // Constraints: min 360px, max 85% of screen width (max 1100px)
+    newWidth = Math.max(360, Math.min(window.innerWidth * 0.85, Math.min(1100, newWidth)));
 
     document.body.classList.remove('sidebar-collapsed');
     const btnText = document.getElementById('toggleSidebarText');
@@ -153,6 +172,27 @@ function initSidebarResizer() {
   };
 
   resizer.addEventListener('mousedown', onMouseDown);
+}
+
+function toggleExpandSidebar() {
+  const sidebar = document.getElementById('dataSidebar');
+  const btn = document.getElementById('btnExpandSidebar');
+  if (!sidebar) return;
+
+  const isExpanded = sidebar.classList.contains('sidebar-maximized');
+  if (isExpanded) {
+    sidebar.classList.remove('sidebar-maximized');
+    const prevWidth = localStorage.getItem('ar_sidebar_prev_width') || '580';
+    document.documentElement.style.setProperty('--sidebar-width', `${prevWidth}px`);
+    if (btn) btn.title = 'Perlebar / Maksimalkan Panel';
+  } else {
+    const currentWidth = sidebar.getBoundingClientRect().width;
+    localStorage.setItem('ar_sidebar_prev_width', currentWidth);
+    sidebar.classList.add('sidebar-maximized');
+    const targetWidth = Math.min(window.innerWidth * 0.75, 920);
+    document.documentElement.style.setProperty('--sidebar-width', `${targetWidth}px`);
+    if (btn) btn.title = 'Kembalikan Ukuran Panel';
+  }
 }
 
 function restoreUiCustomizations() {
@@ -231,8 +271,114 @@ function closeDataSidebar() {
   if (btnText) btnText.textContent = 'Katalog & Data';
 }
 
+// --- Tenant Security & UI Personalization ---
+function applyTenantSecurityAndPersonalization() {
+  const tenant = getEffectiveTenant();
+  const username = sessionStorage.getItem('username') || 'User';
+
+  const pillInv = document.getElementById('modPillInventory');
+  const pillHr = document.getElementById('modPillHr');
+  const pillFin = document.getElementById('modPillFinance');
+
+  const tabInv = document.getElementById('sidebarTabInventory');
+  const tabHr = document.getElementById('sidebarTabHr');
+  const tabFin = document.getElementById('sidebarTabFinance');
+  const tabPrs = document.getElementById('sidebarTabPrs');
+  const tabTerminal = document.getElementById('sidebarTabTerminal');
+
+  const heroTitle = document.getElementById('heroTitle');
+  const heroSubtitle = document.getElementById('heroSubtitle');
+  const promptInput = document.getElementById('promptInput');
+  const inputHint = document.getElementById('inputHintText');
+
+  if (tenant === 'INVENTORY') {
+    // Hide HR & Finance from header and sidebar
+    if (pillHr) pillHr.style.display = 'none';
+    if (pillFin) pillFin.style.display = 'none';
+    if (pillInv) pillInv.style.display = 'inline-flex';
+
+    if (tabHr) tabHr.style.display = 'none';
+    if (tabFin) tabFin.style.display = 'none';
+    if (tabInv) tabInv.style.display = 'inline-flex';
+    if (tabPrs) tabPrs.style.display = 'inline-flex';
+    if (tabTerminal) tabTerminal.style.display = 'inline-flex';
+
+    if (heroTitle) heroTitle.textContent = 'Inventory & Logistics Command Center';
+    if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel operasional terisolasi material menara telekomunikasi, kabel fiber optic, monitoring saldo gudang regional, serta alur pengadaan barang PT Bali Towerindo Sentra Tbk.`;
+    if (promptInput) promptInput.placeholder = 'Tanyakan stok material menara, cek reorder point gudang, atau buat Purchase Requisition...';
+    if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Inventory & Logistik Material Menara/FO';
+
+    switchCanvasTab('canvas-inventory');
+  } else if (tenant === 'HR') {
+    // Hide Inventory & Finance from header and sidebar
+    if (pillInv) pillInv.style.display = 'none';
+    if (pillFin) pillFin.style.display = 'none';
+    if (pillHr) pillHr.style.display = 'inline-flex';
+
+    if (tabInv) tabInv.style.display = 'none';
+    if (tabFin) tabFin.style.display = 'none';
+    if (tabPrs) tabPrs.style.display = 'none';
+    if (tabHr) tabHr.style.display = 'inline-flex';
+    if (tabTerminal) tabTerminal.style.display = 'inline-flex';
+
+    if (heroTitle) heroTitle.textContent = 'HR & Field Workforce Command Center';
+    if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel manajemen ketenagakerjaan teknisi menara, absensi geofencing site BTS, jam lembur, kualifikasi sertifikat K3 TKPK rigger, dan pengajuan cuti PT Bali Towerindo Sentra Tbk.`;
+    if (promptInput) promptInput.placeholder = 'Cari teknisi bersertifikat K3 TKPK, rekap jam lembur, atau cek perizinan cuti...';
+    if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Human Resources & Field Operations';
+
+    switchCanvasTab('canvas-hr');
+  } else if (tenant === 'FINANCE') {
+    // Hide Inventory & HR from header and sidebar
+    if (pillInv) pillInv.style.display = 'none';
+    if (pillHr) pillHr.style.display = 'none';
+    if (pillFin) pillFin.style.display = 'inline-flex';
+
+    if (tabInv) tabInv.style.display = 'none';
+    if (tabHr) tabHr.style.display = 'none';
+    if (tabPrs) tabPrs.style.display = 'none';
+    if (tabFin) tabFin.style.display = 'inline-flex';
+    if (tabTerminal) tabTerminal.style.display = 'inline-flex';
+
+    if (heroTitle) heroTitle.textContent = 'Finance & Telecom Billing Command Center';
+    if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel rekonsiliasi keuangan, penagihan invoice sewa menara ke operator telekomunikasi, kontrak MLA, sewa lahan site, dan utilitas listrik PT Bali Towerindo Sentra Tbk.`;
+    if (promptInput) promptInput.placeholder = 'Cek invoice jatuh tempo operator, rincian biaya PLN site, atau mutasi kas...';
+    if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Finance, Billing & Accounting';
+
+    switchCanvasTab('canvas-finance');
+  } else {
+    // Admin or Multi-Tenant (ALL)
+    if (pillInv) pillInv.style.display = 'inline-flex';
+    if (pillHr) pillHr.style.display = 'inline-flex';
+    if (pillFin) pillFin.style.display = 'inline-flex';
+
+    if (tabInv) tabInv.style.display = 'inline-flex';
+    if (tabHr) tabHr.style.display = 'inline-flex';
+    if (tabFin) tabFin.style.display = 'inline-flex';
+    if (tabPrs) tabPrs.style.display = 'inline-flex';
+    if (tabTerminal) tabTerminal.style.display = 'inline-flex';
+
+    if (heroTitle) heroTitle.textContent = 'Bali Tower Operations Command Center';
+    if (heroSubtitle) heroSubtitle.textContent = 'Pusat komando terpadu PT Bali Towerindo Sentra Tbk. Akses komprehensif ke seluruh 18 basis data operasional: Inventaris Menara & FO, Ketenagakerjaan & K3 Lapangan, serta Keuangan & Billing Operator.';
+    if (promptInput) promptInput.placeholder = 'Ketik instruksi atau pertanyaan analisis operasional enterprise...';
+    if (inputHint) inputHint.textContent = 'Hak Akses Administrator Enterprise: Terhubung ke seluruh 18 basis data operasional DuckDB';
+
+    switchCanvasTab('canvas-inventory');
+  }
+}
+
 // --- Tab Switching ---
 function switchCanvasTab(tabId) {
+  const tenant = getEffectiveTenant();
+
+  // Strict guard against navigating to unauthorized tabs for tenant-specific users
+  if (tenant === 'INVENTORY' && ['canvas-hr', 'canvas-finance'].includes(tabId)) {
+    tabId = 'canvas-inventory';
+  } else if (tenant === 'HR' && ['canvas-inventory', 'canvas-finance', 'canvas-prs'].includes(tabId)) {
+    tabId = 'canvas-hr';
+  } else if (tenant === 'FINANCE' && ['canvas-inventory', 'canvas-hr', 'canvas-prs'].includes(tabId)) {
+    tabId = 'canvas-finance';
+  }
+
   document.querySelectorAll('.sidebar-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-target') === tabId);
   });
@@ -241,11 +387,73 @@ function switchCanvasTab(tabId) {
     content.classList.toggle('active', content.id === tabId);
   });
 
+  // Update header quick pills
+  document.querySelectorAll('.mod-pill').forEach(pill => {
+    const fn = pill.getAttribute('onclick') || '';
+    pill.classList.toggle('active', fn.includes(tabId));
+  });
+
   if (tabId === 'canvas-inventory') {
     loadInventoryItems();
+    loadStockBalances();
+  } else if (tabId === 'canvas-hr') {
+    loadHrData();
+    loadEmployees();
+  } else if (tabId === 'canvas-finance') {
+    loadFinanceData();
+    loadClients();
   } else if (tabId === 'canvas-prs') {
     loadApprovals();
   }
+}
+
+// --- Sub-Tab Switching ---
+function switchInvSubTab(subTabId) {
+  document.querySelectorAll('#canvas-inventory .sub-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', (btn.getAttribute('onclick') || '').includes(subTabId));
+  });
+  document.querySelectorAll('#canvas-inventory .sub-tab-content').forEach(content => {
+    content.classList.toggle('active', content.id === subTabId);
+  });
+
+  if (subTabId === 'sub-inv-items') loadInventoryItems();
+  else if (subTabId === 'sub-inv-balances') loadStockBalances();
+  else if (subTabId === 'sub-inv-warehouses') loadWarehouses();
+  else if (subTabId === 'sub-inv-suppliers') loadSuppliers();
+  else if (subTabId === 'sub-inv-pos') loadPurchaseOrders();
+}
+
+function switchHrSubTab(subTabId) {
+  document.querySelectorAll('#canvas-hr .sub-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', (btn.getAttribute('onclick') || '').includes(subTabId));
+  });
+  document.querySelectorAll('#canvas-hr .sub-tab-content').forEach(content => {
+    content.classList.toggle('active', content.id === subTabId);
+  });
+
+  if (subTabId === 'sub-hr-employees') loadEmployees();
+  else if (subTabId === 'sub-hr-att') loadHrData();
+  else if (subTabId === 'sub-hr-leaves') loadHrData();
+  else if (subTabId === 'sub-hr-candidates') loadHrData();
+  else if (subTabId === 'sub-hr-jobs') loadJobPostings();
+  else if (subTabId === 'sub-hr-sites') loadSites();
+}
+
+function switchFinSubTab(subTabId) {
+  document.querySelectorAll('#canvas-finance .sub-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', (btn.getAttribute('onclick') || '').includes(subTabId));
+  });
+  document.querySelectorAll('#canvas-finance .sub-tab-content').forEach(content => {
+    content.classList.toggle('active', content.id === subTabId);
+  });
+
+  if (subTabId === 'sub-fin-invoices') loadFinanceData();
+  else if (subTabId === 'sub-fin-clients') loadClients();
+  else if (subTabId === 'sub-fin-mla') loadMlaContracts();
+  else if (subTabId === 'sub-fin-leases') loadLandLeases();
+  else if (subTabId === 'sub-fin-utilities') loadSiteUtilities();
+  else if (subTabId === 'sub-fin-transactions') loadFinanceData();
+  else if (subTabId === 'sub-fin-coa') loadCoa();
 }
 
 // --- Visual Refresh Button Animation ---
@@ -294,14 +502,676 @@ function renderCategoryOptions() {
   }
 }
 
-// --- Data Fetching ---
+// --- Data Fetching (Multi-Domain & Tenant Isolated) ---
 async function loadAllData() {
-  await Promise.allSettled([
-    loadInventoryItems(),
-    loadApprovals(),
-    loadDashboardStats()
-  ]);
-  await loadCategories();
+  const tenant = getEffectiveTenant();
+
+  if (tenant === 'INVENTORY') {
+    await Promise.allSettled([
+      loadInventoryItems(),
+      loadStockBalances(),
+      loadWarehouses(),
+      loadSuppliers(),
+      loadPurchaseOrders(),
+      loadApprovals(),
+      loadDashboardStats()
+    ]);
+    await loadCategories();
+  } else if (tenant === 'HR') {
+    await Promise.allSettled([
+      loadHrData(),
+      loadEmployees(),
+      loadJobPostings(),
+      loadSites()
+    ]);
+  } else if (tenant === 'FINANCE') {
+    await Promise.allSettled([
+      loadFinanceData(),
+      loadClients(),
+      loadMlaContracts(),
+      loadLandLeases(),
+      loadSiteUtilities(),
+      loadCoa()
+    ]);
+  } else {
+    // Admin / Multi-Tenant: load all 18 tables across all domains!
+    await Promise.allSettled([
+      loadInventoryItems(),
+      loadStockBalances(),
+      loadWarehouses(),
+      loadSuppliers(),
+      loadPurchaseOrders(),
+      loadApprovals(),
+      loadDashboardStats(),
+      loadHrData(),
+      loadEmployees(),
+      loadJobPostings(),
+      loadSites(),
+      loadFinanceData(),
+      loadClients(),
+      loadMlaContracts(),
+      loadLandLeases(),
+      loadSiteUtilities(),
+      loadCoa()
+    ]);
+    await loadCategories();
+  }
+}
+
+// ==============================================================================
+// DOMAIN 1: INVENTORY & LOGISTICS LOADERS
+// ==============================================================================
+
+function updateSidebarRowCount(count, label) {
+  const el = document.getElementById('sidebarRowCountInfo');
+  if (el) {
+    el.textContent = `${count} ${label}`;
+  }
+}
+
+async function loadStockBalances() {
+  const tbody = document.getElementById('invBalancesTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/inventory/stock-balances?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      state.stockBalances = data || [];
+      filterBalancesTable();
+    }
+  } catch (e) {
+    console.error("Failed to load stock balances:", e);
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: #DC2626;">Gagal memuat saldo gudang.</td></tr>`;
+    }
+  }
+}
+
+function renderStockBalancesTable(data) {
+  const tbody = document.getElementById('invBalancesTableBody');
+  if (!tbody) return;
+  updateSidebarRowCount(data ? data.length : 0, 'Data Saldo Gudang');
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Tidak ada data saldo gudang yang cocok.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(b => {
+    let statusBadge = 'badge-normal';
+    let statusText = 'NORMAL';
+    if (b.stock_status === 'CRITICAL') {
+      statusBadge = 'badge-out_of_stock';
+      statusText = 'KRITIS';
+    } else if (b.stock_status === 'LOW_STOCK') {
+      statusBadge = 'badge-low_stock';
+      statusText = 'MENIPIS';
+    }
+    return `
+      <tr>
+        <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(b.balance_id)}</td>
+        <td><strong>${escapeHtml(b.item_name)}</strong><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${escapeHtml(b.item_code)}</span></td>
+        <td><strong>${escapeHtml(b.warehouse_name)}</strong></td>
+        <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(b.region)}</span></td>
+        <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #0F172A;">${Number(b.quantity_on_hand).toLocaleString('id-ID')} <span style="font-size: 10px; font-weight: 500; color: var(--text-muted);">${escapeHtml(b.unit || 'pcs')}</span></td>
+        <td class="text-right" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${Number(b.quantity_reserved || 0).toLocaleString('id-ID')}</td>
+        <td class="text-right" style="font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: #D97706;">${Number(b.reorder_point).toLocaleString('id-ID')}</td>
+        <td class="text-center"><span class="badge ${statusBadge}">${statusText}</span></td>
+        <td class="text-center" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(b.last_stock_take_date || '-')}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterBalancesTable() {
+  const search = (document.getElementById('searchBalances')?.value || '').toLowerCase().trim();
+  const status = document.getElementById('filterBalanceStatus')?.value || '';
+
+  const list = state.stockBalances || [];
+  const filtered = list.filter(b => {
+    const matchSearch = !search ||
+      (b.item_name || '').toLowerCase().includes(search) ||
+      (b.item_code || '').toLowerCase().includes(search) ||
+      (b.warehouse_name || '').toLowerCase().includes(search) ||
+      (b.region || '').toLowerCase().includes(search) ||
+      (b.balance_id || '').toLowerCase().includes(search);
+
+    let matchStatus = true;
+    if (status === 'CRITICAL') matchStatus = (b.stock_status === 'CRITICAL');
+    else if (status === 'LOW') matchStatus = (b.stock_status === 'LOW_STOCK');
+    else if (status === 'NORMAL') matchStatus = (b.stock_status === 'NORMAL');
+
+    return matchSearch && matchStatus;
+  });
+
+  renderStockBalancesTable(filtered);
+}
+
+async function loadWarehouses() {
+  const tbody = document.getElementById('invWarehousesTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/inventory/warehouses?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">Belum ada data gudang logistik.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(w => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: #2563EB;">${escapeHtml(w.warehouse_id)}</td>
+          <td><strong>${escapeHtml(w.warehouse_name)}</strong></td>
+          <td><span style="font-size: 11px; background: #EFF6FF; color: #1E40AF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(w.warehouse_type)}</span></td>
+          <td>${escapeHtml(w.region)}</td>
+          <td style="font-size: 11px; color: #334155; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(w.address)}">${escapeHtml(w.address)}</td>
+          <td class="text-right" style="font-family: var(--font-mono); font-weight: 700;">${Number(w.capacity_sqm).toLocaleString('id-ID')} m²</td>
+          <td class="text-center"><span class="badge ${w.status === 'ACTIVE' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(w.status)}</span></td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load warehouses:", e);
+  }
+}
+
+async function loadSuppliers() {
+  const tbody = document.getElementById('invSuppliersTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/inventory/suppliers?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">Belum ada rekanan supplier.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(s => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(s.supplier_id)}</td>
+          <td><strong>${escapeHtml(s.supplier_name)}</strong></td>
+          <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(s.category)}</span></td>
+          <td>${escapeHtml(s.contact_person || '-')}</td>
+          <td style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">${escapeHtml(s.phone || '-')}<br>${escapeHtml(s.email || '-')}</td>
+          <td class="text-center"><span style="font-weight: 800; color: #D97706; font-family: var(--font-mono);">${s.rating}</span> / 5.0</td>
+          <td class="text-center"><span style="font-size: 11px; background: #EFF6FF; color: #1E40AF; padding: 2px 6px; border-radius: 4px;">${escapeHtml(s.payment_terms)}</span></td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load suppliers:", e);
+  }
+}
+
+async function loadPurchaseOrders() {
+  const tbody = document.getElementById('invPosTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/inventory/purchase-orders?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 24px; color: var(--text-muted);">Belum ada Purchase Order terbit.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(po => {
+        let statusBadge = 'badge-pending';
+        if (po.po_status === 'DELIVERED') statusBadge = 'badge-approved';
+        else if (po.po_status === 'IN_TRANSIT') statusBadge = 'badge-low_stock';
+        return `
+          <tr>
+            <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: #2563EB;">${escapeHtml(po.po_number)}</td>
+            <td><strong>${escapeHtml(po.supplier_name)}</strong></td>
+            <td>${escapeHtml(po.item_name)}</td>
+            <td class="text-right" style="font-weight: 700; font-family: var(--font-mono);">${Number(po.order_quantity).toLocaleString('id-ID')}</td>
+            <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #0F172A;">${formatCurrency(po.total_amount)}</td>
+            <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(po.order_date)}</td>
+            <td class="text-center" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(po.expected_delivery || '-')}</td>
+            <td class="text-center"><span class="badge ${statusBadge}">${escapeHtml(po.po_status)}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load POs:", e);
+  }
+}
+
+// ==============================================================================
+// DOMAIN 2: HR & FIELD WORKFORCE LOADERS
+// ==============================================================================
+
+async function loadEmployees() {
+  const tbody = document.getElementById('hrEmployeesTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/hr/employees?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      state.employees = data || [];
+      filterEmployeesTable();
+    } else {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Akses dibatasi atau data tidak tersedia untuk sesi ini.</td></tr>`;
+    }
+  } catch (e) {
+    console.error("Failed to load employees:", e);
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Gagal mengambil data karyawan.</td></tr>`;
+  }
+}
+
+function renderEmployeesTable(data) {
+  const tbody = document.getElementById('hrEmployeesTableBody');
+  if (!tbody) return;
+  updateSidebarRowCount(data ? data.length : 0, 'Data Karyawan');
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Tidak ada data karyawan yang cocok.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(e => `
+    <tr>
+      <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(e.employee_id)}</td>
+      <td><strong>${escapeHtml(e.full_name)}</strong></td>
+      <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(e.department)}</span></td>
+      <td>${escapeHtml(e.job_title)}</td>
+      <td class="text-center"><span class="badge ${e.employment_status === 'PERMANENT' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(e.employment_status)}</span></td>
+      <td class="text-center"><span class="badge ${e.k3_certification !== 'NON_CERTIFIED' ? 'badge-tkpk' : 'badge-pending'}">${escapeHtml(e.k3_certification)}</span></td>
+      <td class="text-center" style="font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${e.leave_balance_days} hari</td>
+    </tr>
+  `).join('');
+}
+
+function filterEmployeesTable() {
+  const search = (document.getElementById('searchEmployees')?.value || '').toLowerCase().trim();
+  const list = state.employees || [];
+  const filtered = list.filter(e => {
+    return !search ||
+      (e.full_name || '').toLowerCase().includes(search) ||
+      (e.employee_id || '').toLowerCase().includes(search) ||
+      (e.department || '').toLowerCase().includes(search) ||
+      (e.job_title || '').toLowerCase().includes(search);
+  });
+  renderEmployeesTable(filtered);
+}
+
+async function loadJobPostings() {
+  const tbody = document.getElementById('hrJobsTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/hr/job-postings?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada lowongan pekerjaan dibuka.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(j => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(j.job_id)}</td>
+          <td><strong>${escapeHtml(j.job_title)}</strong></td>
+          <td>${escapeHtml(j.department)}</td>
+          <td class="text-center"><span class="badge badge-tkpk">${escapeHtml(j.required_k3_cert)}</span></td>
+          <td class="text-center" style="font-family: var(--font-mono);">${j.min_experience_years} th</td>
+          <td class="text-center" style="font-weight: 700; color: #2563EB;">${j.open_positions} org</td>
+          <td>${escapeHtml(j.work_location)}</td>
+          <td class="text-center"><span class="badge ${j.status === 'OPEN' ? 'badge-approved' : 'badge-rejected'}">${escapeHtml(j.status)}</span></td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Akses dibatasi atau data tidak tersedia untuk sesi ini.</td></tr>`;
+    }
+  } catch (e) {
+    console.error("Failed to load job postings:", e);
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Gagal mengambil data lowongan.</td></tr>`;
+  }
+}
+
+async function loadSites() {
+  const tbody = document.getElementById('hrSitesTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/hr/sites?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada titik site menara.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(s => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(s.site_id)}</td>
+          <td><strong>${escapeHtml(s.site_name)}</strong></td>
+          <td><span style="font-size: 11px; background: #EFF6FF; color: #1E40AF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(s.site_type)}</span></td>
+          <td>${escapeHtml(s.region)}</td>
+          <td class="text-center" style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${Number(s.latitude).toFixed(4)}, ${Number(s.longitude).toFixed(4)}</td>
+          <td class="text-right" style="font-family: var(--font-mono); font-weight: 700;">${s.height_meters} m</td>
+          <td>${escapeHtml(s.structure_type)}</td>
+          <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${s.tenant_count} Operator</span></td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load sites:", e);
+  }
+}
+
+// --- HR & Field Workforce Data Loader ---
+async function loadHrData() {
+  try {
+    // 1. HR Summary KPIs
+    const sumRes = await fetch(`/api/balitower/hr/summary?t=${Date.now()}`, { cache: 'no-store' });
+    if (sumRes.ok) {
+      const s = await sumRes.json();
+      const el1 = document.getElementById('kpiHrTotalEmp');
+      if (el1) el1.textContent = s.total_employees;
+      const el2 = document.getElementById('kpiHrFieldTech');
+      if (el2) el2.textContent = s.field_technicians;
+      const el3 = document.getElementById('kpiHrK3Cert');
+      if (el3) el3.textContent = s.certified_k3_tkpk;
+      const el4 = document.getElementById('kpiHrOvertime');
+      if (el4) el4.textContent = s.total_overtime_hours + ' Jam';
+    }
+
+    // 2. Attendance & Geofencing Logs
+    const attRes = await fetch(`/api/balitower/hr/attendances?limit=30&t=${Date.now()}`, { cache: 'no-store' });
+    const tbodyAtt = document.getElementById('hrAttendanceTableBody');
+    if (attRes.ok && tbodyAtt) {
+      const atts = await attRes.json();
+      if (!atts || atts.length === 0) {
+        tbodyAtt.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada catatan absensi.</td></tr>`;
+      } else {
+        tbodyAtt.innerHTML = atts.map(a => `
+          <tr>
+            <td style="font-family: var(--font-mono); font-size: 11.5px;">${escapeHtml(a.date)}</td>
+            <td><strong>${escapeHtml(a.employee_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(a.job_title)}</span></td>
+            <td><span style="font-weight: 600;">${escapeHtml(a.site_name)}</span><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: #64748B;">${escapeHtml(a.site_id || '-')}</span></td>
+            <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${a.distance_to_site_m}m</span></td>
+            <td class="text-right" style="font-weight: 700; color: ${a.overtime_hours > 0 ? '#D97706' : '#64748B'}; font-family: var(--font-mono);">${a.overtime_hours > 0 ? a.overtime_hours + ' jam' : '-'}</td>
+            <td class="text-center"><span class="badge ${a.status.includes('OVERTIME') ? 'badge-approved' : 'badge-pending'}">${escapeHtml(a.status)}</span></td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    // 3. Candidates Filter & Screening
+    const candRes = await fetch(`/api/balitower/hr/candidates?t=${Date.now()}`, { cache: 'no-store' });
+    const tbodyCand = document.getElementById('hrCandidatesTableBody');
+    if (candRes.ok && tbodyCand) {
+      const cands = await candRes.json();
+      tbodyCand.innerHTML = cands.map(c => `
+        <tr>
+          <td><strong>${escapeHtml(c.full_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(c.current_city)}</span></td>
+          <td>${escapeHtml(c.job_title)}<br><span style="font-size: 11px; color: var(--text-muted);">${c.years_of_experience} th pengalaman</span></td>
+          <td class="text-center"><span class="badge badge-tkpk">${escapeHtml(c.k3_cert_held)}</span></td>
+          <td class="text-center"><span class="badge ${c.medical_checkup_status.includes('FIT_FOR_HEIGHT') ? 'badge-paid' : 'badge-unpaid'}">${escapeHtml(c.medical_checkup_status)}</span></td>
+          <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #2563EB;">${c.technical_score}</td>
+          <td class="text-center"><span class="badge badge-pending">${escapeHtml(c.recruitment_stage)}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // 4. Leave Requests
+    const leaveRes = await fetch(`/api/balitower/hr/leave-requests?t=${Date.now()}`, { cache: 'no-store' });
+    const tbodyLeave = document.getElementById('hrLeavesTableBody');
+    if (leaveRes.ok && tbodyLeave) {
+      const leaves = await leaveRes.json();
+      tbodyLeave.innerHTML = leaves.map(l => `
+        <tr>
+          <td><strong>${escapeHtml(l.applicant_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(l.job_title)}</span></td>
+          <td>${escapeHtml(l.leave_type)}</td>
+          <td class="text-center" style="font-weight: 700;">${l.days_requested}</td>
+          <td style="font-size: 11.5px;">${escapeHtml(l.reason)}<br><span style="color: var(--text-muted); font-size: 10.5px;">Mulai: ${l.start_date}</span></td>
+          <td>${escapeHtml(l.substitute_name)}</td>
+          <td class="text-center"><span class="badge ${l.approval_status === 'APPROVED' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(l.approval_status)}</span></td>
+          <td class="text-center">
+            ${l.approval_status === 'PENDING_APPROVAL' ? `<button class="btn btn-secondary btn-sm" onclick="approveLeaveQuick('${l.leave_id}')" style="padding: 2px 8px; font-size: 11px;">Setujui</button>` : `<span style="color: #10B981; font-size: 11px; font-weight: 700;">Selesai</span>`}
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load HR data:", e);
+  }
+}
+
+async function approveLeaveQuick(leaveId) {
+  try {
+    const res = await fetch(`/api/balitower/hr/leave-requests/${leaveId}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'APPROVE' })
+    });
+    if (res.ok) {
+      showToast("Pengajuan cuti berhasil disetujui", "success");
+      loadHrData();
+    }
+  } catch (e) {
+    showToast("Gagal menyetujui cuti", "error");
+  }
+}
+
+// ==============================================================================
+// DOMAIN 3: FINANCE & TELECOM BILLING LOADERS
+// ==============================================================================
+
+async function loadClients() {
+  const tbody = document.getElementById('finClientsTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/finance/clients?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada data operator klien.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(c => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(c.client_id)}</td>
+          <td><strong>${escapeHtml(c.client_name)}</strong></td>
+          <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(c.client_type)}</span></td>
+          <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(c.npwp || '-')}</td>
+          <td style="font-size: 11px; color: var(--text-muted);">${escapeHtml(c.billing_email || '-')}<br>${escapeHtml(c.phone || '-')}</td>
+          <td class="text-center" style="font-weight: 700; font-family: var(--font-mono);">${c.active_lease_sites} Site</td>
+          <td class="text-right" style="font-weight: 700; font-family: var(--font-mono);">${formatCurrency(c.credit_limit_idr)}</td>
+          <td class="text-center" style="font-family: var(--font-mono);">${c.payment_terms_days} hari</td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load clients:", e);
+  }
+}
+
+async function loadMlaContracts() {
+  const tbody = document.getElementById('finMlaTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/finance/mla-contracts?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada kontrak MLA.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(m => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(m.contract_id)}</td>
+          <td><strong>${escapeHtml(m.client_name)}</strong></td>
+          <td><strong>${escapeHtml(m.site_name)}</strong><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${escapeHtml(m.site_id)}</span></td>
+          <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #0F172A;">${formatCurrency(m.monthly_rate)}</td>
+          <td class="text-center"><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(m.billing_frequency)}</span></td>
+          <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(m.start_date)} s/d ${escapeHtml(m.end_date)}</td>
+          <td class="text-center"><span class="badge ${m.electricity_included ? 'badge-approved' : 'badge-pending'}">${m.electricity_included ? 'Termasuk PLN' : 'Terpisah'}</span></td>
+          <td class="text-center"><span class="badge ${m.status === 'ACTIVE' ? 'badge-approved' : 'badge-rejected'}">${escapeHtml(m.status)}</span></td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load MLA contracts:", e);
+  }
+}
+
+async function loadLandLeases() {
+  const tbody = document.getElementById('finLandLeasesTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/finance/land-leases?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada data sewa lahan.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(l => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(l.lease_id)}</td>
+          <td><strong>${escapeHtml(l.site_name)}</strong><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${escapeHtml(l.site_id)}</span></td>
+          <td>${escapeHtml(l.region)}</td>
+          <td>${escapeHtml(l.landowner_name)}</td>
+          <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #DC2626;">${formatCurrency(l.annual_lease_cost)}</td>
+          <td class="text-center" style="font-family: var(--font-mono);">${l.lease_duration_years} th</td>
+          <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(l.end_date)}</td>
+          <td class="text-center"><span class="badge ${l.status === 'ACTIVE' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(l.status)}</span></td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load land leases:", e);
+  }
+}
+
+async function loadSiteUtilities() {
+  const tbody = document.getElementById('finUtilitiesTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/finance/site-utilities?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada data utilitas site.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(u => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(u.utility_id)}</td>
+          <td><strong>${escapeHtml(u.site_name)}</strong><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${escapeHtml(u.site_id)}</span></td>
+          <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(u.billing_period)}</td>
+          <td style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(u.pln_meter_id || '-')}</td>
+          <td class="text-right" style="font-family: var(--font-mono); font-weight: 600;">${formatCurrency(u.pln_cost)}</td>
+          <td class="text-right" style="font-family: var(--font-mono); font-weight: 600;">${formatCurrency(u.genset_fuel_cost)}</td>
+          <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #DC2626;">${formatCurrency(u.total_utility_cost)}</td>
+          <td class="text-center"><span class="badge ${u.paid_status === 'PAID' ? 'badge-paid' : 'badge-unpaid'}">${escapeHtml(u.paid_status)}</span></td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load site utilities:", e);
+  }
+}
+
+async function loadCoa() {
+  const tbody = document.getElementById('finCoaTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/balitower/finance/chart-of-accounts?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada bagan akun COA.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(a => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 800; color: #2563EB;">${escapeHtml(a.account_code)}</td>
+          <td><strong>${escapeHtml(a.account_name)}</strong></td>
+          <td class="text-center"><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(a.account_type)}</span></td>
+          <td class="text-center"><span class="badge ${a.normal_balance === 'DEBIT' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(a.normal_balance)}</span></td>
+          <td style="font-size: 11.5px; color: #334155;">${escapeHtml(a.description || '-')}</td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error("Failed to load COA:", e);
+  }
+}
+
+// --- Finance & Accounting Data Loader ---
+async function loadFinanceData() {
+  try {
+    // 1. Finance Summary KPIs
+    const sumRes = await fetch(`/api/balitower/finance/summary?t=${Date.now()}`, { cache: 'no-store' });
+    if (sumRes.ok) {
+      const s = await sumRes.json();
+      const el1 = document.getElementById('kpiFinRevenue');
+      if (el1) el1.textContent = 'Rp ' + (s.total_revenue_billed_idr / 1000000).toFixed(1) + 'M';
+      const el2 = document.getElementById('kpiFinPaid');
+      if (el2) el2.textContent = 'Rp ' + (s.total_revenue_collected_idr / 1000000).toFixed(1) + 'M';
+      const el3 = document.getElementById('kpiFinUnpaid');
+      if (el3) el3.textContent = 'Rp ' + (s.outstanding_accounts_receivable_idr / 1000000).toFixed(1) + 'M';
+      const el4 = document.getElementById('kpiFinNetCash');
+      if (el4) el4.textContent = '+Rp ' + (s.net_cash_flow_idr / 1000000).toFixed(1) + 'M';
+    }
+
+    // 2. Revenue Invoices
+    const invRes = await fetch(`/api/balitower/finance/invoices?t=${Date.now()}`, { cache: 'no-store' });
+    if (invRes.ok) {
+      const invs = await invRes.json();
+      state.invoices = invs || [];
+      filterInvoicesTable();
+    }
+
+    // 3. Transactions / General Ledger
+    const trxRes = await fetch(`/api/balitower/finance/transactions?limit=25&t=${Date.now()}`, { cache: 'no-store' });
+    const tbodyTrx = document.getElementById('finTrxTableBody');
+    if (trxRes.ok && tbodyTrx) {
+      const trxs = await trxRes.json();
+      if (!trxs || trxs.length === 0) {
+        tbodyTrx.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada transaksi jurnal kas.</td></tr>`;
+      } else {
+        tbodyTrx.innerHTML = trxs.map(t => `
+          <tr>
+            <td style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(t.trx_id)}</td>
+            <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(t.trx_date)}</td>
+            <td><span style="font-weight: 600;">${escapeHtml(t.account_name)}</span></td>
+            <td class="text-center"><span class="${t.trx_type === 'INFLOW' ? 'badge-inflow' : 'badge-outflow'}">${t.trx_type === 'INFLOW' ? '+ INFLOW' : '- OUTFLOW'}</span></td>
+            <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: ${t.trx_type === 'INFLOW' ? '#059669' : '#DC2626'};">Rp ${Number(t.amount).toLocaleString('id-ID')}</td>
+            <td style="font-size: 11.5px; color: #334155;">${escapeHtml(t.description || '-')}</td>
+          </tr>
+        `).join('');
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load Finance data:", e);
+  }
+}
+
+function renderInvoicesTable(data) {
+  const tbodyInv = document.getElementById('finInvoicesTableBody');
+  if (!tbodyInv) return;
+  updateSidebarRowCount(data ? data.length : 0, 'Data Invoice');
+  if (!data || data.length === 0) {
+    tbodyInv.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Tidak ada invoice yang sesuai.</td></tr>`;
+    return;
+  }
+  tbodyInv.innerHTML = data.map(i => `
+    <tr>
+      <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(i.invoice_number)}</td>
+      <td><strong>${escapeHtml(i.client_name)}</strong></td>
+      <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(i.period_covered)}</td>
+      <td class="text-right" style="font-weight: 800; font-family: var(--font-mono);">Rp ${Number(i.total_billed).toLocaleString('id-ID')}</td>
+      <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(i.due_date)}</td>
+      <td class="text-center"><span class="badge ${i.payment_status === 'PAID' ? 'badge-paid' : 'badge-unpaid'}">${escapeHtml(i.payment_status)}</span></td>
+    </tr>
+  `).join('');
+}
+
+function filterInvoicesTable() {
+  const search = (document.getElementById('searchInvoices')?.value || '').toLowerCase().trim();
+  const list = state.invoices || [];
+  const filtered = list.filter(i => {
+    return !search ||
+      (i.invoice_number || '').toLowerCase().includes(search) ||
+      (i.client_name || '').toLowerCase().includes(search);
+  });
+  renderInvoicesTable(filtered);
 }
 
 async function loadDashboardStats() {
@@ -319,18 +1189,21 @@ async function loadDashboardStats() {
 async function loadInventoryItems() {
   const tbody = document.getElementById('catalogTableBody');
   try {
-    const res = await fetch(`/api/inventory/items?t=${Date.now()}`, { cache: 'no-store' });
+    let res = await fetch(`/api/balitower/inventory/items?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) {
+      res = await fetch(`/api/inventory/items?t=${Date.now()}`, { cache: 'no-store' });
+    }
     if (res.ok) {
       const rawItems = await res.json();
       state.items = (rawItems || []).map(it => ({
-        sku: it.item_id || it.sku || '',
-        name: it.name || '',
+        sku: it.item_code || it.item_id || it.sku || '',
+        name: it.name || it.item_name || '',
         supplier_name: it.supplier_name || '-',
         category: it.category || 'General',
-        current_stock: Number(it.current_stock) || 0,
+        current_stock: Number(it.total_stock !== undefined ? it.total_stock : it.current_stock) || 0,
         unit: it.unit || 'pcs',
-        min_stock: Number(it.min_threshold) || 0,
-        max_stock: Number(it.max_threshold) || 0,
+        min_stock: Number(it.min_stock !== undefined ? it.min_stock : it.min_threshold) || 0,
+        max_stock: Number(it.max_threshold !== undefined ? it.max_threshold : (it.min_stock * 3)) || 0,
         unit_price: Number(it.unit_price) || 0
       }));
       filterCatalogTable();
@@ -351,6 +1224,7 @@ async function loadInventoryItems() {
 function renderCatalogTable(items) {
   const tbody = document.getElementById('catalogTableBody');
   if (!tbody) return;
+  updateSidebarRowCount(items ? items.length : 0, 'Item Katalog');
 
   if (!items || items.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Katalog kosong atau tidak ada data yang cocok.</td></tr>`;
@@ -786,6 +1660,50 @@ function appendAgentErrorMessage(errorText) {
   feed.scrollTop = feed.scrollHeight;
 }
 
+function formatMarkdownResponse(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let inTable = false;
+  let html = '';
+  let tableRows = [];
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      if (trimmed.includes('---')) continue; // skip header separator
+      inTable = true;
+      const cells = trimmed.split('|').slice(1, -1).map(c => c.trim());
+      tableRows.push(cells);
+    } else {
+      if (inTable && tableRows.length > 0) {
+        html += `<div style="overflow-x:auto; margin: 10px 0;"><table class="data-table" style="font-size: 11.5px; width: 100%;"><thead><tr>` +
+          tableRows[0].map(c => `<th style="padding: 6px 8px;">${c}</th>`).join('') +
+          `</tr></thead><tbody>` +
+          tableRows.slice(1).map(row => `<tr>` + row.map(c => `<td style="padding: 6px 8px;">${c}</td>`).join('') + `</tr>`).join('') +
+          `</tbody></table></div>`;
+        inTable = false;
+        tableRows = [];
+      }
+      if (trimmed.startsWith('- ')) {
+        html += `<div style="margin: 3px 0 3px 12px; font-size: 12.5px;">• ${trimmed.substring(2)}</div>`;
+      } else if (trimmed.length > 0) {
+        html += `<div style="margin: 4px 0; font-size: 13px; line-height: 1.5;">${trimmed}</div>`;
+      }
+    }
+  }
+  if (inTable && tableRows.length > 0) {
+    html += `<div style="overflow-x:auto; margin: 10px 0;"><table class="data-table" style="font-size: 11.5px; width: 100%;"><thead><tr>` +
+      tableRows[0].map(c => `<th style="padding: 6px 8px;">${c}</th>`).join('') +
+      `</tr></thead><tbody>` +
+      tableRows.slice(1).map(row => `<tr>` + row.map(c => `<td style="padding: 6px 8px;">${c}</td>`).join('') + `</tr>`).join('') +
+      `</tbody></table></div>`;
+  }
+  
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  return html;
+}
+
 function appendAgentResponseCard(data) {
   const feed = document.getElementById('copilotFeed');
   if (!feed) return;
@@ -803,7 +1721,7 @@ function appendAgentResponseCard(data) {
     container.innerHTML = `
       <div class="agent-plan-box" style="border-left: 4px solid #F59E0B; background: #FFFBEB; border: 1px solid #FDE68A;">
         <div style="font-size: 13.5px; color: #92400E; line-height: 1.6;">
-          ${escapeHtml(data.message || 'Mohon maaf, permintaan yang Anda masukkan tidak berkaitan dengan alur kerja sistem inventaris.')}
+          ${escapeHtml(data.message || 'Mohon maaf, instruksi yang Anda masukkan berada di luar cakupan wewenang operasional sistem PT Bali Towerindo Sentra Tbk.')}
         </div>
       </div>
     `;
@@ -812,12 +1730,12 @@ function appendAgentResponseCard(data) {
     return;
   }
 
-  // Scenario 1: General message / greeting / simple response
-  if (actionType === 'general' && prs.length === 0 && items.length === 0 && actionType !== 'update_threshold') {
+  // Scenario 1: Bali Tower Domain queries (HR, Finance, Inventory) & General responses
+  if (['hr_query', 'finance_query', 'inventory_query', 'general'].includes(actionType) && prs.length === 0 && items.length === 0) {
     container.innerHTML = `
       <div class="agent-plan-box">
-        <div style="font-size: 13.5px; color: #0F172A; line-height: 1.6;">
-          ${escapeHtml(data.message || intent.reasoning || 'Instruksi telah diproses.')}
+        <div style="font-size: 13px; color: #0F172A; line-height: 1.6;">
+          ${formatMarkdownResponse(data.message || intent.reasoning || 'Instruksi telah diproses.')}
         </div>
       </div>
     `;

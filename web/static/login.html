@@ -250,7 +250,7 @@
           sessionStorage.setItem('tenant_id', data.tenant_id);
           sessionStorage.setItem('username', username);
           
-          if (data.role === 'ADMIN') {
+          if (data.role === 'ADMIN' || username.toLowerCase() === 'admin') {
             window.location.href = '/static/admin.html';
           } else {
             window.location.href = '/';
@@ -271,7 +271,9 @@
     
     // Auto redirect only if valid session token already exists in current browser session
     if (sessionStorage.getItem('access_token')) {
-      if (sessionStorage.getItem('role') === 'ADMIN') {
+      const savedRole = sessionStorage.getItem('role');
+      const savedUser = (sessionStorage.getItem('username') || '').toLowerCase();
+      if (savedRole === 'ADMIN' || savedUser === 'admin') {
         window.location.href = '/static/admin.html';
       } else {
         window.location.href = '/';

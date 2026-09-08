@@ -1,0 +1,13 @@
+employee_id,full_name,department,job_title,employment_status,k3_certification,k3_cert_expiry,leave_balance,hourly_overtime_rate
+EMP-BLT-001,Budi Santoso,Field Operations,Lead Tower Rigger,PERMANENT,TKPK 2,2027-08-15,10,75000
+EMP-BLT-002,Dedi Kurniawan,Field Operations,Tower Climber Specialist,PERMANENT,TKPK 1,2027-04-10,12,65000
+EMP-BLT-003,Ahmad Fauzi,Field Operations,Fiber Optic Splicer Lead,PERMANENT,K3 Umum,2026-12-01,8,70000
+EMP-BLT-004,I Made Sudira,Field Operations,Regional Field Technician Bali,PERMANENT,TKPK 1,2027-01-20,11,65000
+EMP-BLT-005,Eko Prasetyo,Field Operations,Preventive Maintenance Lead,PERMANENT,K3 Listrik & Genset,2028-02-14,9,80000
+EMP-BLT-006,Rian Hidayat,NOC & Infrastructure,NOC Shift Lead Tier-2,PERMANENT,NONE,,14,85000
+EMP-BLT-007,Fajar Nugraha,NOC & Infrastructure,NOC Surveillance Specialist,CONTRACT (PKWT),NONE,,6,60000
+EMP-BLT-008,Siti Rahmawati,Finance & Accounting,Senior Billing & AR Accountant,PERMANENT,NONE,,12,90000
+EMP-BLT-009,Dewi Lestari,Finance & Accounting,Treasury & Site Cost Specialist,PERMANENT,NONE,,10,75000
+EMP-BLT-010,Hendra Gunawan,Project Engineering,Site Acquisition & CME Inspector,PERMANENT,K3 Umum,2026-11-30,7,85000
+EMP-BLT-011,Yusuf Maulana,Field Operations,Junior Fiber Splicer,CONTRACT (PKWT),K3 Umum,2027-03-01,5,55000
+EMP-BLT-012,Agus Setiawan,Field Operations,Junior Tower Climber,CONTRACT (PKWT),TKPK 1,2026-10-15,8,55000

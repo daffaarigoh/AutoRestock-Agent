@@ -141,8 +141,8 @@ def init_db(db_path: Path = DB_PATH):
 
 def seed_data(conn: duckdb.DuckDBPyConnection):
     """Seed base users, system prompts, workflows, and multi-tenant assets."""
-    admin_hash = "$2b$12$JOM29UUbKtItgDFOrcsjuOmRK0mOC9/agdo.RWmU1mzRX7aT/YV06"
-    user_hash = "$2b$12$woqxbeUBVL7YRCLzBR1hEOQKPsBslbohqqbgv9Pl5vxvqwHCNcnVm"
+    admin_hash = "$2b$12$reziVbiqV1qNNnELI.rGjeE7dJOMBhtT3C6/J3oP4foGl8JaE7ujm" # admin123
+    user_hash = "$2b$12$/GHm/zDxQu4BNJ0DX0VBB.Msd3hWRvLEOl.6eo20LIFxXTiYBoLX." # user123
 
     # Seed Users
     user_count = conn.execute("SELECT COUNT(*) FROM users;").fetchone()[0]
@@ -151,7 +151,9 @@ def seed_data(conn: duckdb.DuckDBPyConnection):
             ("USR-001", "admin", admin_hash, "ADMIN", "ALL"),
             ("USR-002", "usera", user_hash, "USER", "TENANT_A"),
             ("USR-003", "userb", user_hash, "USER", "TENANT_B"),
-            ("USR-004", "userc", user_hash, "USER", "TENANT_C")
+            ("USR-004", "userc", user_hash, "USER", "TENANT_C"),
+            ("USR-005", "manager", admin_hash, "MANAGER", "ALL"),
+            ("USR-006", "user", user_hash, "USER", "ALL")
         ]
         conn.executemany("INSERT INTO users VALUES (?, ?, ?, ?, ?);", users_data)
         print("[OK] Users seeded.")

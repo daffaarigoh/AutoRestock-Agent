@@ -1,0 +1,16 @@
+site_id,site_name,site_type,region,latitude,longitude,tower_height_m,status
+JKS-MCP-001,MCP Gatot Subroto Kav 18,Microcell Pole,DKI Jakarta,-6.2304,106.8227,20.0,OPERATIONAL
+JKS-MCP-002,MCP Sudirman SCBD Lot 8,Microcell Pole,DKI Jakarta,-6.2255,106.8098,22.0,OPERATIONAL
+JKP-TWR-003,Macro Tower Senayan Palmerah,Macro 4-Legged,DKI Jakarta,-6.2163,106.7981,45.0,OPERATIONAL
+JKB-MCP-004,MCP Tomang Raya Barat,Microcell Pole,DKI Jakarta,-6.1754,106.7912,18.0,OPERATIONAL
+JKT-TWR-005,Macro Tower Cawang Interchange,Macro 4-Legged,DKI Jakarta,-6.2482,106.8673,52.0,OPERATIONAL
+DPS-MCP-006,MCP Teuku Umar Denpasar,Microcell Pole,Bali & Nusa Tenggara,-8.6782,115.2078,20.0,OPERATIONAL
+DPS-TWR-007,Macro Tower Sanur Bypass,Macro 4-Legged,Bali & Nusa Tenggara,-8.6914,115.2581,42.0,OPERATIONAL
+BDG-TWR-008,Macro Tower Dago Asri,Monopole,Jawa Barat,-6.8791,107.6184,36.0,OPERATIONAL
+BDG-MCP-009,MCP Riau Junction Bandung,Microcell Pole,Jawa Barat,-6.9082,107.6145,18.0,OPERATIONAL
+SBY-TWR-010,Macro Tower Darmo Surabaya,Macro 4-Legged,Jawa Timur,-7.2891,112.7382,48.0,OPERATIONAL
+SBY-MCP-011,MCP Basuki Rahmat Surabaya,Microcell Pole,Jawa Timur,-7.2654,112.741,20.0,OPERATIONAL
+JKS-MCP-012,MCP Kemang Raya Selatan,Microcell Pole,DKI Jakarta,-6.2731,106.8152,20.0,OPERATIONAL
+JKP-TWR-013,Rooftop Pole Cikini Menteng,Rooftop Pole,DKI Jakarta,-6.1925,106.8398,15.0,OPERATIONAL
+TGR-TWR-014,Macro Tower BSD Green Office,Monopole,Banten,-6.3012,106.6521,38.0,OPERATIONAL
+DPS-MCP-015,MCP Sunset Road Kuta,Microcell Pole,Bali & Nusa Tenggara,-8.7042,115.1785,22.0,OPERATIONAL

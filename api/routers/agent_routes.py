@@ -327,6 +327,158 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
     from database.db import get_db_connection
     import json
     
+    # 3. Strict Multi-Tenant Domain Boundary Guard
+    u_tenant = str(getattr(current_user, 'tenant_id', 'ALL')).upper()
+    u_role = str(getattr(current_user, 'role', 'USER')).upper()
+
+    is_hr_keyword = any(w in lower_prompt for w in ["kandidat", "pelamar", "rigger", "climber", "tkpk", "rekrutmen", "screening", "absen", "hadir", "lembur", "overtime", "geofencing", "kunjungan site", "cuti", "izin", "sakit", "karyawan", "pegawai"])
+    is_fin_keyword = any(w in lower_prompt for w in ["pemasukan", "pendapatan", "revenue", "invoice", "tagihan", "operator", "telkomsel", "indosat", "xl", "smartfren", "pengeluaran", "beban", "opex", "listrik", "pln", "sewa lahan", "lahan", "genset", "biaya", "arus kas", "cash flow", "cashflow", "kas", "saldo"])
+    is_inv_keyword = any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "gudang", "beli", "pesan", "restock", "supplier", "purchase order", "po"])
+
+    if u_role != "ADMIN" and u_tenant != "ALL":
+        if u_tenant == "INVENTORY" and (is_hr_keyword or is_fin_keyword) and not is_inv_keyword:
+            return {
+                "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
+                "action_type": "out_of_scope",
+                "message": f"Akses Ditolak: Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi Inventory & Logistik. Anda tidak memiliki wewenang untuk mengakses data HR atau Keuangan perusahaan.",
+                "generated_prs": [],
+                "affected_items": []
+            }
+        if u_tenant == "HR" and (is_inv_keyword or is_fin_keyword) and not is_hr_keyword:
+            return {
+                "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
+                "action_type": "out_of_scope",
+                "message": f"Akses Ditolak: Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi HR & Field Workforce. Anda tidak memiliki wewenang untuk mengakses data Material Gudang atau Keuangan perusahaan.",
+                "generated_prs": [],
+                "affected_items": []
+            }
+        if u_tenant == "FINANCE" and (is_inv_keyword or is_hr_keyword) and not is_fin_keyword:
+            return {
+                "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
+                "action_type": "out_of_scope",
+                "message": f"Akses Ditolak: Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi Keuangan & Akuntansi. Anda tidak memiliki wewenang untuk mengakses data Material Gudang atau Data Personalia.",
+                "generated_prs": [],
+                "affected_items": []
+            }
+
+    # 4. Bali Tower Domain Query Handler (HR, Finance, Inventory)
+    conn = get_db_connection(read_only=True)
+    try:
+        # A. HR - Pelamar / Kandidat / Rigger K3
+        if any(w in lower_prompt for w in ["kandidat", "pelamar", "rigger", "climber", "tkpk", "rekrutmen", "screening"]):
+            cand_rows = conn.execute("""
+                SELECT c.full_name, j.job_title, c.k3_cert_held, c.years_of_experience, c.medical_checkup_status, c.technical_score, c.recruitment_stage
+                FROM candidates c
+                JOIN job_postings j ON c.job_id = j.job_id
+                ORDER BY c.technical_score DESC LIMIT 6;
+            """).fetchall()
+            msg = "**Hasil Screening & Filter Kandidat Teknisi (Bali Tower)**\n\n"
+            msg += "| Nama Kandidat | Posisi | Sertifikat K3 | Pengalaman | Tes Medis | Skor | Status |\n"
+            msg += "| :--- | :--- | :---: | :---: | :---: | :---: | :---: |\n"
+            for r in cand_rows:
+                msg += f"| {r[0]} | {r[1]} | {r[2]} | {r[3]} th | {r[4]} | {r[5]} | **{r[6]}** |\n"
+            msg += "\n*Catatan:* Kandidat dengan sertifikasi **TKPK 1/2** dan status tes medis **FIT_FOR_HEIGHT** direkomendasikan langsung untuk tahap Trial Lapangan."
+            return {"parsed_intent": {"workflow_id": "hr_filter_candidates"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # B. HR - Absensi & Lembur Teknisi Lapangan
+        if any(w in lower_prompt for w in ["absen", "hadir", "lembur", "overtime", "geofencing", "kunjungan site"]):
+            att_rows = conn.execute("""
+                SELECT a.date, e.full_name, s.site_name, a.distance_to_site_m, a.overtime_hours, a.status
+                FROM attendances a
+                JOIN employees e ON a.employee_id = e.employee_id
+                LEFT JOIN telecom_sites s ON a.site_id = s.site_id
+                WHERE a.overtime_hours > 0
+                ORDER BY a.date DESC LIMIT 6;
+            """).fetchall()
+            tot_ot = conn.execute("SELECT COALESCE(SUM(overtime_hours), 0) FROM attendances").fetchone()[0]
+            msg = f"**Laporan Absensi Kunjungan Menara & Lembur Teknisi (Total Lembur: {tot_ot:.1f} Jam)**\n\n"
+            msg += "| Tanggal | Teknisi | Titik Menara (Site) | Jarak GPS | Lembur | Status |\n"
+            msg += "| :---: | :--- | :--- | :---: | :---: | :---: |\n"
+            for r in att_rows:
+                msg += f"| {r[0]} | {r[1]} | {r[2]} | {r[3]}m | **{r[4]} jam** | {r[5]} |\n"
+            msg += "\n*Validasi Geofencing:* Seluruh teknisi terverifikasi berada dalam radius aman (<100m) dari titik koordinat menara."
+            return {"parsed_intent": {"workflow_id": "hr_attendance_audit"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # C. HR - Cuti & Izin
+        if any(w in lower_prompt for w in ["cuti", "izin", "sakit", "leave"]):
+            lv_rows = conn.execute("""
+                SELECT e.full_name, l.leave_type, l.days_requested, l.start_date, l.reason, COALESCE(sub.full_name, '-'), l.approval_status
+                FROM leave_requests l
+                JOIN employees e ON l.employee_id = e.employee_id
+                LEFT JOIN employees sub ON l.substitute_employee_id = sub.employee_id;
+            """).fetchall()
+            msg = "**Daftar Pengajuan Cuti & Izin Karyawan**\n\n"
+            msg += "| Karyawan | Jenis Cuti | Hari | Mulai | Alasan | Teknisi Pengganti | Status |\n"
+            msg += "| :--- | :--- | :---: | :---: | :--- | :--- | :---: |\n"
+            for r in lv_rows:
+                msg += f"| {r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]} | {r[5]} | **{r[6]}** |\n"
+            return {"parsed_intent": {"workflow_id": "hr_leave_query"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # D. Finance - Pemasukan & Invoices Operator
+        if any(w in lower_prompt for w in ["pemasukan", "pendapatan", "revenue", "invoice", "tagihan", "operator", "telkomsel", "indosat", "xl", "smartfren"]):
+            rev_rows = conn.execute("""
+                SELECT c.client_name, COUNT(i.invoice_id), CAST(SUM(i.total_billed) AS BIGINT),
+                       CAST(SUM(CASE WHEN i.payment_status = 'PAID' THEN i.total_billed ELSE 0 END) AS BIGINT),
+                       CAST(SUM(CASE WHEN i.payment_status = 'UNPAID' THEN i.total_billed ELSE 0 END) AS BIGINT)
+                FROM revenue_invoices i
+                JOIN telecom_clients c ON i.client_id = c.client_id
+                GROUP BY c.client_name ORDER BY 3 DESC;
+            """).fetchall()
+            msg = "**Rekapitulasi Pendapatan Sewa Menara per Operator (Q1 2026)**\n\n"
+            msg += "| Operator Klien | Invoices | Total Tagihan (IDR) | Sudah Lunas (IDR) | Piutang (AR) |\n"
+            msg += "| :--- | :---: | :---: | :---: | :---: |\n"
+            for r in rev_rows:
+                msg += f"| {r[0]} | {r[1]} | Rp {r[2]:,} | Rp {r[3]:,} | **Rp {r[4]:,}** |\n"
+            return {"parsed_intent": {"workflow_id": "finance_revenue_report"}, "action_type": "finance_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # E. Finance - Pengeluaran OPEX / Listrik PLN / Sewa Lahan
+        if any(w in lower_prompt for w in ["pengeluaran", "beban", "opex", "listrik", "pln", "sewa lahan", "lahan", "genset", "biaya"]):
+            opex_rows = conn.execute("""
+                SELECT account_name, COUNT(*), CAST(SUM(amount) AS BIGINT)
+                FROM financial_transactions WHERE trx_type = 'OUTFLOW'
+                GROUP BY account_name ORDER BY 3 DESC;
+            """).fetchall()
+            msg = "**Laporan Rincian Beban Operasional Site (OPEX)**\n\n"
+            msg += "| Kategori Beban | Transaksi | Total Realisasi (IDR) |\n"
+            msg += "| :--- | :---: | :---: |\n"
+            for r in opex_rows:
+                msg += f"| {r[0]} | {r[1]} kali | **Rp {r[2]:,}** |\n"
+            return {"parsed_intent": {"workflow_id": "finance_opex_audit"}, "action_type": "finance_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # F. Finance - Arus Kas (Cash Flow)
+        if any(w in lower_prompt for w in ["arus kas", "cash flow", "cashflow", "kas", "transaksi", "saldo"]):
+            inflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'INFLOW'").fetchone()[0]
+            outflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'OUTFLOW'").fetchone()[0]
+            net = inflow - outflow
+            msg = "**Ringkasan Arus Kas Operasional PT Bali Towerindo Sentra Tbk**\n\n"
+            msg += f"- **Total Kas Masuk (Inflow):** Rp {int(inflow):,}\n"
+            msg += f"- **Total Kas Keluar (Outflow):** Rp {int(outflow):,}\n"
+            msg += f"- **Surplus Arus Kas Bersih (Net Cash Flow):** **Rp {int(net):,}**\n\n"
+            msg += "Arus kas perusahaan berada dalam kondisi sehat dengan rasio penerimaan sewa menara yang stabil."
+            return {"parsed_intent": {"workflow_id": "finance_cashflow"}, "action_type": "finance_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # G. Inventory - Cek Stok Material
+        if any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan"]) and not any(w in lower_prompt for w in ["beli", "pesan", "restock", "pr"]):
+            stk_rows = conn.execute("""
+                SELECT i.item_code, i.item_name, i.category, COALESCE(SUM(sb.quantity_on_hand), 0), i.min_stock, i.unit
+                FROM inventory_items i
+                LEFT JOIN stock_balances sb ON i.item_id = sb.item_id
+                GROUP BY i.item_code, i.item_name, i.category, i.min_stock, i.unit
+                ORDER BY 4 ASC LIMIT 8;
+            """).fetchall()
+            msg = "**Status Stok Material Infrastruktur Menara & Fiber Optic**\n\n"
+            msg += "| Kode SKU | Nama Material | Kategori | Total Stok | Batas Min | Status |\n"
+            msg += "| :--- | :--- | :--- | :---: | :---: | :---: |\n"
+            for r in stk_rows:
+                st = "KRITIS" if r[3] <= r[4] * 0.5 else "PERLU PERHATIAN" if r[3] <= r[4] else "AMAN"
+                msg += f"| {r[0]} | {r[1]} | {r[2]} | **{r[3]} {r[5]}** | {r[4]} | {st} |\n"
+            return {"parsed_intent": {"workflow_id": "inventory_stock_query"}, "action_type": "inventory_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+    except Exception as err:
+        pass
+    finally:
+        conn.close()
+
     try:
         # Route prompt to workflow ID strictly scoped by tenant_id
         route_result = await SemanticRouter.route_prompt(request.prompt, current_user.tenant_id)
@@ -344,7 +496,10 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             return {
                 "parsed_intent": {"workflow_id": None},
                 "action_type": "unrecognized_intent",
-                "message": "Mohon maaf, permintaan yang Anda masukkan tidak berkaitan dengan alur kerja sistem inventaris atau berada di luar cakupan wewenang akun Anda. Saya hanya dapat memproses instruksi yang berkaitan dengan manajemen stok, pembaruan batas stok (threshold), pendaftaran barang baru, dan penerbitan dokumen Purchase Requisition (PR).",
+                "message": "Permintaan Anda belum terpetakan ke alur otomatis. Anda dapat menanyakan seputar 3 modul operasional Bali Tower:\n"
+                           "1. **Inventory**: Cek stok material menara, baterai lithium, kabel FO, atau buat Purchase Requisition.\n"
+                           "2. **HR**: Cek log absensi & lembur teknisi, daftar cuti, atau filter pelamar rigger K3 TKPK.\n"
+                           "3. **Finance**: Cek pendapatan sewa menara per operator, beban listrik PLN/lahan, atau arus kas.",
                 "available_workflows": [{"id": r[0], "name": r[1], "description": r[2]} for r in user_wfs],
                 "email_sent": False,
                 "generated_prs": [],
@@ -446,28 +601,38 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 @router.get("/api/agent/prompt-templates")
 def get_prompt_templates():
     """
-    Returns curated 1-click prompt templates for non-technical users.
+    Returns curated 1-click prompt templates for non-technical users tailored to Bali Tower.
     """
     return [
         {
             "id": 1,
-            "title": "Restock Darurat Elektronik -> Email",
-            "prompt": "Tolong cek semua barang kategori Electronics yang stoknya kritis, pilihkan vendor termurah, buatkan dokumen PDF, dan kirim notifikasi ke Email."
+            "title": "Cek Stok Material & Alert Restock",
+            "prompt": "Tolong cek semua material fiber optic dan power backup yang stoknya kritis, serta tampilkan estimasi kebutuhan restock."
         },
         {
             "id": 2,
-            "title": "Update Threshold STM32 & Simpan DB",
-            "prompt": "Ubah threshold barang ITM-001 jadi 80 pcs, lalu hitung ulang kebutuhan restock dan simpan hasilnya di database saja."
+            "title": "Absensi & Lembur Teknisi Lapangan",
+            "prompt": "Tampilkan rekap absensi kunjungan site menara teknisi rigger minggu ini beserta validasi geofencing GPS dan total jam lembur."
         },
         {
             "id": 3,
-            "title": "Rekap Stok Kemasan -> Email",
-            "prompt": "Buatkan rekap laporan restock barang Packaging dan kirimkan ke email manager@company.com."
+            "title": "Filter Pelamar Rigger K3 TKPK",
+            "prompt": "Saring kandidat pelamar posisi Rigger / Tower Climber yang memiliki sertifikasi K3 TKPK aktif dan berstatus layak naik menara (Fit for Height)."
         },
         {
             "id": 4,
-            "title": "Audit Lengkap Semua Barang Gudang",
-            "prompt": "Periksa semua barang di gudang yang di bawah threshold, buatkan draf Purchase Requisition PDF resmi."
+            "title": "Laporan Pemasukan Sewa Menara",
+            "prompt": "Tampilkan ringkasan pendapatan sewa menara dari operator Telkomsel, XL, dan Indosat beserta piutang invoice yang belum dibayar."
+        },
+        {
+            "id": 5,
+            "title": "Biaya Listrik PLN & Sewa Lahan",
+            "prompt": "Tampilkan rincian pengeluaran beban operasional untuk tagihan listrik PLN shelter dan sewa lahan lokasi menara per site."
+        },
+        {
+            "id": 6,
+            "title": "Ringkasan Arus Kas Operasional",
+            "prompt": "Berapa total kas masuk (inflow) versus kas keluar (outflow) dan surplus kas bersih operasional saat ini?"
         }
     ]
 

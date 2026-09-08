@@ -15,6 +15,7 @@ from api.routers.agent_routes import router as agent_router
 from api.routers.approval_routes import PR_STORE
 from api.routers.approval_routes import router as approval_router
 from api.routers.auth_routes import router as auth_router
+from api.routers.balitower_routes import router as balitower_router
 from api.routers.stream_routes import router as stream_router
 from core.config import settings
 from docgen.pdf_generator import pdf_generator
@@ -53,6 +54,7 @@ app.mount("/samples", StaticFiles(directory=str(SAMPLES_DIR)), name="samples")
 
 
 # Include API routers
+app.include_router(balitower_router)
 app.include_router(agent_router)
 app.include_router(stream_router)
 app.include_router(approval_router)
