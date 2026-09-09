@@ -1,4 +1,6 @@
+import json
 from datetime import timedelta
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
@@ -14,6 +16,8 @@ from core.security import (
 from database.db import get_db_connection
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+WORKFLOWS_JSON_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "balitower" / "workflows.json"
 
 class LoginRequest(BaseModel):
     username: str
@@ -53,12 +57,50 @@ async def get_me(current_user: TokenData = Depends(get_current_user)):
 
 
 
+def _sync_workflows_to_json(conn):
+    """Export current workflows table to data/balitower/workflows.json so it is tracked in Git."""
+    try:
+        rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id FROM workflows ORDER BY id ASC").fetchall()
+        columns = [desc[0] for desc in conn.description]
+        workflows = []
+        for r in rows:
+            wf = dict(zip(columns, r))
+            try:
+                wf["compiled_json"] = json.loads(wf["compiled_json"])
+            except:
+                pass
+            workflows.append(wf)
+        WORKFLOWS_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(WORKFLOWS_JSON_PATH, "w", encoding="utf-8") as f:
+            json.dump(workflows, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[AUTH] Failed to sync workflows to JSON: {e}")
+
+
+def _sync_workflows_from_json_if_empty(conn):
+    """If workflows table is empty on startup, populate from data/balitower/workflows.json."""
+    try:
+        cnt = conn.execute("SELECT COUNT(*) FROM workflows;").fetchone()[0]
+        if cnt == 0 and WORKFLOWS_JSON_PATH.exists():
+            with open(WORKFLOWS_JSON_PATH, "r", encoding="utf-8") as f:
+                workflows = json.load(f)
+            for wf in workflows:
+                compiled_str = json.dumps(wf["compiled_json"]) if isinstance(wf.get("compiled_json"), dict) else str(wf.get("compiled_json", "{}"))
+                conn.execute(
+                    "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id) VALUES (?, ?, ?, ?, ?, ?)",
+                    [wf["id"], wf["name"], wf.get("description", ""), wf.get("business_instruction", ""), compiled_str, wf.get("tenant_id", "ALL")]
+                )
+    except Exception as e:
+        pass
+
+
 def _ensure_workflow_tenant_column(conn):
-    """Ensure the workflows table has the tenant_id column for user-scoped workflows."""
+    """Ensure the workflows table has the tenant_id column and seeds from workflows.json if empty."""
     try:
         cols = [r[0] for r in conn.execute("DESCRIBE workflows;").fetchall()]
         if "tenant_id" not in cols:
             conn.execute("ALTER TABLE workflows ADD COLUMN tenant_id VARCHAR DEFAULT 'ALL';")
+        _sync_workflows_from_json_if_empty(conn)
     except Exception as e:
         pass
 
@@ -97,7 +139,6 @@ class CreateWorkflowRequest(BaseModel):
 @router.post("/admin/workflows")
 async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends(get_current_admin)):
     from agents.workflow_compiler import WorkflowCompiler
-    import json
     import uuid
     
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
@@ -111,6 +152,7 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
         "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id) VALUES (?, ?, ?, ?, ?, ?)", 
         [wf_id, req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val]
     )
+    _sync_workflows_to_json(conn)
     conn.close()
     
     return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json, "tenant_id": tenant_val}
@@ -126,7 +168,6 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
     conn.close()
     
     workflows = []
-    import json
     for r in rows:
         wf = dict(zip(columns, r))
         if not wf.get("tenant_id"):
@@ -143,13 +184,13 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
 async def delete_workflow(wf_id: str, admin: TokenData = Depends(get_current_admin)):
     conn = get_db_connection(read_only=False)
     conn.execute("DELETE FROM workflows WHERE id = ?", [wf_id])
+    _sync_workflows_to_json(conn)
     conn.close()
     return {"status": "success"}
 
 @router.put("/admin/workflows/{wf_id}")
 async def edit_workflow(wf_id: str, req: CreateWorkflowRequest, admin: TokenData = Depends(get_current_admin)):
     from agents.workflow_compiler import WorkflowCompiler
-    import json
     
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
     tenant_val = _normalize_tenant_id(req.tenant_id)
@@ -160,6 +201,7 @@ async def edit_workflow(wf_id: str, req: CreateWorkflowRequest, admin: TokenData
         "UPDATE workflows SET name = ?, description = ?, business_instruction = ?, compiled_json = ?, tenant_id = ? WHERE id = ?", 
         [req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val, wf_id]
     )
+    _sync_workflows_to_json(conn)
     conn.close()
     
     return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json, "tenant_id": tenant_val}

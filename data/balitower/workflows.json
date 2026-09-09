@@ -1,0 +1,146 @@
+[
+  {
+    "id": "WF-001",
+    "name": "Auto Restock Material Kritis",
+    "description": "Memeriksa stok material menara & kabel FO yang menipis dan membuat draf PR.",
+    "business_instruction": "Periksa stok material kritis, hitung kebutuhan restock, dan buat dokumen Purchase Requisition.",
+    "compiled_json": {
+      "workflow": "auto_restock",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "inventory.get_low_stock"
+        }
+      ]
+    },
+    "tenant_id": "INVENTORY"
+  },
+  {
+    "id": "WF-002",
+    "name": "Cek Absensi & Lembur Teknisi",
+    "description": "Audit absensi kunjungan site menara dan rekap jam lembur teknisi.",
+    "business_instruction": "Tarik data absensi teknisi lapangan dengan validasi geofencing GPS dan kalkulasi biaya lembur.",
+    "compiled_json": {
+      "workflow": "hr_attendance_audit",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "hr.audit_attendance"
+        }
+      ]
+    },
+    "tenant_id": "HR"
+  },
+  {
+    "id": "WF-003",
+    "name": "Filter Pelamar Rigger K3",
+    "description": "Menyaring kandidat rigger tower dengan sertifikasi TKPK dan tes medis layak ketinggian.",
+    "business_instruction": "Filter kandidat rigger berdasarkan sertifikasi TKPK 1/2 dan tes kesehatan.",
+    "compiled_json": {
+      "workflow": "hr_filter_candidates",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "hr.filter_candidates"
+        }
+      ]
+    },
+    "tenant_id": "HR"
+  },
+  {
+    "id": "WF-004",
+    "name": "Laporan Pendapatan Sewa Menara",
+    "description": "Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, XL, IOH).",
+    "business_instruction": "Tarik data invoice sewa menara per operator dan status pembayarannya.",
+    "compiled_json": {
+      "workflow": "finance_revenue_report",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "finance.revenue_report"
+        }
+      ]
+    },
+    "tenant_id": "FINANCE"
+  },
+  {
+    "id": "WF-005",
+    "name": "Audit Beban Listrik & Sewa Lahan",
+    "description": "Laporan pengeluaran operasional utilitas listrik PLN, BBM genset, dan sewa lahan tower.",
+    "business_instruction": "Analisis beban operasional per site mencakup tagihan PLN dan jatuh tempo sewa tanah.",
+    "compiled_json": {
+      "workflow": "finance_opex_audit",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "finance.opex_audit"
+        }
+      ]
+    },
+    "tenant_id": "FINANCE"
+  },
+  {
+    "id": "WF-006",
+    "name": "Ringkasan Arus Kas (Cash Flow)",
+    "description": "Laporan arus kas masuk vs keluar harian dan posisi saldo bersih.",
+    "business_instruction": "Hitung net cash flow dari transaksi inflow dan outflow.",
+    "compiled_json": {
+      "workflow": "finance_cashflow",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "finance.cashflow_summary"
+        }
+      ]
+    },
+    "tenant_id": "FINANCE"
+  },
+  {
+    "id": "WF-ALL-01",
+    "name": "Cek Profil Akun & Hak Akses",
+    "description": "Melihat informasi profil pengguna yang sedang login, role, divisi tenant, dan modul yang dapat diakses.",
+    "business_instruction": "Periksa akun yang sedang login dan tampilkan detail hak akses serta batasan divisi.",
+    "compiled_json": {
+      "workflow": "check_user_profile",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "system.check_profile"
+        }
+      ]
+    },
+    "tenant_id": "ALL"
+  },
+  {
+    "id": "WF-ALL-02",
+    "name": "Informasi Sistem & Status Layanan",
+    "description": "Melihat ringkasan status operasional server, versi aplikasi, database DuckDB, dan gateway AI.",
+    "business_instruction": "Cek status operasional seluruh modul sistem AutoRestock-Agent.",
+    "compiled_json": {
+      "workflow": "system_health_info",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "system.get_system_info"
+        }
+      ]
+    },
+    "tenant_id": "ALL"
+  },
+  {
+    "id": "WF-ALL-03",
+    "name": "Panduan Operasional & Kontak Darurat",
+    "description": "Panduan SOP penggunaan sistem AutoRestock-Agent, navigasi modul, dan kontak darurat IT/Operasional.",
+    "business_instruction": "Tampilkan panduan operasional perusahaan dan kontak darurat lintas divisi.",
+    "compiled_json": {
+      "workflow": "company_guidelines",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "system.get_company_guidelines"
+        }
+      ]
+    },
+    "tenant_id": "ALL"
+  }
+]
