@@ -1,3 +1,4 @@
+import asyncio
 import re
 import json
 import sys
@@ -5,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status, Response, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 # Base path resolution
@@ -287,17 +288,19 @@ class CustomPromptRequest(BaseModel):
     recipient_email: str | None = Field(None, description="Optional custom recipient email")
 
 
-@router.post("/api/agent/custom-prompt")
-async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_user: TokenData = Depends(get_current_user)):
-    """
-    Accepts free-form natural language instructions from non-technical users,
-    synthesizes a custom multi-agent workflow, executes actions, and dispatches outputs.
-    """
+async def execute_prompt_logic(
+    request: CustomPromptRequest,
+    current_user: TokenData,
+    stage_callback = None
+) -> dict:
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt tidak boleh kosong.")
 
     lower_prompt = request.prompt.strip().lower()
-    
+
+    if stage_callback:
+        await stage_callback("analyze", "🔍 Menganalisis instruksi & hak akses wewenang...")
+
     # 1. Pure thank-you / pleasantries check
     thanks_keywords = ["terima kasih", "terimakasih", "makasih", "thank you", "thanks", "tq", "matur nuwun", "hatur nuhun", "syukron", "arigato", "thx"]
     action_keywords = ["restock", "stok", "stock", "beli", "pesan", "order", "pr", "tambah", "daftar", "update", "threshold", "ambang", "audit", "gudang", "barang", "produk", "sku"]
@@ -324,11 +327,25 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             "affected_items": []
         }
 
-    from agents.router import SemanticRouter
+    from agents.router import SemanticRouter, check_clarification_needs, extract_recipient_email
     from agents.json_executor import JSONExecutionEngine
     from database.db import get_db_connection
     import json
-    
+
+    # 2.5 Clarification Check (Human-in-the-Loop Clarification Guard)
+    clarification = check_clarification_needs(request.prompt, current_user.tenant_id)
+    if clarification:
+        if stage_callback:
+            await stage_callback("clarification", f"❓ Membutuhkan klarifikasi: {clarification.get('title')}...")
+        return {
+            "parsed_intent": {"workflow_id": None},
+            "action_type": "clarification_needed",
+            "message": clarification.get("message"),
+            "clarification": clarification,
+            "generated_prs": [],
+            "affected_items": []
+        }
+
     # 3. Strict Multi-Tenant Domain Boundary Guard
     u_tenant = str(getattr(current_user, 'tenant_id', 'ALL')).upper()
     u_role = str(getattr(current_user, 'role', 'USER')).upper()
@@ -345,6 +362,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
     # If it's a Schema ALL request, it is universally accessible to all users!
     if not is_all_schema_keyword and u_role != "ADMIN" and u_tenant != "ALL":
         if is_fin_keyword and u_tenant != "FINANCE":
+            if stage_callback:
+                await stage_callback("denied", "🚫 Memeriksa wewenang divisi...")
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
                 "action_type": "permission_denied",
@@ -353,6 +372,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
                 "affected_items": []
             }
         if is_hr_keyword and u_tenant != "HR":
+            if stage_callback:
+                await stage_callback("denied", "🚫 Memeriksa wewenang divisi...")
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
                 "action_type": "permission_denied",
@@ -361,6 +382,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
                 "affected_items": []
             }
         if is_inv_keyword and u_tenant != "INVENTORY":
+            if stage_callback:
+                await stage_callback("denied", "🚫 Memeriksa wewenang divisi...")
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
                 "action_type": "permission_denied",
@@ -374,6 +397,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
     try:
         # Schema ALL - A. Cek Profil Pengguna & Hak Akses (WF-ALL-01)
         if is_profile_query:
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa profil pengguna di database...")
             tenant_desc = {
                 "ALL": "Super Administrator (Akses Penuh Seluruh Schema)",
                 "INVENTORY": "Divisi Logistik & Gudang Material (Schema A)",
@@ -403,6 +428,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # Schema ALL - B. Informasi Sistem & Status Layanan (WF-ALL-02)
         if is_system_query:
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa status kesehatan server & sistem...")
             from core.config import settings
             table_count = len(conn.execute("SHOW TABLES;").fetchall())
             wf_count = conn.execute("SELECT COUNT(*) FROM workflows").fetchone()[0]
@@ -423,6 +450,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # Schema ALL - C. Panduan Operasional & Kontak Darurat (WF-ALL-03)
         if is_guideline_query:
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa panduan SOP operasional & helpdesk...")
             msg = (
                 f"### 📋 Panduan Operasional & Kontak Darurat (PT Bali Towerindo Sentra Tbk)\n\n"
                 f"#### 1. Aturan Kerja & SOP Antar-Divisi\n"
@@ -441,6 +470,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # A. HR - Pelamar / Kandidat / Rigger K3
         if any(w in lower_prompt for w in ["kandidat", "pelamar", "rigger", "climber", "tkpk", "rekrutmen", "screening"]):
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa basis data kandidat rigger di DuckDB...")
             cand_rows = conn.execute("""
                 SELECT c.full_name, j.job_title, c.k3_cert_held, c.years_of_experience, c.medical_checkup_status, c.technical_score, c.recruitment_stage
                 FROM candidates c
@@ -457,6 +488,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # B. HR - Absensi & Lembur Teknisi Lapangan
         if any(w in lower_prompt for w in ["absen", "hadir", "lembur", "overtime", "geofencing", "kunjungan site"]):
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa absensi & geofencing teknisi lapangan...")
             att_rows = conn.execute("""
                 SELECT a.date, e.full_name, s.site_name, a.distance_to_site_m, a.overtime_hours, a.status
                 FROM attendances a
@@ -476,6 +509,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # C. HR - Cuti & Izin
         if any(w in lower_prompt for w in ["cuti", "izin", "sakit", "leave"]):
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa pengajuan cuti karyawan...")
             lv_rows = conn.execute("""
                 SELECT e.full_name, l.leave_type, l.days_requested, l.start_date, l.reason, COALESCE(sub.full_name, '-'), l.approval_status
                 FROM leave_requests l
@@ -491,6 +526,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # D. Finance - Pemasukan & Invoices Operator
         if any(w in lower_prompt for w in ["pemasukan", "pendapatan", "revenue", "invoice", "tagihan", "operator", "telkomsel", "indosat", "xl", "smartfren"]):
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa tagihan & invoice operator sewa menara...")
             rev_rows = conn.execute("""
                 SELECT c.client_name, COUNT(i.invoice_id), CAST(SUM(i.total_billed) AS BIGINT),
                        CAST(SUM(CASE WHEN i.payment_status = 'PAID' THEN i.total_billed ELSE 0 END) AS BIGINT),
@@ -508,6 +545,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # E. Finance - Pengeluaran OPEX / Listrik PLN / Sewa Lahan
         if any(w in lower_prompt for w in ["pengeluaran", "beban", "opex", "listrik", "pln", "sewa lahan", "lahan", "genset", "biaya"]):
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa transaksi beban operasional site...")
             opex_rows = conn.execute("""
                 SELECT account_name, COUNT(*), CAST(SUM(amount) AS BIGINT)
                 FROM financial_transactions WHERE trx_type = 'OUTFLOW'
@@ -522,6 +561,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # F. Finance - Arus Kas (Cash Flow)
         if any(w in lower_prompt for w in ["arus kas", "cash flow", "cashflow", "kas", "transaksi", "saldo"]):
+            if stage_callback:
+                await stage_callback("database", "📊 Menghitung arus kas masuk & keluar...")
             inflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'INFLOW'").fetchone()[0]
             outflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'OUTFLOW'").fetchone()[0]
             net = inflow - outflow
@@ -534,6 +575,8 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
 
         # G. Inventory - Cek Stok Material
         if any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan"]) and not any(w in lower_prompt for w in ["beli", "pesan", "restock", "pr"]):
+            if stage_callback:
+                await stage_callback("database", "📊 Memeriksa saldo fisik inventaris material...")
             stk_rows = conn.execute("""
                 SELECT i.item_code, i.item_name, i.category, COALESCE(SUM(sb.quantity_on_hand), 0), i.min_stock, i.unit
                 FROM inventory_items i
@@ -555,12 +598,17 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
         conn.close()
 
     try:
+        if stage_callback:
+            await stage_callback("routing", "🧠 Menentukan alur kerja multi-agent yang sesuai...")
+
         # Route prompt to workflow ID strictly scoped by tenant_id
         route_result = await SemanticRouter.route_prompt(request.prompt, current_user.tenant_id)
         workflow_id = route_result.get("workflow_id")
         
         # If no workflow matches or prompt is out of scope / unrelated:
         if not workflow_id or route_result.get("is_unrelated"):
+            if stage_callback:
+                await stage_callback("fallback", "⚠️ Memeriksa batasan alur kerja...")
             conn = get_db_connection(read_only=True)
             user_wfs = conn.execute(
                 "SELECT id, name, description FROM workflows WHERE tenant_id = ? OR tenant_id = 'ALL' ORDER BY id ASC",
@@ -610,12 +658,24 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             }
             
         compiled_json = json.loads(compiled_json_str)
+
+        if stage_callback:
+            await stage_callback("executing", f"⚡ Menjalankan alur kerja otomatis: {workflow_id}...")
         
+        # Dynamic email extraction & dispatch flags
+        recip_email = route_result.get("recipient_email") or request.recipient_email or extract_recipient_email(request.prompt)
+        send_email_flag = route_result.get("send_email", False) or bool(recip_email)
+
+        if send_email_flag and stage_callback:
+            display_email = recip_email or "manajer operasional"
+            await stage_callback("email", f"📧 Menyiapkan notifikasi & persetujuan PR ke {display_email}...")
+
         # Execute workflow
         context = {
             "threshold_updates": route_result.get("threshold_updates", []),
             "target_item_name": route_result.get("target_item_name"),
-            "send_email": route_result.get("send_email", False),
+            "send_email": send_email_flag,
+            "recipient_email": recip_email,
             "new_item_data": route_result.get("new_item_data", {}),
             "username": current_user.username,
             "role": current_user.role,
@@ -684,6 +744,71 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Gagal mengeksekusi dynamic workflow: {e!s}"
         )
+
+
+@router.post("/api/agent/custom-prompt")
+async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_user: TokenData = Depends(get_current_user)):
+    """
+    Accepts free-form natural language instructions from non-technical users,
+    synthesizes a custom multi-agent workflow, executes actions, and dispatches outputs.
+    """
+    return await execute_prompt_logic(request, current_user)
+
+
+@router.post("/api/agent/stream-prompt")
+async def execute_custom_prompt_workflow_stream(request: CustomPromptRequest, current_user: TokenData = Depends(get_current_user)):
+    """
+    Real-Time SSE Streaming Endpoint for interactive Chat Dashboard (TTPS Optimization).
+    Streams live stage status badges, clarification questions, token-by-token content,
+    and final rich interactive dashboard response card.
+    """
+    async def event_generator():
+        stages_queue = asyncio.Queue()
+
+        async def stage_cb(stage: str, message: str):
+            await stages_queue.put({"type": "status", "stage": stage, "message": message})
+
+        # 1. Instant Initial Stage Badge (TTPS < 20ms)
+        yield f"data: {json.dumps({'type': 'status', 'stage': 'analyze', 'message': '🔍 Menganalisis instruksi & hak akses wewenang...'})}\n\n"
+
+        # 2. Asynchronous execution with real-time stage forwarding
+        task = asyncio.create_task(execute_prompt_logic(request, current_user, stage_callback=stage_cb))
+
+        while not task.done():
+            try:
+                stage_msg = await asyncio.wait_for(stages_queue.get(), timeout=0.08)
+                yield f"data: {json.dumps(stage_msg)}\n\n"
+            except asyncio.TimeoutError:
+                pass
+
+        # Drain any remaining stage events
+        while not stages_queue.empty():
+            stage_msg = stages_queue.get_nowait()
+            yield f"data: {json.dumps(stage_msg)}\n\n"
+
+        try:
+            result = await task
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            return
+
+        # 3. Clarification event if parameters missing
+        if result.get("action_type") == "clarification_needed":
+            yield f"data: {json.dumps({'type': 'clarification', 'clarification': result.get('clarification'), 'message': result.get('message')})}\n\n"
+
+        # 4. Token-by-token streaming for ultra-fluid typing effect
+        msg = result.get("message", "")
+        if msg:
+            words = msg.split(" ")
+            for i, w in enumerate(words):
+                token = w + (" " if i < len(words) - 1 else "")
+                yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+                await asyncio.sleep(0.01)
+
+        # 5. Final complete event with rich interactive payload
+        yield f"data: {json.dumps({'type': 'complete', 'payload': result})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.get("/api/agent/prompt-templates")

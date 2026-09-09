@@ -404,11 +404,13 @@ class TenantSchemaAdapter:
                     SET quantity_on_hand = quantity_on_hand + ?, stock_status = 'NORMAL'
                     WHERE item_id = ? AND warehouse_id = 'WH-JKT-01';
                 """, [qty_to_add, id_param])
-                conn.execute("""
-                    UPDATE items
-                    SET current_stock = current_stock + ?
-                    WHERE item_id = ? OR lower(name) LIKE ?;
-                """, [qty_to_add, id_param, f"%{name_param}%"])
+                if "items" in existing_tables:
+                    conn.execute("""
+                        UPDATE items
+                        SET current_stock = current_stock + ?
+                        WHERE item_id = ? OR lower(name) LIKE ?;
+                    """, [qty_to_add, id_param, f"%{name_param}%"])
+                conn.commit()
                 return True
 
             # TENANT A: Electronics Manufacturing
@@ -449,6 +451,7 @@ class TenantSchemaAdapter:
                     WHERE item_id = ? OR lower(name) LIKE ?;
                 """, [qty_to_add, id_param, f"%{name_param}%"])
 
+            conn.commit()
             return updated
         finally:
             conn.close()

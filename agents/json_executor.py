@@ -224,9 +224,9 @@ class JSONExecutionEngine:
                 # ----------------------------------------------------
                 elif step_type == "tool" and action in ["notification.dispatch", "notification.send_email"]:
                     pr_number = context.get("pr_number")
-                    items_len = len(context.get("planned_items", []))
-                    all_len = len(context.get("all_inventory_items", []))
-                    low_len = len(context.get("low_stock_items", []))
+                    items_len = len(context.get("planned_items") or [])
+                    all_len = len(context.get("all_inventory_items") or [])
+                    low_len = len(context.get("low_stock_items") or [])
                     registered = context.get("registered_item")
                     
                     if pr_number:
@@ -243,7 +243,7 @@ class JSONExecutionEngine:
                         msg = "Workflow berhasil dijalankan (Tanpa data item spesifik)."
                         
                     dispatch_res = await dispatcher.dispatch_email(
-                        recipient_email=None,
+                        recipient_email=context.get("recipient_email"),
                         subject=f"Permintaan Persetujuan Restock: {pr_number}" if pr_number else f"Notifikasi Workflow: {compiled_json.get('workflow', 'Sistem')}",
                         content_text=msg,
                         attachment_path=context.get("pdf_path"),
@@ -527,7 +527,7 @@ class JSONExecutionEngine:
                 })
 
         # Calculate total analyzed items for UI formatting
-        total_analyzed = len(context.get("low_stock_items", [])) or len(context.get("threshold_updates", [])) or len(context.get("all_inventory_items", [])) or len(context.get("specific_items", []))
+        total_analyzed = len(context.get("low_stock_items") or []) or len(context.get("threshold_updates") or []) or len(context.get("all_inventory_items") or []) or len(context.get("specific_items") or [])
         
         # Determine overall summary message
         if context.get("validation_passed") is False:
@@ -545,18 +545,18 @@ class JSONExecutionEngine:
         elif "finance_message" in context:
             summary = context["finance_message"]
         elif context.get("pr_number") and context.get("email_sent"):
-            summary = f"Ditemukan {len(context.get('low_stock_items', []))} barang yang stoknya menipis. Dokumen {context.get('pr_number')} telah berhasil diterbitkan dan notifikasi persetujuan telah otomatis dikirimkan via email ke manajer."
+            summary = f"Ditemukan {len(context.get('low_stock_items') or [])} barang yang stoknya menipis. Dokumen {context.get('pr_number')} telah berhasil diterbitkan dan notifikasi persetujuan telah otomatis dikirimkan via email ke manajer."
         elif context.get("pr_number"):
-            summary = f"Ditemukan {len(context.get('low_stock_items', []))} barang yang stoknya menipis. Dokumen {context.get('pr_number')} telah diterbitkan."
+            summary = f"Ditemukan {len(context.get('low_stock_items') or [])} barang yang stoknya menipis. Dokumen {context.get('pr_number')} telah diterbitkan."
         elif context.get("specific_items"):
             item_msgs = [f"{it['name']} ({it['current_stock']} {it['unit']})" for it in context["specific_items"]]
             summary = "Stok saat ini: " + ", ".join(item_msgs)
-        elif len(context.get("specific_items", [])) == 0 and "specific_items" in context:
+        elif len(context.get("specific_items") or []) == 0 and "specific_items" in context:
             summary = "Barang tersebut tidak ditemukan di gudang."
         elif "low_stock_items" in context:
-            summary = f"Ditemukan {len(context['low_stock_items'])} barang yang stoknya menipis."
+            summary = f"Ditemukan {len(context.get('low_stock_items') or [])} barang yang stoknya menipis."
         elif "all_inventory_items" in context:
-            summary = f"Audit selesai. Terdapat {len(context['all_inventory_items'])} macam barang di dalam inventaris Anda saat ini."
+            summary = f"Audit selesai. Terdapat {len(context.get('all_inventory_items') or [])} macam barang di dalam inventaris Anda saat ini."
         else:
             summary = "Workflow berhasil dieksekusi."
 
@@ -567,7 +567,7 @@ class JSONExecutionEngine:
             if pr_num:
                 msg = f"Dokumen PR #{pr_num} telah diterbitkan dan menunggu persetujuan Anda."
             dispatch_res = await dispatcher.dispatch_email(
-                recipient_email=None,
+                recipient_email=context.get("recipient_email"),
                 subject=f"Permintaan Persetujuan Restock: {pr_num}" if pr_num else "Notifikasi Pengadaan Inventaris",
                 content_text=msg,
                 attachment_path=context.get("pdf_path"),

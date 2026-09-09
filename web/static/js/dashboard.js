@@ -1560,6 +1560,15 @@ function handleKey(e) {
   }
 }
 
+function useClarificationHint(hintText) {
+  const input = document.getElementById('promptInput');
+  if (input) {
+    input.value = hintText;
+    input.focus();
+    submitPrompt();
+  }
+}
+
 async function submitPrompt() {
   const input = document.getElementById('promptInput');
   if (!input) return;
@@ -1572,35 +1581,108 @@ async function submitPrompt() {
 
   appendUserMessage(promptText);
 
-  const loadingId = appendAgentLoadingBubble();
+  const streamBubble = appendAgentStreamBubble();
   const btn = document.getElementById('btnSendPrompt');
   if (btn) btn.disabled = true;
 
   try {
-    const res = await fetch('/api/agent/custom-prompt', {
+    const res = await fetch('/api/agent/stream-prompt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: promptText, destinations: [] })
     });
 
-    const data = await res.json();
-    removeLoadingBubble(loadingId);
-
-    if (res.ok) {
-      appendAgentResponseCard(data);
-      await loadAllData();
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      if (streamBubble) streamBubble.remove();
+      appendAgentErrorMessage(errJson.detail || "Gagal memproses instruksi.");
       saveCopilotFeed();
-    } else {
-      appendAgentErrorMessage(data.detail || "Gagal memproses instruksi.");
-      saveCopilotFeed();
+      return;
     }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let accumulatedText = '';
+    let completedPayload = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const rawJson = trimmed.substring(5).trim();
+        if (!rawJson) continue;
+
+        try {
+          const evt = JSON.parse(rawJson);
+          if (evt.type === 'status') {
+            updateStreamStage(streamBubble, evt.stage, evt.message);
+          } else if (evt.type === 'clarification') {
+            renderClarificationBox(streamBubble, evt.clarification);
+          } else if (evt.type === 'token') {
+            accumulatedText += evt.content;
+            updateStreamText(streamBubble, accumulatedText);
+          } else if (evt.type === 'complete') {
+            completedPayload = evt.payload;
+          } else if (evt.type === 'error') {
+            throw new Error(evt.message || "Error saat streaming respon.");
+          }
+        } catch (err) {
+          console.warn('Error parsing stream event:', err, rawJson);
+        }
+      }
+    }
+
+    // Finalize stream bubble with complete response data
+    finalizeStreamBubble(streamBubble, completedPayload, accumulatedText);
+    await loadAllData();
+    saveCopilotFeed();
+
   } catch (e) {
-    removeLoadingBubble(loadingId);
+    if (streamBubble) streamBubble.remove();
     appendAgentErrorMessage(e.message || "Terjadi kesalahan koneksi ke server backend.");
     saveCopilotFeed();
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+function scrollChatToBottom() {
+  const wrapper = document.getElementById('copilotFeedWrapper');
+  const feed = document.getElementById('copilotFeed');
+  if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+  if (feed) feed.scrollTop = feed.scrollHeight;
+}
+
+function getAgentBubbleHeaderHtml(badgeText = 'Agent Aktif', isError = false) {
+  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return `
+    <div class="agent-bubble-header">
+      <div class="agent-avatar ${isError ? 'error-avatar' : ''}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+          <rect x="3" y="8" width="18" height="12" rx="3"/>
+          <circle cx="8" cy="14" r="1.5" fill="currentColor"/>
+          <circle cx="16" cy="14" r="1.5" fill="currentColor"/>
+          <line x1="12" y1="13" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <div class="agent-header-info">
+        <span class="agent-name">Bali Tower Copilot</span>
+        <span class="agent-status-badge ${isError ? 'error-badge' : ''}">
+          ${!isError ? '<span class="agent-online-dot"></span>' : ''}${escapeHtml(badgeText)}
+        </span>
+      </div>
+      <span class="bubble-time">${timeStr}</span>
+    </div>
+  `;
 }
 
 function appendUserMessage(text) {
@@ -1610,38 +1692,220 @@ function appendUserMessage(text) {
   const feed = document.getElementById('copilotFeed');
   if (!feed) return;
 
+  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const userBox = document.createElement('div');
   userBox.className = 'user-query-bubble';
-  userBox.textContent = text;
+  userBox.innerHTML = `
+    <div class="bubble-meta">
+      <span class="bubble-sender">Anda</span>
+      <span class="bubble-time">${timeStr}</span>
+    </div>
+    <div class="bubble-text">${escapeHtml(text)}</div>
+  `;
   feed.appendChild(userBox);
-  feed.scrollTop = feed.scrollHeight;
+  scrollChatToBottom();
 }
 
-function appendAgentLoadingBubble() {
+function appendAgentStreamBubble() {
   const feed = document.getElementById('copilotFeed');
   if (!feed) return null;
 
-  const id = 'loading_' + Date.now();
+  const id = 'stream_' + Date.now();
   const box = document.createElement('div');
   box.id = id;
   box.className = 'agent-response-box';
   box.innerHTML = `
-    <div class="agent-plan-box" style="display: flex; align-items: center; gap: 8px; color: #2563EB;">
-      <svg class="spin-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-      </svg>
-      <span style="font-weight: 600; font-size: 12.5px;">Menganalisis instruksi & menjalankan proses...</span>
+    ${getAgentBubbleHeaderHtml('Agent Aktif')}
+    <div class="agent-plan-box">
+      <div class="stage-chips-container">
+        <div class="stage-chip active">
+          <span class="stage-pulse-dot"></span>
+          <span>🔍 Menganalisis instruksi & wewenang...</span>
+        </div>
+      </div>
+      <div class="clarification-slot"></div>
+      <div class="stream-text-slot" style="font-size: 13.5px; color: #0F172A; line-height: 1.65;">
+        <span class="stream-cursor"></span>
+      </div>
+      <div class="stream-artifacts-slot" style="margin-top: 8px;"></div>
     </div>
   `;
   feed.appendChild(box);
-  feed.scrollTop = feed.scrollHeight;
-  return id;
+  scrollChatToBottom();
+  return box;
 }
 
-function removeLoadingBubble(id) {
-  if (!id) return;
-  const el = document.getElementById(id);
-  if (el) el.remove();
+function updateStreamStage(streamBubble, stage, message) {
+  if (!streamBubble) return;
+  const stagesContainer = streamBubble.querySelector('.stage-chips-container');
+  if (!stagesContainer) return;
+
+  const prevActive = stagesContainer.querySelector('.stage-chip.active');
+  if (prevActive) {
+    prevActive.classList.remove('active');
+    prevActive.classList.add('done');
+    const pulse = prevActive.querySelector('.stage-pulse-dot');
+    if (pulse) pulse.remove();
+  }
+
+  const chip = document.createElement('div');
+  chip.className = 'stage-chip active';
+  chip.innerHTML = `
+    <span class="stage-pulse-dot"></span>
+    <span>${escapeHtml(message)}</span>
+  `;
+  stagesContainer.appendChild(chip);
+  scrollChatToBottom();
+}
+
+function renderClarificationBox(streamBubble, clarification) {
+  if (!streamBubble || !clarification) return;
+  const slot = streamBubble.querySelector('.clarification-slot');
+  if (!slot) return;
+
+  const hint = clarification.hint || '';
+  const escapedHint = escapeHtml(hint).replace(/'/g, "\\'");
+
+  slot.innerHTML = `
+    <div class="clarification-box">
+      <div class="clarification-title">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>${escapeHtml(clarification.title || 'Klarifikasi Diperlukan')}</span>
+      </div>
+      <div class="clarification-message">${escapeHtml(clarification.message || '')}</div>
+      ${hint ? `
+        <button type="button" class="clarification-hint-btn" onclick="useClarificationHint('${escapedHint}')">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span>Gunakan Saran: "<strong>${escapeHtml(hint)}</strong>"</span>
+        </button>
+      ` : ''}
+    </div>
+  `;
+  scrollChatToBottom();
+}
+
+function updateStreamText(streamBubble, text) {
+  if (!streamBubble) return;
+  const textSlot = streamBubble.querySelector('.stream-text-slot');
+  if (!textSlot) return;
+
+  textSlot.innerHTML = formatMarkdownResponse(text) + '<span class="stream-cursor"></span>';
+  scrollChatToBottom();
+}
+
+function finalizeStreamBubble(streamBubble, payload, streamedText) {
+  if (!streamBubble) return;
+
+  const cursor = streamBubble.querySelector('.stream-cursor');
+  if (cursor) cursor.remove();
+
+  const activeChips = streamBubble.querySelectorAll('.stage-chip.active');
+  activeChips.forEach(c => {
+    c.classList.remove('active');
+    c.classList.add('done');
+    const pulse = c.querySelector('.stage-pulse-dot');
+    if (pulse) pulse.remove();
+  });
+
+  if (!payload) return;
+
+  const prs = payload.generated_prs || [];
+  const items = payload.affected_items || [];
+  const actionType = payload.action_type || 'general';
+
+  if (prs.length > 0) {
+    const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
+    if (artifactsSlot) {
+      const prCards = prs.map(pr => {
+        const rawStatus = String(pr.status || '').toUpperCase();
+        const supplier = pr.supplier_name || 'Vendor Terdaftar';
+        const grandTotal = Number(pr.grand_total || pr.total_budget || 0);
+        const escapedSupplier = escapeHtml(supplier).replace(/'/g, "\\'");
+
+        return `
+          <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-top: 8px; box-shadow: var(--shadow-xs);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 12px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${pr.pr_number}</span>
+                <span style="font-size: 12.5px; margin-left: 6px; color: #334155; font-weight: 600;">${escapeHtml(supplier)}</span>
+              </div>
+              <span style="font-weight: 800; font-size: 14px; color: #0F172A;">${formatCurrency(grandTotal)}</span>
+            </div>
+            <div style="font-size: 12.5px; color: #475569; margin-bottom: 10px; line-height: 1.6;">
+              ${(pr.items || []).map(it => `• <strong>${escapeHtml(it.item_name || it.name)}</strong>: ${it.quantity || it.reorder_qty} ${it.unit || 'pcs'}`).join('<br>')}
+            </div>
+            <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px;">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <span>Dokumen PR resmi telah dikompilasi (PDF) dan notifikasi persetujuan telah otomatis dikirimkan ke email tujuan.</span>
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+              <button class="btn btn-secondary btn-sm" onclick="openPdfModal('${pr.pr_number}', '${escapedSupplier}', ${grandTotal}, '${rawStatus}')">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>Lihat Dokumen PDF</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      artifactsSlot.innerHTML = `
+        <div class="action-card" style="border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7; margin-top: 10px;">
+          <div class="action-card-header">
+            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">DOKUMEN PR DITERBITKAN & TERKIRIM KE EMAIL (${prs.length})</span>
+            <span class="badge badge-approved">TERKIRIM KE EMAIL</span>
+          </div>
+          <div class="action-card-body">
+            ${prCards}
+          </div>
+        </div>
+      `;
+      openDataSidebar('canvas-prs');
+    }
+  } else if (items.length > 0 && actionType !== 'general') {
+    const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
+    if (artifactsSlot) {
+      const isReg = actionType === 'register_product';
+      const title = isReg ? 'PRODUK BARU BERHASIL DIDAFTARKAN' : 'PERUBAHAN AMBANG BATAS STOK';
+      const badge = isReg ? '<span class="badge badge-approved">BERHASIL</span>' : '<span class="badge badge-updated">DIPERBARUI</span>';
+      
+      const rows = items.map(it => `
+        <tr>
+          <td><strong>${escapeHtml(it.name)}</strong></td>
+          <td>${it.current_stock !== undefined ? it.current_stock : '-'} ${it.unit || ''}</td>
+          <td><span style="color: #2563EB; font-weight: 600;">${it.min_stock !== undefined ? it.min_stock : '-'}</span> ${it.unit || ''}</td>
+        </tr>
+      `).join('');
+
+      artifactsSlot.innerHTML = `
+        <div class="action-card" style="border-left: 4px solid #2563EB; background: #F8FAFC; border: 1px solid #E2E8F0; margin-top: 10px;">
+          <div class="action-card-header">
+            <span style="font-weight: 700; font-size: 12.5px; color: #1E293B;">${title} (${items.length})</span>
+            ${badge}
+          </div>
+          <div class="action-card-body" style="padding: 6px 10px;">
+            <table class="data-table" style="font-size: 12px; margin: 4px 0;">
+              <thead>
+                <tr>
+                  <th>Nama Barang</th>
+                  <th>Stok Fisik</th>
+                  <th>Batas Min</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  scrollChatToBottom();
 }
 
 function appendAgentErrorMessage(errorText) {
@@ -1651,13 +1915,14 @@ function appendAgentErrorMessage(errorText) {
   const box = document.createElement('div');
   box.className = 'agent-response-box';
   box.innerHTML = `
-    <div class="agent-plan-box" style="border-left: 4px solid #DC2626; background: #FEF2F2;">
+    ${getAgentBubbleHeaderHtml('Kendala Sistem', true)}
+    <div class="agent-plan-box" style="border-left: 4px solid #DC2626; background: #FEF2F2; border-color: #FECACA;">
       <div class="agent-plan-title" style="color: #DC2626;">TERJADI KESALAHAN</div>
-      <div style="font-size: 13px; color: #991B1B;">${escapeHtml(errorText)}</div>
+      <div style="font-size: 13px; color: #991B1B; line-height: 1.5;">${escapeHtml(errorText)}</div>
     </div>
   `;
   feed.appendChild(box);
-  feed.scrollTop = feed.scrollHeight;
+  scrollChatToBottom();
 }
 
 function formatMarkdownResponse(text) {
@@ -1719,6 +1984,7 @@ function appendAgentResponseCard(data) {
   // Scenario 0: Safe Fallback / Anti-Halusinasi (Out of Scope / Unrecognized Intent)
   if (actionType === 'unrecognized_intent' || actionType === 'out_of_scope') {
     container.innerHTML = `
+      ${getAgentBubbleHeaderHtml('Di Luar Cakupan', true)}
       <div class="agent-plan-box" style="border-left: 4px solid #F59E0B; background: #FFFBEB; border: 1px solid #FDE68A;">
         <div style="font-size: 13.5px; color: #92400E; line-height: 1.6;">
           ${escapeHtml(data.message || 'Mohon maaf, instruksi yang Anda masukkan berada di luar cakupan wewenang operasional sistem PT Bali Towerindo Sentra Tbk.')}
@@ -1726,13 +1992,14 @@ function appendAgentResponseCard(data) {
       </div>
     `;
     feed.appendChild(container);
-    feed.scrollTop = feed.scrollHeight;
+    scrollChatToBottom();
     return;
   }
 
   // Scenario 1: Bali Tower Domain queries (HR, Finance, Inventory) & General responses
   if (['hr_query', 'finance_query', 'inventory_query', 'general'].includes(actionType) && prs.length === 0 && items.length === 0) {
     container.innerHTML = `
+      ${getAgentBubbleHeaderHtml('Laporan')}
       <div class="agent-plan-box">
         <div style="font-size: 13px; color: #0F172A; line-height: 1.6;">
           ${formatMarkdownResponse(data.message || intent.reasoning || 'Instruksi telah diproses.')}
@@ -1740,7 +2007,7 @@ function appendAgentResponseCard(data) {
       </div>
     `;
     feed.appendChild(container);
-    feed.scrollTop = feed.scrollHeight;
+    scrollChatToBottom();
     return;
   }
 
@@ -1779,6 +2046,7 @@ function appendAgentResponseCard(data) {
     }).join('');
 
     container.innerHTML = `
+      ${getAgentBubbleHeaderHtml('PR Diterbitkan')}
       <div class="agent-plan-box">
         <div class="agent-plan-title">INFORMASI & STATUS PENGADAAN:</div>
         <div style="font-size: 13px; font-weight: 600; color: #0F172A; margin-bottom: 6px; line-height: 1.5;">
@@ -1797,13 +2065,14 @@ function appendAgentResponseCard(data) {
     `;
     openDataSidebar('canvas-prs');
     feed.appendChild(container);
-    feed.scrollTop = feed.scrollHeight;
+    scrollChatToBottom();
     return;
   }
 
   // Scenario 3: Threshold Updated
   if (actionType === 'update_threshold') {
     container.innerHTML = `
+      ${getAgentBubbleHeaderHtml('Ambang Batas')}
       <div class="agent-plan-box">
         <div class="action-card" style="border-left: 4px solid #2563EB; background: #EFF6FF; border: 1px solid #DBEAFE; margin-top: 0;">
           <div class="action-card-header">
@@ -1818,7 +2087,7 @@ function appendAgentResponseCard(data) {
     `;
     openDataSidebar('canvas-inventory');
     feed.appendChild(container);
-    feed.scrollTop = feed.scrollHeight;
+    scrollChatToBottom();
     return;
   }
 
@@ -1826,6 +2095,7 @@ function appendAgentResponseCard(data) {
   if (actionType === 'register_product') {
     const isError = data.message && (data.message.includes('ditolak') || data.message.includes('kurang') || data.message.includes('gagal'));
     container.innerHTML = `
+      ${getAgentBubbleHeaderHtml(isError ? 'Pendaftaran Ditolak' : 'Barang Terdaftar', isError)}
       <div class="agent-plan-box">
         <div class="action-card" style="border-left: 4px solid ${isError ? '#DC2626' : '#16A34A'}; background: ${isError ? '#FEF2F2' : '#F0FDF4'}; border: 1px solid ${isError ? '#FECACA' : '#DCFCE7'}; margin-top: 0;">
           <div class="action-card-header">
@@ -1851,13 +2121,14 @@ function appendAgentResponseCard(data) {
       openDataSidebar('canvas-inventory');
     }
     feed.appendChild(container);
-    feed.scrollTop = feed.scrollHeight;
+    scrollChatToBottom();
     return;
   }
 
   // Scenario 4: Email Notification
   if (actionType === 'notify_email') {
     container.innerHTML = `
+      ${getAgentBubbleHeaderHtml('Notifikasi Email')}
       <div class="agent-plan-box">
         <div class="action-card" style="border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7; margin-top: 0;">
           <div class="action-card-header">
@@ -1880,12 +2151,13 @@ function appendAgentResponseCard(data) {
       </div>
     `;
     feed.appendChild(container);
-    feed.scrollTop = feed.scrollHeight;
+    scrollChatToBottom();
     return;
   }
 
   // Scenario 5: General with affected items
   container.innerHTML = `
+    ${getAgentBubbleHeaderHtml('Laporan Inventaris')}
     <div class="agent-plan-box">
       <div class="action-card" style="border-left: 4px solid #2563EB; background: #F8FAFC; border: 1px solid #E2E8F0; margin-top: 0;">
         <div class="action-card-header">
@@ -1909,7 +2181,7 @@ function appendAgentResponseCard(data) {
   `;
 
   feed.appendChild(container);
-  feed.scrollTop = feed.scrollHeight;
+  scrollChatToBottom();
 }
 
 // --- Terminal Logs ---

@@ -89,21 +89,46 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
         db_status = "APPROVED" if is_approve else "REJECTED"
         conn = get_db_connection()
         try:
+            existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+            if "orders" not in existing_tables:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS orders (
+                        order_id VARCHAR PRIMARY KEY,
+                        pr_number VARCHAR,
+                        item_id VARCHAR,
+                        vendor_id VARCHAR,
+                        quantity INTEGER,
+                        unit_price DOUBLE,
+                        total_price DOUBLE,
+                        status VARCHAR,
+                        tenant_id VARCHAR
+                    );
+                """)
+
             # Check if order already exists and its current status
             existing_order = conn.execute("SELECT status FROM orders WHERE pr_number = ? LIMIT 1;", [pr_number]).fetchone()
             already_approved = existing_order and existing_order[0] == "APPROVED"
             
             # Only increment stock if we are approving AND it wasn't already approved
-            if is_approve and pr and pr.items and not already_approved:
+            if is_approve and not already_approved:
                 from database.schema_adapters import TenantSchemaAdapter
-                effective_tenant = getattr(pr, "tenant_id", "ALL") or "ALL"
-                for item in pr.items:
-                    TenantSchemaAdapter.update_item_stock(
-                        item_id=item.item_id,
-                        qty_to_add=item.reorder_qty,
-                        item_name=item.name,
-                        tenant_id=effective_tenant
-                    )
+                if pr and pr.items:
+                    effective_tenant = getattr(pr, "tenant_id", "ALL") or "ALL"
+                    for item in pr.items:
+                        TenantSchemaAdapter.update_item_stock(
+                            item_id=item.item_id,
+                            qty_to_add=item.reorder_qty,
+                            item_name=item.name,
+                            tenant_id=effective_tenant
+                        )
+                else:
+                    ord_rows = conn.execute("SELECT item_id, quantity, tenant_id FROM orders WHERE pr_number = ?;", [pr_number]).fetchall()
+                    for it_id, it_qty, it_tenant in ord_rows:
+                        TenantSchemaAdapter.update_item_stock(
+                            item_id=it_id,
+                            qty_to_add=it_qty,
+                            tenant_id=it_tenant or "ALL"
+                        )
 
             if existing_order:
                 conn.execute("UPDATE orders SET status = ? WHERE pr_number = ?;", [db_status, pr_number])
@@ -116,6 +141,9 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
                     INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """, insert_orders_params)
+
+            if "purchase_requests" in existing_tables:
+                conn.execute("UPDATE purchase_requests SET status = ? WHERE pr_number = ?;", [db_status, pr_number])
         finally:
             conn.commit()
             conn.close()
@@ -176,12 +204,23 @@ def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
     try:
         from database.db import get_db_connection
         conn = get_db_connection()
-        order_rows = conn.execute("""
+        existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        if "vendors" in existing_tables:
+            vendor_join = "LEFT JOIN vendors v ON o.vendor_id = v.vendor_id AND o.item_id = v.item_id"
+            vendor_col = "v.name as vendor_name"
+        elif "suppliers" in existing_tables:
+            vendor_join = "LEFT JOIN suppliers v ON o.vendor_id = v.supplier_id"
+            vendor_col = "v.supplier_name as vendor_name"
+        else:
+            vendor_join = ""
+            vendor_col = "'Vendor Terdaftar' as vendor_name"
+
+        order_rows = conn.execute(f"""
             SELECT o.pr_number, o.item_id, o.vendor_id, o.quantity, o.unit_price, o.total_price, o.status, o.tenant_id,
-                   i.name as item_name, i.unit, v.name as vendor_name
+                   i.name as item_name, i.unit, {vendor_col}
             FROM orders o
             LEFT JOIN items i ON o.item_id = i.item_id
-            LEFT JOIN vendors v ON o.vendor_id = v.vendor_id AND o.item_id = v.item_id
+            {vendor_join}
             WHERE o.pr_number = ?;
         """, [pr_number]).fetchall()
         conn.close()
@@ -243,8 +282,13 @@ async def get_all_requisitions(response: Response, current_user: TokenData = Dep
     # Sync PRs from DuckDB orders
     try:
         from database.db import get_db_connection
-        conn = get_db_connection()
-        pr_rows = conn.execute("SELECT DISTINCT pr_number, status FROM orders;").fetchall()
+        conn = get_db_connection(read_only=True)
+        existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        pr_rows = []
+        if "orders" in existing_tables:
+            pr_rows = conn.execute("SELECT DISTINCT pr_number, status FROM orders;").fetchall()
+        elif "purchase_requests" in existing_tables:
+            pr_rows = conn.execute("SELECT DISTINCT pr_number, status FROM purchase_requests;").fetchall()
         conn.close()
         for pr_num, db_status in pr_rows:
             if pr_num:

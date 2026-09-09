@@ -70,6 +70,69 @@ def _extract_item_attributes_from_text(prompt: str) -> dict:
     return item
 
 
+def extract_recipient_email(prompt: str) -> str | None:
+    """Helper to detect any email address mentioned in the prompt text."""
+    if not prompt:
+        return None
+    match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', prompt)
+    if match:
+        email = match.group(0).strip()
+        email = email.rstrip(".,;:!?")
+        return email
+    return None
+
+
+def check_clarification_needs(prompt: str, tenant_id: str = "ALL") -> dict | None:
+    """
+    Evaluates whether the user's natural language request lacks critical parameters.
+    If so, returns structured clarification payload so agent can query the user back.
+    """
+    if not prompt:
+        return None
+    p_lower = prompt.lower().strip()
+    
+    # 1. Email clarification: User requested email dispatch/approval, but provided no email address
+    has_email_intent = ("email" in p_lower or "surel" in p_lower) and any(w in p_lower for w in ["kirim", "send", "notif", "teruskan", "approve", "persetujuan", "surat"])
+    extracted_email = extract_recipient_email(prompt)
+    if has_email_intent and not extracted_email:
+        return {
+            "needs_clarification": True,
+            "field": "recipient_email",
+            "title": "Alamat Email Diperlukan",
+            "message": "Anda meminta pengiriman notifikasi/persetujuan via email, namun alamat email penerima belum disebutkan. Mohon tentukan alamat email tujuan (contoh: *manager@balitower.co.id*).",
+            "hint": "Kirimkan dokumen PR ini ke manager@balitower.co.id"
+        }
+        
+    # 2. Threshold update clarification: wants to update threshold but neither item nor value given
+    wants_threshold = any(w in p_lower for w in ["ubah threshold", "ganti ambang", "update batas stok", "atur threshold", "ubah batas"])
+    has_number = bool(re.search(r'\d+', prompt))
+    if wants_threshold and not has_number:
+        return {
+            "needs_clarification": True,
+            "field": "threshold_parameters",
+            "title": "Detail Batas Stok Diperlukan",
+            "message": "Untuk memperbarui batas minimum atau maksimum stok, mohon sebutkan nama barang serta nilai batas baru yang diinginkan (contoh: *'Ubah batas minimum SFP Transceiver menjadi 25'*).",
+            "hint": "Ubah batas minimum SFP Transceiver menjadi 25"
+        }
+        
+    # 3. Product registration clarification: wants to register/add new product but no details provided
+    wants_register = any(w in p_lower for w in ["tambah produk", "tambah barang", "daftarkan barang", "daftarkan produk", "registrasi produk", "registrasi barang"])
+    extracted_item = _extract_item_attributes_from_text(prompt)
+    raw_name = extracted_item.get("name", "")
+    filler_words = {'dong', 'ya', 'baru', 'gan', 'min', 'tolong', 'pls', 'please', 'deh', 'sih', 'lah', 'ini', 'itu', 'dulu'}
+    valid_name_tokens = [w for w in raw_name.lower().split() if w not in filler_words]
+    if wants_register and (not valid_name_tokens and "current_stock" not in extracted_item):
+        return {
+            "needs_clarification": True,
+            "field": "product_details",
+            "title": "Spesifikasi Produk Diperlukan",
+            "message": "Untuk mendaftarkan produk baru ke database inventaris, mohon sertakan informasi nama produk dan jumlah stok awal (contoh: *'Tambah produk Baterai Lithium 48V, stok 15, batas min 5'*).",
+            "hint": "Tambah produk Baterai Lithium 48V, stok 15, batas min 5"
+        }
+        
+    return None
+
+
 class SemanticRouter:
     @classmethod
     async def route_prompt(cls, prompt: str, tenant_id: str = "ALL") -> dict:
@@ -122,17 +185,21 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
         ]
         
         prompt_lower = prompt.lower()
+        extracted_email = extract_recipient_email(prompt)
 
         # Check for product registration intent first (only if user workflow has registration)
         if any(k in prompt_lower for k in ["tambah", "tambahkan", "daftar", "daftarkan", "registrasi", "masukkan produk", "tambah produk", "tambah barang", "tambahkan nama produk", "buat barang"]):
             for row in workflows:
                 if any(w in row[1].lower() for w in ["daftar", "pendaftaran", "tambah", "registrasi", "register"]):
                     extracted_item = _extract_item_attributes_from_text(prompt)
-                    return {
+                    res = {
                         "workflow_id": row[0],
                         "new_item_data": extracted_item,
-                        "send_email": False
+                        "send_email": bool(extracted_email)
                     }
+                    if extracted_email:
+                        res["recipient_email"] = extracted_email
+                    return res
 
         try:
             response_str = await gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
@@ -142,6 +209,9 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
             parsed = json.loads(response_str)
             valid_ids = {r[0] for r in workflows}
             if parsed.get("workflow_id") and parsed["workflow_id"] in valid_ids:
+                if extracted_email:
+                    parsed["send_email"] = True
+                    parsed["recipient_email"] = extracted_email
                 return parsed
             if parsed.get("is_unrelated") or parsed.get("workflow_id") is None:
                 return {
@@ -222,15 +292,22 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
         ]) or bool(re.search(r'\bpr\b', prompt_lower))
 
         if is_restock_intent:
+            send_mail = bool(extracted_email) or ("email" in prompt_lower or "notifikasi" in prompt_lower)
             # Check tenant-specific restock workflow first
             for row in workflows:
                 if len(row) > 3 and row[3] == tenant_id and any(w in row[1].lower() for w in ["restock", "pengadaan"]):
-                    return {"workflow_id": row[0], "send_email": "email" in prompt_lower or "notifikasi" in prompt_lower, "threshold_updates": [], "target_item_name": None}
+                    res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None}
+                    if extracted_email:
+                        res["recipient_email"] = extracted_email
+                    return res
 
             # Fallback to global restock if allowed
             for row in workflows:
                 if "restock" in row[1].lower() or bool(re.search(r'\bpr\b', row[1].lower())):
-                    return {"workflow_id": row[0], "send_email": True, "threshold_updates": [], "target_item_name": None}
+                    res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None}
+                    if extracted_email:
+                        res["recipient_email"] = extracted_email
+                    return res
 
         # 6. ANTI-HALUSINASI GUARDRAIL:
         # If no recognized intent matched, return workflow_id: None! Do NOT pick a default workflow!
