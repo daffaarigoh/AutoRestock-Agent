@@ -80,6 +80,9 @@ def update_db_orders_status(pr_number: str, status: str):
                 item_id, qty, tenant_val = r[0], r[1], r[2] or "ALL"
                 TenantSchemaAdapter.update_item_stock(item_id=item_id, qty_to_add=qty, tenant_id=tenant_val)
 
+            # Synchronize purchase_orders: status becomes ORDERED upon approval
+            conn.execute("UPDATE purchase_orders SET status = 'ORDERED' WHERE pr_number = ?;", [pr_number])
+
         conn.execute("""
             UPDATE orders 
             SET status = ?

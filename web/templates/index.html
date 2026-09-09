@@ -99,6 +99,10 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             <span>PR</span>
           </button>
+          <button class="sidebar-tab-btn" id="sidebarTabPos" data-target="canvas-pos" onclick="switchCanvasTab('canvas-pos')" title="Purchase Orders">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14l2 2 4-4"></path></svg>
+            <span>PO</span>
+          </button>
           <button class="sidebar-tab-btn" id="sidebarTabTerminal" data-target="canvas-terminal" onclick="switchCanvasTab('canvas-terminal')" title="Live Stream AI Agent">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
             <span>Terminal</span>
@@ -119,7 +123,7 @@
         </div>
       </div>
 
-      <!-- TAB 1: LIVE INVENTORY & LOGISTICS (5 Sub-Tables) -->
+      <!-- TAB 1: LIVE INVENTORY & LOGISTICS (4 Sub-Tables) -->
       <div class="canvas-tab-content active" id="canvas-inventory">
         <!-- Sub-Tab Navigation Bar -->
         <div class="sub-tab-bar">
@@ -127,7 +131,6 @@
           <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-balances')">Saldo Gudang</button>
           <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-warehouses')">Lokasi Gudang</button>
           <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-suppliers')">Supplier Rekanan</button>
-          <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-pos')">Purchase Orders</button>
         </div>
 
         <!-- Sub-View 1: Katalog Material -->
@@ -256,28 +259,6 @@
           </div>
         </div>
 
-        <!-- Sub-View 5: Purchase Orders -->
-        <div class="sub-tab-content" id="sub-inv-pos">
-          <div class="table-responsive-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>No. PO</th>
-                  <th>Supplier Rekanan</th>
-                  <th>Material Dipesan</th>
-                  <th class="text-right">Qty</th>
-                  <th class="text-right">Total Anggaran (IDR)</th>
-                  <th class="text-center">Tgl Order</th>
-                  <th class="text-center">Estimasi Tiba</th>
-                  <th class="text-center">Status PO</th>
-                </tr>
-              </thead>
-              <tbody id="invPosTableBody">
-                <tr><td colspan="8" class="text-center" style="padding: 24px; color: var(--text-muted);">Memuat Purchase Orders...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
 
       <!-- TAB 2: HR & FIELD WORKFORCE (6 Sub-Tables) -->
@@ -690,6 +671,45 @@
         </div>
       </div>
 
+      <!-- TAB 4.5: DEDICATED PURCHASE ORDERS (SEBELAHAN DENGAN PR) -->
+      <div class="canvas-tab-content" id="canvas-pos">
+        <div class="table-toolbar" style="justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12.5px; font-weight: 700; color: #1E293B;">Purchase Orders Resmi (PO)</span>
+            <span class="badge badge-approved" id="topPoCountBadge" style="font-size: 11px;">16 PO</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" id="btnRefreshTopPos" onclick="triggerVisualRefresh('btnRefreshTopPos', loadPurchaseOrders)">
+              <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No. PO</th>
+                <th>Supplier Rekanan</th>
+                <th>Material Dipesan</th>
+                <th class="text-right">Qty</th>
+                <th class="text-right">Total Anggaran (IDR)</th>
+                <th class="text-center">Tgl Order</th>
+                <th class="text-center">Estimasi Tiba</th>
+                <th class="text-center">Status PO</th>
+                <th class="text-center">Dokumen</th>
+              </tr>
+            </thead>
+            <tbody id="topPosTableBody">
+              <tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Memuat Purchase Orders...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- TAB 5: LIVE AGENT TERMINAL -->
       <div class="canvas-tab-content" id="canvas-terminal">
         <div class="terminal-card">
@@ -747,7 +767,7 @@
           
           <!-- Main Input Bar -->
           <div class="input-bar-container">
-            <textarea id="promptInput" class="prompt-textarea" placeholder="Ketik instruksi atau pertanyaan analisis operasional..." rows="1" onkeydown="handleKey(event)"></textarea>
+            <textarea id="promptInput" class="prompt-textarea" placeholder="Ketik instruksi atau pertanyaan analisis operasional..." rows="1" onkeydown="handleKey(event)" oninput="autoResizePromptInput()"></textarea>
 
             <button class="btn btn-primary btn-send" id="btnSendPrompt" onclick="submitPrompt()">
               <span>Kirim</span>

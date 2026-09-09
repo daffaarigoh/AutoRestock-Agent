@@ -66,7 +66,12 @@ SUPPLIERS_RAW = [
     ("SUP-002", "PT Power Mandiri Prima", "Power & Battery", 4.7, "Net 45", "corporate@powermandiri.com", "021-8891240"),
     ("SUP-003", "PT Tower Steel Abadi", "Tower Structure & Steel", 4.5, "Net 60", "b2b@towersteel.co.id", "021-4478129"),
     ("SUP-004", "PT Delta Cooling System", "Shelter & HVAC", 4.6, "Net 30", "support@deltacooling.id", "022-7201882"),
-    ("SUP-005", "PT Surya RF Komunikasi", "RF & Transmission", 4.9, "Net 30", "rf-sales@suryarf.com", "021-7890123")
+    ("SUP-005", "PT Surya RF Komunikasi", "RF & Transmission", 4.9, "Net 30", "rf-sales@suryarf.com", "021-7890123"),
+    ("SUP-006", "PT Furukawa Optical Solutions", "Fiber Optic & Cable", 4.9, "Net 30", "contact@furukawa.co.id", "021-8971200"),
+    ("SUP-007", "PT Huawei Tech Investment", "RF & Transmission", 4.8, "Net 45", "enterprise.id@huawei.com", "021-29398888"),
+    ("SUP-008", "PT ZTT Cable Indonesia", "Fiber Optic & Cable", 4.7, "Net 45", "sales@zttcable.co.id", "021-89831122"),
+    ("SUP-009", "PT Varta Microbattery Indonesia", "Power & Battery", 4.8, "Net 30", "sales.id@varta.com", "021-52960011"),
+    ("SUP-010", "PT Citra Mandiri Genset", "Shelter & HVAC", 4.6, "Net 30", "info@citramandirigenset.com", "021-65301199")
 ]
 df_suppliers = pd.DataFrame(SUPPLIERS_RAW, columns=[
     "supplier_id", "supplier_name", "category", "rating", "payment_terms", "email", "phone"
@@ -74,10 +79,14 @@ df_suppliers = pd.DataFrame(SUPPLIERS_RAW, columns=[
 df_suppliers.to_csv(INV_DIR / "suppliers.csv", index=False)
 
 WAREHOUSES_RAW = [
-    ("WH-JKT-01", "Central Logistics Warehouse Sunter", "Central Warehouse", "DKI Jakarta", "Jl. Danau Sunter Selatan No. 12", 2500, "Agus Sutanto"),
-    ("WH-DPS-01", "Regional Logistics Hub Denpasar", "Regional Hub", "Bali & Nusa Tenggara", "Jl. Gatot Subroto Timur No. 88", 1200, "I Made Sudirga"),
-    ("WH-BDG-01", "Regional Logistics Hub Bandung", "Regional Hub", "Jawa Barat", "Jl. Soekarno Hatta No. 402", 1000, "Ahmad Sofyan"),
-    ("WH-MOB-01", "Mobile Emergency Response Van JKT", "Mobile Van", "DKI Jakarta", "Fleet Unit B 9182 PQA", 50, "Budi Santoso")
+    ("WH-JKT-01", "Central Logistics Warehouse Sunter", "Central Warehouse", "DKI Jakarta", "Jl. Danau Sunter Selatan No. 12", 3500, "Agus Sutanto"),
+    ("WH-JKB-01", "Logistics Hub Daan Mogot Barat", "Regional Hub", "DKI Jakarta", "Jl. Daan Mogot KM 14 No. 8", 1800, "Hendra Setiawan"),
+    ("WH-BDG-01", "Regional Logistics Hub Bandung", "Regional Hub", "Jawa Barat", "Jl. Soekarno Hatta No. 402", 1500, "Ahmad Sofyan"),
+    ("WH-SMG-01", "Regional Logistics Hub Semarang", "Regional Hub", "Jawa Tengah", "Jl. Kaligawe Raya KM 5 No. 18", 1200, "Bambang Prasetyo"),
+    ("WH-SBY-01", "Regional Logistics Hub Surabaya", "Regional Hub", "Jawa Timur", "Jl. Rungkut Industri III No. 45", 2200, "Tri Wibowo"),
+    ("WH-DPS-01", "Regional Logistics Hub Denpasar", "Regional Hub", "Bali & Nusa Tenggara", "Jl. Gatot Subroto Timur No. 88", 1600, "I Made Sudirga"),
+    ("WH-MDN-01", "Regional Logistics Hub Medan", "Regional Hub", "Sumatera Utara", "Jl. Medan-Belawan KM 10.5", 1400, "Rizal Siregar"),
+    ("WH-MKS-01", "Regional Logistics Hub Makassar", "Regional Hub", "Sulawesi Selatan", "Kawasan Industri Makassar (KIMA) Kav 7", 1100, "Andi Mappanyukki")
 ]
 df_warehouses = pd.DataFrame(WAREHOUSES_RAW, columns=[
     "warehouse_id", "warehouse_name", "warehouse_type", "region", "address", "capacity_sqm", "supervisor"
@@ -85,64 +94,166 @@ df_warehouses = pd.DataFrame(WAREHOUSES_RAW, columns=[
 df_warehouses.to_csv(INV_DIR / "warehouses.csv", index=False)
 
 ITEMS_RAW = [
+    # 1. Fiber Optic & Cable (9 Items)
     ("BLT-INV-001", "FO-ADSS-24C", "Kabel Fiber Optic ADSS 24 Core Single Mode", "Fiber Optic & Cable", "meter", 14500, 2000, 1000, 7, "SUP-001"),
     ("BLT-INV-002", "FO-ADSS-48C", "Kabel Fiber Optic ADSS 48 Core Single Mode", "Fiber Optic & Cable", "meter", 22000, 1500, 800, 7, "SUP-001"),
     ("BLT-INV-003", "FO-CLOSURE-48", "Optical Splice Closure 48 Core Dome Type", "Fiber Optic & Cable", "unit", 480000, 25, 10, 5, "SUP-001"),
     ("BLT-INV-004", "ODC-144-MOD", "Optical Distribution Cabinet 144 Port Outdoor", "Fiber Optic & Cable", "unit", 4200000, 10, 4, 14, "SUP-001"),
+    ("BLT-INV-015", "FO-DUCT-96C", "Kabel Fiber Optic Duct 96 Core Armor Single Mode", "Fiber Optic & Cable", "meter", 38500, 1200, 600, 10, "SUP-008"),
+    ("BLT-INV-016", "FO-DROP-2C", "Kabel Drop Cable Figure-8 2 Core FTTH", "Fiber Optic & Cable", "meter", 3200, 3000, 1500, 5, "SUP-006"),
+    ("BLT-INV-017", "ODF-144-RK", "Optical Distribution Frame 144 Port Rackmount 19 Inch", "Fiber Optic & Cable", "unit", 2850000, 15, 6, 7, "SUP-006"),
+    ("BLT-INV-018", "PATCH-LC-LC", "Patch Cord Fiber Optic LC-LC Duplex Single Mode 3m", "Fiber Optic & Cable", "pcs", 65000, 80, 30, 3, "SUP-006"),
+    ("BLT-INV-019", "FO-CLOSURE-96", "Optical Splice Closure 96 Core Heavy Duty Dome", "Fiber Optic & Cable", "unit", 750000, 20, 8, 7, "SUP-008"),
+
+    # 2. Power & Battery (8 Items)
     ("BLT-INV-005", "BAT-LITH-48V", "Baterai Backup Lithium-Ion LiFePO4 48V 100Ah", "Power & Battery", "unit", 18500000, 15, 6, 21, "SUP-002"),
     ("BLT-INV-006", "RECT-MOD-48V", "Rectifier System Module 48V 50A Hot-Swappable", "Power & Battery", "unit", 12000000, 12, 5, 28, "SUP-002"),
     ("BLT-INV-007", "BAT-VRLA-12V", "Baterai VRLA Deep Cycle 12V 100Ah", "Power & Battery", "unit", 3200000, 30, 12, 10, "SUP-002"),
+    ("BLT-INV-020", "BAT-LITH-200A", "Baterai Lithium-Ion LiFePO4 48V 200Ah High Capacity", "Power & Battery", "unit", 34000000, 8, 3, 21, "SUP-009"),
+    ("BLT-INV-021", "SOL-PANEL-450", "Solar Panel Monocrystalline 450Wp Tier-1", "Power & Battery", "unit", 2400000, 20, 8, 14, "SUP-002"),
+    ("BLT-INV-022", "SOL-MPPT-60A", "Solar Charge Controller MPPT 60A 48V Telecom", "Power & Battery", "unit", 3800000, 10, 4, 10, "SUP-002"),
+    ("BLT-INV-023", "GEN-PORT-5KV", "Genset Silent Portable Diesel 5kVA Single Phase", "Power & Battery", "unit", 16500000, 6, 2, 14, "SUP-010"),
+    ("BLT-INV-024", "ATS-PANEL-100", "Automatic Transfer Switch Panel 100A 3-Phase", "Power & Battery", "unit", 8900000, 8, 3, 14, "SUP-010"),
+
+    # 3. Tower Structure & Steel (8 Items)
     ("BLT-INV-008", "TWR-BOLT-M24", "Baut Angkur Struktur Tower Grade 8.8 M24 Galv", "Tower Structure", "set", 85000, 200, 80, 5, "SUP-003"),
     ("BLT-INV-009", "ANT-BRK-UNIV", "Universal Antenna Mounting Bracket 3-Sector", "Tower Structure", "set", 1450000, 40, 15, 10, "SUP-003"),
     ("BLT-INV-010", "GRD-COP-50MM", "Kabel Tembaga Grounding BC 50mm Anti-Petir", "Tower Structure", "meter", 95000, 300, 100, 4, "SUP-003"),
+    ("BLT-INV-025", "GUY-WIRE-8MM", "Kawat Seling Baja Galvanized Guyed Wire 8mm", "Tower Structure", "meter", 28000, 500, 200, 7, "SUP-003"),
+    ("BLT-INV-026", "ROD-COP-58", "Grounding Copper Bonded Rod 5/8 Inch x 3 Meter", "Tower Structure", "batang", 320000, 40, 15, 5, "SUP-003"),
+    ("BLT-INV-027", "STEP-BOLT-M16", "Step Bolt Climbing Ladder Tower M16 Galvanized", "Tower Structure", "pcs", 45000, 150, 50, 4, "SUP-003"),
+    ("BLT-INV-028", "TWR-AVI-LAMP", "Lampu Aviasi Menara Tower LED Solar Medium Intensity", "Tower Structure", "unit", 4500000, 12, 4, 10, "SUP-003"),
+    ("BLT-INV-029", "CLAMP-FEEDER", "Cable Clamp Feeder 7/8 Double 3-Way Stainless Steel", "Tower Structure", "pcs", 24000, 300, 100, 4, "SUP-003"),
+
+    # 4. Shelter & HVAC (5 Items)
     ("BLT-INV-011", "AC-INV-1.5PK", "AC Inverter Heavy Duty Shelter 1.5 PK Dual Auto", "Shelter & HVAC", "unit", 7500000, 8, 3, 12, "SUP-004"),
     ("BLT-INV-012", "GEN-FILT-OIL", "Filter Oli & Solar Genset Perkins 15kVA", "Shelter & HVAC", "set", 650000, 35, 15, 4, "SUP-004"),
+    ("BLT-INV-030", "SHL-EXH-FAN", "Exhaust Fan Heavy Duty Shelter 12 Inch IP55", "Shelter & HVAC", "unit", 1250000, 15, 6, 7, "SUP-004"),
+    ("BLT-INV-031", "FIRE-AER-GEN", "Tabung Pemadam Aerosol Fire Extinguisher Shelter", "Shelter & HVAC", "unit", 3100000, 10, 4, 10, "SUP-004"),
+    ("BLT-INV-032", "DOOR-MAG-LCK", "Smart Magnetic Door Lock Shelter RFID & Keypad", "Shelter & HVAC", "set", 2200000, 12, 5, 7, "SUP-004"),
+
+    # 5. RF & Transmission (5 Items)
     ("BLT-INV-013", "SFP-10G-LR", "Transceiver SFP+ 10G 1310nm 10km LC SMF", "RF & Transmission", "pcs", 750000, 50, 20, 14, "SUP-005"),
     ("BLT-INV-014", "FEED-COAX-78", "Kabel Coaxial Feeder 7/8 Low Loss 50 Ohm", "RF & Transmission", "meter", 82000, 500, 200, 14, "SUP-005"),
+    ("BLT-INV-033", "SFP-1G-LX", "Transceiver SFP 1.25G 1310nm 20km Single Mode", "RF & Transmission", "pcs", 280000, 60, 25, 10, "SUP-007"),
+    ("BLT-INV-034", "JUMP-COAX-2M", "Coaxial Jumper Cable 1/2 DIN Male to DIN Male 2m", "RF & Transmission", "pcs", 420000, 40, 15, 7, "SUP-005"),
+    ("BLT-INV-035", "RF-LIGHT-ARR", "RF Coaxial Surge Coaxial Lightning Arrestor 7/16 DIN", "RF & Transmission", "pcs", 890000, 30, 12, 7, "SUP-007")
 ]
 df_items = pd.DataFrame(ITEMS_RAW, columns=[
     "item_id", "item_code", "item_name", "category", "unit", "unit_price", "min_stock", "safety_stock", "lead_time_days", "supplier_id"
 ])
 df_items.to_csv(INV_DIR / "inventory_items.csv", index=False)
 
-# Stock Balances (sebagian item sengaja di bawah safety stock agar muncul peringatan restock)
+# Stock Balances: Sebaran realistis di 8 Hub Gudang dengan status variatif
 stock_records = []
+
+# Spesifikasi stok khusus yang sengaja LOW/CRITICAL untuk keperluan skenario operasional:
+SPECIAL_STOCKS = {
+    # Hub Bandung: Menipis kabel & closure & rectifier module
+    ("WH-BDG-01", "BLT-INV-002"): (450, 0, "CRITICAL"),
+    ("WH-BDG-01", "BLT-INV-003"): (8, 2, "LOW_STOCK"),
+    ("WH-BDG-01", "BLT-INV-006"): (2, 0, "CRITICAL"),
+    ("WH-BDG-01", "BLT-INV-001"): (3500, 120, "NORMAL"),
+    ("WH-BDG-01", "BLT-INV-018"): (65, 10, "NORMAL"),
+    ("WH-BDG-01", "BLT-INV-025"): (420, 50, "NORMAL"),
+
+    # Hub Denpasar Bali: Menipis baterai lithium & solar panel
+    ("WH-DPS-01", "BLT-INV-005"): (3, 1, "CRITICAL"),
+    ("WH-DPS-01", "BLT-INV-021"): (5, 2, "LOW_STOCK"),
+    ("WH-DPS-01", "BLT-INV-001"): (4200, 200, "NORMAL"),
+    ("WH-DPS-01", "BLT-INV-010"): (280, 40, "NORMAL"),
+    ("WH-DPS-01", "BLT-INV-026"): (32, 5, "NORMAL"),
+    ("WH-DPS-01", "BLT-INV-013"): (45, 12, "NORMAL"),
+
+    # Hub Medan: Menipis genset portable
+    ("WH-MDN-01", "BLT-INV-023"): (1, 0, "CRITICAL"),
+    ("WH-MDN-01", "BLT-INV-012"): (12, 2, "LOW_STOCK"),
+    ("WH-MDN-01", "BLT-INV-008"): (180, 20, "NORMAL"),
+    ("WH-MDN-01", "BLT-INV-014"): (350, 50, "NORMAL"),
+
+    # Hub Semarang: Menipis drop cable
+    ("WH-SMG-01", "BLT-INV-016"): (1200, 300, "LOW_STOCK"),
+    ("WH-SMG-01", "BLT-INV-003"): (18, 2, "NORMAL"),
+    ("WH-SMG-01", "BLT-INV-033"): (40, 8, "NORMAL"),
+
+    # Hub Surabaya: Menipis baut M24
+    ("WH-SBY-01", "BLT-INV-008"): (60, 10, "LOW_STOCK"),
+    ("WH-SBY-01", "BLT-INV-009"): (35, 5, "NORMAL"),
+    ("WH-SBY-01", "BLT-INV-004"): (8, 1, "NORMAL"),
+    ("WH-SBY-01", "BLT-INV-015"): (950, 100, "NORMAL"),
+
+    # Hub Makassar:
+    ("WH-MKS-01", "BLT-INV-013"): (14, 2, "LOW_STOCK"),
+    ("WH-MKS-01", "BLT-INV-006"): (6, 1, "NORMAL"),
+    ("WH-MKS-01", "BLT-INV-007"): (22, 4, "NORMAL")
+}
+
 for item in ITEMS_RAW:
     item_id = item[0]
     min_stk = item[6]
-    for wh in WAREHOUSES_RAW[:3]:  # 3 Gudang utama
-        wh_id = wh[0]
-        # Item 005 (Baterai) dan 003 (Closure) di gudang Jakarta dibuat low stock
-        if item_id in ["BLT-INV-005", "BLT-INV-003"] and wh_id == "WH-JKT-01":
-            qty_on_hand = random.randint(1, min_stk - 1)
-            status = "CRITICAL"
-        elif random.random() < 0.2:
-            qty_on_hand = random.randint(min_stk - 2, min_stk + 2)
-            status = "LOW_STOCK" if qty_on_hand <= min_stk else "NORMAL"
-        else:
-            qty_on_hand = random.randint(min_stk + 5, min_stk * 3)
-            status = "NORMAL"
-        
-        qty_reserved = random.randint(0, min(qty_on_hand, 5))
+
+    # 1. Central Warehouse Sunter (WH-JKT-01) selalu memiliki seluruh 35 item
+    wh_jkt = "WH-JKT-01"
+    if item_id in ["BLT-INV-005", "BLT-INV-003"]:
+        qty_jkt = random.randint(min_stk - 4, min_stk - 1)
+        st_jkt = "LOW_STOCK"
+    else:
+        qty_jkt = random.randint(min_stk + 10, min_stk * 3)
+        st_jkt = "NORMAL"
+    res_jkt = random.randint(0, min(qty_jkt, 5))
+    stock_records.append((
+        f"STK-{wh_jkt}-{item_id}", item_id, wh_jkt, qty_jkt, res_jkt, min_stk, st_jkt, "2026-03-08 14:30:00"
+    ))
+
+    # 2. Daan Mogot Warehouse (WH-JKB-01) buffer stock untuk 15 item cepat pakai
+    if item[3] in ["Fiber Optic & Cable", "Power & Battery"]:
+        wh_jkb = "WH-JKB-01"
+        qty_jkb = random.randint(min_stk, min_stk * 2)
         stock_records.append((
-            f"STK-{wh_id}-{item_id}", item_id, wh_id, qty_on_hand, qty_reserved, min_stk, status, datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f"STK-{wh_jkb}-{item_id}", item_id, wh_jkb, qty_jkb, 0, min_stk, "NORMAL", "2026-03-07 11:15:00"
         ))
+
+# Masukkan stok khusus regional yang sudah didefinisikan
+for (wh_id, item_id), (q_hand, q_res, st) in SPECIAL_STOCKS.items():
+    item_data = next((it for it in ITEMS_RAW if it[0] == item_id), None)
+    min_stk = item_data[6] if item_data else 50
+    stock_records.append((
+        f"STK-{wh_id}-{item_id}", item_id, wh_id, q_hand, q_res, min_stk, st, "2026-03-08 16:45:00"
+    ))
 
 df_stock = pd.DataFrame(stock_records, columns=[
     "balance_id", "item_id", "warehouse_id", "quantity_on_hand", "quantity_reserved", "reorder_point", "stock_status", "last_updated"
 ])
 df_stock.to_csv(INV_DIR / "stock_balances.csv", index=False)
 
-# Purchase Orders
+# Purchase Orders: 16 PO dengan variasi status realistis (COMPLETED, IN_TRANSIT, ORDERED, PENDING_APPROVAL)
 po_records = [
-    ("PO-2026-001", "PO/BLT/2026/01/012", "SUP-002", "BLT-INV-005", 10, 18500000, 185000000, "COMPLETED", "2026-01-10", "2026-01-31", "2026-01-29"),
-    ("PO-2026-002", "PO/BLT/2026/01/018", "SUP-001", "BLT-INV-001", 5000, 14500, 72500000, "COMPLETED", "2026-01-15", "2026-01-22", "2026-01-22"),
-    ("PO-2026-003", "PO/BLT/2026/02/004", "SUP-003", "BLT-INV-009", 25, 1450000, 36250000, "COMPLETED", "2026-02-05", "2026-02-15", "2026-02-14"),
-    ("PO-2026-004", "PO/BLT/2026/02/029", "SUP-002", "BLT-INV-006", 8, 12000000, 96000000, "IN_TRANSIT", "2026-02-20", "2026-03-20", None),
-    ("PO-2026-005", "PO/BLT/2026/03/002", "SUP-001", "BLT-INV-003", 20, 480000, 9600000, "PENDING_APPROVAL", "2026-03-01", "2026-03-06", None),
+    # Historical Delivered POs
+    ("PO-2026-001", "PO/BLT/2026/01/012", "SUP-002", "BLT-INV-005", 10, 18500000, 185000000, "DELIVERED", "2026-01-10", "2026-01-31", "2026-01-29", "WH-JKT-01"),
+    ("PO-2026-002", "PO/BLT/2026/01/018", "SUP-001", "BLT-INV-001", 5000, 14500, 72500000, "DELIVERED", "2026-01-15", "2026-01-22", "2026-01-22", "WH-BDG-01"),
+    ("PO-2026-003", "PO/BLT/2026/02/004", "SUP-003", "BLT-INV-009", 25, 1450000, 36250000, "DELIVERED", "2026-02-05", "2026-02-15", "2026-02-14", "WH-SBY-01"),
+    
+    # Active IN_TRANSIT POs (Sangat cocok untuk pengujian prompt barang tiba!)
+    ("PO-2026-004", "PO/BLT/2026/02/029", "SUP-002", "BLT-INV-006", 8, 12000000, 96000000, "IN_TRANSIT", "2026-02-20", "2026-03-12", None, "WH-BDG-01"),
+    ("PO-2026-005", "PO/BLT/2026/03/002", "SUP-001", "BLT-INV-003", 20, 480000, 9600000, "IN_TRANSIT", "2026-03-01", "2026-03-10", None, "WH-BDG-01"),
+    ("PO-2026-006", "PO/BLT/2026/03/008", "SUP-008", "BLT-INV-002", 3000, 22000, 66000000, "IN_TRANSIT", "2026-03-03", "2026-03-14", None, "WH-BDG-01"),
+    ("PO-2026-007", "PO/BLT/2026/03/011", "SUP-009", "BLT-INV-005", 12, 18500000, 222000000, "IN_TRANSIT", "2026-03-04", "2026-03-18", None, "WH-DPS-01"),
+    ("PO-2026-008", "PO/BLT/2026/03/014", "SUP-002", "BLT-INV-021", 15, 2400000, 36000000, "IN_TRANSIT", "2026-03-05", "2026-03-15", None, "WH-DPS-01"),
+    ("PO-2026-009", "PO/BLT/2026/03/017", "SUP-010", "BLT-INV-023", 4, 16500000, 66000000, "IN_TRANSIT", "2026-03-06", "2026-03-20", None, "WH-MDN-01"),
+    ("PO-2026-010", "PO/BLT/2026/03/020", "SUP-006", "BLT-INV-016", 5000, 3200, 16000000, "IN_TRANSIT", "2026-03-07", "2026-03-14", None, "WH-SMG-01"),
+    
+    # Newly ORDERED POs
+    ("PO-2026-011", "PO/BLT/2026/03/022", "SUP-003", "BLT-INV-008", 120, 85000, 10200000, "ORDERED", "2026-03-07", "2026-03-17", None, "WH-SBY-01"),
+    ("PO-2026-012", "PO/BLT/2026/03/025", "SUP-007", "BLT-INV-033", 40, 280000, 11200000, "ORDERED", "2026-03-08", "2026-03-22", None, "WH-MKS-01"),
+    ("PO-2026-013", "PO/BLT/2026/03/028", "SUP-004", "BLT-INV-011", 5, 7500000, 37500000, "ORDERED", "2026-03-08", "2026-03-25", None, "WH-JKT-01"),
+    
+    # PENDING_APPROVAL POs
+    ("PO-2026-014", "PO/BLT/2026/03/030", "SUP-001", "BLT-INV-004", 4, 4200000, 16800000, "PENDING_APPROVAL", "2026-03-09", "2026-03-23", None, "WH-JKB-01"),
+    ("PO-2026-015", "PO/BLT/2026/03/032", "SUP-003", "BLT-INV-025", 300, 28000, 8400000, "PENDING_APPROVAL", "2026-03-09", "2026-03-20", None, "WH-BDG-01"),
+    ("PO-2026-016", "PO/BLT/2026/03/035", "SUP-005", "BLT-INV-013", 25, 750000, 18750000, "PENDING_APPROVAL", "2026-03-09", "2026-03-24", None, "WH-JKT-01"),
 ]
 df_po = pd.DataFrame(po_records, columns=[
-    "po_id", "po_number", "supplier_id", "item_id", "order_quantity", "unit_price", "total_amount", "status", "order_date", "expected_delivery", "actual_delivery"
+    "po_id", "po_number", "supplier_id", "item_id", "order_quantity", "unit_price", "total_amount", "status", "order_date", "expected_delivery", "actual_delivery", "warehouse_id"
 ])
 df_po.to_csv(INV_DIR / "purchase_orders.csv", index=False)
 
@@ -433,28 +544,28 @@ if DB_PATH.exists():
 conn = duckdb.connect(str(DB_PATH))
 
 # Scope 1 Tables
-conn.execute("CREATE TABLE suppliers AS SELECT * FROM df_suppliers;")
-conn.execute("CREATE TABLE warehouses AS SELECT * FROM df_warehouses;")
-conn.execute("CREATE TABLE inventory_items AS SELECT * FROM df_items;")
-conn.execute("CREATE TABLE stock_balances AS SELECT * FROM df_stock;")
-conn.execute("CREATE TABLE purchase_orders AS SELECT * FROM df_po;")
+conn.execute("CREATE OR REPLACE TABLE suppliers AS SELECT * FROM df_suppliers;")
+conn.execute("CREATE OR REPLACE TABLE warehouses AS SELECT * FROM df_warehouses;")
+conn.execute("CREATE OR REPLACE TABLE inventory_items AS SELECT * FROM df_items;")
+conn.execute("CREATE OR REPLACE TABLE stock_balances AS SELECT * FROM df_stock;")
+conn.execute("CREATE OR REPLACE TABLE purchase_orders AS SELECT * FROM df_po;")
 
 # Scope 2 Tables
-conn.execute("CREATE TABLE telecom_sites AS SELECT * FROM df_sites;")
-conn.execute("CREATE TABLE employees AS SELECT * FROM df_employees;")
-conn.execute("CREATE TABLE attendances AS SELECT * FROM df_attendances;")
-conn.execute("CREATE TABLE leave_requests AS SELECT * FROM df_leave;")
-conn.execute("CREATE TABLE job_postings AS SELECT * FROM df_jobs;")
-conn.execute("CREATE TABLE candidates AS SELECT * FROM df_candidates;")
+conn.execute("CREATE OR REPLACE TABLE telecom_sites AS SELECT * FROM df_sites;")
+conn.execute("CREATE OR REPLACE TABLE employees AS SELECT * FROM df_employees;")
+conn.execute("CREATE OR REPLACE TABLE attendances AS SELECT * FROM df_attendances;")
+conn.execute("CREATE OR REPLACE TABLE leave_requests AS SELECT * FROM df_leave;")
+conn.execute("CREATE OR REPLACE TABLE job_postings AS SELECT * FROM df_jobs;")
+conn.execute("CREATE OR REPLACE TABLE candidates AS SELECT * FROM df_candidates;")
 
 # Scope 3 Tables
-conn.execute("CREATE TABLE chart_of_accounts AS SELECT * FROM df_coa;")
-conn.execute("CREATE TABLE telecom_clients AS SELECT * FROM df_clients;")
-conn.execute("CREATE TABLE mla_contracts AS SELECT * FROM df_mla;")
-conn.execute("CREATE TABLE revenue_invoices AS SELECT * FROM df_invoices;")
-conn.execute("CREATE TABLE site_land_leases AS SELECT * FROM df_land_leases;")
-conn.execute("CREATE TABLE site_utilities_cost AS SELECT * FROM df_utilities;")
-conn.execute("CREATE TABLE financial_transactions AS SELECT * FROM df_trx;")
+conn.execute("CREATE OR REPLACE TABLE chart_of_accounts AS SELECT * FROM df_coa;")
+conn.execute("CREATE OR REPLACE TABLE telecom_clients AS SELECT * FROM df_clients;")
+conn.execute("CREATE OR REPLACE TABLE mla_contracts AS SELECT * FROM df_mla;")
+conn.execute("CREATE OR REPLACE TABLE revenue_invoices AS SELECT * FROM df_invoices;")
+conn.execute("CREATE OR REPLACE TABLE site_land_leases AS SELECT * FROM df_land_leases;")
+conn.execute("CREATE OR REPLACE TABLE site_utilities_cost AS SELECT * FROM df_utilities;")
+conn.execute("CREATE OR REPLACE TABLE financial_transactions AS SELECT * FROM df_trx;")
 
 # System & Auth Tables (for Login & Workflow Engine)
 conn.execute("""
@@ -466,6 +577,7 @@ conn.execute("""
         tenant_id VARCHAR NOT NULL
     );
 """)
+conn.execute("DELETE FROM users;")
 admin_hash = "$2b$12$reziVbiqV1qNNnELI.rGjeE7dJOMBhtT3C6/J3oP4foGl8JaE7ujm" # admin123
 user_hash = "$2b$12$/GHm/zDxQu4BNJ0DX0VBB.Msd3hWRvLEOl.6eo20LIFxXTiYBoLX." # user123
 users_data = [
@@ -482,6 +594,7 @@ conn.execute("""
         value TEXT NOT NULL
     );
 """)
+conn.execute("DELETE FROM system_settings;")
 default_prompt = (
     "Anda adalah Asisten AI Terpadu PT Bali Towerindo Sentra Tbk (Bali Tower).\n"
     "Anda memiliki akses ke 3 domain data operasional: "
@@ -500,20 +613,23 @@ conn.execute("""
         tenant_id VARCHAR DEFAULT 'ALL'
     );
 """)
+conn.execute("DELETE FROM workflows;")
 import json
 wf_list = [
-    ("WF-001", "Auto Restock Material Kritis", "Memeriksa stok material menara & kabel FO yang menipis dan membuat draf PR.", "Periksa stok material kritis, hitung kebutuhan restock, dan buat dokumen Purchase Requisition.", json.dumps({"workflow": "auto_restock", "steps": [{"type": "tool", "tool": "inventory.get_low_stock"}]}), "ALL"),
-    ("WF-002", "Cek Absensi & Lembur Teknisi", "Audit absensi kunjungan site menara dan rekap jam lembur teknisi.", "Tarik data absensi teknisi lapangan dengan validasi geofencing GPS dan kalkulasi biaya lembur.", json.dumps({"workflow": "hr_attendance_audit", "steps": [{"type": "tool", "tool": "hr.audit_attendance"}]}), "ALL"),
-    ("WF-003", "Filter Pelamar Rigger K3", "Menyaring kandidat rigger tower dengan sertifikasi TKPK dan tes medis layak ketinggian.", "Filter kandidat rigger berdasarkan sertifikasi TKPK 1/2 dan tes kesehatan.", json.dumps({"workflow": "hr_filter_candidates", "steps": [{"type": "tool", "tool": "hr.filter_candidates"}]}), "ALL"),
-    ("WF-004", "Laporan Pendapatan Sewa Menara", "Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, XL, IOH).", "Tarik data invoice sewa menara per operator dan status pembayarannya.", json.dumps({"workflow": "finance_revenue_report", "steps": [{"type": "tool", "tool": "finance.revenue_report"}]}), "ALL"),
-    ("WF-005", "Audit Beban Listrik & Sewa Lahan", "Laporan pengeluaran operasional utilitas listrik PLN, BBM genset, dan sewa lahan tower.", "Analisis beban operasional per site mencakup tagihan PLN dan jatuh tempo sewa tanah.", json.dumps({"workflow": "finance_opex_audit", "steps": [{"type": "tool", "tool": "finance.opex_audit"}]}), "ALL"),
-    ("WF-006", "Ringkasan Arus Kas (Cash Flow)", "Laporan arus kas masuk vs keluar harian dan posisi saldo bersih.", "Hitung net cash flow dari transaksi inflow dan outflow.", json.dumps({"workflow": "finance_cashflow", "steps": [{"type": "tool", "tool": "finance.cashflow_summary"}]}), "ALL")
+    ("WF-A01", "Pipeline Pengadaan Material PR-to-PO End-to-End", "Alur pengadaan otomatis terintegrasi dari inspeksi stok, penerbitan PR draf, approval email, hingga penerbitan PO ke vendor.", "Periksa seluruh saldo stok material menara dan kabel fiber optic di gudang logistik usera yang berada di bawah ambang batas minimum. Hitung kuantitas reorder dan vendor rekanan terbaik, terbitkan dokumen resmi Purchase Requisition (PR) dan draf PO PENDING_APPROVAL, lalu kirim email notifikasi ke manajer.", json.dumps({"workflow": "pipeline_pengadaan_material_pr_to_po_end_to_end", "steps": [{"type": "tool", "tool": "inventory.get_low_stock_products"}, {"type": "agent", "task": "calculate_reorder_quantity"}, {"type": "tool", "tool": "docgen.compile"}, {"type": "tool", "tool": "notification.dispatch"}]}), "INVENTORY"),
+    ("WF-A02", "Penerimaan Barang Fisik PO & Update Saldo", "Verifikasi barang Purchase Order (PO) yang tiba di gudang logistik dan sinkronisasi penambahan stok fisik.", "Verifikasi kedatangan barang Purchase Order yang tiba di gudang, catat penerimaan aktual, update status DELIVERED, dan tambahkan stok ke saldo gudang.", json.dumps({"workflow": "usera_po_goods_receipt", "steps": [{"type": "tool", "tool": "inventory.check_specific_stock"}, {"type": "tool", "tool": "inventory.crud_record"}, {"type": "tool", "tool": "notification.dispatch"}]}), "INVENTORY"),
+    ("WF-A03", "Tracking Pengiriman PO & Cetak Dokumen PDF", "Monitoring status pengiriman Purchase Order (PO) aktif dan penerbitan surat pesanan resmi format PDF Typst.", "Audit status PO yang sedang dikirim (IN_TRANSIT), tampilkan nomor PO dan total nilai, serta terbitkan berkas PDF surat pesanan resmi untuk diunduh.", json.dumps({"workflow": "usera_po_tracking_pdf", "steps": [{"type": "tool", "tool": "inventory.check_specific_stock"}, {"type": "tool", "tool": "docgen.compile"}]}), "INVENTORY"),
+    ("WF-002", "Cek Absensi & Lembur Teknisi", "Audit absensi kunjungan site menara dan rekap jam lembur teknisi.", "Tarik data absensi teknisi lapangan dengan validasi geofencing GPS dan kalkulasi biaya lembur.", json.dumps({"workflow": "hr_attendance_audit", "steps": [{"type": "tool", "tool": "hr.audit_attendance"}]}), "HR"),
+    ("WF-003", "Filter Pelamar Rigger K3", "Menyaring kandidat rigger tower dengan sertifikasi TKPK dan tes medis layak ketinggian.", "Filter kandidat rigger berdasarkan sertifikasi TKPK 1/2 dan tes kesehatan.", json.dumps({"workflow": "hr_filter_candidates", "steps": [{"type": "tool", "tool": "hr.filter_candidates"}]}), "HR"),
+    ("WF-004", "Laporan Pendapatan Sewa Menara", "Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, XL, IOH).", "Tarik data invoice sewa menara per operator dan status pembayarannya.", json.dumps({"workflow": "finance_revenue_report", "steps": [{"type": "tool", "tool": "finance.revenue_report"}]}), "FINANCE"),
+    ("WF-005", "Audit Beban Listrik & Sewa Lahan", "Laporan pengeluaran operasional utilitas listrik PLN, BBM genset, dan sewa lahan tower.", "Analisis beban operasional per site mencakup tagihan PLN dan jatuh tempo sewa tanah.", json.dumps({"workflow": "finance_opex_audit", "steps": [{"type": "tool", "tool": "finance.opex_audit"}]}), "FINANCE"),
+    ("WF-006", "Ringkasan Arus Kas (Cash Flow)", "Laporan arus kas masuk vs keluar harian dan posisi saldo bersih.", "Hitung net cash flow dari transaksi inflow dan outflow.", json.dumps({"workflow": "finance_cashflow", "steps": [{"type": "tool", "tool": "finance.cashflow_summary"}]}), "FINANCE")
 ]
 conn.executemany("INSERT INTO workflows VALUES (?, ?, ?, ?, ?, ?);", wf_list)
 
 # Compatibility Table: items & purchase_requests (for existing agents/PR flows)
 conn.execute("""
-    CREATE TABLE IF NOT EXISTS items AS
+    CREATE OR REPLACE TABLE items AS
     SELECT 
         item_id,
         item_name AS name,
@@ -544,6 +660,21 @@ conn.execute("""
         total_amount BIGINT,
         items_json TEXT,
         tenant_id VARCHAR
+    );
+""")
+
+conn.execute("""
+    CREATE TABLE IF NOT EXISTS orders (
+        order_id VARCHAR PRIMARY KEY,
+        pr_number VARCHAR NOT NULL,
+        item_id VARCHAR NOT NULL,
+        vendor_id VARCHAR NOT NULL,
+        quantity INTEGER NOT NULL,
+        unit_price FLOAT NOT NULL,
+        total_price FLOAT NOT NULL,
+        status VARCHAR NOT NULL,
+        tenant_id VARCHAR NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 """)
 

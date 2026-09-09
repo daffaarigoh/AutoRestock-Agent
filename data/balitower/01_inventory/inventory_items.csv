@@ -3,13 +3,34 @@ BLT-INV-001,FO-ADSS-24C,Kabel Fiber Optic ADSS 24 Core Single Mode,Fiber Optic &
 BLT-INV-002,FO-ADSS-48C,Kabel Fiber Optic ADSS 48 Core Single Mode,Fiber Optic & Cable,meter,22000,1500,800,7,SUP-001
 BLT-INV-003,FO-CLOSURE-48,Optical Splice Closure 48 Core Dome Type,Fiber Optic & Cable,unit,480000,25,10,5,SUP-001
 BLT-INV-004,ODC-144-MOD,Optical Distribution Cabinet 144 Port Outdoor,Fiber Optic & Cable,unit,4200000,10,4,14,SUP-001
+BLT-INV-015,FO-DUCT-96C,Kabel Fiber Optic Duct 96 Core Armor Single Mode,Fiber Optic & Cable,meter,38500,1200,600,10,SUP-008
+BLT-INV-016,FO-DROP-2C,Kabel Drop Cable Figure-8 2 Core FTTH,Fiber Optic & Cable,meter,3200,3000,1500,5,SUP-006
+BLT-INV-017,ODF-144-RK,Optical Distribution Frame 144 Port Rackmount 19 Inch,Fiber Optic & Cable,unit,2850000,15,6,7,SUP-006
+BLT-INV-018,PATCH-LC-LC,Patch Cord Fiber Optic LC-LC Duplex Single Mode 3m,Fiber Optic & Cable,pcs,65000,80,30,3,SUP-006
+BLT-INV-019,FO-CLOSURE-96,Optical Splice Closure 96 Core Heavy Duty Dome,Fiber Optic & Cable,unit,750000,20,8,7,SUP-008
 BLT-INV-005,BAT-LITH-48V,Baterai Backup Lithium-Ion LiFePO4 48V 100Ah,Power & Battery,unit,18500000,15,6,21,SUP-002
 BLT-INV-006,RECT-MOD-48V,Rectifier System Module 48V 50A Hot-Swappable,Power & Battery,unit,12000000,12,5,28,SUP-002
 BLT-INV-007,BAT-VRLA-12V,Baterai VRLA Deep Cycle 12V 100Ah,Power & Battery,unit,3200000,30,12,10,SUP-002
+BLT-INV-020,BAT-LITH-200A,Baterai Lithium-Ion LiFePO4 48V 200Ah High Capacity,Power & Battery,unit,34000000,8,3,21,SUP-009
+BLT-INV-021,SOL-PANEL-450,Solar Panel Monocrystalline 450Wp Tier-1,Power & Battery,unit,2400000,20,8,14,SUP-002
+BLT-INV-022,SOL-MPPT-60A,Solar Charge Controller MPPT 60A 48V Telecom,Power & Battery,unit,3800000,10,4,10,SUP-002
+BLT-INV-023,GEN-PORT-5KV,Genset Silent Portable Diesel 5kVA Single Phase,Power & Battery,unit,16500000,6,2,14,SUP-010
+BLT-INV-024,ATS-PANEL-100,Automatic Transfer Switch Panel 100A 3-Phase,Power & Battery,unit,8900000,8,3,14,SUP-010
 BLT-INV-008,TWR-BOLT-M24,Baut Angkur Struktur Tower Grade 8.8 M24 Galv,Tower Structure,set,85000,200,80,5,SUP-003
 BLT-INV-009,ANT-BRK-UNIV,Universal Antenna Mounting Bracket 3-Sector,Tower Structure,set,1450000,40,15,10,SUP-003
 BLT-INV-010,GRD-COP-50MM,Kabel Tembaga Grounding BC 50mm Anti-Petir,Tower Structure,meter,95000,300,100,4,SUP-003
+BLT-INV-025,GUY-WIRE-8MM,Kawat Seling Baja Galvanized Guyed Wire 8mm,Tower Structure,meter,28000,500,200,7,SUP-003
+BLT-INV-026,ROD-COP-58,Grounding Copper Bonded Rod 5/8 Inch x 3 Meter,Tower Structure,batang,320000,40,15,5,SUP-003
+BLT-INV-027,STEP-BOLT-M16,Step Bolt Climbing Ladder Tower M16 Galvanized,Tower Structure,pcs,45000,150,50,4,SUP-003
+BLT-INV-028,TWR-AVI-LAMP,Lampu Aviasi Menara Tower LED Solar Medium Intensity,Tower Structure,unit,4500000,12,4,10,SUP-003
+BLT-INV-029,CLAMP-FEEDER,Cable Clamp Feeder 7/8 Double 3-Way Stainless Steel,Tower Structure,pcs,24000,300,100,4,SUP-003
 BLT-INV-011,AC-INV-1.5PK,AC Inverter Heavy Duty Shelter 1.5 PK Dual Auto,Shelter & HVAC,unit,7500000,8,3,12,SUP-004
 BLT-INV-012,GEN-FILT-OIL,Filter Oli & Solar Genset Perkins 15kVA,Shelter & HVAC,set,650000,35,15,4,SUP-004
+BLT-INV-030,SHL-EXH-FAN,Exhaust Fan Heavy Duty Shelter 12 Inch IP55,Shelter & HVAC,unit,1250000,15,6,7,SUP-004
+BLT-INV-031,FIRE-AER-GEN,Tabung Pemadam Aerosol Fire Extinguisher Shelter,Shelter & HVAC,unit,3100000,10,4,10,SUP-004
+BLT-INV-032,DOOR-MAG-LCK,Smart Magnetic Door Lock Shelter RFID & Keypad,Shelter & HVAC,set,2200000,12,5,7,SUP-004
 BLT-INV-013,SFP-10G-LR,Transceiver SFP+ 10G 1310nm 10km LC SMF,RF & Transmission,pcs,750000,50,20,14,SUP-005
 BLT-INV-014,FEED-COAX-78,Kabel Coaxial Feeder 7/8 Low Loss 50 Ohm,RF & Transmission,meter,82000,500,200,14,SUP-005
+BLT-INV-033,SFP-1G-LX,Transceiver SFP 1.25G 1310nm 20km Single Mode,RF & Transmission,pcs,280000,60,25,10,SUP-007
+BLT-INV-034,JUMP-COAX-2M,Coaxial Jumper Cable 1/2 DIN Male to DIN Male 2m,RF & Transmission,pcs,420000,40,15,7,SUP-005
+BLT-INV-035,RF-LIGHT-ARR,RF Coaxial Surge Coaxial Lightning Arrestor 7/16 DIN,RF & Transmission,pcs,890000,30,12,7,SUP-007

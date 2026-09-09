@@ -682,7 +682,7 @@ body.sidebar-collapsed .sidebar-resizer {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  max-width: 840px;
+  max-width: min(94%, 1160px);
   width: 100%;
   margin: 10px auto 0 auto;
   padding: 0 20px;
@@ -741,18 +741,18 @@ body.sidebar-collapsed .sidebar-resizer {
 }
 
 .hero-title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #0F172A;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .hero-subtitle {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--text-muted);
-  max-width: 520px;
-  line-height: 1.6;
+  max-width: 780px;
+  line-height: 1.65;
 }
 
 /* Empty State Modifier */
@@ -772,7 +772,7 @@ body.sidebar-collapsed .sidebar-resizer {
 
 .gemini-chat-container.is-empty-state .chat-input-deck {
   position: relative;
-  max-width: 740px;
+  max-width: min(94%, 1040px);
   width: 100%;
   padding: 16px 20px 0 20px;
   background: transparent;
@@ -788,33 +788,35 @@ body.sidebar-collapsed .sidebar-resizer {
   flex: 1 1 0%;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 0 20px 0;
+  padding: 14px 0 24px 0;
   display: flex;
   justify-content: center;
 }
 
 .chat-feed {
   width: 100%;
-  max-width: 840px;
+  max-width: min(94%, 1160px);
   padding: 0 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* User Message Bubble */
+/* User Message Bubble - Expands naturally with content */
 .user-query-bubble {
   align-self: flex-end;
-  max-width: 75%;
+  width: fit-content;
+  max-width: min(85%, 920px);
   background: #1E293B;
   color: #FFFFFF !important;
   font-size: 13.5px;
   font-weight: 500;
-  line-height: 1.5;
-  padding: 10px 16px;
-  border-radius: 14px 14px 2px 14px;
+  line-height: 1.55;
+  padding: 11px 18px;
+  border-radius: 16px 16px 4px 16px;
   box-shadow: var(--shadow-sm);
   word-break: break-word;
+  white-space: pre-wrap;
   animation: slideUpFade 0.2s ease forwards;
 }
 
@@ -831,7 +833,7 @@ body.sidebar-collapsed .sidebar-resizer {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 16px 18px;
+  padding: 18px 20px;
   box-shadow: var(--shadow-sm);
   color: var(--text-main);
 }
@@ -903,7 +905,7 @@ body.sidebar-collapsed .sidebar-resizer {
 
 .chat-input-inner {
   width: 100%;
-  max-width: 840px;
+  max-width: min(94%, 1160px);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -913,16 +915,22 @@ body.sidebar-collapsed .sidebar-resizer {
   display: flex;
   align-items: center;
   background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill);
-  padding: 4px 6px 4px 14px;
-  box-shadow: var(--shadow-md);
-  transition: all 0.2s ease;
+  border: 1.5px solid var(--border-color);
+  border-radius: 28px;
+  padding: 5px 8px 5px 18px;
+  box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: border-radius 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, padding 0.2s ease;
 }
 
 .input-bar-container:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), var(--shadow-md);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 4px 18px -2px rgba(0, 0, 0, 0.08);
+}
+
+.input-bar-container.is-multiline {
+  align-items: flex-end;
+  border-radius: 18px;
+  padding: 10px 10px 10px 18px;
 }
 
 .prompt-textarea {
@@ -931,12 +939,14 @@ body.sidebar-collapsed .sidebar-resizer {
   border: none;
   outline: none;
   font-family: var(--font-main);
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--text-main);
   resize: none;
-  max-height: 100px;
-  line-height: 1.4;
-  padding: 6px 0;
+  min-height: 24px;
+  max-height: 220px;
+  line-height: 1.5;
+  padding: 5px 0;
+  overflow-y: auto;
 }
 
 .prompt-textarea::placeholder {
@@ -945,8 +955,19 @@ body.sidebar-collapsed .sidebar-resizer {
 
 .btn-send {
   border-radius: var(--radius-pill);
-  padding: 7px 16px;
-  font-size: 12.5px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  transition: all 0.15s ease;
+}
+
+.input-bar-container.is-multiline .btn-send {
+  margin-bottom: 2px;
 }
 
 .input-hint {

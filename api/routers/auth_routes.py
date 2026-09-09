@@ -67,9 +67,9 @@ def _normalize_tenant_id(val: str) -> str:
     v = (val or "").strip()
     mapping = {
         "all": "ALL", "ALL": "ALL",
-        "usera": "TENANT_A", "USERA": "TENANT_A", "TENANT_A": "TENANT_A",
-        "userb": "TENANT_B", "USERB": "TENANT_B", "TENANT_B": "TENANT_B",
-        "userc": "TENANT_C", "USERC": "TENANT_C", "TENANT_C": "TENANT_C"
+        "usera": "INVENTORY", "USERA": "INVENTORY", "TENANT_A": "INVENTORY", "INVENTORY": "INVENTORY",
+        "userb": "HR", "USERB": "HR", "TENANT_B": "HR", "HR": "HR",
+        "userc": "FINANCE", "USERC": "FINANCE", "TENANT_C": "FINANCE", "FINANCE": "FINANCE"
     }
     return mapping.get(v, mapping.get(v.upper(), "ALL"))
 

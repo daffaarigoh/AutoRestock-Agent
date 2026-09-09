@@ -116,6 +116,27 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
                     INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """, insert_orders_params)
+
+            # Synchronize Purchase Orders (PO) in purchase_orders table: status becomes ORDERED
+            if is_approve:
+                conn.execute("UPDATE purchase_orders SET status = 'ORDERED' WHERE pr_number = ?;", [pr_number])
+                conn.execute("UPDATE purchase_requests SET status = 'APPROVED' WHERE pr_number = ?;", [pr_number])
+                if pr and pr.items:
+                    item_ids = [it.item_id for it in pr.items]
+                    placeholders = ", ".join(["?"] * len(item_ids))
+                    conn.execute(f"UPDATE purchase_orders SET status = 'ORDERED' WHERE status = 'PENDING_APPROVAL' AND item_id IN ({placeholders});", item_ids)
+                    
+                    # Pre-compile official Typst PDF for ordered POs
+                    try:
+                        from docgen.compiler import generate_po_pdf
+                        po_matches = conn.execute(f"SELECT po_id FROM purchase_orders WHERE pr_number = ? OR (status = 'ORDERED' AND item_id IN ({placeholders}));", [pr_number] + item_ids).fetchall()
+                        for (p_id,) in po_matches:
+                            generate_po_pdf(p_id)
+                    except Exception as po_err:
+                        print(f"PO DocGen error: {po_err}")
+            else:
+                conn.execute("UPDATE purchase_orders SET status = 'REJECTED' WHERE pr_number = ?;", [pr_number])
+                conn.execute("UPDATE purchase_requests SET status = 'REJECTED' WHERE pr_number = ?;", [pr_number])
         finally:
             conn.commit()
             conn.close()
@@ -284,70 +305,223 @@ async def quick_approval_action(
                 for item in pr.items
             ]
         stock_delta_info = _update_db_status(pr_number, "APPROVED", pr)
-        status_badge = '<span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; padding: 6px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.9rem;">DISETUJUI (APPROVED)</span>'
-        title_color = "#22c55e"
-        heading_text = "Pengadaan Barang Telah Disetujui"
-        desc_text = f"Dokumen <strong>{pr_number}</strong> telah resmi disetujui. Status pesanan diperbarui ke APPROVED dan pengadaan dilanjutkan ke vendor terkait."
+        status_badge = '<span style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;">STATUS: DISETUJUI (APPROVED)</span>'
+        title_color = "#0F172A"
+        heading_text = "Otorisasi Pengadaan Berhasil Dicatatkan"
+        desc_text = f"Dokumen Purchase Requisition <strong>{pr_number}</strong> telah resmi disetujui. Sistem telah memproses pengesahan dan Purchase Order (PO) resmi kini siap diteruskan ke rekanan vendor terpilih untuk pengiriman material."
     else:
         if pr:
             pr.status = "REJECTED"
         stock_delta_info = _update_db_status(pr_number, "REJECTED", pr)
-        status_badge = '<span style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; padding: 6px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.9rem;">DITOLAK (REJECTED)</span>'
-        title_color = "#ef4444"
+        status_badge = '<span style="background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;">STATUS: DITOLAK (REJECTED)</span>'
+        title_color = "#0F172A"
         heading_text = "Pengadaan Barang Ditolak"
-        desc_text = f"Dokumen <strong>{pr_number}</strong> telah ditolak. Anggaran pengadaan dibatalkan dan stok fisik gudang tidak berubah."
+        desc_text = f"Dokumen Purchase Requisition <strong>{pr_number}</strong> telah ditolak. Alokasi anggaran dibatalkan dan kuantitas stok gudang tetap dipertahankan."
 
     if pr:
         _regenerate_pdf(pr)
 
     pdf_download_url = f"/api/documents/pr/{pr_number}/download"
-    items_html = "".join(items_updated_summary) if items_updated_summary else "<li>Daftar barang tercatat di tabel orders DuckDB.</li>"
+    items_html = "".join(items_updated_summary) if items_updated_summary else "<li>Daftar barang tercatat dalam basis data logistik.</li>"
 
-    html_content = f"""
-    <!DOCTYPE html>
-    <html lang="id">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Status Persetujuan | {pr_number}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-        <style>
-            * {{ box-sizing: border-box; }}
-            body {{ font-family: 'Inter', sans-serif; background: radial-gradient(circle at top, #1e293b, #0f172a); color: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 24px; }}
-            .container {{ background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; max-width: 580px; width: 100%; padding: 40px 32px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); }}
-            h1 {{ color: {title_color}; font-size: 1.6rem; font-weight: 800; margin: 16px 0 8px 0; }}
-            p {{ color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin: 0 0 16px 0; }}
-            .meta-box {{ background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 14px 18px; margin: 20px 0; font-size: 0.9rem; color: #cbd5e1; display: flex; justify-content: space-between; align-items: center; }}
-            .meta-val {{ font-weight: 700; color: #f1f5f9; }}
-            .btn-group {{ display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }}
-            .btn {{ flex: 1; min-width: 140px; padding: 12px 20px; border-radius: 10px; font-weight: 600; font-size: 0.95rem; text-decoration: none; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }}
-            .btn-primary {{ background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }}
-            .btn-primary:hover {{ background: #1d4ed8; transform: translateY(-1px); }}
-            .btn-secondary {{ background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.1); }}
-            .btn-secondary:hover {{ background: rgba(255, 255, 255, 0.15); color: white; }}
-            .stock-alert {{ padding: 12px; border-radius: 8px; font-size: 0.9rem; background: rgba(30, 41, 59, 0.7); border-left: 4px solid {title_color}; text-align: left; margin-top: 16px; color: #e2e8f0; }}
-            .items-box {{ background: #0f172a; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: left; }}
-            .items-box ul {{ margin: 0; padding-left: 20px; line-height: 1.6; color: #cbd5e1; font-size: 0.95rem; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div>{status_badge}</div>
+    html_content = f"""<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konfirmasi Otorisasi | {pr_number}</title>
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F1F5F9;
+            color: #0F172A;
+            margin: 0;
+            padding: 32px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }}
+        .receipt-card {{
+            background: #FFFFFF;
+            border: 1px solid #CBD5E1;
+            border-radius: 8px;
+            max-width: 620px;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }}
+        .receipt-header {{
+            background: #0F172A;
+            color: #FFFFFF;
+            padding: 22px 28px;
+            border-bottom: 3px solid #2563EB;
+        }}
+        .corp-name {{
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #F8FAFC;
+            margin: 0;
+        }}
+        .corp-dept {{
+            font-size: 12px;
+            color: #94A3B8;
+            margin: 4px 0 0 0;
+        }}
+        .receipt-body {{
+            padding: 32px 28px;
+        }}
+        .status-container {{
+            margin-bottom: 20px;
+        }}
+        h1 {{
+            font-size: 20px;
+            font-weight: 700;
+            color: {title_color};
+            margin: 0 0 10px 0;
+            line-height: 1.3;
+        }}
+        p.lead-desc {{
+            color: #475569;
+            font-size: 13.5px;
+            line-height: 1.6;
+            margin: 0 0 20px 0;
+        }}
+        .meta-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            font-size: 13px;
+        }}
+        .meta-table td {{
+            padding: 10px 12px;
+            border-bottom: 1px solid #E2E8F0;
+        }}
+        .meta-label {{
+            color: #64748B;
+            width: 40%;
+            font-weight: 500;
+        }}
+        .meta-val {{
+            color: #0F172A;
+            font-weight: 600;
+            text-align: right;
+            font-family: 'Consolas', monospace;
+        }}
+        .items-box {{
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 20px 0;
+            font-size: 13px;
+        }}
+        .items-box-title {{
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #475569;
+            margin-bottom: 10px;
+        }}
+        .items-box ul {{
+            margin: 0;
+            padding-left: 20px;
+            line-height: 1.6;
+            color: #334155;
+        }}
+        .btn-row {{
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+        }}
+        .btn {{
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            transition: background 0.15s ease;
+        }}
+        .btn-primary {{
+            background: #0F172A;
+            color: #FFFFFF !important;
+            border: 1px solid #0F172A;
+        }}
+        .btn-primary:hover {{
+            background: #1E293B;
+        }}
+        .btn-secondary {{
+            background: #FFFFFF;
+            color: #334155 !important;
+            border: 1px solid #CBD5E1;
+        }}
+        .btn-secondary:hover {{
+            background: #F8FAFC;
+        }}
+        .receipt-footer {{
+            background: #F8FAFC;
+            border-top: 1px solid #E2E8F0;
+            padding: 16px 28px;
+            font-size: 11.5px;
+            color: #64748B;
+            text-align: center;
+        }}
+    </style>
+</head>
+<body>
+    <div class="receipt-card">
+        <div class="receipt-header">
+            <h2 class="corp-name">PT Bali Towerindo Sentra Tbk</h2>
+            <p class="corp-dept">Enterprise Operations Command Center &mdash; Procurement System</p>
+        </div>
+        <div class="receipt-body">
+            <div class="status-container">
+                {status_badge}
+            </div>
             <h1>{heading_text}</h1>
-            <p>{desc_text}</p>
-            <div class="meta-box"><span>No. Purchase Requisition</span><span class="meta-val">{pr_number}</span></div>
-            <div class="meta-box"><span>Diperbarui Oleh</span><span class="meta-val">{manager_name}</span></div>
-            <div class="meta-box"><span>Waktu Keputusan</span><span class="meta-val">{datetime.now().strftime('%d %b %Y, %H:%M WIB')}</span></div>
-            {'<div class="items-box"><div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Rincian Barang Terkait:</div><ul>' + items_html + '</ul></div>' if clean_action == 'APPROVE' else ''}
-            <div class="stock-alert">{stock_delta_info}</div>
-            <div class="btn-group">
-                <a href="{pdf_download_url}" class="btn btn-secondary" target="_blank">Unduh Dokumen PDF</a>
+            <p class="lead-desc">{desc_text}</p>
+
+            <table class="meta-table">
+                <tr>
+                    <td class="meta-label">Nomor Purchase Requisition</td>
+                    <td class="meta-val">{pr_number}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Otorisator / Penyetuju</td>
+                    <td class="meta-val">{manager_name}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Waktu Pengesahan</td>
+                    <td class="meta-val">{datetime.now().strftime('%d %b %Y, %H:%M WIB')}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Tindak Lanjut Sistem</td>
+                    <td class="meta-val" style="color: #15803D;">{'Penerbitan PO Resmi' if clean_action == 'APPROVE' else 'Pengadaan Dibatalkan'}</td>
+                </tr>
+            </table>
+
+            {'<div class="items-box"><div class="items-box-title">Alokasi Material yang Divalidasi:</div><ul>' + items_html + '</ul></div>' if clean_action == 'APPROVE' else ''}
+
+            <div class="btn-row">
+                <a href="{pdf_download_url}" class="btn btn-secondary" target="_blank">Unduh Dokumen PDF Resmi</a>
                 <a href="/" class="btn btn-primary">Buka Web Dashboard</a>
             </div>
         </div>
-    </body>
-    </html>
-    """
+        <div class="receipt-footer">
+            Dokumen resmi ini disahkan secara elektronik melalui sistem terintegrasi DuckDB Enterprise.
+        </div>
+    </div>
+</body>
+</html>"""
     return HTMLResponse(content=html_content)
 
 
