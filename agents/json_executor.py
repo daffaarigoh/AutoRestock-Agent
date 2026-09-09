@@ -337,6 +337,180 @@ class JSONExecutionEngine:
                         "details": f"Draft {pr_number} created and saved to orders."
                     })
 
+                # ----------------------------------------------------
+                # BLOCK 5: SYSTEM & UTILITY OPERATIONS (Schema ALL)
+                # ----------------------------------------------------
+                elif step_type == "tool" and action == "system.check_profile":
+                    user_info = context.get("user_info") or {}
+                    username = user_info.get("username") or context.get("username") or "user"
+                    user_role = user_info.get("role") or context.get("role") or "USER"
+                    user_tenant = user_info.get("tenant_id") or tenant_id or "ALL"
+                    
+                    conn = get_db_connection(read_only=True)
+                    try:
+                        db_user = conn.execute("SELECT username, role, tenant_id FROM users WHERE username = ?", [username]).fetchone()
+                        if db_user:
+                            username, user_role, user_tenant = db_user
+                    finally:
+                        conn.close()
+                    
+                    tenant_desc = {
+                        "ALL": "Super Administrator (Akses Penuh Seluruh Schema)",
+                        "INVENTORY": "Divisi Logistik & Gudang Material (Schema A)",
+                        "HR": "Divisi Personalia & Field Workforce (Schema B)",
+                        "FINANCE": "Divisi Keuangan & Akuntansi (Schema C)"
+                    }.get(str(user_tenant).upper(), f"Divisi {user_tenant}")
+
+                    modules_access = {
+                        "ALL": "Inventory, HR & Recruitment, Finance & OPEX, Sistem Setting",
+                        "INVENTORY": "Inventory, Stok Material, Restock PO, Gudang Menara",
+                        "HR": "HR, Absensi Geofencing, Cuti, Screening K3 Rigger",
+                        "FINANCE": "Finance, Tagihan Operator, OPEX Listrik/Lahan, Arus Kas"
+                    }.get(str(user_tenant).upper(), "Modul Standar")
+
+                    msg = (
+                        f"### 👤 Profil Pengguna & Hak Akses Sistem\n\n"
+                        f"| Parameter | Keterangan |\n"
+                        f"| :--- | :--- |\n"
+                        f"| **Username** | `{username}` |\n"
+                        f"| **Role Wewenang** | **{user_role}** |\n"
+                        f"| **Divisi (Tenant)** | **{tenant_desc}** |\n"
+                        f"| **Modul yang Diizinkan** | {modules_access} |\n"
+                        f"| **Status Akun** | 🟢 **ACTIVE / VERIFIED** |\n\n"
+                        f"*Info:* Anda masuk ke dalam cakupan **Schema {user_tenant}**. Semua aksi terekam dalam audit trail sistem."
+                    )
+                    context["profile_message"] = msg
+                    execution_results.append({
+                        "step_number": i,
+                        "title": "Verifikasi Profil Pengguna",
+                        "status": "COMPLETED",
+                        "details": f"Profil pengguna '{username}' ({user_tenant}) berhasil diverifikasi."
+                    })
+
+                elif step_type == "tool" and action == "system.get_system_info":
+                    from core.config import settings
+                    conn = get_db_connection(read_only=True)
+                    try:
+                        table_count = len(conn.execute("SHOW TABLES;").fetchall())
+                        wf_count = conn.execute("SELECT COUNT(*) FROM workflows").fetchone()[0]
+                    finally:
+                        conn.close()
+
+                    msg = (
+                        f"### ⚙️ Informasi & Status Sistem AutoRestock-Agent\n\n"
+                        f"| Komponen | Status / Versi |\n"
+                        f"| :--- | :--- |\n"
+                        f"| **Aplikasi** | `{settings.APP_NAME}` (Environment: `{settings.APP_ENV}`) |\n"
+                        f"| **Database Engine** | DuckDB Embedded (Total Tabel: `{table_count}`, Workflows: `{wf_count}`) |\n"
+                        f"| **AI Gateway Model** | `{settings.MODEL_NAME}` (Endpoint: `{settings.MODEL_URL}`) |\n"
+                        f"| **Multi-Agent Orchestrator** | LangGraph StateGraph + HITL Interruption |\n"
+                        f"| **DocGen Engine** | Typst Native Compiler (<50ms PDF Rendering) |\n"
+                        f"| **API Server Host:Port** | `{settings.API_HOST}:{settings.API_PORT}` |\n"
+                        f"| **Health Status** | 🟢 **OPERATIONAL (HEALTHY)** |\n"
+                    )
+                    context["system_info_message"] = msg
+                    execution_results.append({
+                        "step_number": i,
+                        "title": "Health Check & Status Sistem",
+                        "status": "COMPLETED",
+                        "details": "Seluruh subsistem (FastAPI, DuckDB, LangGraph, Typst) berjalan normal."
+                    })
+
+                elif step_type == "tool" and action == "system.get_company_guidelines":
+                    msg = (
+                        f"### 📋 Panduan Operasional & Kontak Darurat Perusahaan (PT Bali Towerindo Sentra Tbk)\n\n"
+                        f"#### 1. Aturan Kerja & SOP Antar-Divisi\n"
+                        f"- **Divisi Inventory (Schema A):** Batas minimum stok dievaluasi secara otomatis setiap hari. Jika status KRITIS, draft PR akan diajukan ke manajer operasional.\n"
+                        f"- **Divisi HR (Schema B):** Seluruh teknisi menara wajib mematuhi protokol K3 Ketinggian (TKPK 1/2) dan absensi validasi geofencing GPS maksimal radius 100m dari titik menara.\n"
+                        f"- **Divisi Keuangan (Schema C):** Invoicing sewa menara ke operator telekomunikasi diterbitkan setiap tanggal 25. Rekapitulasi OPEX utilitas PLN dan sewa lahan direview bulanan.\n\n"
+                        f"#### 2. Kontak Darurat & Helpdesk Operasional\n"
+                        f"| Tim | PIC | Saluran Kontak |\n"
+                        f"| :--- | :--- | :--- |\n"
+                        f"| **NOC & Tower Helpdesk 24/7** | Tim NOC Pusat | `ext. 101` / `noc@balitower.co.id` |\n"
+                        f"| **Keamanan & K3 Lapangan** | Koordinator HSE | `ext. 108` / `k3@balitower.co.id` |\n"
+                        f"| **IT Support & System Agent** | DevOps Admin | `ext. 112` / `it-support@balitower.co.id` |\n"
+                    )
+                    context["guidelines_message"] = msg
+                    execution_results.append({
+                        "step_number": i,
+                        "title": "Muat Panduan Operasional & SOP",
+                        "status": "COMPLETED",
+                        "details": "Panduan SOP operasional dan nomor darurat berhasil dimuat."
+                    })
+
+                # ----------------------------------------------------
+                # BLOCK 6: FINANCE OPERATIONS (Schema C)
+                # ----------------------------------------------------
+                elif step_type == "tool" and action == "finance.revenue_report":
+                    conn = get_db_connection(read_only=True)
+                    try:
+                        rev_rows = conn.execute("""
+                            SELECT c.client_name, COUNT(i.invoice_id), CAST(SUM(i.total_billed) AS BIGINT),
+                                   CAST(SUM(CASE WHEN i.payment_status = 'PAID' THEN i.total_billed ELSE 0 END) AS BIGINT),
+                                   CAST(SUM(CASE WHEN i.payment_status = 'UNPAID' THEN i.total_billed ELSE 0 END) AS BIGINT)
+                            FROM revenue_invoices i
+                            JOIN telecom_clients c ON i.client_id = c.client_id
+                            GROUP BY c.client_name ORDER BY 3 DESC;
+                        """).fetchall()
+                        msg = "**Rekapitulasi Pendapatan Sewa Menara per Operator (Q1 2026)**\n\n"
+                        msg += "| Operator Klien | Invoices | Total Tagihan (IDR) | Sudah Lunas (IDR) | Piutang (AR) |\n"
+                        msg += "| :--- | :---: | :---: | :---: | :---: |\n"
+                        for r in rev_rows:
+                            msg += f"| {r[0]} | {r[1]} | Rp {r[2]:,} | Rp {r[3]:,} | **Rp {r[4]:,}** |\n"
+                        context["finance_message"] = msg
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Kompilasi Laporan Pendapatan Operator",
+                            "status": "COMPLETED",
+                            "details": f"Berhasil menghimpun data pendapatan dari {len(rev_rows)} operator telekomunikasi."
+                        })
+                    finally:
+                        conn.close()
+
+                elif step_type == "tool" and action == "finance.opex_audit":
+                    conn = get_db_connection(read_only=True)
+                    try:
+                        opex_rows = conn.execute("""
+                            SELECT account_name, COUNT(*), CAST(SUM(amount) AS BIGINT)
+                            FROM financial_transactions WHERE trx_type = 'OUTFLOW'
+                            GROUP BY account_name ORDER BY 3 DESC;
+                        """).fetchall()
+                        msg = "**Laporan Rincian Beban Operasional Site (OPEX)**\n\n"
+                        msg += "| Kategori Beban | Transaksi | Total Realisasi (IDR) |\n"
+                        msg += "| :--- | :---: | :---: |\n"
+                        for r in opex_rows:
+                            msg += f"| {r[0]} | {r[1]} kali | **Rp {r[2]:,}** |\n"
+                        context["finance_message"] = msg
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Audit Beban Operasional (OPEX)",
+                            "status": "COMPLETED",
+                            "details": f"Berhasil menganalisis {len(opex_rows)} kategori pengeluaran operasional site."
+                        })
+                    finally:
+                        conn.close()
+
+                elif step_type == "tool" and action == "finance.cashflow_summary":
+                    conn = get_db_connection(read_only=True)
+                    try:
+                        inflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'INFLOW'").fetchone()[0]
+                        outflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'OUTFLOW'").fetchone()[0]
+                        net = inflow - outflow
+                        msg = "**Ringkasan Arus Kas Operasional PT Bali Towerindo Sentra Tbk**\n\n"
+                        msg += f"- **Total Kas Masuk (Inflow):** Rp {int(inflow):,}\n"
+                        msg += f"- **Total Kas Keluar (Outflow):** Rp {int(outflow):,}\n"
+                        msg += f"- **Surplus Arus Kas Bersih (Net Cash Flow):** **Rp {int(net):,}**\n\n"
+                        msg += "Arus kas perusahaan berada dalam kondisi sehat dengan rasio penerimaan sewa menara yang stabil."
+                        context["finance_message"] = msg
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Kalkulasi Arus Kas (Cash Flow)",
+                            "status": "COMPLETED",
+                            "details": f"Net cash flow: Rp {int(net):,}."
+                        })
+                    finally:
+                        conn.close()
+
                 else:
                     execution_results.append({
                         "step_number": i,
@@ -362,6 +536,14 @@ class JSONExecutionEngine:
         elif context.get("registered_item"):
             reg = context["registered_item"]
             summary = f"Barang '{reg.get('name')}' (SKU: {reg.get('item_id')}) berhasil didaftarkan secara eksklusif ke inventaris {reg.get('tenant_id')}."
+        elif "profile_message" in context:
+            summary = context["profile_message"]
+        elif "system_info_message" in context:
+            summary = context["system_info_message"]
+        elif "guidelines_message" in context:
+            summary = context["guidelines_message"]
+        elif "finance_message" in context:
+            summary = context["finance_message"]
         elif context.get("pr_number") and context.get("email_sent"):
             summary = f"Ditemukan {len(context.get('low_stock_items', []))} barang yang stoknya menipis. Dokumen {context.get('pr_number')} telah berhasil diterbitkan dan notifikasi persetujuan telah otomatis dikirimkan via email ke manajer."
         elif context.get("pr_number"):

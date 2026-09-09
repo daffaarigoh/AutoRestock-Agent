@@ -64,21 +64,35 @@ def _ensure_workflow_tenant_column(conn):
 
 
 def _normalize_tenant_id(val: str) -> str:
-    v = (val or "").strip()
+    v = (val or "").strip().upper()
     mapping = {
-        "all": "ALL", "ALL": "ALL",
-        "usera": "TENANT_A", "USERA": "TENANT_A", "TENANT_A": "TENANT_A",
-        "userb": "TENANT_B", "USERB": "TENANT_B", "TENANT_B": "TENANT_B",
-        "userc": "TENANT_C", "USERC": "TENANT_C", "TENANT_C": "TENANT_C"
+        "ALL": "ALL",
+        "SCHEMA_ALL": "ALL",
+        "SCHEMA ALL": "ALL",
+        "USERA": "INVENTORY",
+        "TENANT_A": "INVENTORY",
+        "SCHEMA_A": "INVENTORY",
+        "SCHEMA A": "INVENTORY",
+        "INVENTORY": "INVENTORY",
+        "USERB": "HR",
+        "TENANT_B": "HR",
+        "SCHEMA_B": "HR",
+        "SCHEMA B": "HR",
+        "HR": "HR",
+        "USERC": "FINANCE",
+        "TENANT_C": "FINANCE",
+        "SCHEMA_C": "FINANCE",
+        "SCHEMA C": "FINANCE",
+        "FINANCE": "FINANCE"
     }
-    return mapping.get(v, mapping.get(v.upper(), "ALL"))
+    return mapping.get(v, "ALL")
 
 
 class CreateWorkflowRequest(BaseModel):
     name: str
     description: str
     business_instruction: str
-    tenant_id: str = "ALL"  # ALL, TENANT_A, TENANT_B, TENANT_C, usera, userb, userc
+    tenant_id: str = "ALL"  # ALL, INVENTORY, HR, FINANCE
 
 @router.post("/admin/workflows")
 async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends(get_current_admin)):
@@ -106,8 +120,7 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    conn = get_db_connection(read_only=False)
-    _ensure_workflow_tenant_column(conn)
+    conn = get_db_connection(read_only=True)
     rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id FROM workflows ORDER BY id ASC").fetchall()
     columns = [desc[0] for desc in conn.description]
     conn.close()

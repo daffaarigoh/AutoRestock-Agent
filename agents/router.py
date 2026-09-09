@@ -154,7 +154,42 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
         except Exception as e:
             print(f"[SEMANTIC ROUTER] LLM unavailable ({e}). Using intelligent heuristic matcher.")
             
-        # 1. Check for specific item stock query (only if explicitly asking stock check)
+        # 0. Check for Schema ALL Utility Workflows
+        # A. User Profile & Access Rights (WF-ALL-01)
+        if any(k in prompt_lower for k in ["profil", "siapa saya", "info akun", "hak akses", "wewenang", "role saya", "user info"]):
+            for row in workflows:
+                if row[0] == "WF-ALL-01" or any(w in row[1].lower() for w in ["profil", "hak akses", "user"]):
+                    return {"workflow_id": row[0], "send_email": False}
+
+        # B. System Info & Health Status (WF-ALL-02)
+        if any(k in prompt_lower for k in ["info sistem", "status sistem", "status server", "health check", "spesifikasi sistem", "informasi sistem", "versi sistem"]):
+            for row in workflows:
+                if row[0] == "WF-ALL-02" or any(w in row[1].lower() for w in ["informasi sistem", "status layanan", "health"]):
+                    return {"workflow_id": row[0], "send_email": False}
+
+        # C. Company Guidelines & Emergency Contacts (WF-ALL-03)
+        if any(k in prompt_lower for k in ["panduan operasional", "sop perusahaan", "kontak darurat", "helpdesk", "aturan kerja", "panduan", "sop"]):
+            for row in workflows:
+                if row[0] == "WF-ALL-03" or any(w in row[1].lower() for w in ["panduan", "darurat", "sop", "guideline"]):
+                    return {"workflow_id": row[0], "send_email": False}
+
+        # 1. Check for Finance Workflows (Schema C) - If permitted for this tenant
+        if any(k in prompt_lower for k in ["pendapatan sewa", "pendapatan menara", "pendapatan operator", "revenue", "invoice operator", "tagihan operator", "sewa menara"]):
+            for row in workflows:
+                if row[0] == "WF-004" or any(w in row[1].lower() for w in ["pendapatan", "revenue", "invoice"]):
+                    return {"workflow_id": row[0], "send_email": False}
+
+        if any(k in prompt_lower for k in ["beban operasional", "opex", "listrik pln", "beban listrik", "sewa lahan", "biaya genset", "beban site"]):
+            for row in workflows:
+                if row[0] == "WF-005" or any(w in row[1].lower() for w in ["beban listrik", "opex", "sewa lahan"]):
+                    return {"workflow_id": row[0], "send_email": False}
+
+        if any(k in prompt_lower for k in ["arus kas", "cash flow", "cashflow", "kas masuk", "kas keluar", "saldo kas", "net cash flow"]):
+            for row in workflows:
+                if row[0] == "WF-006" or any(w in row[1].lower() for w in ["arus kas", "cash flow", "cashflow"]):
+                    return {"workflow_id": row[0], "send_email": False}
+
+        # 2. Check for specific item stock query (only if explicitly asking stock check)
         is_stock_query = (
             any(k in prompt_lower for k in ["cek stok", "lihat stok", "status stok", "cek ketersediaan", "stok barang"])
             or ("berapa" in prompt_lower and any(w in prompt_lower for w in ["stok", "sisa", "unit", "persediaan", "tersedia", "ada barang", "part", "item", "produk"]))
@@ -166,13 +201,13 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                     clean_target = prompt.lower().replace("berapa", "").replace("cek stok", "").replace("stok", "").strip()
                     return {"workflow_id": row[0], "target_item_name": clean_target, "send_email": False}
         
-        # 2. Check for threshold update
+        # 3. Check for threshold update
         if any(k in prompt_lower for k in ["threshold", "ambang", "ubah batas"]):
             for row in workflows:
                 if row[0] == "WF-002" or "threshold" in row[1].lower():
                     return {"workflow_id": row[0], "threshold_updates": [], "send_email": False}
         
-        # 3. Check for warehouse audit
+        # 4. Check for warehouse audit
         if any(k in prompt_lower for k in ["seluruh gudang", "audit", "rekap seluruh"]):
             for row in workflows:
                 if row[3] == tenant_id and "audit" in row[1].lower():
@@ -181,7 +216,7 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                 if row[0] in ["WF-004", "WF-B01"] or "audit" in row[1].lower():
                     return {"workflow_id": row[0], "send_email": False}
                     
-        # 4. Check for restock / pengadaan / menipis / kritis / PR
+        # 5. Check for restock / pengadaan / menipis / kritis / PR
         is_restock_intent = any(k in prompt_lower for k in [
             "restock", "menipis", "kritis", "pengadaan", "pesan barang", "beli barang", "order barang", "purchase requisition", "kehabisan", "buatkan pr", "bikin pr", "terbitkan pr", "draf pr", "draft pr"
         ]) or bool(re.search(r'\bpr\b', prompt_lower))
@@ -197,7 +232,7 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                 if "restock" in row[1].lower() or bool(re.search(r'\bpr\b', row[1].lower())):
                     return {"workflow_id": row[0], "send_email": True, "threshold_updates": [], "target_item_name": None}
 
-        # 5. ANTI-HALUSINASI GUARDRAIL:
+        # 6. ANTI-HALUSINASI GUARDRAIL:
         # If no recognized intent matched, return workflow_id: None! Do NOT pick a default workflow!
         return {
             "workflow_id": None,

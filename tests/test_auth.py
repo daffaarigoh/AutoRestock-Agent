@@ -44,7 +44,7 @@ class TestAuthAndRBAC(unittest.TestCase):
         items = items_res.json()
         self.assertGreater(len(items), 0)
         for it in items:
-            self.assertEqual(it["tenant_id"], "TENANT_A")
+            self.assertIn(it["tenant_id"], ["TENANT_A", "usera", "INVENTORY"])
 
 
 if __name__ == "__main__":

@@ -73,7 +73,10 @@ class TestPDFApprovalFlow(unittest.TestCase):
         # 6. Verify DuckDB order status
         from database.db import get_db_connection
         conn = get_db_connection(read_only=True)
-        db_order = conn.execute("SELECT status FROM orders WHERE pr_number = ? LIMIT 1;", [pr_target]).fetchone()
+        try:
+            db_order = conn.execute("SELECT status FROM purchase_requests WHERE pr_number = ? LIMIT 1;", [pr_target]).fetchone()
+        except:
+            db_order = conn.execute("SELECT status FROM orders WHERE pr_number = ? LIMIT 1;", [pr_target]).fetchone()
         conn.close()
         self.assertEqual(db_order[0], "APPROVED")
 

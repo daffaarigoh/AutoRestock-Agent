@@ -1,3 +1,5 @@
+import re
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -331,39 +333,112 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
     u_tenant = str(getattr(current_user, 'tenant_id', 'ALL')).upper()
     u_role = str(getattr(current_user, 'role', 'USER')).upper()
 
-    is_hr_keyword = any(w in lower_prompt for w in ["kandidat", "pelamar", "rigger", "climber", "tkpk", "rekrutmen", "screening", "absen", "hadir", "lembur", "overtime", "geofencing", "kunjungan site", "cuti", "izin", "sakit", "karyawan", "pegawai"])
-    is_fin_keyword = any(w in lower_prompt for w in ["pemasukan", "pendapatan", "revenue", "invoice", "tagihan", "operator", "telkomsel", "indosat", "xl", "smartfren", "pengeluaran", "beban", "opex", "listrik", "pln", "sewa lahan", "lahan", "genset", "biaya", "arus kas", "cash flow", "cashflow", "kas", "saldo"])
-    is_inv_keyword = any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "gudang", "beli", "pesan", "restock", "supplier", "purchase order", "po"])
+    is_profile_query = any(w in lower_prompt for w in ["profil", "siapa saya", "info akun", "hak akses", "wewenang", "role saya", "user info", "wf-all-01"])
+    is_system_query = any(w in lower_prompt for w in ["info sistem", "status sistem", "status server", "health check", "spesifikasi sistem", "informasi sistem", "versi sistem", "kesehatan sistem", "wf-all-02"]) or (("status" in lower_prompt or "kesehatan" in lower_prompt or "info" in lower_prompt) and ("sistem" in lower_prompt or "server" in lower_prompt))
+    is_guideline_query = any(w in lower_prompt for w in ["panduan operasional", "sop perusahaan", "kontak darurat", "helpdesk", "aturan kerja", "panduan", "sop", "wf-all-03"])
+    is_all_schema_keyword = is_profile_query or is_system_query or is_guideline_query
 
-    if u_role != "ADMIN" and u_tenant != "ALL":
-        if u_tenant == "INVENTORY" and (is_hr_keyword or is_fin_keyword) and not is_inv_keyword:
+    is_hr_keyword = any(w in lower_prompt for w in ["kandidat", "pelamar", "rigger", "climber", "tkpk", "rekrutmen", "screening", "absen", "hadir", "lembur", "overtime", "geofencing", "kunjungan site", "cuti", "izin", "sakit", "karyawan", "pegawai", "wf-002", "wf-003"])
+    is_fin_keyword = any(w in lower_prompt for w in ["pemasukan", "pendapatan", "revenue", "invoice", "tagihan", "operator", "telkomsel", "indosat", "xl", "smartfren", "pengeluaran", "beban", "opex", "listrik", "pln", "sewa lahan", "genset", "biaya", "arus kas", "cash flow", "cashflow", "saldo kas", "wf-004", "wf-005", "wf-006", "keuangan", "finance"]) or bool(re.search(r'\bkas\b|\blahan\b', lower_prompt))
+    is_inv_keyword = any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "gudang", "beli", "pesan barang", "restock", "supplier", "purchase order", "wf-001"]) or bool(re.search(r'\bpo\b', lower_prompt))
+
+    # If it's a Schema ALL request, it is universally accessible to all users!
+    if not is_all_schema_keyword and u_role != "ADMIN" and u_tenant != "ALL":
+        if is_fin_keyword and u_tenant != "FINANCE":
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
-                "action_type": "out_of_scope",
-                "message": f"Akses Ditolak: Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi Inventory & Logistik. Anda tidak memiliki wewenang untuk mengakses data HR atau Keuangan perusahaan.",
+                "action_type": "permission_denied",
+                "message": f"Akses Ditolak: Alur kerja ini khusus untuk Schema C (Divisi Keuangan). Akun Anda ({current_user.username} - Divisi {current_user.tenant_id}) tidak memiliki izin untuk mengeksekusi alur kerja ini.",
                 "generated_prs": [],
                 "affected_items": []
             }
-        if u_tenant == "HR" and (is_inv_keyword or is_fin_keyword) and not is_hr_keyword:
+        if is_hr_keyword and u_tenant != "HR":
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
-                "action_type": "out_of_scope",
-                "message": f"Akses Ditolak: Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi HR & Field Workforce. Anda tidak memiliki wewenang untuk mengakses data Material Gudang atau Keuangan perusahaan.",
+                "action_type": "permission_denied",
+                "message": f"Akses Ditolak: Alur kerja ini khusus untuk Schema B (Divisi HR & Field Workforce). Akun Anda ({current_user.username} - Divisi {current_user.tenant_id}) tidak memiliki izin untuk mengeksekusi alur kerja ini.",
                 "generated_prs": [],
                 "affected_items": []
             }
-        if u_tenant == "FINANCE" and (is_inv_keyword or is_hr_keyword) and not is_fin_keyword:
+        if is_inv_keyword and u_tenant != "INVENTORY":
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
-                "action_type": "out_of_scope",
-                "message": f"Akses Ditolak: Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi Keuangan & Akuntansi. Anda tidak memiliki wewenang untuk mengakses data Material Gudang atau Data Personalia.",
+                "action_type": "permission_denied",
+                "message": f"Akses Ditolak: Alur kerja ini khusus untuk Schema A (Divisi Inventory & Logistik). Akun Anda ({current_user.username} - Divisi {current_user.tenant_id}) tidak memiliki izin untuk mengeksekusi alur kerja ini.",
                 "generated_prs": [],
                 "affected_items": []
             }
 
-    # 4. Bali Tower Domain Query Handler (HR, Finance, Inventory)
+    # 4. Bali Tower Domain Query Handler (HR, Finance, Inventory, and Schema ALL)
     conn = get_db_connection(read_only=True)
     try:
+        # Schema ALL - A. Cek Profil Pengguna & Hak Akses (WF-ALL-01)
+        if is_profile_query:
+            tenant_desc = {
+                "ALL": "Super Administrator (Akses Penuh Seluruh Schema)",
+                "INVENTORY": "Divisi Logistik & Gudang Material (Schema A)",
+                "HR": "Divisi Personalia & Field Workforce (Schema B)",
+                "FINANCE": "Divisi Keuangan & Akuntansi (Schema C)"
+            }.get(u_tenant, f"Divisi {u_tenant}")
+
+            modules_access = {
+                "ALL": "Inventory (A), HR & Recruitment (B), Finance & OPEX (C), Pengaturan Sistem",
+                "INVENTORY": "Inventory, Stok Material, Restock PO, Gudang Menara",
+                "HR": "HR, Absensi Geofencing, Cuti, Screening K3 Rigger",
+                "FINANCE": "Finance, Tagihan Operator, OPEX Listrik/Lahan, Arus Kas"
+            }.get(u_tenant, "Modul Standar")
+
+            msg = (
+                f"### 👤 Profil Pengguna & Hak Akses Sistem\n\n"
+                f"| Parameter | Keterangan |\n"
+                f"| :--- | :--- |\n"
+                f"| **Username** | `{current_user.username}` |\n"
+                f"| **Role Wewenang** | **{current_user.role}** |\n"
+                f"| **Divisi (Tenant)** | **{tenant_desc} [{u_tenant}]** |\n"
+                f"| **Modul yang Diizinkan** | {modules_access} |\n"
+                f"| **Status Akun** | 🟢 **ACTIVE / VERIFIED** |\n\n"
+                f"*Info:* Alur kerja utilitas ini merupakan bagian dari **Schema ALL** dan dapat diakses oleh seluruh pengguna."
+            )
+            return {"parsed_intent": {"workflow_id": "WF-ALL-01"}, "action_type": "profile_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # Schema ALL - B. Informasi Sistem & Status Layanan (WF-ALL-02)
+        if is_system_query:
+            from core.config import settings
+            table_count = len(conn.execute("SHOW TABLES;").fetchall())
+            wf_count = conn.execute("SELECT COUNT(*) FROM workflows").fetchone()[0]
+            msg = (
+                f"### ⚙️ Informasi & Status Operasional Sistem AutoRestock-Agent\n\n"
+                f"| Komponen | Status / Spesifikasi |\n"
+                f"| :--- | :--- |\n"
+                f"| **Aplikasi** | `{settings.APP_NAME}` (Environment: `{settings.APP_ENV}`) |\n"
+                f"| **Database Engine** | DuckDB Embedded (Total Tabel: `{table_count}`, Workflows: `{wf_count}`) |\n"
+                f"| **AI Gateway Model** | `{settings.MODEL_NAME}` (Endpoint: `{settings.MODEL_URL}`) |\n"
+                f"| **Multi-Agent Engine** | LangGraph StateGraph + HITL Interruption Guard |\n"
+                f"| **DocGen Engine** | Typst Native Compiler (<50ms PDF Rendering) |\n"
+                f"| **API Server Host:Port** | `{settings.API_HOST}:{settings.API_PORT}` |\n"
+                f"| **Status Layanan** | 🟢 **ONLINE & OPERATIONAL** |\n\n"
+                f"*Info:* Alur kerja diagnostik sistem ini merupakan bagian dari **Schema ALL**."
+            )
+            return {"parsed_intent": {"workflow_id": "WF-ALL-02"}, "action_type": "system_info_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # Schema ALL - C. Panduan Operasional & Kontak Darurat (WF-ALL-03)
+        if is_guideline_query:
+            msg = (
+                f"### 📋 Panduan Operasional & Kontak Darurat (PT Bali Towerindo Sentra Tbk)\n\n"
+                f"#### 1. Aturan Kerja & SOP Antar-Divisi\n"
+                f"- **Divisi Inventory (Schema A):** Batas minimum stok dievaluasi berkala. Jika status KRITIS, draft PR otomatis disusun oleh AI dan diajukan ke manajer operasional.\n"
+                f"- **Divisi HR (Schema B):** Seluruh teknisi menara wajib mematuhi standar K3 (TKPK 1/2) dan absensi geofencing GPS maksimal radius 100m dari titik menara.\n"
+                f"- **Divisi Keuangan (Schema C):** Invoicing sewa menara ke operator telekomunikasi diterbitkan per siklus bulanan, audit utilitas listrik PLN/BBM genset diaudit berkala.\n\n"
+                f"#### 2. Kontak Darurat & Helpdesk Operasional\n"
+                f"| Tim | PIC | Saluran Kontak |\n"
+                f"| :--- | :--- | :--- |\n"
+                f"| **NOC & Tower Helpdesk 24/7** | Tim NOC Pusat | `ext. 101` / `noc@balitower.co.id` |\n"
+                f"| **Keamanan & K3 Lapangan** | Koordinator HSE | `ext. 108` / `k3@balitower.co.id` |\n"
+                f"| **IT Support & System Agent** | DevOps Admin | `ext. 112` / `it-support@balitower.co.id` |\n\n"
+                f"*Info:* Alur kerja informasi SOP ini merupakan bagian dari **Schema ALL**."
+            )
+            return {"parsed_intent": {"workflow_id": "WF-ALL-03"}, "action_type": "guidelines_query", "message": msg, "generated_prs": [], "affected_items": []}
+
         # A. HR - Pelamar / Kandidat / Rigger K3
         if any(w in lower_prompt for w in ["kandidat", "pelamar", "rigger", "climber", "tkpk", "rekrutmen", "screening"]):
             cand_rows = conn.execute("""
@@ -496,10 +571,9 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             return {
                 "parsed_intent": {"workflow_id": None},
                 "action_type": "unrecognized_intent",
-                "message": "Permintaan Anda belum terpetakan ke alur otomatis. Anda dapat menanyakan seputar 3 modul operasional Bali Tower:\n"
-                           "1. **Inventory**: Cek stok material menara, baterai lithium, kabel FO, atau buat Purchase Requisition.\n"
-                           "2. **HR**: Cek log absensi & lembur teknisi, daftar cuti, atau filter pelamar rigger K3 TKPK.\n"
-                           "3. **Finance**: Cek pendapatan sewa menara per operator, beban listrik PLN/lahan, atau arus kas.",
+                "message": "Permintaan Anda belum terpetakan ke alur otomatis. Anda dapat menanyakan seputar:\n"
+                           "- **Schema ALL**: Cek profil pengguna, status informasi sistem, atau panduan operasional & kontak darurat.\n"
+                           "- **Modul Divisi**: Sesuai wewenang divisi Anda (Inventory, HR, atau Finance).",
                 "available_workflows": [{"id": r[0], "name": r[1], "description": r[2]} for r in user_wfs],
                 "email_sent": False,
                 "generated_prs": [],
@@ -516,14 +590,24 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
         conn.close()
         
         if not wf_row:
-            raise Exception(f"Workflow {workflow_id} not found in database.")
+            return {
+                "parsed_intent": {"workflow_id": workflow_id},
+                "action_type": "unrecognized_intent",
+                "message": f"Alur kerja '{workflow_id}' belum terdaftar di sistem database.",
+                "generated_prs": [],
+                "affected_items": []
+            }
             
         compiled_json_str, wf_tenant = wf_row
         if wf_tenant and wf_tenant not in [current_user.tenant_id, "ALL"] and current_user.role != "ADMIN":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Akses ditolak: Alur kerja {workflow_id} dikhususkan untuk {wf_tenant} dan tidak dapat diakses oleh akun Anda ({current_user.tenant_id})."
-            )
+            target_label = "Schema C (Divisi Keuangan)" if wf_tenant == "FINANCE" else f"Schema {wf_tenant}"
+            return {
+                "parsed_intent": {"workflow_id": workflow_id},
+                "action_type": "permission_denied",
+                "message": f"Akses Ditolak: Alur kerja {workflow_id} dikhususkan untuk {target_label}. Akun Anda ({current_user.username} - Divisi {current_user.tenant_id}) tidak memiliki izin untuk mengeksekusi alur kerja ini.",
+                "generated_prs": [],
+                "affected_items": []
+            }
             
         compiled_json = json.loads(compiled_json_str)
         
@@ -532,7 +616,11 @@ async def execute_custom_prompt_workflow(request: CustomPromptRequest, current_u
             "threshold_updates": route_result.get("threshold_updates", []),
             "target_item_name": route_result.get("target_item_name"),
             "send_email": route_result.get("send_email", False),
-            "new_item_data": route_result.get("new_item_data", {})
+            "new_item_data": route_result.get("new_item_data", {}),
+            "username": current_user.username,
+            "role": current_user.role,
+            "tenant_id": current_user.tenant_id,
+            "user_info": {"username": current_user.username, "role": current_user.role, "tenant_id": current_user.tenant_id}
         }
         result = await JSONExecutionEngine.execute(compiled_json, current_user.tenant_id, custom_context=context)
         

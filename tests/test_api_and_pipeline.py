@@ -27,8 +27,13 @@ app.dependency_overrides[get_current_admin] = override_get_current_user
 class TestAutoRestockPipeline(unittest.TestCase):
 
     def setUp(self):
+        app.dependency_overrides[get_current_user] = override_get_current_user
+        app.dependency_overrides[get_current_admin] = override_get_current_user
         self.client = TestClient(app)
         self.client.post("/api/approval/reset")
+
+    def tearDown(self):
+        app.dependency_overrides.clear()
 
     def test_dashboard_ui_served(self):
         """Verifies that GET / serves the interactive HTML dashboard."""
