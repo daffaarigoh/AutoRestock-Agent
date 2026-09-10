@@ -70,18 +70,26 @@ def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
 
 
 def update_db_orders_status(pr_number: str, status: str):
-    """Update all orders under a PR number to a new status (e.g. APPROVED, REJECTED) and update physical stock via TenantSchemaAdapter on APPROVE."""
-    from database.schema_adapters import TenantSchemaAdapter
+    """Update all orders under a PR number to a new status (e.g. APPROVED, REJECTED) and create official POs on APPROVE."""
     conn = get_db_connection()
     try:
         if status.upper() == "APPROVED":
-            rows = conn.execute("SELECT item_id, quantity, tenant_id FROM orders WHERE pr_number = ?;", [pr_number]).fetchall()
-            for r in rows:
-                item_id, qty, tenant_val = r[0], r[1], r[2] or "ALL"
-                TenantSchemaAdapter.update_item_stock(item_id=item_id, qty_to_add=qty, tenant_id=tenant_val)
-
-            # Synchronize purchase_orders: status becomes ORDERED upon approval
-            conn.execute("UPDATE purchase_orders SET status = 'ORDERED' WHERE pr_number = ?;", [pr_number])
+            # ERP Standard: Physical stock increments upon physical Goods Receipt (DELIVERED)
+            # when material arrives at the regional warehouse.
+            # Here on APPROVE, we synchronize purchase_orders (status ORDERED) and generate PO PDF.
+            existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+            if "purchase_orders" in existing_tables:
+                try:
+                    from api.routers.approval_routes import sync_approved_pr_to_purchase_orders
+                    sync_approved_pr_to_purchase_orders(conn, pr_number)
+                except Exception as sync_err:
+                    print(f"[WORKFLOW] Failed to sync PO: {sync_err}")
+        elif status.upper() in ["REJECTED", "CANCELLED"]:
+            existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+            if "purchase_orders" in existing_tables:
+                po_cols = [c[0] for c in conn.execute("DESCRIBE purchase_orders;").fetchall()]
+                if "pr_number" in po_cols:
+                    conn.execute("UPDATE purchase_orders SET status = 'REJECTED' WHERE pr_number = ?;", [pr_number])
 
         conn.execute("""
             UPDATE orders 

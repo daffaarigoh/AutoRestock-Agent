@@ -152,7 +152,7 @@ class JSONExecutionEngine:
                             FROM purchase_orders po
                             JOIN suppliers s ON po.supplier_id = s.supplier_id
                             JOIN inventory_items i ON po.item_id = i.item_id
-                            WHERE po.status IN ('ACTIVE', 'IN_TRANSIT', 'PENDING_APPROVAL')
+                            WHERE po.status IN ('ORDERED', 'ACTIVE')
                             ORDER BY po.order_date DESC;
                         """).fetchall()
                         conn.close()
@@ -270,7 +270,21 @@ class JSONExecutionEngine:
                     registered = context.get("registered_item")
                     
                     if pr_number:
-                        msg = f"Dokumen Purchase Requisition {pr_number} telah diterbitkan untuk {items_len} barang menipis dengan total anggaran Rp {context.get('total_budget', 0.0):,.2f}. Mohon tinjau dan lakukan persetujuan."
+                        msg = f"Dokumen Purchase Requisition **{pr_number}** telah diterbitkan untuk **{items_len} barang menipis** dengan estimasi anggaran **Rp {context.get('total_budget', 0.0):,.2f}**.\n\n"
+                        p_items = context.get("planned_items") or []
+                        if p_items:
+                            msg += "| SKU | Nama Material | Rekanan Vendor | Kuantitas | Harga Satuan | Subtotal |\n"
+                            msg += "| :--- | :--- | :--- | :---: | :---: | :---: |\n"
+                            for it in p_items:
+                                it_sku = getattr(it, "item_id", "") if hasattr(it, "item_id") else it.get("item_id", "")
+                                it_name = getattr(it, "name", "") if hasattr(it, "name") else it.get("name", "")
+                                it_vend = getattr(it, "vendor_name", "") if hasattr(it, "vendor_name") else it.get("vendor_name", "")
+                                it_qty = getattr(it, "reorder_qty", 0) if hasattr(it, "reorder_qty") else it.get("reorder_qty", 0)
+                                it_unit = getattr(it, "unit", "pcs") if hasattr(it, "unit") else it.get("unit", "pcs")
+                                it_price = getattr(it, "unit_price", 0.0) if hasattr(it, "unit_price") else it.get("unit_price", 0.0)
+                                it_total = getattr(it, "total_price", 0.0) if hasattr(it, "total_price") else it.get("total_price", 0.0)
+                                msg += f"| `{it_sku}` | {it_name} | {it_vend} | **{it_qty:,} {it_unit}** | Rp {it_price:,.2f} | Rp {it_total:,.2f} |\n"
+                        msg += "\nMohon tinjau rincian barang di atas dan berikan otorisasi pengesahan melalui tombol di bawah."
                     elif registered:
                         msg = f"Pendaftaran Barang Baru Berhasil: '{registered.get('name')}' (SKU: {registered.get('item_id')}) telah terdaftar ke inventaris {registered.get('tenant_id')}."
                     elif items_len > 0:
@@ -366,7 +380,7 @@ class JSONExecutionEngine:
                                 next_num = f"PO/BLT/2026/03/{(35 + idx):03d}"
                                 conn.execute("""
                                     INSERT INTO purchase_orders (po_id, po_number, supplier_id, item_id, order_quantity, unit_price, total_amount, status, order_date, expected_delivery, warehouse_id, pr_number)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL', CAST(CURRENT_DATE AS VARCHAR), CAST(CURRENT_DATE + INTERVAL 10 DAY AS VARCHAR), 'WH-JKT-01', ?);
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, 'ORDERED', CAST(CURRENT_DATE AS VARCHAR), CAST(CURRENT_DATE + INTERVAL 10 DAY AS VARCHAR), 'WH-JKT-01', ?);
                                 """, [next_id, next_num, it.vendor_id, it.item_id, int(it.reorder_qty), int(it.unit_price), int(it.total_price), pr_number])
 
                             # Also insert into purchase_requests table
@@ -436,7 +450,7 @@ class JSONExecutionEngine:
                 # ----------------------------------------------------
                 elif (step_type == "tool" and action in ["po.query_orders", "po.query", "query_purchase_orders"]) or (step_type == "agent" and "purchase_orders" in str(step)):
                     conn = get_db_connection(read_only=True)
-                    status_param = step.get("params", {}).get("status_filter") or ["ACTIVE", "IN_TRANSIT", "PENDING_APPROVAL"]
+                    status_param = step.get("params", {}).get("status_filter") or ["ORDERED", "DELIVERED"]
                     if isinstance(status_param, str):
                         status_param = [status_param]
                     placeholders = ", ".join(["?"] * len(status_param))
@@ -645,7 +659,7 @@ class JSONExecutionEngine:
                 elif step_type in ["tool", "agent"] and action in ["po.approve", "purchase_order.approve"]:
                     target_po = context.get("target_po_id") or step.get("params", {}).get("po_id") or "PO-2026-001"
                     conn = get_db_connection()
-                    conn.execute("UPDATE purchase_orders SET status = 'APPROVED' WHERE UPPER(po_id) = ? OR UPPER(po_number) = ?;", [str(target_po).upper(), str(target_po).upper()])
+                    conn.execute("UPDATE purchase_orders SET status = 'ORDERED' WHERE UPPER(po_id) = ? OR UPPER(po_number) = ?;", [str(target_po).upper(), str(target_po).upper()])
                     conn.commit()
                     conn.close()
                     context["po_approved"] = True
@@ -653,7 +667,7 @@ class JSONExecutionEngine:
                         "step_number": i,
                         "title": f"Approve Purchase Order: {target_po}",
                         "status": "COMPLETED",
-                        "details": f"Status Purchase Order {target_po} berhasil disetujui menjadi APPROVED."
+                        "details": f"Status Purchase Order {target_po} berhasil disetujui menjadi ORDERED."
                     })
 
                 elif step_type == "tool" and (action == "docgen.compile_po" or (action in ["docgen.compile", "purchase_order.create_draft"] and (context.get("target_po_id") or not context.get("planned_items")))):

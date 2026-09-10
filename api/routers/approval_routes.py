@@ -66,9 +66,7 @@ def _create_default_pr(pr_number: str = "PR-2026-0819-001", status: str = "PENDI
 
 
 # In-memory PR Store
-PR_STORE: dict[str, PurchaseRequisitionDoc] = {
-    "PR-2026-0819-001": _create_default_pr()
-}
+PR_STORE: dict[str, PurchaseRequisitionDoc] = {}
 
 
 class ApprovalActionPayload(BaseModel):
@@ -76,6 +74,137 @@ class ApprovalActionPayload(BaseModel):
     action: str = "APPROVE"  # APPROVE | REJECT
     manager_name: str | None = "Warehouse Manager"
     notes: str | None = None
+
+
+# --- Helper: Synchronize Approved PR to purchase_orders Table ---
+
+def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequisitionDoc | None = None) -> list[str]:
+    """
+    Ensures that for an APPROVED Purchase Requisition, official Purchase Orders (PO)
+    are created and recorded in the purchase_orders table if not already present,
+    and their official Typst PDFs are compiled.
+    """
+    import re
+    from datetime import datetime, timedelta
+    from pathlib import Path
+
+    existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+    if "purchase_orders" not in existing_tables:
+        return []
+
+    po_cols = [c[0] for c in conn.execute("DESCRIBE purchase_orders;").fetchall()]
+    if "pr_number" not in po_cols:
+        conn.execute("ALTER TABLE purchase_orders ADD COLUMN pr_number VARCHAR;")
+
+    existing_pos = conn.execute("SELECT po_id FROM purchase_orders WHERE pr_number = ?;", [pr_number]).fetchall()
+    created_po_ids = []
+
+    if existing_pos:
+        conn.execute("UPDATE purchase_orders SET status = 'ORDERED' WHERE pr_number = ?;", [pr_number])
+        created_po_ids = [r[0] for r in existing_pos]
+    else:
+        # Determine items from pr object or from DuckDB orders table
+        items_to_create = []
+        if pr and getattr(pr, "items", None):
+            for it in pr.items:
+                items_to_create.append({
+                    "item_id": it.item_id,
+                    "vendor_id": getattr(it, "vendor_id", "SUP-001"),
+                    "quantity": int(getattr(it, "reorder_qty", 1)),
+                    "unit_price": int(getattr(it, "unit_price", 0)),
+                    "total_price": int(getattr(it, "total_price", 0))
+                })
+        else:
+            ord_rows = conn.execute("""
+                SELECT item_id, vendor_id, quantity, unit_price, total_price 
+                FROM orders 
+                WHERE pr_number = ?;
+            """, [pr_number]).fetchall()
+            for o_it, o_ven, o_qty, o_prc, o_tot in ord_rows:
+                items_to_create.append({
+                    "item_id": o_it,
+                    "vendor_id": o_ven or "SUP-001",
+                    "quantity": int(o_qty or 1),
+                    "unit_price": int(o_prc or 0),
+                    "total_price": int(o_tot or 0)
+                })
+
+        # Also check purchase_requests if still empty
+        if not items_to_create and "purchase_requests" in existing_tables:
+            pr_req = conn.execute("SELECT items_json FROM purchase_requests WHERE pr_number = ?;", [pr_number]).fetchone()
+            if pr_req and pr_req[0]:
+                import json
+                try:
+                    parsed_items = json.loads(pr_req[0])
+                    for pit in parsed_items:
+                        items_to_create.append({
+                            "item_id": pit.get("item_id"),
+                            "vendor_id": pit.get("vendor_id", "SUP-001"),
+                            "quantity": int(pit.get("quantity", 1)),
+                            "unit_price": int(pit.get("unit_price", 0)),
+                            "total_price": int(pit.get("total_price", 0))
+                        })
+                except Exception:
+                    pass
+
+        # Determine next sequential counter for po_id
+        all_pos = conn.execute("SELECT po_id FROM purchase_orders;").fetchall()
+        current_max = 0
+        for (pid_val,) in all_pos:
+            digits = re.findall(r'\d+', str(pid_val))
+            if digits:
+                val = int(digits[-1])
+                if val > current_max:
+                    current_max = val
+
+        today_s = datetime.now().strftime("%Y-%m-%d")
+        delivery_s = (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d")
+        month_s = datetime.now().strftime("%Y/%m")
+
+        for idx, item in enumerate(items_to_create, 1):
+            next_idx = current_max + idx
+            new_po_id = f"PO-2026-{next_idx:03d}"
+            new_po_num = f"PO/BLT/{month_s}/{(30 + next_idx):03d}"
+
+            # Resolve valid supplier_id from inventory_items
+            sup_id = item["vendor_id"]
+            if not sup_id or not str(sup_id).startswith("SUP-"):
+                sup_row = conn.execute("SELECT supplier_id FROM inventory_items WHERE item_id = ?;", [item["item_id"]]).fetchone()
+                sup_id = sup_row[0] if sup_row and sup_row[0] else "SUP-001"
+
+            # Resolve warehouse_id from stock_balances or default
+            wh_row = conn.execute("SELECT warehouse_id FROM stock_balances WHERE item_id = ? ORDER BY quantity_on_hand ASC LIMIT 1;", [item["item_id"]]).fetchone()
+            target_wh = wh_row[0] if wh_row and wh_row[0] else "WH-BDG-01"
+
+            conn.execute("""
+                INSERT INTO purchase_orders (
+                    po_id, po_number, supplier_id, item_id, order_quantity, unit_price, total_amount, status, order_date, expected_delivery, actual_delivery, warehouse_id, pr_number
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ORDERED', ?, ?, NULL, ?, ?);
+            """, [
+                new_po_id, new_po_num, sup_id, item["item_id"],
+                item["quantity"], item["unit_price"], item["total_price"],
+                today_s, delivery_s, target_wh, pr_number
+            ])
+            created_po_ids.append(new_po_id)
+
+    # Pre-compile official Typst PO PDFs
+    try:
+        from docgen.compiler import generate_po_pdf
+        for p_id in created_po_ids:
+            generate_po_pdf(p_id)
+    except Exception as po_err:
+        pass
+
+    # Synchronize to CSV file for persistence across server restarts
+    try:
+        inv_csv = Path("data/balitower/01_inventory/purchase_orders.csv")
+        if inv_csv.parent.exists():
+            df_pos = conn.execute("SELECT * FROM purchase_orders").df()
+            df_pos.to_csv(inv_csv, index=False)
+    except Exception:
+        pass
+
+    return created_po_ids
 
 
 # --- Helper: Update DuckDB order status & optionally add stock ---
@@ -109,26 +238,9 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
             existing_order = conn.execute("SELECT status FROM orders WHERE pr_number = ? LIMIT 1;", [pr_number]).fetchone()
             already_approved = existing_order and existing_order[0] == "APPROVED"
             
-            # Only increment stock if we are approving AND it wasn't already approved
-            if is_approve and not already_approved:
-                from database.schema_adapters import TenantSchemaAdapter
-                if pr and pr.items:
-                    effective_tenant = getattr(pr, "tenant_id", "ALL") or "ALL"
-                    for item in pr.items:
-                        TenantSchemaAdapter.update_item_stock(
-                            item_id=item.item_id,
-                            qty_to_add=item.reorder_qty,
-                            item_name=item.name,
-                            tenant_id=effective_tenant
-                        )
-                else:
-                    ord_rows = conn.execute("SELECT item_id, quantity, tenant_id FROM orders WHERE pr_number = ?;", [pr_number]).fetchall()
-                    for it_id, it_qty, it_tenant in ord_rows:
-                        TenantSchemaAdapter.update_item_stock(
-                            item_id=it_id,
-                            qty_to_add=it_qty,
-                            tenant_id=it_tenant or "ALL"
-                        )
+            # ERP Standard: Stock is NOT incremented upon PR approval.
+            # Physical warehouse stock will increment upon Goods Receipt (DELIVERED)
+            # when material physically arrives at the destination warehouse.
 
             if existing_order:
                 conn.execute("UPDATE orders SET status = ? WHERE pr_number = ?;", [db_status, pr_number])
@@ -145,22 +257,11 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
             # Synchronize Purchase Orders (PO) in purchase_orders table: status becomes ORDERED
             if "purchase_orders" in existing_tables:
                 if is_approve:
-                    conn.execute("UPDATE purchase_orders SET status = 'ORDERED' WHERE pr_number = ?;", [pr_number])
-                    if pr and pr.items:
-                        item_ids = [it.item_id for it in pr.items]
-                        placeholders = ", ".join(["?"] * len(item_ids))
-                        conn.execute(f"UPDATE purchase_orders SET status = 'ORDERED' WHERE status = 'PENDING_APPROVAL' AND item_id IN ({placeholders});", item_ids)
-                        
-                        # Pre-compile official Typst PDF for ordered POs
-                        try:
-                            from docgen.compiler import generate_po_pdf
-                            po_matches = conn.execute(f"SELECT po_id FROM purchase_orders WHERE pr_number = ? OR (status = 'ORDERED' AND item_id IN ({placeholders}));", [pr_number] + item_ids).fetchall()
-                            for (p_id,) in po_matches:
-                                generate_po_pdf(p_id)
-                        except Exception as po_err:
-                            print(f"PO DocGen error: {po_err}")
+                    sync_approved_pr_to_purchase_orders(conn, pr_number, pr)
                 else:
-                    conn.execute("UPDATE purchase_orders SET status = 'REJECTED' WHERE pr_number = ?;", [pr_number])
+                    po_cols = [c[0] for c in conn.execute("DESCRIBE purchase_orders;").fetchall()]
+                    if "pr_number" in po_cols:
+                        conn.execute("UPDATE purchase_orders SET status = 'REJECTED' WHERE pr_number = ?;", [pr_number])
 
             if "purchase_requests" in existing_tables:
                 conn.execute("UPDATE purchase_requests SET status = ? WHERE pr_number = ?;", [db_status, pr_number])
@@ -169,7 +270,7 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
             conn.close()
 
         if is_approve:
-            return "<strong>Stok Fisik Inventaris DuckDB Berhasil Ditambahkan Otomatis!</strong>"
+            return "<strong>Purchase Order Resmi Berhasil Diterbitkan (Status: ORDERED). Saldo fisik gudang akan bertambah otomatis saat barang tiba (Goods Receipt / DELIVERED).</strong>"
         return "<strong>Stok Fisik Inventaris Tetap (Tidak Ada Penambahan).</strong>"
     except Exception as e:
         return f"Catatan database: {e!s}"
@@ -344,7 +445,7 @@ async def quick_approval_action(
         if pr:
             pr.status = "APPROVED"
             items_updated_summary = [
-                f"<li><strong>{item.name}</strong>: +{item.reorder_qty} {item.unit} (Stok Fisik Bertambah)</li>"
+                f"<li><strong>{item.name}</strong>: {item.reorder_qty} {item.unit} (PO Diterbitkan ke Vendor &mdash; Menunggu Kedatangan Fisik Gudang)</li>"
                 for item in pr.items
             ]
         stock_delta_info = _update_db_status(pr_number, "APPROVED", pr)
@@ -639,5 +740,50 @@ async def reset_sample_data():
     _regenerate_pdf(PR_STORE["PR-2026-0819-001"])
 
     return {"status": "reset", "message": "PR-2026-0819-001 reset to PENDING status with all 5 DuckDB critical items."}
+
+
+@router.post("/clear-all")
+async def clear_all_prs_and_pos(current_user: TokenData = Depends(get_current_user)):
+    """
+    Membersihkan seluruh draf PR, mengosongkan PR_STORE, menghapus seluruh berkas PDF PR dan PO,
+    serta mengosongkan tabel purchase_orders dan orders di DuckDB.
+    """
+    PR_STORE.clear()
+
+    # Clear orders and purchase_orders in balitower.db
+    try:
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=False)
+        try:
+            existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+            if "orders" in existing_tables:
+                conn.execute("DELETE FROM orders;")
+            if "purchase_orders" in existing_tables:
+                conn.execute("DELETE FROM purchase_orders;")
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"[CLEAR-ALL] Error clearing DuckDB orders: {e}")
+
+    # Remove generated PDFs from storage
+    deleted_files = 0
+    from database.db import STORAGE_DIR
+    for sub in ["documents", "pending", "approved", "rejected", "purchase_orders"]:
+        folder = STORAGE_DIR / sub
+        if folder.exists():
+            for pdf_file in folder.glob("*.pdf"):
+                try:
+                    pdf_file.unlink()
+                    deleted_files += 1
+                except Exception as e:
+                    print(f"[CLEAR-ALL] Could not delete {pdf_file}: {e}")
+
+    return {
+        "status": "success",
+        "message": f"Seluruh draf PR dan PO berhasil dibersihkan ({deleted_files} berkas PDF dihapus).",
+        "total_prs_now": len(PR_STORE),
+        "total_pos_now": 0
+    }
 
 

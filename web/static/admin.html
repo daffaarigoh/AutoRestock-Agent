@@ -1267,6 +1267,88 @@
 
   </main>
 
+  <!-- Modal Edit Saldo Stok Fisik Barang (Admin Stock Override) -->
+  <div class="modal-overlay" id="modalEditStock" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 520px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border: 1px solid #E2E8F0;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: #EFF6FF; display: flex; align-items: center; justify-content: center; color: #2563EB;">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0F172A;">Ubah Saldo Stok Fisik Barang</h3>
+            <p style="margin: 0; font-size: 11.5px; color: #64748B;">Admin Override: Sesuaikan kuantitas stok per gudang secara bebas</p>
+          </div>
+        </div>
+        <button onclick="closeAdminStockModal()" style="background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; color: #94A3B8;">&times;</button>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">MATERIAL / BARANG</label>
+        <div id="editStockItemName" style="font-size: 13px; font-weight: 700; color: #0F172A; background: #F8FAFC; padding: 8px 12px; border-radius: 6px; border: 1px solid #E2E8F0;">-</div>
+        <input type="hidden" id="editStockItemId">
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PILIH GUDANG PENYIMPANAN</label>
+        <select id="editStockWarehouseSelect" class="form-input" style="width: 100%; font-size: 13px; font-weight: 600; color: #1E293B;" onchange="onAdminStockWarehouseChange()">
+          <option value="">Memuat gudang...</option>
+        </select>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">STOK FISIK BARU</label>
+          <div style="position: relative;">
+            <input type="number" id="editStockQtyInput" class="form-input" placeholder="0" min="0" style="width: 100%; font-size: 14px; font-weight: 700; color: #0F172A; font-family: var(--font-mono); padding-right: 48px;">
+            <span id="editStockUnitBadge" style="position: absolute; right: 10px; top: 9px; font-size: 11px; color: #64748B; font-weight: 600;">unit</span>
+          </div>
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">REORDER POINT (ROP)</label>
+          <input type="number" id="editStockRopInput" class="form-input" placeholder="10" min="1" style="width: 100%; font-size: 14px; font-weight: 700; color: #0F172A; font-family: var(--font-mono);">
+        </div>
+      </div>
+
+      <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 6px; padding: 10px 12px; margin-bottom: 18px; font-size: 12px; color: #166534; display: flex; align-items: flex-start; gap: 8px;">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="flex-shrink: 0; margin-top: 1px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Status kesehatan (<strong>Normal</strong>, <strong>Menipis</strong>, atau <strong>Kritis</strong>) akan dihitung ulang secara otomatis berdasarkan rumus matematis baku setelah disimpan.</span>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="closeAdminStockModal()">Batal</button>
+        <button class="btn btn-primary" id="btnSaveAdminStock" onclick="saveAdminStockOverride()" style="display: inline-flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span>Simpan Perubahan</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi Hapus Semua PR & PO -->
+  <div class="modal-overlay" id="modalClearAllPrPo" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 440px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #FCA5A5;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #FEE2E2; display: flex; align-items: center; justify-content: center; color: #DC2626; flex-shrink: 0;">
+          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <div>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Bersihkan Semua PR & PO?</h3>
+          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">Tindakan ini akan mengosongkan antrean draf PR dan riwayat PO.</p>
+        </div>
+      </div>
+      <p style="font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 20px;">
+        Seluruh antrean dokumen <strong>Purchase Requisition (PR)</strong>, <strong>Purchase Order (PO)</strong>, serta berkas PDF sementara akan dihapus dari sistem. Status persediaan akan kembali bersih tanpa antrean belanja.
+      </p>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modalClearAllPrPo').style.display='none'">Batal</button>
+        <button class="btn" onclick="executeClearAllPrPo()" style="background: #DC2626; color: white; border: none; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <span>Ya, Bersihkan Sekarang</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="status-toast" id="toast">
     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#10B981">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -2023,11 +2105,13 @@
         rows = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Tidak ada data material yang cocok.</td></tr>`;
       } else {
         rows = items.map(it => {
-          let statusBadge = `<span class="badge-stock-safe">Normal</span>`;
+          let statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">Normal</span>`;
           if (it.current_stock === 0) {
-            statusBadge = `<span class="badge-stock-critical">Habis</span>`;
+            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">Habis</span>`;
+          } else if (it.current_stock <= it.min_threshold * 0.5) {
+            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">Kritis</span>`;
           } else if (it.current_stock <= it.min_threshold) {
-            statusBadge = `<span class="badge-stock-critical">Menipis</span>`;
+            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A;">Menipis</span>`;
           }
 
           const maxThresh = it.max_threshold || '-';
@@ -2038,9 +2122,15 @@
               <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; padding: 2px 6px; border-radius: 4px;">${escapeHtml(it.category)}</span></td>
               <td style="font-size: 12px; color: #334155;">${escapeHtml(it.supplier_name || '-')}</td>
               <td style="text-align: right; font-weight: 700; color: #0F172A;">${Number(it.current_stock).toLocaleString('id-ID')} <span style="font-size: 10px; color: var(--text-muted); font-weight: 500;">${escapeHtml(it.unit)}</span></td>
-              <td style="text-align: right; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${it.min_threshold} / ${maxThresh}</td>
+              <td style="text-align: right; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${Number(it.min_threshold).toLocaleString('id-ID')} / ${Number(maxThresh).toLocaleString('id-ID')}</td>
               <td style="text-align: right; font-weight: 600; color: #0F172A;">${formatCurrency(it.unit_price || 0)}</td>
               <td style="text-align: center;">${statusBadge}</td>
+              <td style="text-align: center;">
+                <button class="btn-action-edit" onclick="openAdminStockModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.unit || 'pcs')}', ${Number(it.min_threshold || 0)})" style="padding: 4px 10px; font-size: 11.5px; background: #2563EB; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  <span>Edit Stok</span>
+                </button>
+              </td>
             </tr>
           `;
         }).join('');
@@ -2056,7 +2146,13 @@
               <span>Database Material & Inventaris Menara</span>
               <span class="badge-tenant tenant-a">usera (Inventory)</span>
             </div>
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Material Terdaftar</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button onclick="clearAllPrAndPoModal()" style="border: 1px solid #EF4444; color: #DC2626; background: #FEF2F2; font-weight: 700; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;" title="Kosongkan seluruh draf PR dan data PO di sistem">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <span>Bersihkan Semua PR & PO</span>
+              </button>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Material Terdaftar</span>
+            </div>
           </div>
 
           <div class="data-table-container">
@@ -2071,6 +2167,7 @@
                   <th style="text-align: right;">BATAS MIN/MAX</th>
                   <th style="text-align: right;">HARGA SATUAN (IDR)</th>
                   <th style="text-align: center;">STATUS STOK</th>
+                  <th style="text-align: center;">AKSI</th>
                 </tr>
               </thead>
               <tbody>
@@ -2223,6 +2320,145 @@
       sessionStorage.clear();
       localStorage.clear();
       window.location.href = '/static/login.html';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    let currentMaterialBalances = [];
+
+    async function openAdminStockModal(itemId, itemName, unit, minStock) {
+      document.getElementById('editStockItemId').value = itemId;
+      document.getElementById('editStockItemName').textContent = `${itemName} (${itemId})`;
+      document.getElementById('editStockUnitBadge').textContent = unit || 'unit';
+      document.getElementById('editStockQtyInput').value = '';
+      document.getElementById('editStockRopInput').value = minStock || '';
+      
+      const selWh = document.getElementById('editStockWarehouseSelect');
+      selWh.innerHTML = '<option value="">Memuat saldo gudang...</option>';
+      document.getElementById('modalEditStock').style.display = 'flex';
+
+      try {
+        const res = await fetch(`/api/balitower/inventory/stock-balances?t=${Date.now()}`, {
+          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
+        });
+        if (res.ok) {
+          const allBalances = await res.json();
+          currentMaterialBalances = allBalances.filter(b => b.item_id === itemId);
+          
+          if (currentMaterialBalances.length === 0) {
+            selWh.innerHTML = '<option value="">Material ini belum memiliki alokasi gudang</option>';
+          } else {
+            selWh.innerHTML = currentMaterialBalances.map((b, idx) => `
+              <option value="${escapeHtml(b.warehouse_id)}" ${idx === 0 ? 'selected' : ''}>
+                ${escapeHtml(b.warehouse_name)} (Stok: ${Number(b.quantity_on_hand).toLocaleString('id-ID')} ${b.unit}, ROP: ${b.reorder_point})
+              </option>
+            `).join('');
+            onAdminStockWarehouseChange();
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching stock balances:', e);
+        selWh.innerHTML = '<option value="">Gagal memuat gudang</option>';
+      }
+    }
+
+    function onAdminStockWarehouseChange() {
+      const selWh = document.getElementById('editStockWarehouseSelect');
+      const whId = selWh.value;
+      const match = currentMaterialBalances.find(b => b.warehouse_id === whId);
+      if (match) {
+        document.getElementById('editStockQtyInput').value = match.quantity_on_hand;
+        document.getElementById('editStockRopInput').value = match.reorder_point;
+      }
+    }
+
+    function closeAdminStockModal() {
+      document.getElementById('modalEditStock').style.display = 'none';
+    }
+
+    async function saveAdminStockOverride() {
+      const itemId = document.getElementById('editStockItemId').value;
+      const warehouseId = document.getElementById('editStockWarehouseSelect').value;
+      const newQtyVal = document.getElementById('editStockQtyInput').value;
+      const ropVal = document.getElementById('editStockRopInput').value;
+
+      if (!warehouseId) {
+        alert('Pilih gudang terlebih dahulu.');
+        return;
+      }
+      if (newQtyVal === '' || Number(newQtyVal) < 0) {
+        alert('Masukkan jumlah stok yang valid (minimal 0).');
+        return;
+      }
+
+      const payload = {
+        item_id: itemId,
+        warehouse_id: warehouseId,
+        new_quantity: parseInt(newQtyVal, 10),
+        reorder_point: ropVal ? parseInt(ropVal, 10) : undefined
+      };
+
+      const btn = document.getElementById('btnSaveAdminStock');
+      btn.disabled = true;
+      btn.innerHTML = '<span>Menyimpan...</span>';
+
+      try {
+        const res = await fetch('/api/balitower/inventory/stock-balances', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          closeAdminStockModal();
+          showToast(data.message || 'Stok berhasil diperbarui!');
+          await loadUsersDatabase();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Gagal menyimpan stok: ' + (err.detail || 'Terjadi kesalahan server'));
+        }
+      } catch (e) {
+        alert('Kesalahan jaringan: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Simpan Perubahan</span>';
+      }
+    }
+
+    function clearAllPrAndPoModal() {
+      document.getElementById('modalClearAllPrPo').style.display = 'flex';
+    }
+
+    async function executeClearAllPrPo() {
+      const modal = document.getElementById('modalClearAllPrPo');
+      modal.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/approval/clear-all', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          showToast(data.message || 'Semua draf PR dan PO berhasil dibersihkan!');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Gagal membersihkan data: ' + (err.detail || 'Terjadi kesalahan'));
+        }
+      } catch (e) {
+        alert('Kesalahan jaringan: ' + e.message);
+      }
     }
 
     // Default Load: Directly open Master Database

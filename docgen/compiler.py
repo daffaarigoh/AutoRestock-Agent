@@ -182,15 +182,15 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
         try:
             # Exact match first
             row = conn.execute("""
-                SELECT po.po_id, po.po_number, po.supplier_id, s.supplier_name, s.category AS sup_cat,
-                       s.phone, s.email, s.payment_terms, po.item_id, i.item_name, i.item_code,
-                       i.category AS item_cat, i.unit, po.order_quantity, po.unit_price, po.total_amount,
+                SELECT po.po_id, po.po_number, po.supplier_id, COALESCE(s.supplier_name, po.supplier_id) AS supplier_name, COALESCE(s.category, 'General') AS sup_cat,
+                       COALESCE(s.phone, '-') AS phone, COALESCE(s.email, '-') AS email, COALESCE(s.payment_terms, 'Net 30') AS payment_terms, po.item_id, COALESCE(i.item_name, po.item_id) AS item_name, COALESCE(i.item_code, po.item_id) AS item_code,
+                       COALESCE(i.category, 'Logistics') AS item_cat, COALESCE(i.unit, 'pcs') AS unit, po.order_quantity, po.unit_price, po.total_amount,
                        po.status, po.order_date, po.expected_delivery, po.actual_delivery,
-                       po.warehouse_id, w.warehouse_name, w.region, w.address, w.supervisor
+                       po.warehouse_id, COALESCE(w.warehouse_name, po.warehouse_id) AS warehouse_name, COALESCE(w.region, 'DKI Jakarta') AS region, COALESCE(w.address, 'Jl. Logistics Hub') AS address, COALESCE(w.supervisor, 'Manager Logistik') AS supervisor
                 FROM purchase_orders po
-                JOIN suppliers s ON po.supplier_id = s.supplier_id
-                JOIN inventory_items i ON po.item_id = i.item_id
-                JOIN warehouses w ON po.warehouse_id = w.warehouse_id
+                LEFT JOIN suppliers s ON po.supplier_id = s.supplier_id
+                LEFT JOIN inventory_items i ON po.item_id = i.item_id
+                LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
                 WHERE UPPER(po.po_id) = ? OR UPPER(po.po_number) = ?;
             """, [po_input.upper(), po_input.upper()]).fetchone()
             
@@ -199,15 +199,15 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
                 digits = re.findall(r'\d+', po_input)
                 last_num = digits[-1].zfill(3) if digits else po_input
                 row = conn.execute("""
-                    SELECT po.po_id, po.po_number, po.supplier_id, s.supplier_name, s.category AS sup_cat,
-                           s.phone, s.email, s.payment_terms, po.item_id, i.item_name, i.item_code,
-                           i.category AS item_cat, i.unit, po.order_quantity, po.unit_price, po.total_amount,
+                    SELECT po.po_id, po.po_number, po.supplier_id, COALESCE(s.supplier_name, po.supplier_id) AS supplier_name, COALESCE(s.category, 'General') AS sup_cat,
+                           COALESCE(s.phone, '-') AS phone, COALESCE(s.email, '-') AS email, COALESCE(s.payment_terms, 'Net 30') AS payment_terms, po.item_id, COALESCE(i.item_name, po.item_id) AS item_name, COALESCE(i.item_code, po.item_id) AS item_code,
+                           COALESCE(i.category, 'Logistics') AS item_cat, COALESCE(i.unit, 'pcs') AS unit, po.order_quantity, po.unit_price, po.total_amount,
                            po.status, po.order_date, po.expected_delivery, po.actual_delivery,
-                           po.warehouse_id, w.warehouse_name, w.region, w.address, w.supervisor
+                           po.warehouse_id, COALESCE(w.warehouse_name, po.warehouse_id) AS warehouse_name, COALESCE(w.region, 'DKI Jakarta') AS region, COALESCE(w.address, 'Jl. Logistics Hub') AS address, COALESCE(w.supervisor, 'Manager Logistik') AS supervisor
                     FROM purchase_orders po
-                    JOIN suppliers s ON po.supplier_id = s.supplier_id
-                    JOIN inventory_items i ON po.item_id = i.item_id
-                    JOIN warehouses w ON po.warehouse_id = w.warehouse_id
+                    LEFT JOIN suppliers s ON po.supplier_id = s.supplier_id
+                    LEFT JOIN inventory_items i ON po.item_id = i.item_id
+                    LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
                     WHERE po.po_number LIKE ? OR po.po_id LIKE ?;
                 """, [f"%{last_num}%", f"%{last_num}%"]).fetchone()
 

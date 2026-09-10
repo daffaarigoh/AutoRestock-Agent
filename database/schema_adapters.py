@@ -24,22 +24,23 @@ class TenantSchemaAdapter:
                         i.item_name,
                         i.category,
                         COALESCE(SUM(sb.quantity_on_hand), 0) AS total_stock,
-                        i.min_stock,
                         i.lead_time_days,
                         i.unit,
                         i.unit_price,
                         COALESCE(s.supplier_id, 'SUP-001') AS supplier_id,
-                        COALESCE(s.supplier_name, 'PT Bali Vendor Utama') AS supplier_name
+                        COALESCE(s.supplier_name, 'PT Bali Vendor Utama') AS supplier_name,
+                        CASE WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point) AS BIGINT) ELSE i.min_stock END AS min_thresh,
+                        CASE WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point * 3) AS BIGINT) ELSE i.min_stock * 3 END AS max_thresh
                     FROM inventory_items i
-                    LEFT JOIN stock_balances sb ON i.item_id = sb.item_id
+                    LEFT JOIN stock_balances sb ON i.item_id = sb.item_id AND (sb.stock_status IN ('CRITICAL', 'LOW_STOCK') OR sb.quantity_on_hand <= sb.reorder_point)
                     LEFT JOIN suppliers s ON i.supplier_id = s.supplier_id
                     GROUP BY i.item_id, i.item_name, i.category, i.min_stock, i.lead_time_days, i.unit, i.unit_price, s.supplier_id, s.supplier_name
-                    HAVING COALESCE(SUM(sb.quantity_on_hand), 0) <= i.min_stock
-                    ORDER BY (i.min_stock - COALESCE(SUM(sb.quantity_on_hand), 0)) DESC;
+                    HAVING COUNT(sb.warehouse_id) > 0
+                    ORDER BY (SUM(sb.reorder_point) - SUM(sb.quantity_on_hand)) DESC;
                 """).fetchall()
                 results = []
                 for r in rows:
-                    item_id, name, cat, stock, min_thresh, lt_days, unit, price, sup_id, sup_name = r
+                    item_id, name, cat, stock, lt_days, unit, price, sup_id, sup_name, min_thresh, max_thresh = r
                     stock_val = int(stock)
                     min_val = int(min_thresh)
                     reorder_qty = max(min_val * 2 - stock_val, 1)
@@ -49,7 +50,7 @@ class TenantSchemaAdapter:
                         "category": cat,
                         "current_stock": stock_val,
                         "min_threshold": min_val,
-                        "max_threshold": int(min_val * 3),
+                        "max_threshold": int(max_thresh),
                         "avg_daily_usage": 5.0,
                         "lead_time_days": int(lt_days),
                         "unit": unit,
@@ -249,7 +250,8 @@ class TenantSchemaAdapter:
                         i.item_name,
                         i.category,
                         COALESCE(SUM(sb.quantity_on_hand), i.min_stock * 2) AS stock,
-                        i.min_stock,
+                        CASE WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point) AS BIGINT) ELSE i.min_stock END AS min_thresh,
+                        CASE WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point * 3) AS BIGINT) ELSE i.min_stock * 3 END AS max_thresh,
                         i.lead_time_days,
                         i.unit,
                         i.unit_price,
@@ -262,14 +264,14 @@ class TenantSchemaAdapter:
                 """).fetchall()
                 items = []
                 for r in rows:
-                    item_id, name, cat, stock, min_thresh, lt_days, unit, price, supp_name = r
+                    item_id, name, cat, stock, min_thresh, max_thresh, lt_days, unit, price, supp_name = r
                     items.append({
                         "item_id": item_id,
                         "name": name,
                         "category": cat,
                         "current_stock": int(stock),
                         "min_threshold": int(min_thresh),
-                        "max_threshold": int(min_thresh * 3),
+                        "max_threshold": int(max_thresh),
                         "avg_daily_usage": 5.0,
                         "lead_time_days": int(lt_days),
                         "unit": unit,
@@ -485,16 +487,20 @@ class TenantSchemaAdapter:
 
             existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
             if "inventory_items" in existing_tables:
+                wh_count_row = conn.execute("SELECT COUNT(*) FROM stock_balances WHERE item_id = ? OR lower(item_id) = ?;", [target, target_lower]).fetchone()
+                wh_count = wh_count_row[0] if wh_count_row and wh_count_row[0] > 0 else 1
+                per_wh_min = max(1, new_threshold // wh_count)
+
                 conn.execute("""
                     UPDATE inventory_items
                     SET min_stock = ?
                     WHERE item_id = ? OR lower(item_name) LIKE ?;
-                """, [new_threshold, target, f"%{target_lower}%"])
+                """, [per_wh_min, target, f"%{target_lower}%"])
                 conn.execute("""
                     UPDATE stock_balances
                     SET reorder_point = ?
                     WHERE item_id = ?;
-                """, [new_threshold, target])
+                """, [per_wh_min, target])
                 return True
 
             # TENANT A: Min_Safety_Stock

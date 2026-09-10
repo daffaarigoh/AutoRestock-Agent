@@ -206,7 +206,25 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
         prompt_lower = prompt.lower()
         extracted_email = extract_recipient_email(prompt)
 
-        # Check for product registration intent first (only if user workflow has registration)
+        # Check for Restock / PR creation pipeline intent
+        is_pr_pipeline = (
+            any(k in prompt_lower for k in ["buat pr", "buatkan pr", "draf pr", "draft pr", "terbitkan pr", "kirim pr", "kirimkan pr", "restock", "order barang"])
+            or ("pr" in prompt_lower and any(k in prompt_lower for k in ["kirim", "email", "ajukan", "buat", "terbit", "menipis"]))
+        )
+        if is_pr_pipeline:
+            for row in workflows:
+                if row[0] == "WF-A01" or "pipeline_pengadaan" in row[1].lower() or "pengadaan" in row[1].lower():
+                    res = {
+                        "workflow_id": row[0],
+                        "send_email": bool(extracted_email),
+                        "threshold_updates": [],
+                        "target_item_name": None
+                    }
+                    if extracted_email:
+                        res["recipient_email"] = extracted_email
+                    return res
+
+        # Check for product registration intent (only if user workflow has registration)
         if any(k in prompt_lower for k in ["tambah", "tambahkan", "daftar", "daftarkan", "registrasi", "masukkan produk", "tambah produk", "tambah barang", "tambahkan nama produk", "buat barang"]):
             for row in workflows:
                 if any(w in row[1].lower() for w in ["daftar", "pendaftaran", "tambah", "registrasi", "register"]):

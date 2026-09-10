@@ -97,13 +97,34 @@ class TestStreamAndClarification(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn("DISETUJUI (APPROVED)", res.text)
 
-        # Assert DuckDB updated
+        # Assert DuckDB state after approval (ERP standard: PO is ORDERED, physical stock unchanged)
         conn = get_db_connection(read_only=True)
         order_status = conn.execute("SELECT status FROM orders WHERE pr_number = ?;", [pr_num]).fetchone()[0]
-        updated_stock = conn.execute("SELECT current_stock FROM items WHERE item_id = ?;", [item_id]).fetchone()[0]
+        po_row = conn.execute("SELECT po_id, status FROM purchase_orders WHERE pr_number = ?;", [pr_num]).fetchone()
+        stock_before_delivery = conn.execute("SELECT current_stock FROM items WHERE item_id = ?;", [item_id]).fetchone()[0]
         conn.close()
 
         self.assertEqual(order_status, "APPROVED")
+        self.assertIsNotNone(po_row)
+        self.assertEqual(po_row[1], "ORDERED")
+        self.assertEqual(stock_before_delivery, initial_stock)
+
+        # Simulate physical goods arrival at warehouse (Goods Receipt / DELIVERED)
+        po_id = po_row[0]
+        login_res = self.client.post("/api/auth/login", json={"username": "usera", "password": "user123"})
+        token = login_res.json()["access_token"]
+        gr_res = self.client.post(
+            "/api/agent/custom-prompt",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"prompt": f"Barang untuk {po_id} sudah sampai di gudang, tolong catat penerimaannya", "destinations": []}
+        )
+        self.assertEqual(gr_res.status_code, 200)
+        self.assertEqual(gr_res.json()["po_status"], "DELIVERED")
+
+        # Verify physical stock increment upon delivery
+        conn = get_db_connection(read_only=True)
+        updated_stock = conn.execute("SELECT current_stock FROM items WHERE item_id = ?;", [item_id]).fetchone()[0]
+        conn.close()
         self.assertEqual(updated_stock, initial_stock + qty_to_add)
 
 if __name__ == "__main__":

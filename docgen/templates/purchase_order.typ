@@ -36,9 +36,9 @@
 )
 
 #let po_status = "{{STATUS}}"
-#let status_color = if po_status == "DELIVERED" { rgb("#16a34a") } else if po_status == "IN_TRANSIT" { rgb("#2563eb") } else if po_status == "ORDERED" { rgb("#d97706") } else { rgb("#64748b") }
-#let status_bg = if po_status == "DELIVERED" { rgb("#f0fdf4") } else if po_status == "IN_TRANSIT" { rgb("#eff6ff") } else if po_status == "ORDERED" { rgb("#fffbeb") } else { rgb("#f8fafc") }
-#let status_border = if po_status == "DELIVERED" { rgb("#bbf7d0") } else if po_status == "IN_TRANSIT" { rgb("#bfdbfe") } else if po_status == "ORDERED" { rgb("#fde68a") } else { rgb("#e2e8f0") }
+#let status_color = if po_status == "DELIVERED" { rgb("#16a34a") } else { rgb("#d97706") }
+#let status_bg = if po_status == "DELIVERED" { rgb("#f0fdf4") } else { rgb("#fffbeb") }
+#let status_border = if po_status == "DELIVERED" { rgb("#bbf7d0") } else { rgb("#fde68a") }
 
 // Header Kop Surat Perusahaan
 #grid(

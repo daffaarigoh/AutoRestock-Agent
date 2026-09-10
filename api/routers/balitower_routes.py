@@ -12,9 +12,10 @@ Dilengkapi sistem otorisasi multi-tenant ketat:
 - User Finance (tenant FINANCE): Hanya boleh akses modul Finance & Accounting.
 """
 
+from datetime import datetime
 from typing import Any
-from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends, Query, status
+from pydantic import BaseModel, Field
 from core.security import TokenData, get_current_user
 from database.db import get_db_connection
 
@@ -85,15 +86,31 @@ def get_inventory_items(
                 i.category,
                 i.unit,
                 i.unit_price,
-                i.min_stock,
+                CASE 
+                    WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point) AS BIGINT) 
+                    ELSE i.min_stock 
+                END AS min_stock,
+                CASE 
+                    WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point * 3) AS BIGINT) 
+                    ELSE i.min_stock * 3 
+                END AS max_stock,
+                CASE 
+                    WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point * 3) AS BIGINT) 
+                    ELSE i.min_stock * 3 
+                END AS max_threshold,
                 i.safety_stock,
                 i.lead_time_days,
                 s.supplier_name,
                 COALESCE(SUM(sb.quantity_on_hand), 0) AS total_stock,
                 COALESCE(SUM(sb.quantity_reserved), 0) AS total_reserved,
                 CASE 
-                    WHEN COALESCE(SUM(sb.quantity_on_hand), 0) <= i.min_stock * 0.5 THEN 'CRITICAL'
-                    WHEN COALESCE(SUM(sb.quantity_on_hand), 0) <= i.min_stock THEN 'LOW_STOCK'
+                    WHEN COALESCE(SUM(sb.quantity_on_hand), 0) = 0 THEN 'OUT_OF_STOCK'
+                    WHEN COALESCE(SUM(sb.quantity_on_hand), 0) <= (
+                        CASE WHEN COUNT(sb.warehouse_id) > 0 THEN SUM(sb.reorder_point * 0.5) ELSE i.min_stock * 0.5 END
+                    ) THEN 'CRITICAL'
+                    WHEN COALESCE(SUM(sb.quantity_on_hand), 0) <= (
+                        CASE WHEN COUNT(sb.warehouse_id) > 0 THEN SUM(sb.reorder_point) ELSE i.min_stock END
+                    ) THEN 'LOW_STOCK'
                     ELSE 'NORMAL'
                 END AS stock_status
             FROM inventory_items i
@@ -140,8 +157,14 @@ def get_stock_balances(
                 sb.quantity_on_hand,
                 sb.quantity_reserved,
                 sb.reorder_point,
-                sb.stock_status,
-                sb.last_updated
+                CASE 
+                    WHEN sb.quantity_on_hand = 0 THEN 'OUT_OF_STOCK'
+                    WHEN sb.quantity_on_hand <= (sb.reorder_point * 0.5) THEN 'CRITICAL'
+                    WHEN sb.quantity_on_hand <= sb.reorder_point THEN 'LOW_STOCK'
+                    ELSE 'NORMAL'
+                END AS stock_status,
+                sb.last_updated,
+                CAST(sb.last_updated AS VARCHAR)[:10] AS last_stock_take_date
             FROM stock_balances sb
             JOIN inventory_items i ON sb.item_id = i.item_id
             JOIN warehouses w ON sb.warehouse_id = w.warehouse_id
@@ -159,12 +182,159 @@ def get_stock_balances(
         conn.close()
 
 
+class UpdateStockBalancePayload(BaseModel):
+    item_id: str
+    warehouse_id: str
+    new_quantity: int = Field(..., ge=0, description="Kuantitas fisik stok baru")
+    reorder_point: int | None = Field(None, ge=1, description="Ambang batas minimum reorder point opsional")
+
+
+@router.put("/api/balitower/inventory/stock-balances")
+def update_stock_balance(
+    payload: UpdateStockBalancePayload,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """
+    Memperbarui kuantitas fisik stok barang pada gudang tertentu secara bebas oleh Admin.
+    Secara otomatis mengalkulasi ulang stock_status berdasarkan formula matematis baku:
+    - new_quantity == 0 -> OUT_OF_STOCK
+    - new_quantity <= reorder_point * 0.5 -> CRITICAL
+    - new_quantity <= reorder_point -> LOW_STOCK
+    - new_quantity > reorder_point -> NORMAL
+    """
+    u_role = str(getattr(current_user, 'role', 'USER')).upper()
+    u_tenant = str(getattr(current_user, 'tenant_id', 'ALL')).upper()
+    username = str(getattr(current_user, 'username', '')).lower()
+    is_authorized = (
+        u_role in ["ADMIN", "SUPERADMIN"] or 
+        u_tenant in ["ALL", "INVENTORY", "TENANT_A"] or 
+        username in ["admin", "usera"]
+    )
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Akses Ditolak: Hanya Admin atau Divisi Inventory yang berhak mengubah saldo stok fisik."
+        )
+
+    now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    conn = get_db_connection(read_only=False)
+    try:
+        row = conn.execute("""
+            SELECT balance_id, quantity_on_hand, reorder_point 
+            FROM stock_balances 
+            WHERE item_id = ? AND warehouse_id = ?;
+        """, [payload.item_id, payload.warehouse_id]).fetchone()
+
+        if not row:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Saldo stok untuk item {payload.item_id} di gudang {payload.warehouse_id} tidak ditemukan."
+            )
+
+        bal_id, old_qty, cur_rop = row
+        new_rop = payload.reorder_point if payload.reorder_point is not None else cur_rop
+        new_qty = payload.new_quantity
+
+        if new_qty == 0:
+            new_status = 'OUT_OF_STOCK'
+        elif new_qty <= new_rop * 0.5:
+            new_status = 'CRITICAL'
+        elif new_qty <= new_rop:
+            new_status = 'LOW_STOCK'
+        else:
+            new_status = 'NORMAL'
+
+        conn.execute("""
+            UPDATE stock_balances
+            SET quantity_on_hand = ?,
+                reorder_point = ?,
+                stock_status = ?,
+                last_updated = ?,
+                last_stock_take_date = ?
+            WHERE balance_id = ?;
+        """, [new_qty, new_rop, new_status, now_ts, today_str, bal_id])
+
+        if payload.reorder_point is not None:
+            conn.execute("""
+                UPDATE inventory_items
+                SET min_stock = ?
+                WHERE item_id = ?;
+            """, [new_rop, payload.item_id])
+
+        try:
+            conn.execute("""
+                UPDATE items
+                SET current_stock = (
+                    SELECT COALESCE(SUM(quantity_on_hand), 0)
+                    FROM stock_balances
+                    WHERE stock_balances.item_id = items.item_id
+                ),
+                min_threshold = (
+                    SELECT COALESCE(SUM(reorder_point), items.min_threshold)
+                    FROM stock_balances
+                    WHERE stock_balances.item_id = items.item_id
+                ),
+                max_threshold = (
+                    SELECT COALESCE(SUM(reorder_point * 3), items.max_threshold)
+                    FROM stock_balances
+                    WHERE stock_balances.item_id = items.item_id
+                )
+                WHERE item_id = ?;
+            """, [payload.item_id])
+        except Exception:
+            pass
+
+        conn.commit()
+
+        updated_data = conn.execute("""
+            SELECT 
+                sb.balance_id,
+                sb.item_id,
+                i.item_name,
+                sb.warehouse_id,
+                w.warehouse_name,
+                sb.quantity_on_hand,
+                sb.reorder_point,
+                sb.stock_status,
+                sb.last_stock_take_date
+            FROM stock_balances sb
+            JOIN inventory_items i ON sb.item_id = i.item_id
+            JOIN warehouses w ON sb.warehouse_id = w.warehouse_id
+            WHERE sb.balance_id = ?;
+        """, [bal_id]).fetchone()
+
+        cols = ["balance_id", "item_id", "item_name", "warehouse_id", "warehouse_name", "quantity_on_hand", "reorder_point", "stock_status", "last_stock_take_date"]
+        res_dict = dict(zip(cols, updated_data))
+
+        return {
+            "status": "success",
+            "message": f"Stok {res_dict['item_name']} di {res_dict['warehouse_name']} berhasil diubah menjadi {new_qty} (Status: {new_status}).",
+            "data": res_dict
+        }
+    finally:
+        conn.close()
+
+
 @router.get("/api/balitower/inventory/warehouses")
 def get_warehouses(current_user: TokenData = Depends(require_inventory_access)):
     """Tabel 3: warehouses - Daftar gudang regional dan kapasitas logistik."""
     conn = get_db_connection(read_only=True)
     try:
-        rows = conn.execute("SELECT * FROM warehouses ORDER BY warehouse_id ASC;").fetchall()
+        rows = conn.execute("""
+            SELECT 
+                warehouse_id,
+                warehouse_name,
+                warehouse_type,
+                region,
+                address,
+                capacity_sqm,
+                supervisor,
+                'OPERASIONAL' AS status
+            FROM warehouses 
+            ORDER BY warehouse_id ASC;
+        """).fetchall()
         cols = [desc[0] for desc in conn.description]
         return [dict(zip(cols, r)) for r in rows]
     finally:
@@ -181,6 +351,7 @@ def get_suppliers(current_user: TokenData = Depends(require_inventory_access)):
                 supplier_id,
                 supplier_name,
                 category,
+                COALESCE(contact_person, '-') AS contact_person,
                 phone,
                 email,
                 rating,
@@ -204,9 +375,9 @@ def get_purchase_orders(current_user: TokenData = Depends(require_inventory_acce
                 po.po_id,
                 po.po_number,
                 po.supplier_id,
-                s.supplier_name,
+                COALESCE(s.supplier_name, po.supplier_id) AS supplier_name,
                 po.item_id,
-                i.item_name,
+                COALESCE(i.item_name, po.item_id) AS item_name,
                 po.warehouse_id,
                 COALESCE(w.warehouse_name, po.warehouse_id) AS warehouse_name,
                 po.order_quantity,
@@ -217,10 +388,10 @@ def get_purchase_orders(current_user: TokenData = Depends(require_inventory_acce
                 po.status,
                 po.status AS po_status
             FROM purchase_orders po
-            JOIN suppliers s ON po.supplier_id = s.supplier_id
-            JOIN inventory_items i ON po.item_id = i.item_id
+            LEFT JOIN suppliers s ON po.supplier_id = s.supplier_id
+            LEFT JOIN inventory_items i ON po.item_id = i.item_id
             LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
-            ORDER BY po.order_date DESC;
+            ORDER BY po.order_date DESC, po.po_id DESC;
         """
         rows = conn.execute(query).fetchall()
         cols = [desc[0] for desc in conn.description]

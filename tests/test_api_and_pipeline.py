@@ -13,11 +13,12 @@ from api.main import app
 from core.observability import tracer
 from core.schemas import PurchaseRequisitionDoc, RestockItem
 from core.security import TokenData, get_current_admin, get_current_user
+from database.db import get_db_connection
 from docgen.compiler import generate_pr_pdf
 
 
 def override_get_current_user():
-    return TokenData(username="test_admin", role="ADMIN", tenant_id="TENANT_A")
+    return TokenData(username="test_admin", role="ADMIN", tenant_id="ALL")
 
 
 app.dependency_overrides[get_current_user] = override_get_current_user
@@ -31,6 +32,9 @@ class TestAutoRestockPipeline(unittest.TestCase):
         app.dependency_overrides[get_current_admin] = override_get_current_user
         self.client = TestClient(app)
         self.client.post("/api/approval/reset")
+        conn = get_db_connection(read_only=False)
+        conn.execute("UPDATE stock_balances SET quantity_on_hand = 450, stock_status = 'CRITICAL' WHERE item_id = 'BLT-INV-002' AND warehouse_id = 'WH-BDG-01';")
+        conn.close()
 
     def tearDown(self):
         app.dependency_overrides.clear()
@@ -140,10 +144,15 @@ class TestAutoRestockPipeline(unittest.TestCase):
 
         # 8. Test Threshold Customizer Endpoint (PATCH /api/inventory/items/...)
         first_item_id = items[0]["item_id"]
+        original_min = items[0].get("min_threshold", 2000)
         res_threshold = self.client.patch(f"/api/inventory/items/{first_item_id}", json={
             "min_threshold": 80
         })
         self.assertEqual(res_threshold.status_code, 200)
+        # Restore original min threshold so live dashboard data is preserved
+        self.client.patch(f"/api/inventory/items/{first_item_id}", json={
+            "min_threshold": original_min
+        })
 
         # 9. Test Prompt Templates Endpoint (GET /api/agent/prompt-templates)
         res_templates = self.client.get("/api/agent/prompt-templates")

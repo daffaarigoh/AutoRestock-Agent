@@ -724,7 +724,7 @@ async function loadPurchaseOrders() {
       const rowsHtml = data.map(po => {
         let statusBadge = 'badge-pending';
         if (po.po_status === 'DELIVERED') statusBadge = 'badge-approved';
-        else if (po.po_status === 'IN_TRANSIT') statusBadge = 'badge-low_stock';
+        else statusBadge = 'badge-pending';
         return `
           <tr>
             <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: #2563EB;">${escapeHtml(po.po_number)}</td>
@@ -735,7 +735,13 @@ async function loadPurchaseOrders() {
             <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(po.order_date)}</td>
             <td class="text-center" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(po.expected_delivery || '-')}</td>
             <td class="text-center"><span class="badge ${statusBadge}">${escapeHtml(po.po_status)}</span></td>
-            <td class="text-center">
+            <td class="text-center" style="white-space: nowrap;">
+              ${po.po_status === 'ORDERED' ? `
+              <button class="btn btn-primary btn-xs" style="padding: 3px 8px; font-size: 11px; background: #16A34A; border-color: #15803D; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;" onclick="confirmGoodsReceiptQuick('${escapeHtml(po.po_id)}', '${escapeHtml(po.po_number)}')">
+                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Terima Barang</span>
+              </button>
+              ` : ''}
               <button class="btn btn-secondary btn-xs" style="padding: 3px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openPoPdfModal('${escapeHtml(po.po_id)}', '${escapeHtml(po.po_number)}', '${escapeHtml(po.supplier_name)}', ${po.total_amount}, '${escapeHtml(po.po_status)}')">
                 <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 <span>PDF</span>
@@ -748,6 +754,15 @@ async function loadPurchaseOrders() {
     }
   } catch (e) {
     console.error("Failed to load POs:", e);
+  }
+}
+
+function confirmGoodsReceiptQuick(poId, poNumber) {
+  const input = document.getElementById('promptInput');
+  if (input) {
+    input.value = `Barang untuk ${poId} sudah sampai di gudang, tolong catat penerimaannya`;
+    input.focus();
+    submitPrompt();
   }
 }
 
@@ -1219,8 +1234,9 @@ async function loadInventoryItems() {
         current_stock: Number(it.total_stock !== undefined ? it.total_stock : it.current_stock) || 0,
         unit: it.unit || 'pcs',
         min_stock: Number(it.min_stock !== undefined ? it.min_stock : it.min_threshold) || 0,
-        max_stock: Number(it.max_threshold !== undefined ? it.max_threshold : (it.min_stock * 3)) || 0,
-        unit_price: Number(it.unit_price) || 0
+        max_stock: Number(it.max_stock !== undefined ? it.max_stock : (it.max_threshold !== undefined ? it.max_threshold : (it.min_stock * 3))) || 0,
+        unit_price: Number(it.unit_price) || 0,
+        stock_status: it.stock_status || ''
       }));
       filterCatalogTable();
     } else {
@@ -1253,6 +1269,9 @@ function renderCatalogTable(items) {
     if (it.current_stock === 0) {
       badgeClass = 'badge-out_of_stock';
       statusLabel = 'Habis';
+    } else if (it.current_stock <= it.min_stock * 0.5) {
+      badgeClass = 'badge-out_of_stock';
+      statusLabel = 'Kritis';
     } else if (it.current_stock <= it.min_stock) {
       badgeClass = 'badge-low_stock';
       statusLabel = 'Menipis';
@@ -1269,8 +1288,8 @@ function renderCatalogTable(items) {
         <td>
           <span style="font-size: 11px; background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; padding: 2px 6px; border-radius: 4px;">${escapeHtml(it.category)}</span>
         </td>
-        <td class="text-right" style="font-weight: 700; color: #0F172A;">${it.current_stock} <span style="font-size: 10px; font-weight: 500; color: var(--text-muted);">${it.unit}</span></td>
-        <td class="text-right" style="font-size: 11px; color: var(--text-muted);">${it.min_stock} / ${it.max_stock}</td>
+        <td class="text-right" style="font-weight: 700; color: #0F172A;">${it.current_stock.toLocaleString('id-ID')} <span style="font-size: 10px; font-weight: 500; color: var(--text-muted);">${it.unit}</span></td>
+        <td class="text-right" style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${it.min_stock.toLocaleString('id-ID')} / ${it.max_stock.toLocaleString('id-ID')}</td>
         <td class="text-right" style="font-weight: 600; color: #0F172A;">${formatCurrency(it.unit_price)}</td>
         <td class="text-center"><span class="badge ${badgeClass}">${statusLabel}</span></td>
       </tr>
@@ -1472,7 +1491,6 @@ function openPoPdfModal(poId, poNumber, supplierName, grandTotal, poStatus) {
   if (statusBadge) {
     const rawStatus = (poStatus || "ORDERED").toUpperCase();
     if (rawStatus === 'DELIVERED') statusBadge.className = 'badge badge-approved';
-    else if (rawStatus === 'IN_TRANSIT') statusBadge.className = 'badge badge-low_stock';
     else statusBadge.className = 'badge badge-pending';
     statusBadge.textContent = rawStatus;
   }
@@ -2150,8 +2168,8 @@ function appendAgentResponseCard(data) {
       borderStyle = "border-left: 4px solid #2563EB; background: #EFF6FF; border: 1px solid #BFDBFE;";
       headerColor = "#1D4ED8";
     } else if (isClarification) {
-      headerTitle = "PENGIRIMAN LOGISTIK DALAM PERJALANAN (IN_TRANSIT)";
-      badgeText = "IN_TRANSIT";
+      headerTitle = "PURCHASE ORDER AKTIF (ORDERED)";
+      badgeText = "ORDERED";
       badgeClass = "badge-low_stock";
       borderStyle = "border-left: 4px solid #D97706; background: #FFFBEB; border: 1px solid #FDE68A;";
       headerColor = "#B45309";

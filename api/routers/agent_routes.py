@@ -16,7 +16,7 @@ WORKSPACE_DIR = Path(__file__).resolve().parent.parent.parent
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
-from agents.state import PurchaseRequisition
+from agents.state import PurchaseRequisition, RestockItem
 from agents.workflow import resume_approval, run_autorestock_cycle
 from core.security import TokenData, get_current_user
 from database.db import get_db_connection
@@ -320,7 +320,7 @@ def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest, cur
 def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
     """
     Menangani pencatatan penerimaan fisik barang pesanan (Purchase Order) saat tiba di gudang regional.
-    - Mengidentifikasi nomor PO atau mencari pengiriman aktif (IN_TRANSIT).
+    - Mengidentifikasi nomor PO atau mencari pesanan aktif (ORDERED).
     - Memperbarui status PO menjadi DELIVERED dan actual_delivery = hari ini.
     - Menambahkan kuantitas fisik ke stock_balances di gudang terkait.
     - Mengalkulasi ulang stock_status (CRITICAL / LOW_STOCK -> NORMAL).
@@ -421,7 +421,7 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                     WHERE UPPER(po.po_number) LIKE ?;
                 """, [f"%{padded_digits}"]).fetchone()
 
-        # C. Jika tidak ada kode PO eksplisit, cari PO yang berstatus IN_TRANSIT berdasarkan material / gudang
+        # C. Jika tidak ada kode PO eksplisit, cari PO yang berstatus ORDERED berdasarkan material / gudang
         if not po_row:
             in_transit_rows = conn.execute("""
                 SELECT po.po_id, po.po_number, po.supplier_id, s.supplier_name, po.item_id, 
@@ -432,7 +432,7 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                 JOIN suppliers s ON po.supplier_id = s.supplier_id
                 JOIN inventory_items i ON po.item_id = i.item_id
                 JOIN warehouses w ON po.warehouse_id = w.warehouse_id
-                WHERE po.status = 'IN_TRANSIT';
+                WHERE po.status = 'ORDERED';
             """).fetchall()
             
             matched_pos = []
@@ -450,7 +450,7 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                 po_row = matched_pos[0]
             elif len(matched_pos) > 1 or len(in_transit_rows) > 0:
                 candidates = matched_pos if matched_pos else in_transit_rows
-                msg = "**Sistem Mendeteksi Pengiriman Sedang Dalam Perjalanan (`IN_TRANSIT`)**\n\n"
+                msg = "**Sistem Mendeteksi Purchase Order Aktif (`ORDERED`)**\n\n"
                 msg += "Mohon sebutkan nomor PO spesifik yang telah sampai di gudang fisik:\n\n"
                 msg += "| No. PO | Kode Referensi | Material | Volume | Gudang Tujuan | Estimasi Tiba |\n"
                 msg += "| :--- | :--- | :--- | :---: | :--- | :---: |\n"
@@ -548,6 +548,16 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
             UPDATE items
             SET current_stock = (
                 SELECT COALESCE(SUM(quantity_on_hand), 0)
+                FROM stock_balances
+                WHERE stock_balances.item_id = items.item_id
+            ),
+            min_threshold = (
+                SELECT COALESCE(SUM(reorder_point), items.min_threshold)
+                FROM stock_balances
+                WHERE stock_balances.item_id = items.item_id
+            ),
+            max_threshold = (
+                SELECT COALESCE(SUM(reorder_point * 3), items.max_threshold)
                 FROM stock_balances
                 WHERE stock_balances.item_id = items.item_id
             )
@@ -705,39 +715,39 @@ async def execute_prompt_logic(
         or ("saldo" in lower_prompt and any(w in lower_prompt for w in ["keuangan", "bank", "kas"]))
     )
     is_inv_keyword = (
-        any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "gudang", "beli", "pesan", "restock", "supplier", "purchase order", "po", "terima", "sampai", "tiba", "penerimaan", "pengiriman", "delivered", "transit", "approved", "setujui", "wf-001", "wf-a01"])
+        any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "gudang", "beli", "pesan", "restock", "supplier", "purchase order", "terima", "sampai", "tiba", "penerimaan", "pengiriman", "delivered", "transit", "approved", "setujui", "wf-001", "wf-a01"])
         or bool(re.search(r'\bpo\b', lower_prompt))
     )
 
     # If it's a Schema ALL request, it is universally accessible to all users!
     if not is_all_schema_keyword and u_role != "ADMIN" and u_tenant != "ALL":
-        if is_fin_keyword and u_tenant != "FINANCE":
+        if is_fin_keyword and u_tenant not in ["FINANCE", "USERC", "TENANT_C"]:
             if stage_callback:
                 await stage_callback("denied", "🚫 Memeriksa wewenang divisi...")
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
                 "action_type": "out_of_scope",
-                "message": f"Akses Ditolak: Permintaan ini di luar ranah kewenangan Anda. Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi {current_user.tenant_id}. Anda tidak memiliki akses ke data HR atau Keuangan perusahaan.",
+                "message": f"Akses Ditolak: Permintaan ini di luar ranah kewenangan Anda. Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi {current_user.tenant_id}. Anda tidak memiliki akses ke alur kerja Schema C (Divisi Keuangan) perusahaan.",
                 "generated_prs": [],
                 "affected_items": []
             }
-        if is_hr_keyword and u_tenant != "HR":
+        if is_hr_keyword and u_tenant not in ["HR", "USERB", "TENANT_B"]:
             if stage_callback:
                 await stage_callback("denied", "🚫 Memeriksa wewenang divisi...")
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
                 "action_type": "out_of_scope",
-                "message": f"Akses Ditolak: Permintaan ini di luar ranah kewenangan Anda. Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi {current_user.tenant_id}. Anda tidak memiliki akses ke data Material Gudang atau Keuangan perusahaan.",
+                "message": f"Akses Ditolak: Permintaan ini di luar ranah kewenangan Anda. Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi {current_user.tenant_id}. Anda tidak memiliki akses ke alur kerja Schema B (Divisi HR) perusahaan.",
                 "generated_prs": [],
                 "affected_items": []
             }
-        if is_inv_keyword and u_tenant != "INVENTORY":
+        if is_inv_keyword and u_tenant not in ["INVENTORY", "USERA", "TENANT_A"]:
             if stage_callback:
                 await stage_callback("denied", "🚫 Memeriksa wewenang divisi...")
             return {
                 "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
                 "action_type": "out_of_scope",
-                "message": f"Akses Ditolak: Permintaan ini di luar ranah kewenangan Anda. Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi {current_user.tenant_id}. Anda tidak memiliki akses ke data Material Gudang atau Data Personalia.",
+                "message": f"Akses Ditolak: Permintaan ini di luar ranah kewenangan Anda. Akun Anda ({current_user.username}) terdaftar khusus untuk Divisi {current_user.tenant_id}. Anda tidak memiliki akses ke alur kerja Schema A (Divisi Logistik / Material Gudang) perusahaan.",
                 "generated_prs": [],
                 "affected_items": []
             }
@@ -756,10 +766,10 @@ async def execute_prompt_logic(
 
         c_conn = get_db_connection()
         po_row = c_conn.execute("""
-            SELECT po.po_id, po.po_number, s.supplier_name, i.item_name, po.order_quantity, i.unit, po.total_amount, po.status
+            SELECT po.po_id, po.po_number, COALESCE(s.supplier_name, po.supplier_id), COALESCE(i.item_name, po.item_id), po.order_quantity, COALESCE(i.unit, 'pcs'), po.total_amount, po.status
             FROM purchase_orders po
-            JOIN suppliers s ON po.supplier_id = s.supplier_id
-            JOIN inventory_items i ON po.item_id = i.item_id
+            LEFT JOIN suppliers s ON po.supplier_id = s.supplier_id
+            LEFT JOIN inventory_items i ON po.item_id = i.item_id
             WHERE UPPER(po.po_id) = ? OR UPPER(po.po_number) = ?
                OR po.po_number LIKE ? OR po.po_id LIKE ?;
         """, [
@@ -769,24 +779,24 @@ async def execute_prompt_logic(
 
         if po_row:
             p_id, p_num, s_name, i_name, o_qty, u_name, tot, old_st = po_row
-            new_st = "APPROVED"
+            new_st = "ORDERED"
             c_conn.execute("UPDATE purchase_orders SET status = ? WHERE po_id = ?;", [new_st, p_id])
             c_conn.commit()
             c_conn.close()
 
-            # Compile official Typst PO PDF with APPROVED status
+            # Compile official Typst PO PDF with ORDERED status
             try:
                 generate_po_pdf(p_id)
             except Exception as e:
                 print(f"[PO PDF Compile Error]: {e}")
 
-            msg = f"**Purchase Order Resmi Berhasil Disetujui (APPROVED)**\n\n"
-            msg += f"Dokumen surat pesanan **{p_id}** (`{p_num}`) kepada supplier **{s_name}** telah resmi disetujui.\n\n"
+            msg = f"**Purchase Order Resmi Berhasil Disetujui (ORDERED)**\n\n"
+            msg += f"Dokumen surat pesanan **{p_id}** (`{p_num}`) kepada supplier **{s_name}** telah resmi berstatus **`ORDERED`**.\n\n"
             msg += f"- **Nomor PO**: `{p_num}` ({p_id})\n"
             msg += f"- **Supplier Rekanan**: {s_name}\n"
             msg += f"- **Material Dipesan**: {i_name} ({o_qty:,} {u_name})\n"
             msg += f"- **Total Anggaran**: Rp {tot:,}\n"
-            msg += f"- **Status Sebelumnya**: `{old_st}` $\\rightarrow$ **`APPROVED`**\n\n"
+            msg += f"- **Status Sebelumnya**: `{old_st}` $\\rightarrow$ **`ORDERED`**\n\n"
             msg += f"Berkas dokumen resmi berformat PDF Typst dengan kop surat PT Bali Towerindo Sentra Tbk telah diterbitkan dan siap diunduh atau dipratinjau."
 
             return {
@@ -834,10 +844,10 @@ async def execute_prompt_logic(
                 generate_po_pdf(lookup_term)
                 c_conn = get_db_connection(read_only=True)
                 po_info = c_conn.execute("""
-                    SELECT po.po_id, po.po_number, s.supplier_name, i.item_name, po.order_quantity, i.unit, po.total_amount, po.status
+                    SELECT po.po_id, po.po_number, COALESCE(s.supplier_name, po.supplier_id), COALESCE(i.item_name, po.item_id), po.order_quantity, COALESCE(i.unit, 'pcs'), po.total_amount, po.status
                     FROM purchase_orders po
-                    JOIN suppliers s ON po.supplier_id = s.supplier_id
-                    JOIN inventory_items i ON po.item_id = i.item_id
+                    LEFT JOIN suppliers s ON po.supplier_id = s.supplier_id
+                    LEFT JOIN inventory_items i ON po.item_id = i.item_id
                     WHERE UPPER(po.po_id) = ? OR UPPER(po.po_number) = ?
                        OR po.po_number LIKE ? OR po.po_id LIKE ?;
                 """, [
@@ -1084,73 +1094,249 @@ async def execute_prompt_logic(
             return {"parsed_intent": {"workflow_id": "pr_query"}, "action_type": "info", "message": msg, "generated_prs": [], "affected_items": []}
 
         # H. Purchase Order (PO) General Inquiry
-        if lower_prompt.strip() in ["po", "cek po", "daftar po", "status po", "lihat po", "purchase order", "info po"]:
+        is_po_general_query = (
+            lower_prompt.strip() in ["po", "cek po", "daftar po", "status po", "lihat po", "purchase order", "info po"]
+            or any(k in lower_prompt for k in ["daftar po", "cek po", "status po", "lihat po", "daftar purchase order", "tampilkan po", "list po", "riwayat po", "po terkini", "po aktif", "cek purchase order", "semua po", "tabel po", "pesanan pembelian"])
+            or (any(k in lower_prompt for k in ["po", "purchase order"]) and any(w in lower_prompt for w in ["cek", "daftar", "lihat", "status", "tampilkan", "list", "tabel", "riwayat", "ada"]))
+        )
+        if is_po_general_query:
             if stage_callback:
                 await stage_callback("database", "📊 Memeriksa daftar Purchase Order aktif...")
             po_rows = conn.execute("""
-                SELECT po_id, po_number, status, total_amount, warehouse_id
-                FROM purchase_orders
-                ORDER BY order_date DESC LIMIT 5;
+                SELECT 
+                    po.po_id, 
+                    po.po_number, 
+                    po.status, 
+                    po.total_amount, 
+                    COALESCE(w.warehouse_name, po.warehouse_id) AS wh_name,
+                    COALESCE(i.item_name, po.item_id) AS it_name,
+                    po.order_quantity,
+                    COALESCE(s.supplier_name, po.supplier_id) AS sup_name
+                FROM purchase_orders po
+                LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
+                LEFT JOIN inventory_items i ON po.item_id = i.item_id
+                LEFT JOIN suppliers s ON po.supplier_id = s.supplier_id
+                ORDER BY po.order_date DESC, po.po_id DESC LIMIT 10;
             """).fetchall()
-            msg = "Daftar Purchase Order (PO) Terkini:\n\n"
-            msg += "| No. PO | Ref Internal | Status | Nilai Tagihan | Gudang Tujuan |\n"
-            msg += "| :--- | :--- | :---: | :---: | :---: |\n"
-            for r in po_rows:
-                msg += f"| {r[0]} | {r[1]} | {r[2]} | Rp {int(r[3] or 0):,} | {r[4]} |\n"
-            msg += "\nPetunjuk: Ketik 'lihat dokumen PO-2026-006' untuk mencetak PDF atau 'PO-2026-006 sudah sampai di Bandung' untuk mencatat barang tiba."
+            if po_rows:
+                msg = "**Daftar Purchase Order (PO) Terkini PT Bali Towerindo Sentra Tbk:**\n\n"
+                msg += "| No. PO | Ref Internal | Material | Kuantitas | Total Tagihan | Status | Rekanan & Gudang |\n"
+                msg += "| :--- | :--- | :--- | :---: | :---: | :---: | :--- |\n"
+                for r in po_rows:
+                    p_id, p_num, p_st, p_tot, p_wh, p_itm, p_qty, p_sup = r
+                    msg += f"| **{p_id}** | `{p_num}` | {p_itm} | {p_qty:,} | Rp {int(p_tot or 0):,} | `{p_st}` | {p_sup} ({p_wh}) |\n"
+                msg += "\n*Petunjuk:* Ketik `lihat dokumen [PO-ID]` (contoh: `lihat dokumen PO-2026-001`) untuk membuka/mengunduh berkas PDF resmi Typst."
+            else:
+                msg = "**Informasi Purchase Order (PO)**\n\nSaat ini belum ada dokumen Purchase Order (PO) yang tercatat di sistem."
             return {"parsed_intent": {"workflow_id": "po_query"}, "action_type": "info", "message": msg, "generated_prs": [], "affected_items": []}
 
         # I. Inventory - Cek Stok Material (Menipis vs Umum)
         is_restock_action = any(w in lower_prompt for w in [
-            "beli", "pesan", "restock", "buat", "buatkan", "bikin", "draf", "draft", "terbitkan", "pipeline", "reorder", "pengadaan"
-        ])
+            "beli", "pesan", "restock", "buat", "buatkan", "bikin", "draf", "draft", "terbitkan", "pipeline", "reorder", "pengadaan", "kirim pr", "kirimkan pr"
+        ]) or ("pr" in lower_prompt and any(w in lower_prompt for w in ["kirim", "email", "ajukan", "proses", "terbit", "buat"]))
         if any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "menipis", "habis"]) and not is_restock_action:
             is_low_stock_filter = any(w in lower_prompt for w in ["menipis", "kritis", "kurang", "habis", "rendah", "limit", "minimum", "reorder"])
             
             if is_low_stock_filter:
                 stk_rows = conn.execute("""
-                    SELECT i.item_code, i.item_name, i.category, COALESCE(SUM(sb.quantity_on_hand), 0) AS total_stock, i.min_stock, i.unit
-                    FROM inventory_items i
-                    LEFT JOIN stock_balances sb ON i.item_id = sb.item_id
-                    GROUP BY i.item_code, i.item_name, i.category, i.min_stock, i.unit
-                    HAVING COALESCE(SUM(sb.quantity_on_hand), 0) <= i.min_stock
-                    ORDER BY (COALESCE(SUM(sb.quantity_on_hand), 0) * 1.0 / NULLIF(i.min_stock, 1)) ASC;
+                    SELECT 
+                        sb.balance_id,
+                        w.warehouse_name,
+                        w.region,
+                        i.item_code,
+                        i.item_name,
+                        i.category,
+                        sb.quantity_on_hand,
+                        sb.reorder_point,
+                        sb.stock_status,
+                        i.unit,
+                        i.item_id,
+                        COALESCE(i.unit_price, 10000.0) as unit_price,
+                        COALESCE(s.supplier_id, 'SUP-001') as supplier_id,
+                        COALESCE(s.supplier_name, 'PT Bali Vendor Utama') as supplier_name
+                    FROM stock_balances sb
+                    JOIN warehouses w ON sb.warehouse_id = w.warehouse_id
+                    JOIN inventory_items i ON sb.item_id = i.item_id
+                    LEFT JOIN suppliers s ON i.supplier_id = s.supplier_id
+                    WHERE sb.quantity_on_hand <= sb.reorder_point 
+                       OR sb.stock_status IN ('CRITICAL', 'LOW_STOCK', 'OUT_OF_STOCK')
+                    ORDER BY 
+                        CASE WHEN sb.stock_status = 'OUT_OF_STOCK' THEN 1
+                             WHEN sb.stock_status = 'CRITICAL' THEN 2
+                             WHEN sb.stock_status = 'LOW_STOCK' THEN 3
+                             ELSE 4 END ASC,
+                        (sb.quantity_on_hand * 1.0 / NULLIF(sb.reorder_point, 1)) ASC;
                 """).fetchall()
 
                 if not stk_rows:
-                    msg = "Status Pemantauan Stok Material Menara & Fiber Optic\n\n"
-                    msg += "Kondisi Normal & Aman: Seluruh 35 item material infrastruktur menara saat ini berada dalam kondisi AMAN (tidak ada stok di bawah ambang batas minimum / reorder point).\n\n"
-                    msg += "Persediaan di seluruh gudang regional (Jakarta, Bandung, Denpasar, Medan, Semarang, Surabaya, Makassar) mencukupi kebutuhan operasional."
-                    return {"parsed_intent": {"workflow_id": "inventory_stock_query"}, "action_type": "inventory_query", "message": msg, "generated_prs": [], "affected_items": []}
+                    msg = "### 🟢 Status Pemantauan Stok Material Menara & Fiber Optic\n\n"
+                    msg += "Kondisi Normal & Aman: Seluruh saldo material di seluruh gudang logistik regional saat ini berada dalam kondisi **AMAN** (tidak ada stok fisik di bawah ambang batas reorder point).\n\n"
+                    msg += "Persediaan di seluruh gudang regional mencukupi kebutuhan operasional harian."
+                    return {"parsed_intent": {"workflow_id": "inventory_stock_query"}, "action_type": "inventory_query", "message": msg, "email_sent": False, "generated_prs": [], "affected_items": []}
 
-                msg = "Status Stok Material Kritis / Menipis (Di Bawah Batas Minimum)\n\n"
-                msg += "| Kode SKU | Nama Material | Kategori | Total Stok | Batas Min | Status |\n"
-                msg += "| :--- | :--- | :--- | :---: | :---: | :---: |\n"
+                msg = f"### ⚠️ Status Saldo Stok Material Menara Kritis & Menipis\n\n"
+                msg += f"Ditemukan **{len(stk_rows)} saldo stok** di gudang logistik yang berada di bawah ambang batas minimum (*reorder point*):\n\n"
+                msg += "| Kode SKU | Nama Material | Lokasi Gudang | Wilayah | Stok Fisik | Batas Reorder | Status |\n"
+                msg += "| :--- | :--- | :--- | :---: | :---: | :---: | :---: |\n"
+                
+                affected_items = []
+                planned_items = []
+                total_budget = 0.0
+
                 for r in stk_rows:
-                    st = "KRITIS" if r[3] <= r[4] * 0.5 else "MENIPIS"
-                    msg += f"| {r[0]} | {r[1]} | {r[2]} | {r[3]} {r[5]} | {r[4]} | {st} |\n"
-                msg += "\nCatatan: Terdapat material di bawah ambang batas minimum. Untuk menerbitkan PR restock otomatis, ketik: buat draft PR untuk stok menipis."
-                return {"parsed_intent": {"workflow_id": "inventory_stock_query"}, "action_type": "inventory_query", "message": msg, "generated_prs": [], "affected_items": []}
+                    bal_id, wh_name, reg, it_code, it_name, cat, qty, rop, st_raw, unit, it_id, u_price, sup_id, sup_name = r
+                    if st_raw == 'OUT_OF_STOCK' or qty == 0:
+                        st_label = "⚫ **HABIS**"
+                    elif st_raw == 'CRITICAL' or qty <= rop * 0.5:
+                        st_label = "🔴 **KRITIS**"
+                    else:
+                        st_label = "🟡 **MENIPIS**"
+
+                    msg += f"| `{it_code}` | {it_name} | {wh_name} | {reg} | **{qty:,} {unit}** | {rop:,} | {st_label} |\n"
+                    affected_items.append({
+                        "name": f"{it_name} ({wh_name})",
+                        "current_stock": qty,
+                        "min_stock": rop,
+                        "unit": unit
+                    })
+
+                    reorder_qty = max(rop * 2 - qty, 1)
+                    line_total = float(u_price * reorder_qty)
+                    total_budget += line_total
+                    planned_items.append(RestockItem(
+                        item_id=it_id,
+                        name=f"{it_name} ({wh_name})",
+                        category=cat or "Infrastructure",
+                        current_stock=qty,
+                        min_threshold=rop,
+                        reorder_qty=reorder_qty,
+                        unit=unit,
+                        vendor_id=sup_id,
+                        vendor_name=sup_name,
+                        unit_price=float(u_price),
+                        total_price=line_total,
+                        reason=f"Stok di {wh_name} tersisa {qty:,} {unit} (di bawah ROP {rop:,} {unit}). Pengadaan darurat untuk menjaga SLA jaringan."
+                    ))
+
+                msg += "\n*Tindakan yang Disarankan:* Segera lakukan penerbitan dokumen Purchase Requisition (PR) untuk pengisian kembali pasokan material gudang terkait."
+
+                # Check if user requested email dispatch
+                recip_email = extract_recipient_email(request.prompt)
+                email_dispatched = False
+                generated_prs = []
+
+                if recip_email:
+                    import shutil
+                    from api.routers.approval_routes import PR_STORE
+                    from agents.workflow import record_orders_to_db
+                    from docgen.compiler import generate_pr_pdf
+                    from core.dispatcher import dispatcher
+
+                    pr_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                    pr_number = f"PR-{pr_timestamp}"
+                    clean_filename = f"{pr_number.replace('-', '_')}.pdf"
+
+                    pr_doc = PurchaseRequisition(
+                        pr_number=pr_number,
+                        created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        items=planned_items,
+                        total_budget=total_budget,
+                        auditor_status="PASSED",
+                        auditor_notes=f"Audit sistem: Permintaan restock otomatis untuk {len(planned_items)} item di bawah ROP gudang.",
+                        pdf_path=f"storage/documents/{clean_filename}",
+                        status="PENDING",
+                        tenant_id=current_user.tenant_id if current_user else "usera",
+                        thread_id=f"thread-{pr_timestamp}"
+                    )
+
+                    # Close read-only conn first so record_orders_to_db can acquire write connection safely
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+
+                    # Store in PR_STORE and DB orders
+                    PR_STORE[pr_number] = pr_doc
+                    record_orders_to_db(pr_doc, status="PENDING")
+
+                    # Compile Typst PDF document
+                    pdf_path = generate_pr_pdf(pr_doc, output_path=f"storage/documents/{clean_filename}")
+                    pr_doc.pdf_path = str(pdf_path)
+
+                    # Ensure in pending directory for direct download/preview
+                    pending_pdf = STORAGE_DIR / "pending" / clean_filename
+                    pending_pdf.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        shutil.copy(pdf_path, pending_pdf)
+                    except Exception as copy_err:
+                        pass
+
+                    if stage_callback:
+                        await stage_callback("email", f"📧 Mengirimkan berkas resmi {pr_number} beserta lampiran PDF dan tautan persetujuan ke {recip_email}...")
+
+                    await dispatcher.dispatch_email(
+                        recipient_email=recip_email,
+                        subject=f"Permintaan Persetujuan Pengadaan Material: {pr_number} - PT Bali Towerindo Sentra Tbk",
+                        content_text=msg,
+                        attachment_path=str(pdf_path),
+                        pr_number=pr_number
+                    )
+                    email_dispatched = True
+                    generated_prs = [pr_number]
+
+                    msg += f"\n\n📋 **Dokumen Purchase Requisition Resmi Diterbitkan:** `{pr_number}`\n"
+                    msg += f"💰 **Total Estimasi Anggaran:** Rp {total_budget:,.2f}\n"
+                    msg += f"📧 **Email Interaktif Terkirim:** Dokumen pengajuan `{pr_number}` beserta lampiran berkas resmi PDF (`{clean_filename}`) dan tombol aksi langsung **[SETUJUI PENGAJUAN (APPROVE)]** serta **[TOLAK PENGAJUAN (REJECT)]** telah berhasil dikirimkan ke **{recip_email}**."
+
+                return {
+                    "parsed_intent": {"workflow_id": "auto_restock_pipeline" if recip_email else "inventory_stock_query", "recipient_email": recip_email},
+                    "action_type": "review_prs" if recip_email else "inventory_query",
+                    "message": msg,
+                    "email_sent": email_dispatched,
+                    "generated_prs": generated_prs,
+                    "affected_items": affected_items,
+                    "total_budget_formatted": f"Rp {total_budget:,.2f}"
+                }
             else:
                 stk_rows = conn.execute("""
-                    SELECT i.item_code, i.item_name, i.category, COALESCE(SUM(sb.quantity_on_hand), 0) AS total_stock, i.min_stock, i.unit
-                    FROM inventory_items i
-                    LEFT JOIN stock_balances sb ON i.item_id = sb.item_id
-                    GROUP BY i.item_code, i.item_name, i.category, i.min_stock, i.unit
-                    ORDER BY 3 ASC, 1 ASC LIMIT 8;
+                    SELECT 
+                        sb.balance_id,
+                        w.warehouse_name,
+                        i.item_code,
+                        i.item_name,
+                        i.category,
+                        sb.quantity_on_hand,
+                        sb.reorder_point,
+                        sb.stock_status,
+                        i.unit
+                    FROM stock_balances sb
+                    JOIN warehouses w ON sb.warehouse_id = w.warehouse_id
+                    JOIN inventory_items i ON sb.item_id = i.item_id
+                    ORDER BY 
+                        CASE WHEN sb.stock_status = 'OUT_OF_STOCK' THEN 1
+                             WHEN sb.stock_status = 'CRITICAL' THEN 2
+                             WHEN sb.stock_status = 'LOW_STOCK' THEN 3
+                             ELSE 4 END ASC,
+                        sb.quantity_on_hand ASC LIMIT 8;
                 """).fetchall()
-                msg = "Ringkasan Katalog & Persediaan Material Menara\n\n"
-                msg += "| Kode SKU | Nama Material | Kategori | Total Stok | Batas Min | Kondisi |\n"
+                msg = "### 📦 Ringkasan Saldo Persediaan Material Gudang Regional\n\n"
+                msg += "| Kode SKU | Nama Material | Lokasi Gudang | Stok Fisik | Reorder Point | Kondisi |\n"
                 msg += "| :--- | :--- | :--- | :---: | :---: | :---: |\n"
                 for r in stk_rows:
-                    st = "KRITIS" if r[3] <= r[4] * 0.5 else "PERLU PERHATIAN" if r[3] <= r[4] else "AMAN"
-                    msg += f"| {r[0]} | {r[1]} | {r[2]} | {r[3]} {r[5]} | {r[4]} | {st} |\n"
-                return {"parsed_intent": {"workflow_id": "inventory_stock_query"}, "action_type": "inventory_query", "message": msg, "generated_prs": [], "affected_items": []}
+                    bal_id, wh_name, it_code, it_name, cat, qty, rop, st_raw, unit = r
+                    cond = "🔴 KRITIS" if (st_raw == 'CRITICAL' or qty <= rop * 0.5) else ("🟡 PERLU PERHATIAN" if qty <= rop else "🟢 AMAN")
+                    msg += f"| `{it_code}` | {it_name} | {wh_name} | **{qty:,} {unit}** | {rop:,} | {cond} |\n"
+                return {"parsed_intent": {"workflow_id": "inventory_stock_query"}, "action_type": "inventory_query", "message": msg, "email_sent": False, "generated_prs": [], "affected_items": []}
 
     except Exception as err:
-        pass
+        import traceback
+        print(f"[execute_prompt_logic Domain Handler Error]: {err}")
+        traceback.print_exc()
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
 
     try:
         if stage_callback:

@@ -13,6 +13,74 @@ from core.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _format_markdown_to_html(text: str) -> str:
+    """Converts markdown (headings, bold, tables, code) into clean inline-styled HTML for email clients."""
+    if not text:
+        return ""
+    import re
+    lines = text.strip().split("\n")
+    html_out = []
+    in_table = False
+    table_rows = []
+
+    def flush_table(t_rows):
+        if not t_rows:
+            return ""
+        tbl_html = ['<div style="overflow-x: auto; margin: 16px 0;"><table style="width: 100%; border-collapse: collapse; font-size: 12.5px; font-family: inherit; border: 1px solid #E2E8F0; background: #FFFFFF;">']
+        for idx, row in enumerate(t_rows):
+            cols = [c.strip() for c in row.split("|")[1:-1]]
+            if not cols or all(re.match(r'^:?-+:?$', c) for c in cols):
+                continue
+            if idx == 0:
+                tbl_html.append('<tr style="background: #F8FAFC; color: #334155; font-weight: 700; border-bottom: 2px solid #CBD5E1;">')
+                for c in cols:
+                    tbl_html.append(f'<th style="padding: 10px 12px; border: 1px solid #E2E8F0; text-align: left;">{_format_inline(c)}</th>')
+                tbl_html.append('</tr>')
+            else:
+                bg = "#F8FAFC" if idx % 2 == 1 else "#FFFFFF"
+                tbl_html.append(f'<tr style="background: {bg}; border-bottom: 1px solid #E2E8F0;">')
+                for c in cols:
+                    tbl_html.append(f'<td style="padding: 8px 12px; border: 1px solid #E2E8F0;">{_format_inline(c)}</td>')
+                tbl_html.append('</tr>')
+        tbl_html.append('</table></div>')
+        return "".join(tbl_html)
+
+    def _format_inline(s: str) -> str:
+        s = re.sub(r'`([^`]+)`', r'<code style="background: #F1F5F9; color: #2563EB; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11.5px;">\1</code>', s)
+        s = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', s)
+        s = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'<em>\1</em>', s)
+        return s
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("|") and stripped.endswith("|"):
+            in_table = True
+            table_rows.append(stripped)
+        else:
+            if in_table:
+                html_out.append(flush_table(table_rows))
+                table_rows = []
+                in_table = False
+
+            if stripped.startswith("### "):
+                html_out.append(f'<h3 style="color: #0F172A; font-size: 15px; font-weight: 700; margin: 18px 0 8px 0;">{_format_inline(stripped[4:])}</h3>')
+            elif stripped.startswith("## "):
+                html_out.append(f'<h2 style="color: #0F172A; font-size: 17px; font-weight: 700; margin: 20px 0 10px 0;">{_format_inline(stripped[3:])}</h2>')
+            elif stripped.startswith("# "):
+                html_out.append(f'<h1 style="color: #0F172A; font-size: 19px; font-weight: 800; margin: 22px 0 12px 0;">{_format_inline(stripped[2:])}</h1>')
+            elif stripped.startswith("*") and stripped.endswith("*") and len(stripped) > 2:
+                html_out.append(f'<p style="color: #64748B; font-size: 12.5px; font-style: italic; margin: 6px 0;">{_format_inline(stripped[1:-1])}</p>')
+            elif stripped:
+                html_out.append(f'<p style="color: #334155; font-size: 13px; line-height: 1.6; margin: 8px 0;">{_format_inline(stripped)}</p>')
+            else:
+                html_out.append('<div style="height: 6px;"></div>')
+
+    if in_table:
+        html_out.append(flush_table(table_rows))
+
+    return "".join(html_out)
+
+
 class MultiChannelDispatcher:
     """
     Unified multi-channel integration dispatcher:
@@ -35,6 +103,7 @@ class MultiChannelDispatcher:
         Sends a rich HTML email notification with optional PDF attachment and interactive Approve/Reject action buttons.
         Falls back to smart simulation if SMTP credentials are not configured.
         """
+        import re
         if settings.PUBLIC_URL:
             base_url = base_url or settings.PUBLIC_URL.rstrip("/")
         else:
@@ -43,15 +112,24 @@ class MultiChannelDispatcher:
         recipient = recipient_email or settings.DEFAULT_RECIPIENT_EMAIL
         is_smtp_configured = bool(settings.SMTP_EMAIL and settings.SMTP_PASSWORD)
 
+        # Auto-detect PR number from subject, attachment_path, or content_text if not explicitly given
+        if not pr_number:
+            candidates = [attachment_path or "", subject or "", content_text or ""]
+            for cand in candidates:
+                m = re.search(r'\b(PR[-_]\d{8}[-_]\d{6}|PR[-_]\d{4}[-_]\d{3})\b', cand)
+                if m:
+                    pr_number = m.group(1).replace('_', '-')
+                    break
+
         # Build default rich HTML if not provided
-        if not html_content and pr_number:
-            approve_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=APPROVE"
-            reject_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=REJECT"
-            pdf_link = f"{base_url}/api/documents/pr/{pr_number}/download"
-            from datetime import datetime
-            today_str = datetime.now().strftime("%d %B %Y, %H:%M WIB")
-            
-            html_content = f"""<!DOCTYPE html>
+        if not html_content:
+            if pr_number:
+                approve_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=APPROVE"
+                reject_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=REJECT"
+                pdf_link = f"{base_url}/api/documents/pr/{pr_number}/download"
+                
+                formatted_body = _format_markdown_to_html(content_text)
+                html_content = f"""<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
@@ -118,23 +196,10 @@ class MultiChannelDispatcher:
             padding: 4px 10px;
             font-size: 11px;
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
             background: #FEF3C7;
             color: #92400E;
-            border-radius: 4px;
             border: 1px solid #FCD34D;
-        }}
-        .content-box {{
-            background: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 6px;
-            padding: 16px;
-            margin: 18px 0;
-            font-size: 13.5px;
-            color: #334155;
-            white-space: pre-line;
-            line-height: 1.6;
+            border-radius: 4px;
         }}
         .instruction-box {{
             background: #EFF6FF;
@@ -143,37 +208,6 @@ class MultiChannelDispatcher:
             margin: 18px 0 24px 0;
             font-size: 12.5px;
             color: #1E40AF;
-        }}
-        .btn-container {{
-            margin: 28px 0 16px 0;
-            text-align: center;
-        }}
-        .btn {{
-            display: inline-block;
-            padding: 11px 22px;
-            font-size: 13px;
-            font-weight: 600;
-            text-decoration: none;
-            border-radius: 6px;
-            margin: 4px 6px;
-            letter-spacing: 0.02em;
-        }}
-        .btn-approve {{
-            background: #15803D;
-            color: #FFFFFF !important;
-            border: 1px solid #166534;
-        }}
-        .btn-reject {{
-            background: #FFFFFF;
-            color: #B91C1C !important;
-            border: 1px solid #F87171;
-        }}
-        .btn-doc {{
-            background: #F8FAFC;
-            color: #334155 !important;
-            border: 1px solid #CBD5E1;
-            font-size: 12px;
-            padding: 8px 16px;
         }}
         .corp-footer {{
             background: #F8FAFC;
@@ -207,7 +241,7 @@ class MultiChannelDispatcher:
                 Sistem monitoring logistik mendeteksi ketersediaan material infrastruktur telah menyentuh batas minimum stok kerja (Reorder Point). Dokumen pengajuan pembelian (Purchase Requisition) resmi telah disusun untuk permohonan persetujuan Anda:
             </p>
 
-            <div class="content-box">{content_text}</div>
+            <div style="margin: 16px 0;">{formatted_body}</div>
 
             <div class="instruction-box">
                 <strong>Ketentuan Otorisasi:</strong><br>
@@ -215,12 +249,12 @@ class MultiChannelDispatcher:
                 2. <strong>Tolak (REJECT)</strong>: Proses pengadaan dihentikan dan pengalokasian anggaran dibatalkan.
             </div>
 
-            <div class="btn-container">
-                <a href="{approve_link}" class="btn btn-approve" target="_blank">SETUJUI PENGAJUAN (APPROVE)</a>
-                <a href="{reject_link}" class="btn btn-reject" target="_blank">TOLAK PENGAJUAN (REJECT)</a>
+            <div style="margin: 28px 0 16px 0; text-align: center;">
+                <a href="{approve_link}" style="display: inline-block; padding: 12px 24px; font-size: 13px; font-weight: 700; color: #FFFFFF !important; background-color: #15803D; border: 1px solid #166534; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">SETUJUI PENGAJUAN (APPROVE)</a>
+                <a href="{reject_link}" style="display: inline-block; padding: 12px 24px; font-size: 13px; font-weight: 700; color: #B91C1C !important; background-color: #FFFFFF; border: 1px solid #F87171; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">TOLAK PENGAJUAN (REJECT)</a>
             </div>
             <div style="text-align: center; margin-top: 8px;">
-                <a href="{pdf_link}" class="btn btn-doc" target="_blank">Unduh Dokumen Draf Resmi (PDF)</a>
+                <a href="{pdf_link}" style="display: inline-block; padding: 10px 20px; font-size: 12px; font-weight: 600; color: #2563EB !important; background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 6px; text-decoration: none; margin: 4px 6px;" target="_blank">Unduh Dokumen Draf Resmi (PDF)</a>
             </div>
         </div>
         <div class="corp-footer">
@@ -231,13 +265,90 @@ class MultiChannelDispatcher:
     </div>
 </body>
 </html>"""
+            else:
+                formatted_body = _format_markdown_to_html(content_text)
+                html_content = f"""<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{subject}</title>
+    <style>
+        body {{
+            margin: 0;
+            padding: 24px 12px;
+            background-color: #F1F5F9;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #0F172A;
+            line-height: 1.5;
+        }}
+        .email-wrapper {{
+            max-width: 650px;
+            margin: 0 auto;
+            background: #FFFFFF;
+            border: 1px solid #CBD5E1;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }}
+        .corp-header {{
+            background: #0F172A;
+            color: #FFFFFF;
+            padding: 20px 24px;
+            border-bottom: 3px solid #2563EB;
+        }}
+        .corp-title {{
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin: 0;
+            color: #F8FAFC;
+        }}
+        .corp-subtitle {{
+            font-size: 12px;
+            color: #94A3B8;
+            margin: 4px 0 0 0;
+        }}
+        .email-body {{
+            padding: 24px;
+        }}
+        .corp-footer {{
+            background: #F8FAFC;
+            border-top: 1px solid #E2E8F0;
+            padding: 16px 24px;
+            font-size: 11.5px;
+            color: #64748B;
+            line-height: 1.6;
+        }}
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="corp-header">
+            <h1 class="corp-title">PT Bali Towerindo Sentra Tbk</h1>
+            <p class="corp-subtitle">Enterprise Operations Command Center & Logistics</p>
+        </div>
+        <div class="email-body">
+            {formatted_body}
+            <div style="text-align: center; margin: 24px 0 8px 0;">
+                <a href="{base_url}/admin" style="display: inline-block; padding: 11px 22px; font-size: 12.5px; font-weight: 600; color: #FFFFFF !important; background-color: #2563EB; border-radius: 6px; text-decoration: none;" target="_blank">Buka Portal Manajemen Logistik</a>
+            </div>
+        </div>
+        <div class="corp-footer">
+            <strong>PT Bali Towerindo Sentra Tbk</strong><br>
+            Wisma Kodel Lantai 7, Jl. H.R. Rasuna Said Kav. B-4, Jakarta Selatan 12920<br>
+            <em>Pemberitahuan otomatis dari Enterprise Operations Command Center.</em>
+        </div>
+    </div>
+</body>
+</html>"""
 
         if not is_smtp_configured:
             attach_info = f" (dengan lampiran: {Path(attachment_path).name})" if attachment_path and Path(attachment_path).exists() else ""
             msg = f"[EMAIL SIMULASI] Email berhasil disimulasikan ke '{recipient}' | Subjek: '{subject}'{attach_info}."
             logger.info(msg)
             return {
-                "channel": "email",
                 "status": "simulated",
                 "recipient": recipient,
                 "subject": subject,
@@ -250,28 +361,34 @@ class MultiChannelDispatcher:
             }
 
         try:
-            msg = MIMEMultipart("alternative")
-            msg["From"] = settings.SMTP_EMAIL
-            msg["To"] = recipient
-            msg["Subject"] = subject
+            # RFC 2046 Standard: multipart/mixed at top level allows both multipart/alternative (text/html) and binary attachments
+            outer = MIMEMultipart("mixed")
+            outer["From"] = settings.SMTP_EMAIL
+            outer["To"] = recipient
+            outer["Subject"] = subject
 
-            # Attach plain text and HTML
-            part1 = MIMEText(content_text, "plain")
-            msg.attach(part1)
+            # Child alternative container for plain text and HTML representation
+            body_alt = MIMEMultipart("alternative")
+            part1 = MIMEText(content_text or "", "plain", "utf-8")
+            body_alt.attach(part1)
             if html_content:
-                part2 = MIMEText(html_content, "html")
-                msg.attach(part2)
+                part2 = MIMEText(html_content, "html", "utf-8")
+                body_alt.attach(part2)
+            outer.attach(body_alt)
 
+            # Physical attachment (Typst PDF / document)
             if attachment_path and Path(attachment_path).exists():
-                with open(attachment_path, "rb") as f:
-                    part = MIMEApplication(f.read(), Name=Path(attachment_path).name)
-                part["Content-Disposition"] = f'attachment; filename="{Path(attachment_path).name}"'
-                msg.attach(part)
+                file_p = Path(attachment_path)
+                with open(file_p, "rb") as f:
+                    part_attach = MIMEApplication(f.read(), Name=file_p.name)
+                part_attach["Content-Disposition"] = f'attachment; filename="{file_p.name}"'
+                outer.attach(part_attach)
+                logger.info(f"Attached document '{file_p.name}' to email for {recipient}")
 
-            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15) as server:
                 server.starttls()
                 server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
-                server.send_message(msg)
+                server.send_message(outer)
 
             return {
                 "channel": "email",

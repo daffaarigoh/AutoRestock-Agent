@@ -3,7 +3,7 @@ Unit and Integration Tests for Tahap 2:
 Recording Physical Goods Receipt (Penerimaan Barang Fisik) via AI Prompt Chat.
 
 Verifies:
-1. PO-2026-006 status transition from IN_TRANSIT to DELIVERED.
+1. PO-2026-006 status transition from ORDERED to DELIVERED.
 2. Warehouse stock_balances quantity_on_hand increment and recalculation of stock_status (CRITICAL -> NORMAL).
 3. Data integrity across DuckDB and CSV files.
 4. Protection against duplicate delivery bookings.
@@ -34,7 +34,7 @@ def login(username: str, password: str = "user123"):
 def test_goods_receipt_workflow():
     # Setup / Reset initial baseline for idempotent testing
     w_conn = get_db_connection(read_only=False)
-    w_conn.execute("UPDATE purchase_orders SET status = 'IN_TRANSIT', actual_delivery = NULL WHERE po_id = 'PO-2026-006';")
+    w_conn.execute("UPDATE purchase_orders SET status = 'ORDERED', actual_delivery = NULL WHERE po_id = 'PO-2026-006';")
     w_conn.execute("UPDATE stock_balances SET quantity_on_hand = 450, stock_status = 'CRITICAL' WHERE warehouse_id = 'WH-BDG-01' AND item_id = 'BLT-INV-002';")
     w_conn.close()
 
@@ -49,7 +49,7 @@ def test_goods_receipt_workflow():
         FROM purchase_orders WHERE po_id = 'PO-2026-006';
     """).fetchone()
     assert po_before is not None, "PO-2026-006 should exist"
-    assert po_before[0] == "IN_TRANSIT", f"Expected IN_TRANSIT, got {po_before[0]}"
+    assert po_before[0] == "ORDERED", f"Expected ORDERED, got {po_before[0]}"
     qty_ordered = po_before[1]
     
     stk_before = conn.execute("""

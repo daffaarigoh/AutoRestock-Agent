@@ -225,8 +225,14 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
             i.item_name,
             i.category,
             COALESCE(SUM(sb.quantity_on_hand), 0) AS current_stock,
-            i.min_stock AS min_threshold,
-            i.min_stock * 3 AS max_threshold,
+            CASE 
+                WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point) AS BIGINT) 
+                ELSE i.min_stock 
+            END AS min_threshold,
+            CASE 
+                WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point * 3) AS BIGINT) 
+                ELSE i.min_stock * 3 
+            END AS max_threshold,
             i.unit,
             i.unit_price,
             s.supplier_name
@@ -266,6 +272,16 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
         usera_total_stock += stock_val
         if stock_val <= min_val:
             usera_low_stock += 1
+        
+        if stock_val == 0:
+            calc_status = "Habis"
+        elif stock_val <= min_val * 0.5:
+            calc_status = "Kritis"
+        elif stock_val <= min_val:
+            calc_status = "Menipis"
+        else:
+            calc_status = "Normal"
+
         items_list.append({
             "domain": "INVENTORY",
             "tenant_id": "usera",
@@ -279,7 +295,7 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
             "min_threshold": min_val,
             "max_threshold": int(max_thresh),
             "unit_price": float(price or 0.0),
-            "status": "Menipis" if stock_val <= min_val else "Normal"
+            "status": calc_status
         })
 
     # 2. userb - HR Workforce (12 employees)

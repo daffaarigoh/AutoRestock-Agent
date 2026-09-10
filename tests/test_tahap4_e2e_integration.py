@@ -45,7 +45,7 @@ def setup_test_scenario():
     conn = get_db_connection(read_only=False)
     conn.execute("""
         UPDATE purchase_orders 
-        SET status = 'IN_TRANSIT', actual_delivery = NULL
+        SET status = 'ORDERED', actual_delivery = NULL
         WHERE po_id = 'PO-2026-006';
     """)
     conn.execute("""
@@ -97,7 +97,7 @@ def run_usera_e2e_workflow():
 
     po_target = next((p for p in pos if p["po_id"] == "PO-2026-006"), None)
     assert po_target is not None, "PO-2026-006 must exist in purchase orders"
-    assert po_target["status"] == "IN_TRANSIT"
+    assert po_target["status"] == "ORDERED"
     target_po_id = "PO-2026-006"
     target_item_id = "BLT-INV-002"
     target_wh_id = "WH-BDG-01"
