@@ -71,14 +71,58 @@ def _extract_item_attributes_from_text(prompt: str) -> dict:
 
 
 def extract_recipient_email(prompt: str) -> str | None:
-    """Helper to detect any email address mentioned in the prompt text."""
+    """Helper to detect any email address or named person/role mentioned in the prompt text."""
     if not prompt:
         return None
+
+    # 1. Direct standard email regex pattern
     match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', prompt)
     if match:
         email = match.group(0).strip()
         email = email.rstrip(".,;:!?")
         return email
+
+    # 2. Named recipient resolution (colleagues, roles, and corporate staff)
+    p_lower = prompt.lower()
+    named_map = {
+        "zeiniah": "zeiniahalfiah@gmail.com",
+        "daffa": "daffaarigoh02@gmail.com",
+        "hr.operations": "hr.operations@balitower.co.id",
+        "hrd": "hr.operations@balitower.co.id",
+        "hr": "hr.operations@balitower.co.id",
+        "personalia": "hr.operations@balitower.co.id",
+        "manager": "manager@balitower.co.id",
+        "manajer": "manager@balitower.co.id",
+        "boss": "manager@balitower.co.id",
+        "bos": "manager@balitower.co.id",
+        "procurement": "procurement@balitower.co.id",
+        "pengadaan": "procurement@balitower.co.id",
+        "budi santoso": "budi.santoso@balitower.co.id",
+        "budi": "budi.santoso@balitower.co.id",
+        "dedi kurniawan": "dedi.kurniawan@balitower.co.id",
+        "dedi": "dedi.kurniawan@balitower.co.id",
+        "rian hidayat": "rian.hidayat@balitower.co.id",
+        "rian": "rian.hidayat@balitower.co.id",
+        "siti rahmawati": "siti.rahmawati@balitower.co.id",
+        "siti": "siti.rahmawati@balitower.co.id",
+        "fajar nugraha": "fajar.nugraha@balitower.co.id",
+        "fajar": "fajar.nugraha@balitower.co.id",
+        "dewi lestari": "dewi.lestari@balitower.co.id",
+        "dewi": "dewi.lestari@balitower.co.id",
+        "hendra gunawan": "hendra.gunawan@balitower.co.id",
+        "hendra": "hendra.gunawan@balitower.co.id",
+        "yusuf maulana": "yusuf.maulana@balitower.co.id",
+        "yusuf": "yusuf.maulana@balitower.co.id",
+        "agus setiawan": "agus.setiawan@balitower.co.id",
+        "agus": "agus.setiawan@balitower.co.id",
+    }
+
+    # Match directional phrases: "ke <nama>", "kirim ke <nama>", "email ke <nama>", "kepada <nama>"
+    for key, target_email in named_map.items():
+        pat = r'(?:ke|kepada|untuk|email(?:kan)?|kirim(?:kan)?|tujukan)\s+(?:rekan\s+)?(?:sdr\s+|bapak\s+|ibu\s+|pak\s+|bu\s+)?' + re.escape(key) + r'\b'
+        if re.search(pat, p_lower):
+            return target_email
+
     return None
 
 
@@ -206,10 +250,21 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
         prompt_lower = prompt.lower()
         extracted_email = extract_recipient_email(prompt)
 
-        # Check for product registration intent first (only if user workflow has registration)
-        if any(k in prompt_lower for k in ["tambah", "tambahkan", "daftar", "daftarkan", "registrasi", "masukkan produk", "tambah produk", "tambah barang", "tambahkan nama produk", "buat barang"]):
+        # Check for client operator onboarding intent first
+        is_onboarding_intent = any(k in prompt_lower for k in ["klien", "operator", "sewa", "onboarding", "mla", "menara", "kontrak"]) and any(k in prompt_lower for k in ["daftar", "daftarkan", "baru", "onboard", "tambah", "ajukan"])
+        if is_onboarding_intent:
             for row in workflows:
-                if any(w in row[1].lower() for w in ["daftar", "pendaftaran", "tambah", "registrasi", "register"]):
+                if any(w in row[1].lower() for w in ["onboard", "klien", "kontrak", "mla"]) or ("daftar" in row[1].lower() and "operator" in row[1].lower()):
+                    return {
+                        "workflow_id": row[0],
+                        "send_email": True,
+                        "recipient_email": extracted_email
+                    }
+
+        # Check for product registration intent (only if user workflow has registration and not onboarding)
+        if not is_onboarding_intent and any(k in prompt_lower for k in ["tambah", "tambahkan", "daftar", "daftarkan", "registrasi", "masukkan produk", "tambah produk", "tambah barang", "tambahkan nama produk", "buat barang"]):
+            for row in workflows:
+                if any(w in row[1].lower() for w in ["daftar", "pendaftaran", "tambah", "registrasi", "register"]) and not any(w in row[1].lower() for w in ["klien", "operator", "sewa", "kontrak"]):
                     extracted_item = _extract_item_attributes_from_text(prompt)
                     res = {
                         "workflow_id": row[0],
@@ -262,8 +317,22 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                 if row[0] == "WF-ALL-03" or any(w in row[1].lower() for w in ["panduan", "darurat", "sop", "guideline"]):
                     return {"workflow_id": row[0], "send_email": False}
 
+        # Check for New Client Operator Onboarding & Lease Contract (Approval Workflow)
+        if is_onboarding_intent or any(k in prompt_lower for k in ["klien baru", "operator baru", "daftar operator", "sewa baru", "kontrak baru", "onboarding", "daftarkan operator", "sewa menara baru", "tambah operator"]):
+            for row in workflows:
+                if any(w in row[1].lower() for w in ["onboard", "klien", "kontrak", "mla"]) or ("daftar" in row[1].lower() and "operator" in row[1].lower()):
+                    return {
+                        "workflow_id": row[0],
+                        "send_email": True,
+                        "recipient_email": extracted_email
+                    }
+
         # 1. Check for Finance Workflows (Schema C) - If permitted for this tenant
-        if any(k in prompt_lower for k in ["pendapatan sewa", "pendapatan menara", "pendapatan operator", "revenue", "invoice operator", "tagihan operator", "sewa menara"]):
+        if not is_onboarding_intent and (
+            any(k in prompt_lower for k in ["pendapatan sewa", "pendapatan menara", "pendapatan operator", "revenue", "invoice operator", "tagihan operator", "invoice sewa", "tagihan sewa", "laporan pendapatan", "status pembayaran"])
+            or ("invoice" in prompt_lower and any(w in prompt_lower for w in ["sewa", "operator", "menara", "status"]))
+            or ("tagihan" in prompt_lower and any(w in prompt_lower for w in ["sewa", "operator", "menara"]))
+        ):
             for row in workflows:
                 if row[0] == "WF-004" or any(w in row[1].lower() for w in ["pendapatan", "revenue", "invoice"]):
                     return {"workflow_id": row[0], "send_email": False}

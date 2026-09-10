@@ -12,6 +12,8 @@ Dilengkapi sistem otorisasi multi-tenant ketat:
 - User Finance (tenant FINANCE): Hanya boleh akses modul Finance & Accounting.
 """
 
+import re
+from datetime import datetime, timedelta
 from typing import Any
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
@@ -410,6 +412,160 @@ def get_leave_requests(current_user: TokenData = Depends(require_hr_access)):
         conn.close()
 
 
+class LeaveCreateRequest(BaseModel):
+    employee_id: str
+    leave_type: str = "ANNUAL_LEAVE"
+    start_date: str
+    days_requested: int = 1
+    reason: str
+    substitute_employee_id: str | None = None
+    recipient_email: str | None = None
+
+
+@router.post("/api/balitower/hr/leave-requests")
+async def create_leave_request(
+    payload: LeaveCreateRequest,
+    current_user: TokenData = Depends(require_hr_access)
+):
+    """
+    Merekam permohonan cuti baru karyawan ke tabel DuckDB leave_requests,
+    mengompilasi formulir resmi format PDF Typst, dan mendistribusikan notifikasi ke HR.
+    """
+    conn = get_db_connection()
+    try:
+        # 1. Validasi employee_id
+        emp = conn.execute(
+            "SELECT employee_id, full_name, job_title, department, leave_balance FROM employees WHERE employee_id = ?",
+            [payload.employee_id]
+        ).fetchone()
+        if not emp:
+            raise HTTPException(status_code=400, detail=f"Karyawan dengan ID '{payload.employee_id}' tidak ditemukan.")
+
+        substitute_name = "-"
+        substitute_title = "-"
+        if payload.substitute_employee_id:
+            sub = conn.execute(
+                "SELECT employee_id, full_name, job_title FROM employees WHERE employee_id = ?",
+                [payload.substitute_employee_id]
+            ).fetchone()
+            if sub:
+                substitute_name = sub[1]
+                substitute_title = sub[2]
+
+        # 2. Generate next leave_id (LV-2026-XXX)
+        max_row = conn.execute("SELECT leave_id FROM leave_requests ORDER BY leave_id DESC LIMIT 1").fetchone()
+        next_num = 1
+        if max_row and max_row[0]:
+            digits = re.findall(r'\d+', max_row[0])
+            if digits:
+                next_num = int(digits[-1]) + 1
+        new_leave_id = f"LV-2026-{next_num:03d}"
+
+        # 3. Hitung end_date otomatis
+        try:
+            s_date = datetime.strptime(payload.start_date, "%Y-%m-%d")
+            days = max(1, int(payload.days_requested))
+            e_date = s_date + timedelta(days=days - 1)
+            end_date_str = e_date.strftime("%Y-%m-%d")
+        except Exception:
+            end_date_str = payload.start_date
+            days = max(1, int(payload.days_requested))
+
+        # 4. Insert ke tabel leave_requests
+        conn.execute("""
+            INSERT INTO leave_requests (
+                leave_id, employee_id, leave_type, start_date, end_date,
+                days_requested, reason, substitute_employee_id, approval_status, approved_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL', NULL);
+        """, [
+            new_leave_id,
+            payload.employee_id,
+            payload.leave_type.upper(),
+            payload.start_date,
+            end_date_str,
+            days,
+            payload.reason,
+            payload.substitute_employee_id
+        ])
+    finally:
+        conn.close()
+
+    # Siapkan dict data leave untuk PDF generator
+    leave_data = {
+        "leave_id": new_leave_id,
+        "employee_id": emp[0],
+        "applicant_name": emp[1],
+        "job_title": emp[2],
+        "department": emp[3],
+        "leave_balance": emp[4],
+        "leave_type": payload.leave_type,
+        "start_date": payload.start_date,
+        "end_date": end_date_str,
+        "days_requested": days,
+        "reason": payload.reason,
+        "substitute_employee_id": payload.substitute_employee_id,
+        "substitute_name": substitute_name,
+        "substitute_title": substitute_title,
+        "approval_status": "PENDING_APPROVAL",
+        "approved_by_name": "Eko Prasetyo"
+    }
+
+    # 5. Kompilasi dokumen resmi PDF Typst
+    from docgen.compiler import generate_leave_pdf
+    pdf_path = None
+    try:
+        pdf_path = generate_leave_pdf(leave_data)
+    except Exception as e:
+        print(f"[WARN] Failed to compile leave PDF on submit: {e}")
+
+    # 6. Kirim notifikasi email ke HR dengan lampiran PDF
+    from core.dispatcher import dispatcher
+    dispatch_res = None
+    try:
+        email_msg = (
+            f"Pengajuan cuti baru telah dicatat dengan rincian sebagai berikut:\n"
+            f"- Nomor Cuti: {new_leave_id}\n"
+            f"- Pemohon: {emp[1]} ({emp[2]})\n"
+            f"- Jenis Cuti: {payload.leave_type}\n"
+            f"- Periode: {payload.start_date} s/d {end_date_str} ({days} hari kerja)\n"
+            f"- Alasan: {payload.reason}\n\n"
+            f"Berkas resmi formulir pengajuan cuti berformat PDF terlampir."
+        )
+        from core.config import settings
+        target_recipient = payload.recipient_email or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "zeiniahalfiah@gmail.com"
+        dispatch_res = await dispatcher.dispatch_email(
+            recipient_email=target_recipient,
+            subject=f"Pengajuan Cuti Karyawan: {new_leave_id} - {emp[1]}",
+            content_text=email_msg,
+            attachment_path=pdf_path,
+            leave_id=new_leave_id,
+            leave_data=leave_data
+        )
+    except Exception as e:
+        print(f"[WARN] Failed to dispatch email to HR: {e}")
+
+    return {
+        "status": "success",
+        "leave_id": new_leave_id,
+        "message": f"Pengajuan cuti {new_leave_id} berhasil dicatat dan berkas PDF telah dikirimkan ke Divisi HR.",
+        "pdf_url": f"/api/documents/leave/{new_leave_id}/download",
+        "data": {
+            "leave_id": new_leave_id,
+            "applicant_name": emp[1],
+            "job_title": emp[2],
+            "leave_type": payload.leave_type,
+            "start_date": payload.start_date,
+            "end_date": end_date_str,
+            "days_requested": days,
+            "reason": payload.reason,
+            "substitute_employee_id": payload.substitute_employee_id,
+            "approval_status": "PENDING_APPROVAL",
+            "pdf_path": pdf_path,
+            "email_status": dispatch_res.get("status") if dispatch_res else "SENT"
+        }
+    }
+
+
 class LeaveActionRequest(BaseModel):
     action: str  # APPROVE / REJECT
     manager_name: str | None = "HR Manager"
@@ -425,13 +581,34 @@ def update_leave_status(
     conn = get_db_connection()
     try:
         new_status = "APPROVED" if payload.action.upper() == "APPROVE" else "REJECTED"
+        
+        row = conn.execute(
+            "SELECT employee_id, leave_type, days_requested, approval_status FROM leave_requests WHERE leave_id = ?",
+            [leave_id]
+        ).fetchone()
+
         conn.execute(
             "UPDATE leave_requests SET approval_status = ?, approved_by = 'EMP-BLT-005' WHERE leave_id = ?",
             [new_status, leave_id]
         )
-        return {"leave_id": leave_id, "status": new_status, "message": f"Pengajuan cuti berhasil di-{new_status.lower()}"}
+
+        if row and new_status == "APPROVED" and row[3] != "APPROVED":
+            emp_id, l_type, days, _ = row
+            conn.execute(
+                "UPDATE employees SET leave_balance = GREATEST(0, leave_balance - ?) WHERE employee_id = ?",
+                [max(1, int(days or 1)), emp_id]
+            )
+        conn.commit()
     finally:
         conn.close()
+
+    try:
+        from docgen.compiler import generate_leave_pdf
+        generate_leave_pdf(leave_id)
+    except Exception as e:
+        print(f"[WARN] Failed to regenerate leave PDF: {e}")
+
+    return {"leave_id": leave_id, "status": new_status, "message": f"Pengajuan cuti berhasil di-{new_status.lower()}"}
 
 
 @router.get("/api/balitower/hr/candidates")

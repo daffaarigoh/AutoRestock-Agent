@@ -326,8 +326,8 @@ function applyTenantSecurityAndPersonalization() {
     if (tabTerminal) tabTerminal.style.display = 'inline-flex';
 
     if (heroTitle) heroTitle.textContent = 'HR & Field Workforce Command Center';
-    if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel manajemen ketenagakerjaan teknisi menara, absensi geofencing site BTS, jam lembur, kualifikasi sertifikat K3 TKPK rigger, dan pengajuan cuti PT Bali Towerindo Sentra Tbk.`;
-    if (promptInput) promptInput.placeholder = 'Cari teknisi bersertifikat K3 TKPK, rekap jam lembur, atau cek perizinan cuti...';
+    if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel manajemen ketenagakerjaan teknisi lapangan, kualifikasi sertifikat K3 TKPK rigger, rekap jam lembur, dan pengajuan cuti PT Bali Towerindo Sentra Tbk.`;
+    if (promptInput) promptInput.placeholder = 'Ajukan cuti teknisi, cari personil bersertifikat K3 TKPK, atau cek lowongan kerja...';
     if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Human Resources & Field Operations';
 
     switchCanvasTab('canvas-hr');
@@ -439,11 +439,9 @@ function switchHrSubTab(subTabId) {
   });
 
   if (subTabId === 'sub-hr-employees') loadEmployees();
-  else if (subTabId === 'sub-hr-att') loadHrData();
   else if (subTabId === 'sub-hr-leaves') loadHrData();
   else if (subTabId === 'sub-hr-candidates') loadHrData();
   else if (subTabId === 'sub-hr-jobs') loadJobPostings();
-  else if (subTabId === 'sub-hr-sites') loadSites();
 }
 
 function switchFinSubTab(subTabId) {
@@ -459,8 +457,6 @@ function switchFinSubTab(subTabId) {
   else if (subTabId === 'sub-fin-mla') loadMlaContracts();
   else if (subTabId === 'sub-fin-leases') loadLandLeases();
   else if (subTabId === 'sub-fin-utilities') loadSiteUtilities();
-  else if (subTabId === 'sub-fin-transactions') loadFinanceData();
-  else if (subTabId === 'sub-fin-coa') loadCoa();
 }
 
 // --- Visual Refresh Button Animation ---
@@ -930,18 +926,23 @@ async function loadHrData() {
       const leaves = await leaveRes.json();
       tbodyLeave.innerHTML = leaves.map(l => `
         <tr>
+          <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(l.leave_id)}</td>
           <td><strong>${escapeHtml(l.applicant_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(l.job_title)}</span></td>
           <td>${escapeHtml(l.leave_type)}</td>
           <td class="text-center" style="font-weight: 700;">${l.days_requested}</td>
           <td style="font-size: 11.5px;">${escapeHtml(l.reason)}<br><span style="color: var(--text-muted); font-size: 10.5px;">Mulai: ${l.start_date}</span></td>
           <td>${escapeHtml(l.substitute_name)}</td>
           <td class="text-center"><span class="badge ${l.approval_status === 'APPROVED' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(l.approval_status)}</span></td>
-          <td class="text-center">
-            ${l.approval_status === 'PENDING_APPROVAL' ? `<button class="btn btn-secondary btn-sm" onclick="approveLeaveQuick('${l.leave_id}')" style="padding: 2px 8px; font-size: 11px;">Setujui</button>` : `<span style="color: #10B981; font-size: 11px; font-weight: 700;">Selesai</span>`}
+          <td class="text-center" style="white-space: nowrap;">
+            <button class="btn btn-secondary btn-sm" onclick="openLeavePdfModal('${l.leave_id}', '${escapeHtml(l.applicant_name)}', '${escapeHtml(l.leave_type)}', ${l.days_requested}, '${escapeHtml(l.approval_status)}')" style="padding: 3px 10px; font-size: 11.5px;" title="Lihat Berkas PDF">
+              PDF
+            </button>
           </td>
         </tr>
       `).join('');
     }
+    // Also keep employees table synchronized
+    loadEmployees();
   } catch (e) {
     console.error("Failed to load HR data:", e);
   }
@@ -957,6 +958,7 @@ async function approveLeaveQuick(leaveId) {
     if (res.ok) {
       showToast("Pengajuan cuti berhasil disetujui", "success");
       loadHrData();
+      loadEmployees();
     }
   } catch (e) {
     showToast("Gagal menyetujui cuti", "error");
@@ -1036,7 +1038,9 @@ async function loadLandLeases() {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada data sewa lahan.</td></tr>`;
         return;
       }
-      tbody.innerHTML = data.map(l => `
+      tbody.innerHTML = data.map(l => {
+        const isPaidActive = l.status === 'ACTIVE_PAID' || l.status === 'ACTIVE' || l.status === 'PAID';
+        return `
         <tr>
           <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(l.lease_id)}</td>
           <td><strong>${escapeHtml(l.site_name)}</strong><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${escapeHtml(l.site_id)}</span></td>
@@ -1045,9 +1049,10 @@ async function loadLandLeases() {
           <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #DC2626;">${formatCurrency(l.annual_lease_cost)}</td>
           <td class="text-center" style="font-family: var(--font-mono);">${l.lease_duration_years} th</td>
           <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(l.end_date)}</td>
-          <td class="text-center"><span class="badge ${l.status === 'ACTIVE' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(l.status)}</span></td>
+          <td class="text-center"><span class="badge ${isPaidActive ? 'badge-active_paid' : 'badge-pending'}">${escapeHtml(l.status)}</span></td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     }
   } catch (e) {
     console.error("Failed to load land leases:", e);
@@ -1164,19 +1169,37 @@ function renderInvoicesTable(data) {
   if (!tbodyInv) return;
   updateSidebarRowCount(data ? data.length : 0, 'Data Invoice');
   if (!data || data.length === 0) {
-    tbodyInv.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Tidak ada invoice yang sesuai.</td></tr>`;
+    tbodyInv.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Tidak ada invoice yang sesuai.</td></tr>`;
     return;
   }
-  tbodyInv.innerHTML = data.map(i => `
+  tbodyInv.innerHTML = data.map(i => {
+    const isPaid = (i.payment_status || '').toUpperCase() === 'PAID' || (i.payment_status || '').toUpperCase() === 'ACTIVE_PAID';
+    const displayStatus = isPaid ? 'PAID' : 'PENDING';
+    const badgeClass = isPaid ? 'badge-paid' : 'badge-pending';
+    const invId = i.invoice_id || '';
+    const invNum = i.invoice_number || '';
+    const clientName = i.client_name || '';
+    const totalBilled = Number(i.total_billed || 0);
+
+    return `
     <tr>
-      <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(i.invoice_number)}</td>
-      <td><strong>${escapeHtml(i.client_name)}</strong></td>
-      <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(i.period_covered)}</td>
-      <td class="text-right" style="font-weight: 800; font-family: var(--font-mono);">Rp ${Number(i.total_billed).toLocaleString('id-ID')}</td>
-      <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(i.due_date)}</td>
-      <td class="text-center"><span class="badge ${i.payment_status === 'PAID' ? 'badge-paid' : 'badge-unpaid'}">${escapeHtml(i.payment_status)}</span></td>
+      <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(invNum)}</td>
+      <td><strong>${escapeHtml(clientName)}</strong></td>
+      <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(i.period_covered || '-')}</td>
+      <td class="text-right" style="font-weight: 800; font-family: var(--font-mono);">Rp ${totalBilled.toLocaleString('id-ID')}</td>
+      <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(i.due_date || '-')}</td>
+      <td class="text-center"><span class="badge ${badgeClass}">${displayStatus}</span></td>
+      <td class="text-center">
+        <button class="btn btn-secondary btn-sm" style="padding: 3px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openInvoicePdfModal('${escapeHtml(invId)}', '${escapeHtml(invNum)}', '${escapeHtml(clientName)}', ${totalBilled}, '${displayStatus}')" title="Buka Dokumen PDF Resmi">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span>PDF</span>
+        </button>
+      </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function filterInvoicesTable() {
@@ -1503,6 +1526,101 @@ function openPoPdfModal(poId, poNumber, supplierName, grandTotal, poStatus) {
   modal.classList.add('open');
 }
 
+// --- Open Official Leave Request Typst PDF In-App Preview Modal ---
+function openLeavePdfModal(leaveId, applicantName, leaveType, daysRequested, status) {
+  const modal = document.getElementById('pdfPreviewModal');
+  if (!modal) return;
+
+  const prNumberEl = document.getElementById('modalPrNumber');
+  if (prNumberEl) prNumberEl.textContent = leaveId;
+
+  const supplierNameEl = document.getElementById('modalSupplierName');
+  if (supplierNameEl) supplierNameEl.textContent = `${applicantName} - ${leaveType}`;
+
+  const statusBadge = document.getElementById('modalPrStatusBadge');
+  if (statusBadge) {
+    const rawStatus = (status || "PENDING_APPROVAL").toUpperCase();
+    if (rawStatus === 'APPROVED') statusBadge.className = 'badge badge-approved';
+    else if (rawStatus === 'REJECTED') statusBadge.className = 'badge badge-rejected';
+    else statusBadge.className = 'badge badge-pending';
+    statusBadge.textContent = rawStatus;
+  }
+
+  const grandTotalEl = document.getElementById('modalGrandTotal');
+  if (grandTotalEl) grandTotalEl.textContent = `Durasi Cuti: ${daysRequested} Hari Kerja`;
+
+  const modalApproveBtn = document.getElementById('modalApproveBtn');
+  if (modalApproveBtn) modalApproveBtn.style.display = 'none';
+
+  const cleanLeaveId = encodeURIComponent(leaveId);
+  const downloadBtn = document.getElementById('modalDownloadBtn');
+  if (downloadBtn) {
+    downloadBtn.href = `/api/documents/leave/${cleanLeaveId}/download?download=true&t=${Date.now()}`;
+    downloadBtn.setAttribute('download', `${leaveId}.pdf`);
+  }
+
+  const openTabBtn = document.getElementById('modalOpenTabBtn');
+  if (openTabBtn) {
+    openTabBtn.href = `/api/documents/leave/${cleanLeaveId}/download?inline=true&t=${Date.now()}`;
+  }
+
+  const iframe = document.getElementById('pdfPreviewIframe');
+  if (iframe) {
+    iframe.src = `/api/documents/leave/${cleanLeaveId}/download?inline=true&t=${Date.now()}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`;
+  }
+
+  modal.classList.add('open');
+}
+
+// --- Open Official Tower Lease Invoice Typst PDF In-App Preview Modal ---
+function openInvoicePdfModal(invoiceId, invoiceNumber, clientName, totalBilled, status) {
+  const modal = document.getElementById('pdfPreviewModal');
+  if (!modal) return;
+
+  const prNumberEl = document.getElementById('modalPrNumber');
+  if (prNumberEl) prNumberEl.textContent = invoiceNumber || invoiceId;
+
+  const supplierNameEl = document.getElementById('modalSupplierName');
+  if (supplierNameEl) supplierNameEl.textContent = clientName || "Surat Perjanjian Sewa & Tagihan Invoice";
+
+  const statusBadge = document.getElementById('modalPrStatusBadge');
+  if (statusBadge) {
+    const rawStatus = (status || "PENDING").toUpperCase();
+    if (rawStatus === 'PAID' || rawStatus === 'ACTIVE_PAID') {
+      statusBadge.className = 'badge badge-paid';
+      statusBadge.textContent = 'PAID';
+    } else {
+      statusBadge.className = 'badge badge-pending';
+      statusBadge.textContent = 'PENDING';
+    }
+  }
+
+  const grandTotalEl = document.getElementById('modalGrandTotal');
+  if (grandTotalEl) grandTotalEl.textContent = totalBilled ? `Total Tagihan: ${formatCurrency(totalBilled)}` : "Surat Perjanjian Sewa & Tagihan Invoice PT Bali Towerindo Sentra Tbk";
+
+  const modalApproveBtn = document.getElementById('modalApproveBtn');
+  if (modalApproveBtn) modalApproveBtn.style.display = 'none';
+
+  const cleanInvId = encodeURIComponent(invoiceId);
+  const downloadBtn = document.getElementById('modalDownloadBtn');
+  if (downloadBtn) {
+    downloadBtn.href = `/api/documents/invoice/${cleanInvId}/download?download=true&t=${Date.now()}`;
+    downloadBtn.setAttribute('download', `${invoiceId}.pdf`);
+  }
+
+  const openTabBtn = document.getElementById('modalOpenTabBtn');
+  if (openTabBtn) {
+    openTabBtn.href = `/api/documents/invoice/${cleanInvId}/download?inline=true&t=${Date.now()}`;
+  }
+
+  const iframe = document.getElementById('pdfPreviewIframe');
+  if (iframe) {
+    iframe.src = `/api/documents/invoice/${cleanInvId}/download?inline=true&t=${Date.now()}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`;
+  }
+
+  modal.classList.add('open');
+}
+
 // --- Approve Action From Inside Modal ---
 async function approvePrFromModal() {
   const prNumber = state.currentModalPrNumber;
@@ -1642,10 +1760,61 @@ function quickFillPrompt(promptText) {
   }
 }
 
+// --- Global Prompt Execution & Abort Controller (Gemini Style Stop Action) ---
+let activePromptAbortController = null;
+let isAgentPromptRunning = false;
+
+function setAgentPromptRunning(isRunning) {
+  isAgentPromptRunning = isRunning;
+  const btn = document.getElementById('btnSendPrompt');
+  if (!btn) return;
+
+  if (isRunning) {
+    btn.classList.add('btn-stop-state');
+    btn.disabled = false;
+    btn.setAttribute('title', 'Hentikan respon (Stop)');
+    btn.setAttribute('aria-label', 'Hentikan respon');
+    btn.innerHTML = `
+      <span>Stop</span>
+      <svg class="stop-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="5" y="5" width="14" height="14" rx="2" />
+      </svg>
+    `;
+  } else {
+    btn.classList.remove('btn-stop-state');
+    btn.disabled = false;
+    btn.setAttribute('title', 'Kirim instruksi');
+    btn.setAttribute('aria-label', 'Kirim instruksi');
+    btn.innerHTML = `
+      <span>Kirim</span>
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+      </svg>
+    `;
+  }
+}
+
+function stopPromptExecution() {
+  if (activePromptAbortController) {
+    activePromptAbortController.abort();
+    activePromptAbortController = null;
+  }
+  setAgentPromptRunning(false);
+}
+
+// Global keydown listener for Escape key to cancel ongoing prompt execution
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && isAgentPromptRunning) {
+    e.preventDefault();
+    stopPromptExecution();
+  }
+});
+
 // --- Interactive Prompt Submission ---
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
+    if (isAgentPromptRunning) return; // Prevent duplicate submission while running
     submitPrompt();
   } else if (e.key === 'Enter' && e.shiftKey) {
     setTimeout(autoResizePromptInput, 0);
@@ -1661,7 +1830,55 @@ function useClarificationHint(hintText) {
   }
 }
 
+function handleStreamAborted(streamBubble, accumulatedText = '') {
+  if (!streamBubble) return;
+
+  const cursor = streamBubble.querySelector('.stream-cursor');
+  if (cursor) cursor.remove();
+
+  const inlineCancel = streamBubble.querySelector('.btn-cancel-inline');
+  if (inlineCancel) inlineCancel.remove();
+
+  const activeChips = streamBubble.querySelectorAll('.stage-chip.active');
+  activeChips.forEach(c => {
+    c.classList.remove('active');
+    c.classList.add('done');
+    const pulse = c.querySelector('.stage-pulse-dot');
+    if (pulse) pulse.remove();
+  });
+
+  const stagesContainer = streamBubble.querySelector('.stage-chips-container');
+  if (stagesContainer) {
+    const stoppedChip = document.createElement('div');
+    stoppedChip.className = 'stage-chip stopped';
+    stoppedChip.innerHTML = `
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="color: #64748B;"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+      <span>Dibatalkan oleh pengguna</span>
+    `;
+    stagesContainer.appendChild(stoppedChip);
+  }
+
+  const textSlot = streamBubble.querySelector('.stream-text-slot');
+  if (textSlot) {
+    if (accumulatedText) {
+      textSlot.innerHTML = formatMarkdownResponse(accumulatedText) + `
+        <div class="stream-stopped-hint">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+          <span>Proses pembuatan respon dihentikan.</span>
+        </div>
+      `;
+    }
+  }
+  scrollChatToBottom();
+}
+
 async function submitPrompt() {
+  // If agent is currently running and user clicks the Stop button:
+  if (isAgentPromptRunning) {
+    stopPromptExecution();
+    return;
+  }
+
   const input = document.getElementById('promptInput');
   if (!input) return;
 
@@ -1675,15 +1892,25 @@ async function submitPrompt() {
 
   appendUserMessage(promptText);
 
+  const lower = promptText.toLowerCase();
+  const isLeaveFormIntent = ["ajukan cuti", "input cuti", "form cuti", "formulir cuti", "permohonan cuti", "isi cuti", "minta cuti", "mau cuti", "input data cuti", "buat cuti"].some(k => lower.includes(k));
+
+  if (isLeaveFormIntent && (getEffectiveTenant() === 'HR' || getEffectiveTenant() === 'ALL')) {
+    renderLeaveRequestChatForm();
+    saveCopilotFeed();
+    return;
+  }
+
   const streamBubble = appendAgentStreamBubble();
-  const btn = document.getElementById('btnSendPrompt');
-  if (btn) btn.disabled = true;
+  activePromptAbortController = new AbortController();
+  setAgentPromptRunning(true);
 
   try {
     const res = await fetch('/api/agent/stream-prompt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptText, destinations: [] })
+      body: JSON.stringify({ prompt: promptText, destinations: [] }),
+      signal: activePromptAbortController.signal
     });
 
     if (!res.ok) {
@@ -1701,6 +1928,8 @@ async function submitPrompt() {
     let completedPayload = null;
 
     while (true) {
+      if (activePromptAbortController?.signal?.aborted) break;
+
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -1709,6 +1938,8 @@ async function submitPrompt() {
       buffer = lines.pop();
 
       for (const line of lines) {
+        if (activePromptAbortController?.signal?.aborted) break;
+
         const trimmed = line.trim();
         if (!trimmed.startsWith('data:')) continue;
         const rawJson = trimmed.substring(5).trim();
@@ -1734,17 +1965,32 @@ async function submitPrompt() {
       }
     }
 
+    // Check if aborted right after loop
+    if (activePromptAbortController?.signal?.aborted) {
+      handleStreamAborted(streamBubble, accumulatedText);
+      saveCopilotFeed();
+      return;
+    }
+
     // Finalize stream bubble with complete response data
     finalizeStreamBubble(streamBubble, completedPayload, accumulatedText);
     await loadAllData();
     saveCopilotFeed();
 
   } catch (e) {
+    const isAborted = e.name === 'AbortError' || activePromptAbortController?.signal?.aborted;
+    if (isAborted) {
+      handleStreamAborted(streamBubble);
+      saveCopilotFeed();
+      return;
+    }
+
     if (streamBubble) streamBubble.remove();
     appendAgentErrorMessage(e.message || "Terjadi kesalahan koneksi ke server backend.");
     saveCopilotFeed();
   } finally {
-    if (btn) btn.disabled = false;
+    setAgentPromptRunning(false);
+    activePromptAbortController = null;
   }
 }
 
@@ -1814,8 +2060,12 @@ function appendAgentStreamBubble() {
       <div class="stage-chips-container">
         <div class="stage-chip active">
           <span class="stage-pulse-dot"></span>
-          <span>🔍 Menganalisis instruksi & wewenang...</span>
+          <span>Menganalisis instruksi dan wewenang...</span>
         </div>
+        <button type="button" class="btn-cancel-inline" onclick="stopPromptExecution()" title="Hentikan respon (Stop)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+          <span>Stop</span>
+        </button>
       </div>
       <div class="clarification-slot"></div>
       <div class="stream-text-slot" style="font-size: 13.5px; color: #0F172A; line-height: 1.65;">
@@ -1842,13 +2092,20 @@ function updateStreamStage(streamBubble, stage, message) {
     if (pulse) pulse.remove();
   }
 
+  const inlineCancel = stagesContainer.querySelector('.btn-cancel-inline');
+
   const chip = document.createElement('div');
   chip.className = 'stage-chip active';
   chip.innerHTML = `
     <span class="stage-pulse-dot"></span>
     <span>${escapeHtml(message)}</span>
   `;
-  stagesContainer.appendChild(chip);
+
+  if (inlineCancel) {
+    stagesContainer.insertBefore(chip, inlineCancel);
+  } else {
+    stagesContainer.appendChild(chip);
+  }
   scrollChatToBottom();
 }
 
@@ -1897,6 +2154,9 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
   const cursor = streamBubble.querySelector('.stream-cursor');
   if (cursor) cursor.remove();
 
+  const inlineCancel = streamBubble.querySelector('.btn-cancel-inline');
+  if (inlineCancel) inlineCancel.remove();
+
   const activeChips = streamBubble.querySelectorAll('.stage-chip.active');
   activeChips.forEach(c => {
     c.classList.remove('active');
@@ -1911,7 +2171,12 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
   const items = payload.affected_items || [];
   const actionType = payload.action_type || 'general';
 
-  if (prs.length > 0) {
+  if (actionType === 'hr_leave_form' || (payload.parsed_intent && payload.parsed_intent.workflow_id === 'hr_leave_form')) {
+    const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
+    if (artifactsSlot) {
+      renderLeaveRequestChatForm(artifactsSlot);
+    }
+  } else if (prs.length > 0) {
     const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
     if (artifactsSlot) {
       const prCards = prs.map(pr => {
@@ -1958,6 +2223,69 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
         </div>
       `;
       openDataSidebar('canvas-prs');
+    }
+  }
+
+  if (payload.onboarding_id) {
+    const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
+    if (artifactsSlot) {
+      const onbId = payload.onboarding_id;
+      const clientName = payload.client_name || 'Klien Operator';
+      const siteId = payload.site_id || '';
+      const totalBilled = payload.total_billed || 0;
+      artifactsSlot.innerHTML = `
+        <div class="action-card" style="border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7; margin-top: 10px;">
+          <div class="action-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">PENGAJUAN SEWA MENARA OPERATOR BARU (${escapeHtml(onbId)})</span>
+            <span class="badge badge-approved" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D;">PENDING APPROVAL</span>
+          </div>
+          <div class="action-card-body" style="padding-top: 8px;">
+            <div style="font-size: 12.5px; color: #334155; margin-bottom: 8px;">
+              <strong>Klien:</strong> ${escapeHtml(clientName)} ${siteId ? `• <strong>Site:</strong> ${escapeHtml(siteId)}` : ''}
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px;">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <span>Faktur tagihan sewa menara & berkas perjanjian telah dikompilasi (PDF) dan dikirimkan ke email untuk persetujuan.</span>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <a href="/api/documents/invoice/${encodeURIComponent(onbId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Unduh Faktur PDF</span>
+              </a>
+              <button class="btn btn-primary btn-sm" onclick="openInvoicePdfModal('${escapeHtml(onbId)}', '${escapeHtml(onbId)}', '${escapeHtml(clientName)}', ${totalBilled}, 'PENDING')">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>Lihat Dokumen PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      openDataSidebar('canvas-finance');
+      if (typeof loadFinanceData === 'function') loadFinanceData();
+      if (typeof loadClients === 'function') loadClients();
+      if (typeof loadMlaContracts === 'function') loadMlaContracts();
+    }
+  }
+
+  if (payload.leave_id) {
+    const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
+    if (artifactsSlot) {
+      const lId = payload.leave_id;
+      const appName = payload.applicant_name || 'Karyawan';
+      const lType = payload.leave_type || 'Cuti';
+      const days = payload.days_requested || 1;
+      artifactsSlot.innerHTML = `
+        <div style="display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px;">
+          <a href="/api/documents/leave/${encodeURIComponent(lId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>Unduh PDF Cuti</span>
+          </a>
+          <button class="btn btn-primary btn-sm" onclick="openLeavePdfModal('${escapeHtml(lId)}', '${escapeHtml(appName)}', '${escapeHtml(lType)}', ${days}, 'PENDING_APPROVAL')">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Lihat Dokumen PDF</span>
+          </button>
+        </div>
+      `;
     }
   } else if (items.length > 0 && actionType !== 'general') {
     const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
@@ -2046,19 +2374,33 @@ function appendAgentErrorMessage(errorText) {
 
 function formatMarkdownResponse(text) {
   if (!text) return '';
+
+  // Strip emojis across the board
+  const stripEmojis = (str) => (str || '').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F900}-\u{1F9FF}\u{1F004}\u{1F0CF}\u{1F170}-\u{1F251}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{2934}\u{2935}\u{2B05}\u{2B06}\u{2B07}]/gu, '').trim();
+
   const lines = text.split('\n');
   let inTable = false;
   let html = '';
   let tableRows = [];
 
-  const cleanText = (str) => (str || '').replace(/\*\*/g, '').replace(/`/g, '');
+  const cleanText = (str) => stripEmojis(str || '').replace(/\*\*/g, '').replace(/`/g, '').trim();
 
   for (let line of lines) {
-    const trimmed = line.trim();
+    let trimmed = line.trim();
+
+    // Strip markdown table rows
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       if (trimmed.includes('---')) continue; // skip header separator
       inTable = true;
-      const cells = trimmed.split('|').slice(1, -1).map(c => cleanText(c.trim()));
+      const cells = trimmed.split('|').slice(1, -1).map(c => {
+        let val = cleanText(c);
+        if (val.toUpperCase() === 'PENDING_APPROVAL' || val.toUpperCase() === 'PENDING') {
+          return '<span class="badge badge-pending" style="font-weight: 700;">PENDING</span>';
+        } else if (val.toUpperCase() === 'APPROVED' || val.toUpperCase() === 'PAID' || val.toUpperCase() === 'ACTIVE_PAID') {
+          return '<span class="badge badge-paid" style="font-weight: 700;">PAID</span>';
+        }
+        return val;
+      });
       tableRows.push(cells);
     } else {
       if (inTable && tableRows.length > 0) {
@@ -2070,6 +2412,25 @@ function formatMarkdownResponse(text) {
         inTable = false;
         tableRows = [];
       }
+
+      // Clean header lines (### or ## or #)
+      if (trimmed.startsWith('#')) {
+        const hTitle = cleanText(trimmed.replace(/^#+\s*/, ''));
+        if (hTitle) {
+          html += `<div style="font-size: 13.5px; font-weight: 700; color: #0F172A; margin: 8px 0 4px 0;">${hTitle}</div>`;
+        }
+        continue;
+      }
+
+      // Clean blockquote lines (> ...)
+      if (trimmed.startsWith('>')) {
+        const bQuote = cleanText(trimmed.replace(/^>\s*/, ''));
+        if (bQuote) {
+          html += `<div style="background: #F8FAFC; border-left: 3px solid #CBD5E1; padding: 7px 10px; margin: 6px 0; font-size: 12px; color: #475569; border-radius: 0 6px 6px 0; line-height: 1.5;">${bQuote}</div>`;
+        }
+        continue;
+      }
+
       const cLine = cleanText(trimmed);
       if (cLine.startsWith('- ')) {
         html += `<div style="margin: 3px 0 3px 12px; font-size: 12.5px;">- ${cLine.substring(2)}</div>`;
@@ -2085,7 +2446,7 @@ function formatMarkdownResponse(text) {
       tableRows.slice(1).map(row => `<tr>` + row.map(c => `<td style="padding: 6px 8px;">${c}</td>`).join('') + `</tr>`).join('') +
       `</tbody></table></div>`;
   }
-  
+
   return html;
 }
 
@@ -2532,3 +2893,295 @@ function useCopilotSuggestion(promptText) {
     input.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
+
+// ==============================================================================
+// DOMAIN 2 (HR & WORKFORCE): INTERACTIVE CHAT LEAVE APPLICATION FORM
+// ==============================================================================
+
+async function renderLeaveRequestChatForm(targetContainer = null) {
+  const container = document.getElementById('geminiChatContainer');
+  if (container) container.classList.remove('is-empty-state');
+
+  let parent = targetContainer;
+  if (!parent) {
+    const feed = document.getElementById('copilotFeed');
+    if (!feed) return;
+    const agentBox = document.createElement('div');
+    agentBox.className = 'agent-response-box';
+    agentBox.innerHTML = `
+      ${getAgentBubbleHeaderHtml('HR Assistant')}
+      <div class="stream-text-content" style="margin-bottom: 8px;">
+        Silakan lengkapi formulir permohonan cuti teknisi di bawah ini. Setelah dikonfirmasi dan dikirim, data akan langsung tersimpan di basis data DuckDB dan berkas resmi PDF akan dikirimkan ke HR.
+      </div>
+      <div class="stream-artifacts-slot"></div>
+    `;
+    feed.appendChild(agentBox);
+    parent = agentBox.querySelector('.stream-artifacts-slot');
+  }
+
+  // Fetch employees list if not already cached
+  if (!state.employeesList || state.employeesList.length === 0) {
+    try {
+      const res = await fetch(`/api/balitower/hr/employees?t=${Date.now()}`);
+      if (res.ok) {
+        state.employeesList = await res.json();
+      }
+    } catch (e) {
+      console.warn("Failed to load employees for leave form:", e);
+    }
+  }
+
+  const emps = state.employeesList || [];
+  const empOptions = emps.map(e => `
+    <option value="${escapeHtml(e.employee_id)}">${escapeHtml(e.full_name)} (${escapeHtml(e.employee_id)}) - ${escapeHtml(e.job_title)}</option>
+  `).join('');
+
+  const subOptions = `<option value="">-- Pilih Teknisi Pengganti (Opsional) --</option>` + emps.map(e => `
+    <option value="${escapeHtml(e.employee_id)}">${escapeHtml(e.full_name)} - ${escapeHtml(e.job_title)}</option>
+  `).join('');
+
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const defaultDate = tomorrow.toISOString().split('T')[0];
+
+  const formId = 'leaveForm_' + Date.now();
+
+  parent.innerHTML = `
+    <div class="leave-form-card" id="${formId}">
+      <div class="leave-form-header">
+        <span class="leave-form-title">Formulir Permohonan Cuti Karyawan</span>
+        <span class="badge badge-pending">DRAF BARU</span>
+      </div>
+      <div class="leave-form-body">
+        <!-- Field 1: Karyawan Pemohon (Full Width) -->
+        <div class="leave-form-group">
+          <label class="leave-form-label">Karyawan Pemohon <span style="color: #DC2626;">*</span></label>
+          <select class="leave-form-select" id="${formId}_emp">
+            ${empOptions}
+          </select>
+        </div>
+
+        <!-- Row 1: Jenis Cuti & Durasi Hari Kerja -->
+        <div class="leave-form-row">
+          <div class="leave-form-col">
+            <label class="leave-form-label">Jenis Cuti <span style="color: #DC2626;">*</span></label>
+            <select class="leave-form-select" id="${formId}_type">
+              <option value="ANNUAL_LEAVE">Cuti Tahunan</option>
+              <option value="SICK_LEAVE">Cuti Sakit</option>
+              <option value="SPECIAL_LEAVE">Cuti Khusus / Alasan Penting</option>
+              <option value="MATERNITY_LEAVE">Cuti Melahirkan</option>
+            </select>
+          </div>
+          <div class="leave-form-col">
+            <label class="leave-form-label">Durasi Hari Kerja <span style="color: #DC2626;">*</span></label>
+            <input type="number" class="leave-form-input" id="${formId}_days" value="1" min="1" max="30" placeholder="Jumlah hari...">
+          </div>
+        </div>
+
+        <!-- Row 2: Tanggal Mulai Cuti & Teknisi Pengganti -->
+        <div class="leave-form-row">
+          <div class="leave-form-col">
+            <label class="leave-form-label">Tanggal Mulai Cuti <span style="color: #DC2626;">*</span></label>
+            <input type="date" class="leave-form-input" id="${formId}_start" value="${defaultDate}">
+          </div>
+          <div class="leave-form-col">
+            <label class="leave-form-label">Teknisi Pengganti / Backup</label>
+            <select class="leave-form-select" id="${formId}_sub">
+              ${subOptions}
+            </select>
+          </div>
+        </div>
+
+        <!-- Field 4: Alasan Pengajuan Cuti (Full Width) -->
+        <div class="leave-form-group">
+          <label class="leave-form-label">Alasan Pengajuan Cuti <span style="color: #DC2626;">*</span></label>
+          <input type="text" class="leave-form-input" id="${formId}_reason" placeholder="Contoh: Keperluan keluarga mendesak ke luar kota..." value="">
+        </div>
+      </div>
+
+      <div class="leave-form-footer">
+        <span id="${formId}_error" style="color: #DC2626; font-size: 12px; display: none;"></span>
+        <button class="btn btn-primary btn-sm" id="${formId}_btn" onclick="submitLeaveRequestForm('${formId}')">
+          <span>Kirim Pengajuan Cuti</span>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+
+  scrollChatToBottom();
+}
+
+function triggerLeaveFormInChat() {
+  const container = document.getElementById('geminiChatContainer');
+  if (container) container.classList.remove('is-empty-state');
+  renderLeaveRequestChatForm();
+}
+
+async function submitLeaveRequestForm(formId) {
+  const empEl = document.getElementById(`${formId}_emp`);
+  const typeEl = document.getElementById(`${formId}_type`);
+  const startEl = document.getElementById(`${formId}_start`);
+  const daysEl = document.getElementById(`${formId}_days`);
+  const subEl = document.getElementById(`${formId}_sub`);
+  const reasonEl = document.getElementById(`${formId}_reason`);
+  const btn = document.getElementById(`${formId}_btn`);
+  const errorEl = document.getElementById(`${formId}_error`);
+
+  if (!empEl || !typeEl || !startEl || !daysEl || !reasonEl) return;
+
+  const employeeId = empEl.value.trim();
+  const leaveType = typeEl.value;
+  const startDate = startEl.value.trim();
+  const daysRequested = parseInt(daysEl.value, 10);
+  const reason = reasonEl.value.trim();
+  const substituteId = subEl ? subEl.value.trim() : null;
+
+  if (errorEl) errorEl.style.display = 'none';
+
+  if (!employeeId) {
+    if (errorEl) { errorEl.textContent = 'Silakan pilih karyawan pemohon.'; errorEl.style.display = 'block'; }
+    return;
+  }
+  if (!startDate) {
+    if (errorEl) { errorEl.textContent = 'Silakan tentukan tanggal mulai cuti.'; errorEl.style.display = 'block'; }
+    return;
+  }
+  if (!daysRequested || daysRequested < 1) {
+    if (errorEl) { errorEl.textContent = 'Durasi hari cuti minimal 1 hari.'; errorEl.style.display = 'block'; }
+    return;
+  }
+  if (!reason) {
+    if (errorEl) { errorEl.textContent = 'Alasan pengajuan cuti wajib diisi.'; errorEl.style.display = 'block'; }
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>Menyimpan ke DB & Mengirim PDF...</span>`;
+  }
+
+  try {
+    const res = await fetch('/api/balitower/hr/leave-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employee_id: employeeId,
+        leave_type: leaveType,
+        start_date: startDate,
+        days_requested: daysRequested,
+        reason: reason,
+        substitute_employee_id: substituteId || null
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Gagal mencatat pengajuan cuti.");
+    }
+
+    const respData = await res.json();
+    const d = respData.data || {};
+    const leaveId = respData.leave_id || d.leave_id || 'LV-2026-NEW';
+    const formCard = document.getElementById(formId);
+
+    if (formCard) {
+      const typeLabelMap = {
+        'ANNUAL_LEAVE': 'Cuti Tahunan',
+        'SICK_LEAVE': 'Cuti Sakit',
+        'SPECIAL_LEAVE': 'Cuti Khusus / Alasan Penting',
+        'MATERNITY_LEAVE': 'Cuti Melahirkan'
+      };
+      const typeLabel = typeLabelMap[d.leave_type] || d.leave_type;
+
+      formCard.className = 'leave-success-card';
+      formCard.innerHTML = `
+        <div class="leave-success-header">
+          <span class="leave-success-title">Pengajuan Cuti Berhasil Dicatat</span>
+          <span class="badge badge-approved">TERKIRIM KE HR</span>
+        </div>
+        <div class="leave-success-body">
+          <div class="leave-info-grid">
+            <div class="leave-info-item">
+              <span class="leave-info-k">No. Pengajuan:</span>
+              <span class="badge" style="background:#EFF6FF; color:#2563EB; font-family:var(--font-mono); font-weight:700;">${escapeHtml(leaveId)}</span>
+            </div>
+            <div class="leave-info-item">
+              <span class="leave-info-k">Pemohon:</span>
+              <span class="leave-info-v"><strong>${escapeHtml(d.applicant_name || '-')}</strong> (${escapeHtml(d.job_title || '-')})</span>
+            </div>
+            <div class="leave-info-item">
+              <span class="leave-info-k">Periode Cuti:</span>
+              <span class="leave-info-v">${escapeHtml(d.start_date)} s/d ${escapeHtml(d.end_date)} (<strong>${d.days_requested} hari kerja</strong>)</span>
+            </div>
+            <div class="leave-info-item">
+              <span class="leave-info-k">Jenis Cuti:</span>
+              <span class="leave-info-v">${escapeHtml(typeLabel)}</span>
+            </div>
+            <div class="leave-info-item" style="grid-column: 1 / -1;">
+              <span class="leave-info-k">Alasan:</span>
+              <span class="leave-info-v">${escapeHtml(d.reason || '-')}</span>
+            </div>
+          </div>
+          <div class="leave-dispatch-notice">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <span>Data otomatis tersimpan ke tabel DuckDB dan formulir resmi PDF telah diterbitkan & terkirim ke HR.</span>
+          </div>
+          <div class="leave-action-row">
+            <button class="btn btn-primary btn-sm" onclick="openLeavePdfModal('${leaveId}', '${escapeHtml(d.applicant_name || '')}', '${escapeHtml(typeLabel)}', ${d.days_requested}, 'PENDING_APPROVAL')">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>Lihat Dokumen PDF</span>
+            </button>
+            <a href="/api/documents/leave/${leaveId}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              <span>Unduh PDF</span>
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    showToast(`Pengajuan cuti ${leaveId} berhasil disimpan dan dikirim ke HR`, 'success');
+    loadHrData();
+    loadEmployees();
+    saveCopilotFeed();
+  } catch (err) {
+    if (errorEl) {
+      errorEl.textContent = err.message || "Gagal menyimpan pengajuan cuti.";
+      errorEl.style.display = 'block';
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>Kirim Pengajuan Cuti</span>`;
+    }
+    showToast(err.message || "Gagal memproses pengajuan cuti", 'error');
+  }
+}
+
+// --- Auto-Refresh on Window Focus / Tab Activation (e.g., returning from Email Quick Approval) ---
+window.addEventListener('focus', () => {
+  const hrCanvas = document.getElementById('canvas-hr');
+  if (hrCanvas && hrCanvas.classList.contains('active')) {
+    loadHrData();
+    loadEmployees();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const hrCanvas = document.getElementById('canvas-hr');
+    if (hrCanvas && hrCanvas.classList.contains('active')) {
+      loadHrData();
+      loadEmployees();
+    }
+  }
+});

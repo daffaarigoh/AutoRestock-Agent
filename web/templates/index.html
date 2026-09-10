@@ -50,19 +50,20 @@
         </button>
       </div>
 
-      <!-- API Health Indicator -->
-      <div class="api-health-pill" id="apiHealthIndicator">
+      <!-- API Health Indicator (Hidden for clean executive minimalism) -->
+      <div class="api-health-pill" id="apiHealthIndicator" style="display: none;">
         <span class="health-dot" id="apiHealthDot"></span>
         <span id="apiHealthText">API Online</span>
       </div>
 
-      <!-- User Profile & Tenant Pill -->
+      <!-- User Profile Pill (Minimalist & Clean) -->
       <div class="user-profile-pill">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+        <svg class="user-pill-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
         </svg>
-        <span id="displayUsername" style="font-weight: 700; color: #1E40AF;">admin</span>
-        <span class="user-tenant-tag" id="displayTenant">ALL</span>
+        <span id="displayUsername" class="user-pill-name">admin</span>
+        <span class="user-tenant-tag" id="displayTenant" style="display: none;">ALL</span>
+        <div class="user-pill-divider"></div>
         <a href="/static/admin.html" class="btn btn-secondary btn-sm" id="btnAdminNav" style="display: none; padding: 2px 8px; font-size: 11px; text-decoration: none; border-radius: 4px;" title="Admin Management Panel">Admin Panel</a>
         <button class="btn-logout" onclick="logoutSession()" title="Keluar dari sesi">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -286,11 +287,9 @@
         <!-- HR Sub-Tabs -->
         <div class="sub-tab-bar">
           <button class="sub-tab-btn active" onclick="switchHrSubTab('sub-hr-employees')">Data Karyawan</button>
-          <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-att')">Absensi Site GPS</button>
           <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-leaves')">Pengajuan Cuti</button>
           <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-candidates')">Filter Pelamar K3</button>
           <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-jobs')">Lowongan Posisi</button>
-          <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-sites')">Titik Menara Site</button>
         </div>
 
         <!-- Sub-View 1: Data Karyawan -->
@@ -328,50 +327,40 @@
           </div>
         </div>
 
-        <!-- Sub-View 2: Absensi & Kunjungan Site -->
-        <div class="sub-tab-content" id="sub-hr-att">
-          <div class="table-responsive-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Tanggal</th>
-                  <th>Teknisi</th>
-                  <th>Site Menara</th>
-                  <th class="text-center">Jarak GPS</th>
-                  <th class="text-right">Lembur</th>
-                  <th class="text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody id="hrAttendanceTableBody">
-                <tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat data absensi...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Sub-View 3: Pengajuan Cuti -->
+        <!-- Sub-View 2: Pengajuan Cuti -->
         <div class="sub-tab-content" id="sub-hr-leaves">
+          <div class="table-toolbar" style="justify-content: space-between;">
+            <span style="font-size: 12.5px; font-weight: 600; color: #1E293B;">Riwayat Permohonan Cuti Karyawan</span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-secondary btn-sm" id="btnRefreshLeaves" onclick="triggerVisualRefresh('btnRefreshLeaves', loadHrData)" title="Segarkan Data Cuti">
+                <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+              </button>
+            </div>
+          </div>
           <div class="table-responsive-container">
             <table class="data-table">
               <thead>
                 <tr>
+                  <th>No. Pengajuan</th>
                   <th>Pemohon</th>
                   <th>Jenis Cuti</th>
                   <th class="text-center">Hari</th>
                   <th>Alasan</th>
                   <th>Pengganti</th>
                   <th class="text-center">Status</th>
-                  <th class="text-center">Aksi</th>
+                  <th class="text-center">Dokumen PDF</th>
                 </tr>
               </thead>
               <tbody id="hrLeavesTableBody">
-                <tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat cuti...</td></tr>
+                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat cuti...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Sub-View 4: Filter Pelamar Rigger K3 -->
+        <!-- Sub-View 3: Filter Pelamar Rigger K3 -->
         <div class="sub-tab-content" id="sub-hr-candidates">
           <div class="table-responsive-container">
             <table class="data-table">
@@ -392,7 +381,7 @@
           </div>
         </div>
 
-        <!-- Sub-View 5: Lowongan Posisi -->
+        <!-- Sub-View 4: Lowongan Posisi -->
         <div class="sub-tab-content" id="sub-hr-jobs">
           <div class="table-responsive-container">
             <table class="data-table">
@@ -410,29 +399,6 @@
               </thead>
               <tbody id="hrJobsTableBody">
                 <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat lowongan kerja...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Sub-View 6: Titik Menara Site -->
-        <div class="sub-tab-content" id="sub-hr-sites">
-          <div class="table-responsive-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Site ID</th>
-                  <th>Nama Menara</th>
-                  <th>Tipe Site</th>
-                  <th>Wilayah</th>
-                  <th class="text-center">Koordinat GPS</th>
-                  <th class="text-right">Tinggi (m)</th>
-                  <th>Struktur</th>
-                  <th class="text-center">Operator Tenant</th>
-                </tr>
-              </thead>
-              <tbody id="hrSitesTableBody">
-                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat menara site...</td></tr>
               </tbody>
             </table>
           </div>
@@ -468,8 +434,6 @@
           <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-mla')">Kontrak MLA Menara</button>
           <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-leases')">Sewa Lahan Site</button>
           <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-utilities')">Biaya PLN & Genset</button>
-          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-transactions')">Jurnal Kas Harian</button>
-          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-coa')">Bagan Akun COA</button>
         </div>
 
         <!-- Sub-View 1: Invoices Sewa Menara -->
@@ -497,10 +461,11 @@
                   <th class="text-right">Total Tagihan (IDR)</th>
                   <th class="text-center">Jatuh Tempo</th>
                   <th class="text-center">Status</th>
+                  <th class="text-center">Dokumen PDF</th>
                 </tr>
               </thead>
               <tbody id="finInvoicesTableBody">
-                <tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat invoice...</td></tr>
+                <tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat invoice...</td></tr>
               </tbody>
             </table>
           </div>
@@ -593,47 +558,6 @@
               </thead>
               <tbody id="finUtilitiesTableBody">
                 <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat tagihan utilitas...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Sub-View 6: Jurnal Kas Harian -->
-        <div class="sub-tab-content" id="sub-fin-transactions">
-          <div class="table-responsive-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>ID Trx</th>
-                  <th>Tanggal</th>
-                  <th>Akun COA</th>
-                  <th class="text-center">Arus</th>
-                  <th class="text-right">Nominal (IDR)</th>
-                  <th>Keterangan</th>
-                </tr>
-              </thead>
-              <tbody id="finTrxTableBody">
-                <tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat transaksi...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Sub-View 7: Bagan Akun COA -->
-        <div class="sub-tab-content" id="sub-fin-coa">
-          <div class="table-responsive-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Kode Akun</th>
-                  <th>Nama Akun</th>
-                  <th class="text-center">Klasifikasi Tipe</th>
-                  <th class="text-center">Saldo Normal</th>
-                  <th>Keterangan Akuntansi</th>
-                </tr>
-              </thead>
-              <tbody id="finCoaTableBody">
-                <tr><td colspan="5" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat bagan akun COA...</td></tr>
               </tbody>
             </table>
           </div>

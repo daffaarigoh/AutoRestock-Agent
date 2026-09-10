@@ -1,21 +1,5 @@
 [
   {
-    "id": "WF-001",
-    "name": "Auto Restock Material Kritis",
-    "description": "Memeriksa stok material menara & kabel FO yang menipis dan membuat draf PR.",
-    "business_instruction": "Periksa stok material kritis, hitung kebutuhan restock, dan buat dokumen Purchase Requisition.",
-    "compiled_json": {
-      "workflow": "auto_restock",
-      "steps": [
-        {
-          "type": "tool",
-          "tool": "inventory.get_low_stock"
-        }
-      ]
-    },
-    "tenant_id": "INVENTORY"
-  },
-  {
     "id": "WF-002",
     "name": "Cek Absensi & Lembur Teknisi",
     "description": "Audit absensi kunjungan site menara dan rekap jam lembur teknisi.",
@@ -96,51 +80,146 @@
     "tenant_id": "FINANCE"
   },
   {
-    "id": "WF-ALL-01",
-    "name": "Cek Profil Akun & Hak Akses",
-    "description": "Melihat informasi profil pengguna yang sedang login, role, divisi tenant, dan modul yang dapat diakses.",
-    "business_instruction": "Periksa akun yang sedang login dan tampilkan detail hak akses serta batasan divisi.",
+    "id": "WF-08BEBD",
+    "name": "Pengajuan Cuti Teknisi dan Penerbitan Dokumen PDF HR",
+    "description": "Mencatat permohonan cuti teknisi ke database DuckDB, mencetak formulir resmi PDF Typst, dan mendistribusikan notifikasi email ke HR.",
+    "business_instruction": "Catat permohonan cuti karyawan ke dalam database, cetak formulir resmi cuti format PDF dengan kop surat PT Bali Towerindo Sentra Tbk, lalu kirimkan notifikasi dan lampiran PDF ke email HR.",
     "compiled_json": {
-      "workflow": "check_user_profile",
+      "workflow": "pengajuan-cuti-teknisi-dan-penerbitan-dokumen-pdf-hr",
+      "version": 1,
       "steps": [
         {
           "type": "tool",
-          "tool": "system.check_profile"
+          "tool": "hr.submit_leave_request"
+        },
+        {
+          "type": "tool",
+          "tool": "docgen.compile_leave_pdf"
+        },
+        {
+          "type": "tool",
+          "tool": "notification.send_email"
         }
       ]
     },
-    "tenant_id": "ALL"
+    "tenant_id": "HR"
   },
   {
-    "id": "WF-ALL-02",
-    "name": "Informasi Sistem & Status Layanan",
-    "description": "Melihat ringkasan status operasional server, versi aplikasi, database DuckDB, dan gateway AI.",
-    "business_instruction": "Cek status operasional seluruh modul sistem AutoRestock-Agent.",
+    "id": "WF-3959D6",
+    "name": "Pendaftaran Klien Operator & Kontrak Sewa Menara Baru (Otorisasi Email)",
+    "description": "Alur pendaftaran operator telekomunikasi baru dan penerbitan draf kontrak Master Lease Agreement (MLA) sewa menara. Sistem mengirimkan rincian sewa dan tombol otorisasi persetujuan ke email Finance Manager sebelum memperbarui database klien, kontrak, dan invoice secara otomatis.",
+    "business_instruction": "Susun draf pendaftaran operator klien baru dan kontrak sewa menara (MLA) ke dalam basis data dengan status PENDING_APPROVAL. Hitung estimasi tagihan invoice perdana dan kirimkan email notifikasi ke manajer keuangan berisikan rincian kontrak serta tombol otorisasi persetujuan. Jangan aktifkan kontrak di database operasional sebelum otorisasi email disetujui.",
     "compiled_json": {
-      "workflow": "system_health_info",
+      "workflow": "pendaftaran-klien-operator-dan-kontrak-sewa-menara",
+      "version": 1,
       "steps": [
         {
           "type": "tool",
-          "tool": "system.get_system_info"
+          "tool": "finance.draft_client_onboarding"
+        },
+        {
+          "type": "agent",
+          "task": "agent.reason_and_validate"
+        },
+        {
+          "type": "tool",
+          "tool": "notification.send_email"
         }
       ]
     },
-    "tenant_id": "ALL"
+    "tenant_id": "FINANCE"
   },
   {
-    "id": "WF-ALL-03",
-    "name": "Panduan Operasional & Kontak Darurat",
-    "description": "Panduan SOP penggunaan sistem AutoRestock-Agent, navigasi modul, dan kontak darurat IT/Operasional.",
-    "business_instruction": "Tampilkan panduan operasional perusahaan dan kontak darurat lintas divisi.",
+    "id": "WF-847DA5",
+    "name": "Audit Cuti Pending & Kirim Email Otorisasi HR",
+    "description": "Memeriksa seluruh permohonan pengajuan cuti karyawan yang berstatus pending di database, menampilkan rincian berkas di chat, dan mengirimkan rekapitulasi ke email HR untuk otorisasi persetujuan.",
+    "business_instruction": "Audit seluruh data permohonan cuti karyawan yang masih berstatus pending approval di database. Tampilkan rincian daftar pengajuan cuti yang belum disetujui di chat, lalu kirimkan rekapitulasi ke email HR agar dapat diajukan persetujuan langsung.",
     "compiled_json": {
-      "workflow": "company_guidelines",
+      "workflow": "audit_cuti_pending_kirim_email_otorisasi_hr",
+      "version": 1,
       "steps": [
         {
           "type": "tool",
-          "tool": "system.get_company_guidelines"
+          "tool": "hr.query_pending_leaves"
+        },
+        {
+          "type": "tool",
+          "tool": "notification.send_email"
         }
       ]
     },
-    "tenant_id": "ALL"
+    "tenant_id": "HR"
+  },
+  {
+    "id": "WF-A01",
+    "name": "Pipeline Pengadaan Material PR-to-PO End-to-End",
+    "description": "Alur pengadaan otomatis terintegrasi dari inspeksi stok, penerbitan PR draf, approval email, hingga penerbitan PO ke vendor.",
+    "business_instruction": "Periksa seluruh saldo stok material menara dan kabel fiber optic di gudang logistik usera yang berada di bawah ambang batas minimum. Hitung kuantitas reorder dan vendor rekanan terbaik, terbitkan dokumen resmi Purchase Requisition (PR) dan draf PO PENDING_APPROVAL, lalu kirim email notifikasi ke manajer.",
+    "compiled_json": {
+      "workflow": "pipeline_pengadaan_material_pr_to_po_end_to_end",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "inventory.get_low_stock_products"
+        },
+        {
+          "type": "agent",
+          "task": "calculate_reorder_quantity"
+        },
+        {
+          "type": "tool",
+          "tool": "docgen.compile"
+        },
+        {
+          "type": "tool",
+          "tool": "notification.dispatch"
+        }
+      ]
+    },
+    "tenant_id": "INVENTORY"
+  },
+  {
+    "id": "WF-A02",
+    "name": "Penerimaan Barang Fisik PO & Update Saldo",
+    "description": "Verifikasi barang Purchase Order (PO) yang tiba di gudang logistik dan sinkronisasi penambahan stok fisik.",
+    "business_instruction": "Verifikasi kedatangan barang Purchase Order yang tiba di gudang, catat penerimaan aktual, update status DELIVERED, dan tambahkan stok ke saldo gudang.",
+    "compiled_json": {
+      "workflow": "usera_po_goods_receipt",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "inventory.check_specific_stock"
+        },
+        {
+          "type": "tool",
+          "tool": "inventory.crud_record"
+        },
+        {
+          "type": "tool",
+          "tool": "notification.dispatch"
+        }
+      ]
+    },
+    "tenant_id": "INVENTORY"
+  },
+  {
+    "id": "WF-A03",
+    "name": "Tracking Pengiriman PO & Cetak Dokumen PDF",
+    "description": "Monitoring status pengiriman Purchase Order (PO) aktif dan penerbitan surat pesanan resmi format PDF Typst.",
+    "business_instruction": "Audit status PO yang sedang dikirim (IN_TRANSIT), tampilkan nomor PO dan total nilai, serta terbitkan berkas PDF surat pesanan resmi untuk diunduh.",
+    "compiled_json": {
+      "workflow": "usera_po_tracking_pdf",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "po.query_orders"
+        },
+        {
+          "type": "tool",
+          "tool": "docgen.compile_po"
+        }
+      ]
+    },
+    "tenant_id": "INVENTORY"
   }
 ]

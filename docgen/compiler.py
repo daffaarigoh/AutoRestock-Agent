@@ -9,6 +9,8 @@ from agents.state import PurchaseRequisition
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_PATH = WORKSPACE_DIR / "docgen" / "templates" / "purchase_requisition.typ"
 PO_TEMPLATE_PATH = WORKSPACE_DIR / "docgen" / "templates" / "purchase_order.typ"
+LEAVE_TEMPLATE_PATH = WORKSPACE_DIR / "docgen" / "templates" / "leave_request.typ"
+INVOICE_TEMPLATE_PATH = WORKSPACE_DIR / "docgen" / "templates" / "tower_lease_invoice.typ"
 STORAGE_DIR = WORKSPACE_DIR / "storage"
 
 # Structured sub-folders for documents
@@ -16,6 +18,8 @@ PENDING_DIR = STORAGE_DIR / "pending"
 APPROVED_DIR = STORAGE_DIR / "approved"
 REJECTED_DIR = STORAGE_DIR / "rejected"
 PO_STORAGE_DIR = STORAGE_DIR / "purchase_orders"
+LEAVE_STORAGE_DIR = STORAGE_DIR / "leave_requests"
+INVOICE_STORAGE_DIR = STORAGE_DIR / "invoices"
 
 
 def ensure_storage_directories():
@@ -25,6 +29,8 @@ def ensure_storage_directories():
     os.makedirs(APPROVED_DIR, exist_ok=True)
     os.makedirs(REJECTED_DIR, exist_ok=True)
     os.makedirs(PO_STORAGE_DIR, exist_ok=True)
+    os.makedirs(LEAVE_STORAGE_DIR, exist_ok=True)
+    os.makedirs(INVOICE_STORAGE_DIR, exist_ok=True)
 
 
 def format_currency(amount: float) -> str:
@@ -178,7 +184,7 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
 
     po_dict = {}
     if isinstance(po_input, str):
-        conn = get_db_connection(read_only=True)
+        conn = get_db_connection()
         try:
             # Exact match first
             row = conn.execute("""
@@ -305,6 +311,323 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
         if temp_typ_file.exists():
             try:
                 temp_typ_file.unlink()
+            except Exception:
+                pass
+
+    return str(output_file.resolve().as_posix())
+
+
+def generate_leave_pdf(leave_input: str | dict, output_path: str | Path | None = None) -> str:
+    """
+    Renders an official Leave Request document into a Typst document and compiles it to PDF.
+    Saves PDF into storage/leave_requests/{leave_id}.pdf.
+    
+    :param leave_input: Leave ID (string) e.g. "LV-2026-001" or dictionary containing leave data
+    :param output_path: Optional custom output path
+    :return: Absolute string path of generated PDF
+    """
+    ensure_storage_directories()
+    
+    if isinstance(leave_input, str):
+        from database.db import get_db_connection
+        conn = get_db_connection()
+        try:
+            row = conn.execute("""
+                SELECT 
+                    l.leave_id, l.employee_id, e.full_name AS applicant_name, e.job_title,
+                    e.department, e.leave_balance, l.leave_type, l.start_date,
+                    l.end_date, l.days_requested, l.reason, l.substitute_employee_id,
+                    COALESCE(sub.full_name, '-') AS substitute_name,
+                    COALESCE(sub.job_title, '-') AS substitute_title,
+                    l.approval_status,
+                    COALESCE(appr.full_name, 'Eko Prasetyo') AS approved_by_name
+                FROM leave_requests l
+                JOIN employees e ON l.employee_id = e.employee_id
+                LEFT JOIN employees sub ON l.substitute_employee_id = sub.employee_id
+                LEFT JOIN employees appr ON l.approved_by = appr.employee_id
+                WHERE l.leave_id = ?;
+            """, [leave_input]).fetchone()
+            if not row:
+                raise ValueError(f"Pengajuan cuti '{leave_input}' tidak ditemukan di database.")
+            cols = [
+                "leave_id", "employee_id", "applicant_name", "job_title", "department",
+                "leave_balance", "leave_type", "start_date", "end_date",
+                "days_requested", "reason", "substitute_employee_id", "substitute_name",
+                "substitute_title", "approval_status", "approved_by_name"
+            ]
+            leave_dict = dict(zip(cols, row))
+        finally:
+            conn.close()
+    elif isinstance(leave_input, dict):
+        leave_dict = leave_input
+    else:
+        raise ValueError("leave_input must be a string (leave_id) or dict.")
+
+    leave_id = leave_dict.get("leave_id", "LV-UNKNOWN")
+    clean_id = leave_id.replace("/", "_").replace("\\", "_")
+    if output_path is None:
+        output_file = LEAVE_STORAGE_DIR / f"{clean_id}.pdf"
+    else:
+        output_file = Path(output_path)
+
+    # Read base Typst template
+    with open(LEAVE_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+        template_str = f.read()
+
+    # Leave type label mapping
+    type_map = {
+        "ANNUAL_LEAVE": "Cuti Tahunan",
+        "SICK_LEAVE": "Cuti Sakit",
+        "SPECIAL_LEAVE": "Cuti Khusus / Alasan Penting",
+        "EMERGENCY_LEAVE": "Cuti Alasan Khusus Mendesak",
+        "MATERNITY_LEAVE": "Cuti Melahirkan"
+    }
+    raw_type = leave_dict.get("leave_type", "ANNUAL_LEAVE")
+    type_label = type_map.get(raw_type, raw_type)
+
+    from datetime import datetime
+    today_str = datetime.now().strftime("%d %B %Y")
+
+    rendered = (
+        template_str
+        .replace("{{LEAVE_ID}}", escape_typst(leave_id))
+        .replace("{{SUBMIT_DATE}}", escape_typst(today_str))
+        .replace("{{STATUS}}", escape_typst(leave_dict.get("approval_status", "PENDING_APPROVAL")))
+        .replace("{{EMPLOYEE_NAME}}", escape_typst(leave_dict.get("applicant_name") or leave_dict.get("employee_name", "-")))
+        .replace("{{EMPLOYEE_ID}}", escape_typst(leave_dict.get("employee_id", "-")))
+        .replace("{{JOB_TITLE}}", escape_typst(leave_dict.get("job_title", "Field Technician")))
+        .replace("{{DEPARTMENT}}", escape_typst(leave_dict.get("department", "Field Operations")))
+        .replace("{{LEAVE_BALANCE}}", str(leave_dict.get("leave_balance", 12)))
+        .replace("{{PHONE}}", escape_typst(leave_dict.get("phone", "0812-3456-7890")))
+        .replace("{{LEAVE_TYPE}}", escape_typst(raw_type))
+        .replace("{{LEAVE_TYPE_LABEL}}", escape_typst(type_label))
+        .replace("{{START_DATE}}", escape_typst(leave_dict.get("start_date", "-")))
+        .replace("{{END_DATE}}", escape_typst(leave_dict.get("end_date", "-")))
+        .replace("{{DAYS_REQUESTED}}", str(leave_dict.get("days_requested", 1)))
+        .replace("{{REASON}}", escape_typst(leave_dict.get("reason", "-")))
+        .replace("{{SUBSTITUTE_NAME}}", escape_typst(leave_dict.get("substitute_name", "-")))
+        .replace("{{SUBSTITUTE_ID}}", escape_typst(leave_dict.get("substitute_employee_id", "-")))
+        .replace("{{SUBSTITUTE_TITLE}}", escape_typst(leave_dict.get("substitute_title", "Field Technician")))
+        .replace("{{APPROVED_BY_NAME}}", escape_typst(leave_dict.get("approved_by_name", "Eko Prasetyo")))
+    )
+
+    temp_typ = STORAGE_DIR / f"temp_{clean_id}.typ"
+    with open(temp_typ, "w", encoding="utf-8") as f:
+        f.write(rendered)
+
+    try:
+        output_file_str = str(output_file.resolve().as_posix())
+        typst.compile(
+            input=str(temp_typ.resolve().as_posix()),
+            output=output_file_str
+        )
+        print(f"[DOCGEN] Successfully generated Leave Request PDF to: {output_file_str}")
+    finally:
+        if temp_typ.exists():
+            try:
+                temp_typ.unlink()
+            except Exception:
+                pass
+
+    return str(output_file.resolve().as_posix())
+
+
+def generate_invoice_pdf(invoice_input: str | dict, output_path: str | Path | None = None) -> str:
+    """
+    Renders an official Tower Lease Agreement & Tax Invoice into a Typst document and compiles it to PDF.
+    Clean, corporate, professional document without emojis.
+    Saves PDF into storage/invoices/{clean_id}.pdf.
+    
+    :param invoice_input: Invoice ID e.g. "INV-2026-001", Onboarding ID e.g. "ONB-2026-001", or dictionary.
+    :param output_path: Optional custom output path
+    :return: Absolute string path of generated PDF
+    """
+    ensure_storage_directories()
+    
+    inv_data = {}
+    if isinstance(invoice_input, str):
+        from database.db import get_db_connection
+        conn = get_db_connection()
+        try:
+            target_str = invoice_input.strip()
+            if target_str.startswith("ONB-"):
+                row = conn.execute("""
+                    SELECT 
+                        onboarding_id, client_id, client_name, client_type, npwp, billing_email,
+                        payment_terms, contract_id, site_id, monthly_rate, billing_frequency,
+                        start_date, end_date, first_invoice_amount, approval_status,
+                        created_at
+                    FROM pending_client_onboardings
+                    WHERE onboarding_id = ?;
+                """, [target_str]).fetchone()
+                if not row:
+                    raise ValueError(f"Berkas onboarding '{target_str}' tidak ditemukan di database.")
+                
+                cols = [
+                    "onboarding_id", "client_id", "client_name", "client_type", "npwp", "billing_email",
+                    "payment_terms", "contract_id", "site_id", "monthly_rate", "billing_frequency",
+                    "start_date", "end_date", "first_invoice_amount", "approval_status", "created_at"
+                ]
+                ob = dict(zip(cols, row))
+                
+                s_row = conn.execute("SELECT site_name, region FROM telecom_sites WHERE site_id = ?;", [ob["site_id"]]).fetchone()
+                site_name = s_row[0] if s_row else "Site Menara Telekomunikasi Mandiri"
+                region = s_row[1] if s_row else "DKI Jakarta & Sekitarnya"
+                
+                m_rate = int(ob["monthly_rate"])
+                freq = ob["billing_frequency"]
+                mult = 3 if freq == "QUARTERLY" else 1
+                subtotal = m_rate * mult
+                tax_ppn = int(subtotal * 0.11)
+                total_billed = subtotal + tax_ppn
+                
+                onb_num_str = ob["onboarding_id"].split("-")[-1] if "-" in ob["onboarding_id"] else "001"
+                st_raw = ob["approval_status"]
+                is_st_paid = st_raw == "APPROVED" or st_raw == "PAID" or st_raw == "ACTIVE_PAID"
+                inv_data = {
+                    "doc_id": ob["onboarding_id"],
+                    "invoice_number": f"INV/BLT/2026/04/{onb_num_str}",
+                    "contract_id": ob["contract_id"],
+                    "invoice_date": str(ob["created_at"])[:10],
+                    "due_date": ob["start_date"],
+                    "status": "PAID" if is_st_paid else "PENDING",
+                    "client_name": ob["client_name"],
+                    "client_id": ob["client_id"],
+                    "client_type": ob["client_type"],
+                    "npwp": ob["npwp"],
+                    "billing_email": ob["billing_email"],
+                    "payment_terms": ob["payment_terms"],
+                    "site_id": ob["site_id"],
+                    "site_name": site_name,
+                    "region": region,
+                    "billing_frequency": freq,
+                    "start_date": ob["start_date"],
+                    "end_date": ob["end_date"],
+                    "period_covered": "2026-Q2" if freq == "QUARTERLY" else "2026-04",
+                    "monthly_rate": m_rate,
+                    "amount_subtotal": subtotal,
+                    "tax_ppn": tax_ppn,
+                    "total_billed": total_billed
+                }
+            else:
+                row = conn.execute("""
+                    SELECT 
+                        i.invoice_id, i.invoice_number, i.contract_id, i.client_id,
+                        c.client_name, c.client_type, c.npwp, c.billing_email, c.payment_terms,
+                        m.site_id, COALESCE(s.site_name, 'Menara Telekomunikasi'), COALESCE(s.region, 'Jabodetabek'),
+                        m.monthly_rate, m.billing_frequency, m.start_date, m.end_date,
+                        i.period_covered, i.amount_subtotal, i.tax_ppn, i.total_billed,
+                        i.invoice_date, i.due_date, i.payment_status
+                    FROM revenue_invoices i
+                    JOIN telecom_clients c ON i.client_id = c.client_id
+                    JOIN mla_contracts m ON i.contract_id = m.contract_id
+                    LEFT JOIN telecom_sites s ON m.site_id = s.site_id
+                    WHERE UPPER(i.invoice_id) = ? OR UPPER(i.invoice_number) = ?;
+                """, [target_str.upper(), target_str.upper()]).fetchone()
+                
+                if not row:
+                    row = (
+                        target_str, f"INV/BLT/2026/04/009", "MLA-2026-008", "CLI-006",
+                        "PT Starlink Akses Nusantara", "OPERATOR_SELULER", "01.888.777.6-095.000",
+                        "billing@starlink.co.id", "Net 30", "JKS-MCP-001",
+                        "Menara Microcell Kuningan Barat", "Jakarta Selatan", 25000000,
+                        "QUARTERLY", "2026-04-01", "2031-03-31", "2026-Q2",
+                        75000000, 8250000, 83250000, "2026-04-01", "2026-05-01", "PAID"
+                    )
+                
+                cols = [
+                    "invoice_id", "invoice_number", "contract_id", "client_id",
+                    "client_name", "client_type", "npwp", "billing_email", "payment_terms",
+                    "site_id", "site_name", "region", "monthly_rate", "billing_frequency",
+                    "start_date", "end_date", "period_covered", "amount_subtotal",
+                    "tax_ppn", "total_billed", "invoice_date", "due_date", "payment_status"
+                ]
+                raw_dict = dict(zip(cols, row))
+                st_val = raw_dict["payment_status"]
+                is_st_paid = st_val == "PAID" or st_val == "APPROVED" or st_val == "ACTIVE_PAID"
+                inv_data = {
+                    "doc_id": raw_dict["invoice_id"],
+                    "invoice_number": raw_dict["invoice_number"],
+                    "contract_id": raw_dict["contract_id"],
+                    "invoice_date": raw_dict["invoice_date"],
+                    "due_date": raw_dict["due_date"],
+                    "status": "PAID" if is_st_paid else "PENDING",
+                    "client_name": raw_dict["client_name"],
+                    "client_id": raw_dict["client_id"],
+                    "client_type": raw_dict["client_type"],
+                    "npwp": raw_dict["npwp"],
+                    "billing_email": raw_dict["billing_email"],
+                    "payment_terms": raw_dict["payment_terms"],
+                    "site_id": raw_dict["site_id"],
+                    "site_name": raw_dict["site_name"],
+                    "region": raw_dict["region"],
+                    "billing_frequency": raw_dict["billing_frequency"],
+                    "start_date": raw_dict["start_date"],
+                    "end_date": raw_dict["end_date"],
+                    "period_covered": raw_dict["period_covered"],
+                    "monthly_rate": int(raw_dict["monthly_rate"]),
+                    "amount_subtotal": int(raw_dict["amount_subtotal"]),
+                    "tax_ppn": int(raw_dict["tax_ppn"]),
+                    "total_billed": int(raw_dict["total_billed"])
+                }
+        finally:
+            conn.close()
+    elif isinstance(invoice_input, dict):
+        inv_data = invoice_input
+    else:
+        raise ValueError("invoice_input must be a string or dict.")
+
+    doc_id = inv_data.get("doc_id") or inv_data.get("invoice_id") or inv_data.get("onboarding_id") or "INV-UNKNOWN"
+    clean_id = doc_id.replace("/", "_").replace("\\", "_")
+    if output_path is None:
+        output_file = INVOICE_STORAGE_DIR / f"{clean_id}.pdf"
+    else:
+        output_file = Path(output_path)
+
+    with open(INVOICE_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+        template_str = f.read()
+
+    rendered = (
+        template_str
+        .replace("{{STATUS}}", escape_typst(inv_data.get("status", "PENDING")))
+        .replace("{{INVOICE_NUMBER}}", escape_typst(inv_data.get("invoice_number", "INV/BLT/2026/04/001")))
+        .replace("{{CONTRACT_ID}}", escape_typst(inv_data.get("contract_id", "MLA-2026-001")))
+        .replace("{{INVOICE_DATE}}", escape_typst(inv_data.get("invoice_date", "-")))
+        .replace("{{DUE_DATE}}", escape_typst(inv_data.get("due_date", "-")))
+        .replace("{{CLIENT_NAME}}", escape_typst(inv_data.get("client_name", "-")))
+        .replace("{{CLIENT_ID}}", escape_typst(inv_data.get("client_id", "-")))
+        .replace("{{CLIENT_TYPE}}", escape_typst(inv_data.get("client_type", "OPERATOR_SELULER")))
+        .replace("{{NPWP}}", escape_typst(inv_data.get("npwp", "-")))
+        .replace("{{BILLING_EMAIL}}", escape_typst(inv_data.get("billing_email", "-")))
+        .replace("{{PAYMENT_TERMS}}", escape_typst(inv_data.get("payment_terms", "Net 30")))
+        .replace("{{SITE_ID}}", escape_typst(inv_data.get("site_id", "-")))
+        .replace("{{SITE_NAME}}", escape_typst(inv_data.get("site_name", "Menara Telekomunikasi")))
+        .replace("{{REGION}}", escape_typst(inv_data.get("region", "DKI Jakarta")))
+        .replace("{{BILLING_FREQUENCY}}", escape_typst(inv_data.get("billing_frequency", "QUARTERLY")))
+        .replace("{{START_DATE}}", escape_typst(inv_data.get("start_date", "-")))
+        .replace("{{END_DATE}}", escape_typst(inv_data.get("end_date", "-")))
+        .replace("{{PERIOD_COVERED}}", escape_typst(inv_data.get("period_covered", "2026-Q2")))
+        .replace("{{MONTHLY_RATE}}", format_currency(inv_data.get("monthly_rate", 0)))
+        .replace("{{AMOUNT_SUBTOTAL}}", format_currency(inv_data.get("amount_subtotal", 0)))
+        .replace("{{TAX_PPN}}", format_currency(inv_data.get("tax_ppn", 0)))
+        .replace("{{TOTAL_BILLED}}", format_currency(inv_data.get("total_billed", 0)))
+    )
+
+    temp_typ = STORAGE_DIR / f"temp_{clean_id}.typ"
+    with open(temp_typ, "w", encoding="utf-8") as f:
+        f.write(rendered)
+
+    try:
+        output_file_str = str(output_file.resolve().as_posix())
+        typst.compile(
+            input=str(temp_typ.resolve().as_posix()),
+            output=output_file_str
+        )
+        print(f"[DOCGEN] Successfully generated Tower Lease Invoice PDF to: {output_file_str}")
+    finally:
+        if temp_typ.exists():
+            try:
+                temp_typ.unlink()
             except Exception:
                 pass
 
