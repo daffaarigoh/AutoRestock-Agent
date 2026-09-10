@@ -20,39 +20,44 @@ class TenantSchemaAdapter:
                     return []
                 rows = conn.execute("""
                     SELECT 
-                        sb.balance_id,
                         i.item_id,
                         i.item_name,
                         i.category,
-                        sb.quantity_on_hand,
-                        sb.reorder_point,
+                        COALESCE(SUM(sb.quantity_on_hand), 0) AS total_stock,
+                        i.min_stock,
                         i.lead_time_days,
                         i.unit,
                         i.unit_price,
-                        w.warehouse_name
-                    FROM stock_balances sb
-                    JOIN inventory_items i ON sb.item_id = i.item_id
-                    JOIN warehouses w ON sb.warehouse_id = w.warehouse_id
-                    WHERE sb.stock_status IN ('CRITICAL', 'LOW_STOCK')
-                    ORDER BY (sb.reorder_point - sb.quantity_on_hand) DESC;
+                        COALESCE(s.supplier_id, 'SUP-001') AS supplier_id,
+                        COALESCE(s.supplier_name, 'PT Bali Vendor Utama') AS supplier_name
+                    FROM inventory_items i
+                    LEFT JOIN stock_balances sb ON i.item_id = sb.item_id
+                    LEFT JOIN suppliers s ON i.supplier_id = s.supplier_id
+                    GROUP BY i.item_id, i.item_name, i.category, i.min_stock, i.lead_time_days, i.unit, i.unit_price, s.supplier_id, s.supplier_name
+                    HAVING COALESCE(SUM(sb.quantity_on_hand), 0) <= i.min_stock
+                    ORDER BY (i.min_stock - COALESCE(SUM(sb.quantity_on_hand), 0)) DESC;
                 """).fetchall()
                 results = []
                 for r in rows:
-                    bal_id, item_id, name, cat, stock, min_thresh, lt_days, unit, price, wh_name = r
-                    reorder_qty = max(min_thresh * 2 - stock, 1)
+                    item_id, name, cat, stock, min_thresh, lt_days, unit, price, sup_id, sup_name = r
+                    stock_val = int(stock)
+                    min_val = int(min_thresh)
+                    reorder_qty = max(min_val * 2 - stock_val, 1)
                     results.append({
                         "item_id": item_id,
-                        "name": f"{name} ({wh_name})",
+                        "name": name,
                         "category": cat,
-                        "current_stock": int(stock),
-                        "min_threshold": int(min_thresh),
-                        "max_threshold": int(min_thresh * 3),
+                        "current_stock": stock_val,
+                        "min_threshold": min_val,
+                        "max_threshold": int(min_val * 3),
                         "avg_daily_usage": 5.0,
                         "lead_time_days": int(lt_days),
                         "unit": unit,
                         "unit_price": float(price),
-                        "safety_stock": int(min_thresh),
+                        "safety_stock": min_val,
                         "reorder_qty": int(reorder_qty),
+                        "vendor_id": sup_id,
+                        "vendor_name": sup_name,
                         "tenant_id": "usera",
                         "raw_source_table": "inventory_items"
                     })
@@ -399,17 +404,28 @@ class TenantSchemaAdapter:
 
             existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
             if "stock_balances" in existing_tables:
+                wh_row = conn.execute("SELECT warehouse_id FROM stock_balances WHERE item_id = ? ORDER BY quantity_on_hand ASC LIMIT 1;", [id_param]).fetchone()
+                target_wh = wh_row[0] if wh_row else "WH-JKT-01"
+
                 conn.execute("""
                     UPDATE stock_balances
-                    SET quantity_on_hand = quantity_on_hand + ?, stock_status = 'NORMAL'
-                    WHERE item_id = ? AND warehouse_id = 'WH-JKT-01';
-                """, [qty_to_add, id_param])
+                    SET quantity_on_hand = quantity_on_hand + ?,
+                        stock_status = CASE 
+                            WHEN (quantity_on_hand + ?) <= reorder_point * 0.5 THEN 'CRITICAL'
+                            WHEN (quantity_on_hand + ?) <= reorder_point THEN 'LOW_STOCK'
+                            ELSE 'NORMAL'
+                        END,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE item_id = ? AND warehouse_id = ?;
+                """, [qty_to_add, qty_to_add, qty_to_add, id_param, target_wh])
+
                 if "items" in existing_tables:
                     conn.execute("""
                         UPDATE items
                         SET current_stock = current_stock + ?
                         WHERE item_id = ? OR lower(name) LIKE ?;
                     """, [qty_to_add, id_param, f"%{name_param}%"])
+
                 conn.commit()
                 return True
 

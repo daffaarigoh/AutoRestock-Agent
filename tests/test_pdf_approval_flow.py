@@ -47,8 +47,8 @@ class TestPDFApprovalFlow(unittest.TestCase):
         if HAVE_PYPDF:
             reader_pending = pypdf.PdfReader(io.BytesIO(res_pdf_pending.content))
             text_pending = reader_pending.pages[0].extract_text()
-            self.assertIn("Status: PENDING", text_pending)
-            self.assertIn("PASSED (PENDING)", text_pending)
+            self.assertTrue("Status: PENDING" in text_pending or "Status Dokumen: PENDING" in text_pending)
+            self.assertTrue("PASSED (PENDING)" in text_pending or "MENUNGGU PERSETUJUAN" in text_pending)
         
         # 4. Perform Approval Action
         res_action = client.post("/api/approval/action", json={
@@ -67,17 +67,25 @@ class TestPDFApprovalFlow(unittest.TestCase):
         if HAVE_PYPDF:
             reader_approved = pypdf.PdfReader(io.BytesIO(res_pdf_approved.content))
             text_approved = reader_approved.pages[0].extract_text()
-            self.assertIn("Status: APPROVED", text_approved)
+            self.assertTrue("Status: APPROVED" in text_approved or "Status Dokumen: APPROVED" in text_approved)
             self.assertNotIn("PASSED (PENDING)", text_approved)
+            self.assertNotIn("MENUNGGU PERSETUJUAN", text_approved)
         
         # 6. Verify DuckDB order status
         from database.db import get_db_connection
         conn = get_db_connection(read_only=True)
+        db_order = None
         try:
-            db_order = conn.execute("SELECT status FROM purchase_requests WHERE pr_number = ? LIMIT 1;", [pr_target]).fetchone()
-        except:
             db_order = conn.execute("SELECT status FROM orders WHERE pr_number = ? LIMIT 1;", [pr_target]).fetchone()
+        except:
+            pass
+        if not db_order:
+            try:
+                db_order = conn.execute("SELECT status FROM purchase_requests WHERE pr_number = ? LIMIT 1;", [pr_target]).fetchone()
+            except:
+                pass
         conn.close()
+        self.assertIsNotNone(db_order)
         self.assertEqual(db_order[0], "APPROVED")
 
 

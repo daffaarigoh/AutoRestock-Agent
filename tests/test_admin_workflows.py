@@ -32,7 +32,9 @@ class TestAdminWorkflows(unittest.TestCase):
         wf_map = {w["id"]: w for w in wfs}
 
         # Check Schema A
-        self.assertEqual(wf_map["WF-001"]["tenant_id"], "INVENTORY")
+        wf_a = wf_map.get("WF-A01") or wf_map.get("WF-001")
+        self.assertIsNotNone(wf_a)
+        self.assertEqual(wf_a["tenant_id"], "INVENTORY")
         # Check Schema B
         self.assertEqual(wf_map["WF-002"]["tenant_id"], "HR")
         self.assertEqual(wf_map["WF-003"]["tenant_id"], "HR")

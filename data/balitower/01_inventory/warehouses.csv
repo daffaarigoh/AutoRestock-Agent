@@ -1,5 +1,9 @@
 warehouse_id,warehouse_name,warehouse_type,region,address,capacity_sqm,supervisor
-WH-JKT-01,Central Logistics Warehouse Sunter,Central Warehouse,DKI Jakarta,Jl. Danau Sunter Selatan No. 12,2500,Agus Sutanto
-WH-DPS-01,Regional Logistics Hub Denpasar,Regional Hub,Bali & Nusa Tenggara,Jl. Gatot Subroto Timur No. 88,1200,I Made Sudirga
-WH-BDG-01,Regional Logistics Hub Bandung,Regional Hub,Jawa Barat,Jl. Soekarno Hatta No. 402,1000,Ahmad Sofyan
-WH-MOB-01,Mobile Emergency Response Van JKT,Mobile Van,DKI Jakarta,Fleet Unit B 9182 PQA,50,Budi Santoso
+WH-JKT-01,Central Logistics Warehouse Sunter,Central Warehouse,DKI Jakarta,Jl. Danau Sunter Selatan No. 12,3500,Agus Sutanto
+WH-JKB-01,Logistics Hub Daan Mogot Barat,Regional Hub,DKI Jakarta,Jl. Daan Mogot KM 14 No. 8,1800,Hendra Setiawan
+WH-BDG-01,Regional Logistics Hub Bandung,Regional Hub,Jawa Barat,Jl. Soekarno Hatta No. 402,1500,Ahmad Sofyan
+WH-SMG-01,Regional Logistics Hub Semarang,Regional Hub,Jawa Tengah,Jl. Kaligawe Raya KM 5 No. 18,1200,Bambang Prasetyo
+WH-SBY-01,Regional Logistics Hub Surabaya,Regional Hub,Jawa Timur,Jl. Rungkut Industri III No. 45,2200,Tri Wibowo
+WH-DPS-01,Regional Logistics Hub Denpasar,Regional Hub,Bali & Nusa Tenggara,Jl. Gatot Subroto Timur No. 88,1600,I Made Sudirga
+WH-MDN-01,Regional Logistics Hub Medan,Regional Hub,Sumatera Utara,Jl. Medan-Belawan KM 10.5,1400,Rizal Siregar
+WH-MKS-01,Regional Logistics Hub Makassar,Regional Hub,Sulawesi Selatan,Kawasan Industri Makassar (KIMA) Kav 7,1100,Andi Mappanyukki

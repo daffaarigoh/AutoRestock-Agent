@@ -1021,11 +1021,11 @@
         <div class="form-row" style="flex-wrap: wrap;">
           <input type="hidden" id="wfId">
           <input type="text" id="wfName" class="form-input" placeholder="Nama Workflow (contoh: Pengecekan Stok Kritis Harian)" style="flex: 2; min-width: 200px;">
-          <select id="wfTenantId" class="form-input" style="flex: 1.2; min-width: 220px; font-weight: 600; cursor: pointer; color: #1E40AF;">
+          <select id="wfTenantId" class="form-input" style="flex: 1.2; min-width: 220px; font-weight: 600; cursor: pointer; color: #1E40AF; background: #FFFFFF;">
             <option value="ALL">🌐 all (Schema ALL - Lintas Divisi)</option>
-            <option value="FINANCE">💰 userc (Schema C - Divisi Keuangan)</option>
             <option value="INVENTORY">📦 usera (Schema A - Divisi Inventory)</option>
             <option value="HR">👥 userb (Schema B - Divisi HR & Field)</option>
+            <option value="FINANCE">💰 userc (Schema C - Divisi Keuangan)</option>
           </select>
           <input type="text" id="wfDesc" class="form-input" placeholder="Deskripsi Singkat Tujuan Workflow" style="flex: 2; min-width: 200px;">
         </div>
@@ -1038,18 +1038,31 @@
       <!-- Active Workflows List -->
       <div class="card">
         <div class="card-header">
-          <h2 class="card-title">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-            </svg>
-            <span>Daftar Workflow Aktif</span>
-          </h2>
+          <div>
+            <h2 class="card-title">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+              <span>Daftar Workflow Aktif</span>
+            </h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">Seluruh pipeline alur kerja otonom yang dikonfigurasi per tenant.</p>
+          </div>
           <button class="btn btn-secondary" onclick="loadWorkflows()">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
             <span>Refresh</span>
           </button>
+        </div>
+
+        <!-- Filter Workflow by Tenant Pills -->
+        <div class="filter-bar" style="margin-top: 8px; margin-bottom: 14px;">
+          <div class="tenant-filter-pills" id="wfTenantFilterPills">
+            <button class="pill-btn active" onclick="filterWorkflowsByTenant('ALL')">all (<span id="countWfAll">0</span>)</button>
+            <button class="pill-btn" onclick="filterWorkflowsByTenant('usera')">usera (<span id="countWfTenantA">0</span>)</button>
+            <button class="pill-btn" onclick="filterWorkflowsByTenant('userb')">userb (<span id="countWfTenantB">0</span>)</button>
+            <button class="pill-btn" onclick="filterWorkflowsByTenant('userc')">userc (<span id="countWfTenantC">0</span>)</button>
+          </div>
         </div>
         
         <!-- Workflow Schema Filters -->
@@ -1321,6 +1334,24 @@
       }
     }
 
+    let allWorkflowsList = [];
+    let allWorkflowsMap = {};
+    let selectedWfTenantFilter = 'ALL';
+
+    function setSelectTenant(val) {
+      const v = (val || 'ALL').toUpperCase();
+      const sel = document.getElementById('wfTenantId');
+      if (['INVENTORY', 'TENANT_A', 'USERA'].includes(v)) {
+        sel.value = 'INVENTORY';
+      } else if (['HR', 'TENANT_B', 'USERB'].includes(v)) {
+        sel.value = 'HR';
+      } else if (['FINANCE', 'TENANT_C', 'USERC'].includes(v)) {
+        sel.value = 'FINANCE';
+      } else {
+        sel.value = 'ALL';
+      }
+    }
+
     // Submit Workflow (Create or Update)
     async function submitWorkflow() {
       const btn = document.getElementById('createWfBtn');
@@ -1360,17 +1391,21 @@
 
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('toastMsg').textContent = `Workflow ${id ? 'berhasil diperbarui' : 'berhasil disusun'}: ${data.workflow_id || data.id || name}`;
+          const targetDisplay = (data.tenant_id || tenantId);
+          document.getElementById('toastMsg').textContent = `Workflow ${id ? 'berhasil diperbarui' : 'berhasil disusun'}: ${data.workflow_id || data.id || name} (${targetDisplay})`;
           toast.classList.add('show');
           setTimeout(() => toast.classList.remove('show'), 3500);
           
           cancelEdit();
+          // Pertahankan tenant yang baru dipilih agar form tidak melompat ke ALL
+          setSelectTenant(tenantId);
           loadWorkflows();
         } else {
-          alert("Gagal menyimpan workflow.");
+          const errData = await res.json().catch(() => ({}));
+          alert("Gagal menyimpan workflow: " + (errData.detail || "Terjadi kesalahan server"));
         }
       } catch (err) {
-        alert("Terjadi kesalahan kompilasi workflow.");
+        alert("Terjadi kesalahan kompilasi workflow: " + err.message);
       } finally {
         btnText.textContent = id ? 'Update Workflow' : 'Compile & Simpan Workflow';
         btn.disabled = false;
@@ -1382,7 +1417,6 @@
       document.getElementById('wfName').value = '';
       document.getElementById('wfDesc').value = '';
       document.getElementById('wfInstruction').value = '';
-      document.getElementById('wfTenantId').value = 'ALL';
       document.getElementById('formTitleText').textContent = 'Buat Workflow Baru (Data-Driven Engine)';
       document.getElementById('btnSubmitText').textContent = 'Compile & Simpan Workflow';
       document.getElementById('cancelEditBtn').style.display = 'none';
@@ -1514,9 +1548,92 @@
       }
     }
 
-    function editWf(wf) {
+    function renderWorkflowsList() {
+      const listDiv = document.getElementById('workflowList');
+      if (!listDiv) return;
+
+      if (allWorkflowsList.length === 0) {
+        listDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Belum ada workflow yang dibuat.</p>';
+        return;
+      }
+
+      const filtered = allWorkflowsList.filter(wf => {
+        const tid = (wf.tenant_id || 'ALL').toUpperCase();
+        if (selectedWfTenantFilter === 'ALL' || selectedWfTenantFilter === 'all') return true;
+        if (['usera', 'TENANT_A', 'INVENTORY'].includes(selectedWfTenantFilter)) {
+          return ['INVENTORY', 'TENANT_A', 'USERA'].includes(tid);
+        }
+        if (['userb', 'TENANT_B', 'HR'].includes(selectedWfTenantFilter)) {
+          return ['HR', 'TENANT_B', 'USERB'].includes(tid);
+        }
+        if (['userc', 'TENANT_C', 'FINANCE'].includes(selectedWfTenantFilter)) {
+          return ['FINANCE', 'TENANT_C', 'USERC'].includes(tid);
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        listDiv.innerHTML = `<p style="color: var(--text-muted); font-size: 13px;">Tidak ada workflow untuk filter target tenant "${selectedWfTenantFilter}".</p>`;
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(wf => {
+        const escapedJson = JSON.stringify(wf.compiled_json || {}, null, 2);
+        
+        // Badge Tenant Scoping
+        let tenantBadge = '<span class="badge-tenant-all">all</span>';
+        const tid = (wf.tenant_id || 'ALL').toUpperCase();
+        if (tid === 'TENANT_A' || tid === 'USERA' || tid === 'INVENTORY') {
+          tenantBadge = '<span class="badge-tenant-a">usera</span>';
+        } else if (tid === 'TENANT_B' || tid === 'USERB' || tid === 'HR') {
+          tenantBadge = '<span class="badge-tenant-b">userb</span>';
+        } else if (tid === 'TENANT_C' || tid === 'USERC' || tid === 'FINANCE') {
+          tenantBadge = '<span class="badge-tenant-c">userc</span>';
+        }
+
+        html += `
+          <div class="workflow-item">
+            <div class="workflow-header" style="flex-wrap: wrap; gap: 8px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <h3 class="workflow-name">${escapeHtml(wf.name)}</h3>
+                  ${tenantBadge}
+                </div>
+                <p class="workflow-id">ID: ${escapeHtml(wf.id)}</p>
+              </div>
+              <div class="workflow-actions-group">
+                <button class="btn-action-edit" onclick="editWf('${escapeHtml(wf.id)}')">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                  <span>Edit</span>
+                </button>
+                <button class="btn-action-delete" onclick="deleteWf('${escapeHtml(wf.id)}')">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                  <span>Hapus</span>
+                </button>
+                <span class="badge-status-active">ACTIVE</span>
+              </div>
+            </div>
+            <p class="workflow-desc">${escapeHtml(wf.description || 'Tidak ada deskripsi.')}</p>
+            <details class="workflow-details">
+              <summary>Lihat Detail JSON Execution</summary>
+              <pre>${escapeHtml(escapedJson)}</pre>
+            </details>
+          </div>
+        `;
+      });
+      listDiv.innerHTML = html;
+    }
+
+    function editWf(id) {
+      const wf = allWorkflowsMap[id];
+      if (!wf) return;
       document.getElementById('wfId').value = wf.id;
-      document.getElementById('wfName').value = wf.name;
+      document.getElementById('wfName').value = wf.name || '';
       document.getElementById('wfDesc').value = wf.description || '';
       document.getElementById('wfInstruction').value = wf.business_instruction || '';
       const tid = (wf.tenant_id || 'ALL').toUpperCase();

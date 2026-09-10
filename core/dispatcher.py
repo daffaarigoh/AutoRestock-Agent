@@ -48,61 +48,189 @@ class MultiChannelDispatcher:
             approve_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=APPROVE"
             reject_link = f"{base_url}/api/approval/quick-action?pr_number={pr_number}&action=REJECT"
             pdf_link = f"{base_url}/api/documents/pr/{pr_number}/download"
+            from datetime import datetime
+            today_str = datetime.now().strftime("%d %B %Y, %H:%M WIB")
             
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px; color: #1e293b; }}
-                    .card {{ background: #ffffff; max-width: 600px; margin: 0 auto; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
-                    .header {{ background: #1e293b; color: #ffffff; padding: 24px; text-align: center; }}
-                    .body {{ padding: 24px; }}
-                    .btn-group {{ margin: 28px 0 16px 0; text-align: center; display: flex; justify-content: center; gap: 12px; }}
-                    .btn {{ display: inline-block; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; margin: 0 6px; }}
-                    .btn-approve {{ background-color: #16a34a; color: #ffffff !important; }}
-                    .btn-reject {{ background-color: #dc2626; color: #ffffff !important; }}
-                    .btn-pdf {{ background-color: #2563eb; color: #ffffff !important; }}
-                    .footer {{ background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }}
-                    .note {{ background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 4px; font-size: 13px; color: #1e40af; margin: 16px 0; }}
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <div class="header">
-                        <h2 style="margin:0; font-size: 20px;">Permintaan Persetujuan Restock Otomatis</h2>
-                        <p style="margin: 6px 0 0 0; font-size: 14px; color: #94a3b8;">AutoRestock-Agent Procurement System</p>
-                    </div>
-                    <div class="body">
-                        <p>Halo Manajer Pengadaan,</p>
-                        <p>Sistem AI Agent telah mendeteksi kebutuhan restock barang kritis dan mengompilasi draf resmi Purchase Requisition <strong>{pr_number}</strong>.</p>
-                        
-                        <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 16px 0; border: 1px solid #e2e8f0; white-space: pre-line; font-size: 14px;">
-                            {content_text}
-                        </div>
-
-                        <div class="note">
-                            <strong>Instruksi Persetujuan:</strong><br>
-                            • Klik <strong>Setujui (APPROVE)</strong>: Stok inventaris di database DuckDB akan langsung ditambahkan otomatis.<br>
-                            • Klik <strong>Tolak (REJECT)</strong>: Pengadaan dibatalkan dan stok gudang tetap.
-                        </div>
-
-                        <div class="btn-group">
-                            <a href="{approve_link}" class="btn btn-approve" target="_blank">SETUJUI (APPROVE)</a>
-                            <a href="{reject_link}" class="btn btn-reject" target="_blank">TOLAK (REJECT)</a>
-                        </div>
-                        <div style="text-align: center; margin-top: 12px;">
-                            <a href="{pdf_link}" class="btn btn-pdf" target="_blank">Unduh Dokumen PDF Resmi</a>
-                        </div>
-                    </div>
-                    <div class="footer">
-                        AutoRestock-Agent &bull; Terintegrasi dengan DuckDB, LangGraph & Typst
-                    </div>
+            html_content = f"""<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pemberitahuan Pengadaan Barang | {pr_number}</title>
+    <style>
+        body {{
+            margin: 0;
+            padding: 24px 12px;
+            background-color: #F1F5F9;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0F172A;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }}
+        .email-wrapper {{
+            max-width: 620px;
+            margin: 0 auto;
+            background: #FFFFFF;
+            border: 1px solid #CBD5E1;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }}
+        .corp-header {{
+            background: #0F172A;
+            color: #FFFFFF;
+            padding: 22px 28px;
+            border-bottom: 3px solid #2563EB;
+        }}
+        .corp-title {{
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: 0;
+            color: #F8FAFC;
+        }}
+        .corp-subtitle {{
+            font-size: 12px;
+            color: #94A3B8;
+            margin: 4px 0 0 0;
+            letter-spacing: 0.02em;
+        }}
+        .email-body {{
+            padding: 28px;
+        }}
+        .doc-badge-row {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #E2E8F0;
+        }}
+        .doc-id {{
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1D4ED8;
+        }}
+        .status-pill {{
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #FEF3C7;
+            color: #92400E;
+            border-radius: 4px;
+            border: 1px solid #FCD34D;
+        }}
+        .content-box {{
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 18px 0;
+            font-size: 13.5px;
+            color: #334155;
+            white-space: pre-line;
+            line-height: 1.6;
+        }}
+        .instruction-box {{
+            background: #EFF6FF;
+            border-left: 3px solid #2563EB;
+            padding: 12px 16px;
+            margin: 18px 0 24px 0;
+            font-size: 12.5px;
+            color: #1E40AF;
+        }}
+        .btn-container {{
+            margin: 28px 0 16px 0;
+            text-align: center;
+        }}
+        .btn {{
+            display: inline-block;
+            padding: 11px 22px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 4px 6px;
+            letter-spacing: 0.02em;
+        }}
+        .btn-approve {{
+            background: #15803D;
+            color: #FFFFFF !important;
+            border: 1px solid #166534;
+        }}
+        .btn-reject {{
+            background: #FFFFFF;
+            color: #B91C1C !important;
+            border: 1px solid #F87171;
+        }}
+        .btn-doc {{
+            background: #F8FAFC;
+            color: #334155 !important;
+            border: 1px solid #CBD5E1;
+            font-size: 12px;
+            padding: 8px 16px;
+        }}
+        .corp-footer {{
+            background: #F8FAFC;
+            border-top: 1px solid #E2E8F0;
+            padding: 18px 28px;
+            font-size: 11.5px;
+            color: #64748B;
+            line-height: 1.6;
+        }}
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="corp-header">
+            <h1 class="corp-title">PT Bali Towerindo Sentra Tbk</h1>
+            <p class="corp-subtitle">Divisi Supply Chain Management & Pengadaan Logistik</p>
+        </div>
+        <div class="email-body">
+            <div class="doc-badge-row">
+                <div>
+                    <span style="font-size: 11px; color: #64748B; text-transform: uppercase; font-weight: 600;">Nomor Dokumen:</span><br>
+                    <span class="doc-id">{pr_number}</span>
                 </div>
-            </body>
-            </html>
-            """
+                <div style="text-align: right;">
+                    <span class="status-pill">Menunggu Otorisasi</span>
+                </div>
+            </div>
+
+            <p style="margin-top: 0; font-size: 14px; font-weight: 600; color: #0F172A;">Kepada Yth. Leader / Manajer Operasional Pengadaan,</p>
+            <p style="font-size: 13.5px; color: #334155; margin-bottom: 12px;">
+                Sistem monitoring logistik mendeteksi ketersediaan material infrastruktur telah menyentuh batas minimum stok kerja (Reorder Point). Dokumen pengajuan pembelian (Purchase Requisition) resmi telah disusun untuk permohonan persetujuan Anda:
+            </p>
+
+            <div class="content-box">{content_text}</div>
+
+            <div class="instruction-box">
+                <strong>Ketentuan Otorisasi:</strong><br>
+                1. <strong>Setujui (APPROVE)</strong>: Sistem akan segera menerbitkan Purchase Order (PO) resmi ke rekanan vendor terdaftar.<br>
+                2. <strong>Tolak (REJECT)</strong>: Proses pengadaan dihentikan dan pengalokasian anggaran dibatalkan.
+            </div>
+
+            <div class="btn-container">
+                <a href="{approve_link}" class="btn btn-approve" target="_blank">SETUJUI PENGAJUAN (APPROVE)</a>
+                <a href="{reject_link}" class="btn btn-reject" target="_blank">TOLAK PENGAJUAN (REJECT)</a>
+            </div>
+            <div style="text-align: center; margin-top: 8px;">
+                <a href="{pdf_link}" class="btn btn-doc" target="_blank">Unduh Dokumen Draf Resmi (PDF)</a>
+            </div>
+        </div>
+        <div class="corp-footer">
+            <strong>PT Bali Towerindo Sentra Tbk</strong><br>
+            Wisma Kodel Lantai 7, Jl. H.R. Rasuna Said Kav. B-4, Jakarta Selatan 12920<br>
+            <em>Pemberitahuan otomatis dari Enterprise Operations Command Center. Tidak memerlukan balasan email.</em>
+        </div>
+    </div>
+</body>
+</html>"""
 
         if not is_smtp_configured:
             attach_info = f" (dengan lampiran: {Path(attachment_path).name})" if attachment_path and Path(attachment_path).exists() else ""

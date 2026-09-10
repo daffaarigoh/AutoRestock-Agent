@@ -22,7 +22,7 @@ def test_tenant_isolation():
     print("[PASS] Admin login succeeded (Tenant: ALL)")
 
     # 2. Inventory User login (Tenant: INVENTORY)
-    res = client.post("/api/auth/login", json={"username": "user_inventory", "password": "user123"})
+    res = client.post("/api/auth/login", json={"username": "usera", "password": "user123"})
     assert res.status_code == 200, f"Inventory user login failed: {res.text}"
     inv_data = res.json()
     inv_token = inv_data["access_token"]
@@ -30,7 +30,7 @@ def test_tenant_isolation():
     print("[PASS] Inventory user login succeeded (Tenant: INVENTORY)")
 
     # 3. HR User login (Tenant: HR)
-    res = client.post("/api/auth/login", json={"username": "user_hr", "password": "user123"})
+    res = client.post("/api/auth/login", json={"username": "userb", "password": "user123"})
     assert res.status_code == 200, f"HR user login failed: {res.text}"
     hr_data = res.json()
     hr_token = hr_data["access_token"]
@@ -38,7 +38,7 @@ def test_tenant_isolation():
     print("[PASS] HR user login succeeded (Tenant: HR)")
 
     # 4. Finance User login (Tenant: FINANCE)
-    res = client.post("/api/auth/login", json={"username": "user_finance", "password": "user123"})
+    res = client.post("/api/auth/login", json={"username": "userc", "password": "user123"})
     assert res.status_code == 200, f"Finance user login failed: {res.text}"
     fin_data = res.json()
     fin_token = fin_data["access_token"]

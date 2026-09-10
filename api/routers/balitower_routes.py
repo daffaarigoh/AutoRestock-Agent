@@ -207,15 +207,19 @@ def get_purchase_orders(current_user: TokenData = Depends(require_inventory_acce
                 s.supplier_name,
                 po.item_id,
                 i.item_name,
+                po.warehouse_id,
+                COALESCE(w.warehouse_name, po.warehouse_id) AS warehouse_name,
                 po.order_quantity,
                 po.unit_price,
                 po.total_amount,
                 po.order_date,
                 po.expected_delivery,
+                po.status,
                 po.status AS po_status
             FROM purchase_orders po
             JOIN suppliers s ON po.supplier_id = s.supplier_id
             JOIN inventory_items i ON po.item_id = i.item_id
+            LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
             ORDER BY po.order_date DESC;
         """
         rows = conn.execute(query).fetchall()

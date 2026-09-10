@@ -142,17 +142,36 @@ class SemanticRouter:
         Returns workflow_id: None and is_unrelated: True if the prompt is out of scope.
         """
         conn = get_db_connection(read_only=True)
-        workflows = conn.execute("""
+        tenant_variants = [tenant_id, "ALL"]
+        if tenant_id in ["INVENTORY", "TENANT_A", "usera"]:
+            tenant_variants.extend(["INVENTORY", "TENANT_A", "usera"])
+        elif tenant_id in ["HR", "TENANT_B", "userb"]:
+            tenant_variants.extend(["HR", "TENANT_B", "userb"])
+        elif tenant_id in ["FINANCE", "TENANT_C", "userc"]:
+            tenant_variants.extend(["FINANCE", "TENANT_C", "userc"])
+        placeholders = ", ".join(["?"] * len(tenant_variants))
+        workflows = conn.execute(f"""
             SELECT id, name, description, tenant_id 
             FROM workflows 
-            WHERE tenant_id = ? OR tenant_id = 'ALL'
+            WHERE tenant_id IN ({placeholders})
             ORDER BY id ASC
-        """, [tenant_id]).fetchall()
+        """, tenant_variants).fetchall()
         conn.close()
         
         if not workflows:
             return {
                 "workflow_id": None,
+                "send_email": False,
+                "threshold_updates": [],
+                "target_item_name": None
+            }
+
+        prompt_clean = prompt.strip().lower()
+        # Guard against single-word, ambiguous, or too-short inputs without clear command
+        if len(prompt_clean) < 3 or prompt_clean in ["pr", "po", "stok", "cek", "halo", "hi", "tes", "test", "help", "menu", "workflow", "buat", "pesan"]:
+            return {
+                "workflow_id": None,
+                "is_unrelated": True,
                 "send_email": False,
                 "threshold_updates": [],
                 "target_item_name": None
@@ -166,14 +185,14 @@ Match the user's prompt ONLY to one of the following permitted workflows:
 {workflows_str}
 
 CRITICAL RULES:
-1. If the user's prompt is UNRELATED to inventory operations, stock checking, threshold updates, adding new products, or purchase requisitions/restock (e.g. general chit-chat, programming questions, destructive database commands, weather, jokes, or out-of-scope requests), you MUST return:
+1. If the user's prompt is UNRELATED, vague, ambiguous, or lacks a clear operational command (e.g. single words like "pr", "po", "stok", general greetings, chit-chat, weather, programming questions), you MUST return:
    {{"workflow_id": null, "is_unrelated": true}}
 2. DO NOT force or default any prompt to a workflow unless it clearly matches the intent of that workflow.
-3. If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "max_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}} (extract whatever fields the user provided, leaving unmentioned fields out).
-4. If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}]. Include only the thresholds the user specified.
-5. If the user specifies an item name to check, extract it as "target_item_name".
-6. If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
-7. If the user asks to generate, create, or compile a PDF, Purchase Requisition (PR), or document, you MUST match it to a restock workflow that creates PR documents (e.g. WF-001 or tenant-specific restock workflow like WF-A01, WF-B01, WF-C01), NOT a report-only workflow.
+3. DO NOT match to a restock/procurement pipeline (like WF-A01) unless the user EXPLICITLY commands to create/draft/issue a PR or restock depleted material (e.g., "buatkan PR", "terbitkan PR untuk stok menipis", "restock material"). Mere queries about stock or single keywords do NOT match procurement pipelines.
+4. If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "max_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}} (extract whatever fields the user provided, leaving unmentioned fields out).
+5. If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}]. Include only the thresholds the user specified.
+6. If the user specifies an item name to check, extract it as "target_item_name".
+7. If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
 
 Output strictly valid JSON with exact keys: "workflow_id" (string or null), "is_unrelated" (boolean), "new_item_data" (optional object), "threshold_updates" (optional array), "target_item_name" (optional string), "send_email" (boolean).
 If no workflow matches or the request is unrelated, return "workflow_id": null, "is_unrelated": true.
@@ -278,7 +297,7 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                     return {"workflow_id": row[0], "threshold_updates": [], "send_email": False}
         
         # 4. Check for warehouse audit
-        if any(k in prompt_lower for k in ["seluruh gudang", "audit", "rekap seluruh"]):
+        if any(k in prompt_lower for k in ["seluruh gudang", "audit gudang", "audit", "rekap seluruh", "rekap seluruh inventaris"]):
             for row in workflows:
                 if row[3] == tenant_id and "audit" in row[1].lower():
                     return {"workflow_id": row[0], "send_email": False}
@@ -288,7 +307,9 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                     
         # 5. Check for restock / pengadaan / menipis / kritis / PR
         is_restock_intent = any(k in prompt_lower for k in [
-            "restock", "menipis", "kritis", "pengadaan", "pesan barang", "beli barang", "order barang", "purchase requisition", "kehabisan", "buatkan pr", "bikin pr", "terbitkan pr", "draf pr", "draft pr"
+            "buatkan pr", "bikin pr", "terbitkan pr", "buat draft pr", "buatkan draf pr", "draf pr", "draft pr",
+            "proses pengadaan", "pipeline pengadaan", "restock material", "pesan material", "order material",
+            "restock", "menipis", "kritis", "pengadaan", "pesan barang", "beli barang", "order barang", "purchase requisition", "kehabisan"
         ]) or bool(re.search(r'\bpr\b', prompt_lower))
 
         if is_restock_intent:
@@ -303,7 +324,7 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
 
             # Fallback to global restock if allowed
             for row in workflows:
-                if "restock" in row[1].lower() or bool(re.search(r'\bpr\b', row[1].lower())):
+                if any(w in row[1].lower() for w in ["restock", "pengadaan"]) or bool(re.search(r'\bpr\b', row[1].lower())):
                     res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None}
                     if extracted_email:
                         res["recipient_email"] = extracted_email

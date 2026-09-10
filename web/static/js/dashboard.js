@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   restoreUiCustomizations();
   restoreCopilotFeed();
   applyTenantSecurityAndPersonalization();
+  initPromptInputAutoResize();
   loadAllData();
   
   // Real-time synchronization (10s interval + instant refresh on window focus)
@@ -284,6 +285,7 @@ function applyTenantSecurityAndPersonalization() {
   const tabHr = document.getElementById('sidebarTabHr');
   const tabFin = document.getElementById('sidebarTabFinance');
   const tabPrs = document.getElementById('sidebarTabPrs');
+  const tabPos = document.getElementById('sidebarTabPos');
   const tabTerminal = document.getElementById('sidebarTabTerminal');
 
   const heroTitle = document.getElementById('heroTitle');
@@ -301,12 +303,13 @@ function applyTenantSecurityAndPersonalization() {
     if (tabFin) tabFin.style.display = 'none';
     if (tabInv) tabInv.style.display = 'inline-flex';
     if (tabPrs) tabPrs.style.display = 'inline-flex';
+    if (tabPos) tabPos.style.display = 'inline-flex';
     if (tabTerminal) tabTerminal.style.display = 'inline-flex';
 
     if (heroTitle) heroTitle.textContent = 'Inventory & Logistics Command Center';
     if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel operasional terisolasi material menara telekomunikasi, kabel fiber optic, monitoring saldo gudang regional, serta alur pengadaan barang PT Bali Towerindo Sentra Tbk.`;
-    if (promptInput) promptInput.placeholder = 'Tanyakan stok material menara, cek reorder point gudang, atau buat Purchase Requisition...';
-    if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Inventory & Logistik Material Menara/FO';
+    if (promptInput) promptInput.placeholder = 'Tanyakan stok material menara, catat penerimaan PO tiba (contoh: PO-2026-006 sudah sampai di Bandung), atau buat PR...';
+    if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Inventory & Logistik Material Menara/FO (DuckDB Live Sync)';
 
     switchCanvasTab('canvas-inventory');
   } else if (tenant === 'HR') {
@@ -318,6 +321,7 @@ function applyTenantSecurityAndPersonalization() {
     if (tabInv) tabInv.style.display = 'none';
     if (tabFin) tabFin.style.display = 'none';
     if (tabPrs) tabPrs.style.display = 'none';
+    if (tabPos) tabPos.style.display = 'none';
     if (tabHr) tabHr.style.display = 'inline-flex';
     if (tabTerminal) tabTerminal.style.display = 'inline-flex';
 
@@ -336,6 +340,7 @@ function applyTenantSecurityAndPersonalization() {
     if (tabInv) tabInv.style.display = 'none';
     if (tabHr) tabHr.style.display = 'none';
     if (tabPrs) tabPrs.style.display = 'none';
+    if (tabPos) tabPos.style.display = 'none';
     if (tabFin) tabFin.style.display = 'inline-flex';
     if (tabTerminal) tabTerminal.style.display = 'inline-flex';
 
@@ -355,6 +360,7 @@ function applyTenantSecurityAndPersonalization() {
     if (tabHr) tabHr.style.display = 'inline-flex';
     if (tabFin) tabFin.style.display = 'inline-flex';
     if (tabPrs) tabPrs.style.display = 'inline-flex';
+    if (tabPos) tabPos.style.display = 'inline-flex';
     if (tabTerminal) tabTerminal.style.display = 'inline-flex';
 
     if (heroTitle) heroTitle.textContent = 'Bali Tower Operations Command Center';
@@ -373,9 +379,9 @@ function switchCanvasTab(tabId) {
   // Strict guard against navigating to unauthorized tabs for tenant-specific users
   if (tenant === 'INVENTORY' && ['canvas-hr', 'canvas-finance'].includes(tabId)) {
     tabId = 'canvas-inventory';
-  } else if (tenant === 'HR' && ['canvas-inventory', 'canvas-finance', 'canvas-prs'].includes(tabId)) {
+  } else if (tenant === 'HR' && ['canvas-inventory', 'canvas-finance', 'canvas-prs', 'canvas-pos'].includes(tabId)) {
     tabId = 'canvas-hr';
-  } else if (tenant === 'FINANCE' && ['canvas-inventory', 'canvas-hr', 'canvas-prs'].includes(tabId)) {
+  } else if (tenant === 'FINANCE' && ['canvas-inventory', 'canvas-hr', 'canvas-prs', 'canvas-pos'].includes(tabId)) {
     tabId = 'canvas-finance';
   }
 
@@ -404,6 +410,8 @@ function switchCanvasTab(tabId) {
     loadClients();
   } else if (tabId === 'canvas-prs') {
     loadApprovals();
+  } else if (tabId === 'canvas-pos') {
+    loadPurchaseOrders();
   }
 }
 
@@ -420,7 +428,6 @@ function switchInvSubTab(subTabId) {
   else if (subTabId === 'sub-inv-balances') loadStockBalances();
   else if (subTabId === 'sub-inv-warehouses') loadWarehouses();
   else if (subTabId === 'sub-inv-suppliers') loadSuppliers();
-  else if (subTabId === 'sub-inv-pos') loadPurchaseOrders();
 }
 
 function switchHrSubTab(subTabId) {
@@ -702,17 +709,19 @@ async function loadSuppliers() {
 }
 
 async function loadPurchaseOrders() {
-  const tbody = document.getElementById('invPosTableBody');
-  if (!tbody) return;
+  const tbodyTop = document.getElementById('topPosTableBody');
+  const badgeTop = document.getElementById('topPoCountBadge');
+  if (!tbodyTop) return;
   try {
     const res = await fetch(`/api/balitower/inventory/purchase-orders?t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
+      if (badgeTop) badgeTop.textContent = `${data ? data.length : 0} PO`;
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 24px; color: var(--text-muted);">Belum ada Purchase Order terbit.</td></tr>`;
+        tbodyTop.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Belum ada Purchase Order terbit.</td></tr>`;
         return;
       }
-      tbody.innerHTML = data.map(po => {
+      const rowsHtml = data.map(po => {
         let statusBadge = 'badge-pending';
         if (po.po_status === 'DELIVERED') statusBadge = 'badge-approved';
         else if (po.po_status === 'IN_TRANSIT') statusBadge = 'badge-low_stock';
@@ -726,9 +735,16 @@ async function loadPurchaseOrders() {
             <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(po.order_date)}</td>
             <td class="text-center" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(po.expected_delivery || '-')}</td>
             <td class="text-center"><span class="badge ${statusBadge}">${escapeHtml(po.po_status)}</span></td>
+            <td class="text-center">
+              <button class="btn btn-secondary btn-xs" style="padding: 3px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openPoPdfModal('${escapeHtml(po.po_id)}', '${escapeHtml(po.po_number)}', '${escapeHtml(po.supplier_name)}', ${po.total_amount}, '${escapeHtml(po.po_status)}')">
+                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>PDF</span>
+              </button>
+            </td>
           </tr>
         `;
       }).join('');
+      tbodyTop.innerHTML = rowsHtml;
     }
   } catch (e) {
     console.error("Failed to load POs:", e);
@@ -1441,6 +1457,52 @@ function closePdfModal() {
   }
 }
 
+// --- Open Official Purchase Order (PO) Typst PDF In-App Preview Modal ---
+function openPoPdfModal(poId, poNumber, supplierName, grandTotal, poStatus) {
+  const modal = document.getElementById('pdfPreviewModal');
+  if (!modal) return;
+
+  const prNumberEl = document.getElementById('modalPrNumber');
+  if (prNumberEl) prNumberEl.textContent = poNumber || poId;
+
+  const supplierNameEl = document.getElementById('modalSupplierName');
+  if (supplierNameEl) supplierNameEl.textContent = supplierName || "Surat Pesanan Resmi";
+
+  const statusBadge = document.getElementById('modalPrStatusBadge');
+  if (statusBadge) {
+    const rawStatus = (poStatus || "ORDERED").toUpperCase();
+    if (rawStatus === 'DELIVERED') statusBadge.className = 'badge badge-approved';
+    else if (rawStatus === 'IN_TRANSIT') statusBadge.className = 'badge badge-low_stock';
+    else statusBadge.className = 'badge badge-pending';
+    statusBadge.textContent = rawStatus;
+  }
+
+  const grandTotalEl = document.getElementById('modalGrandTotal');
+  if (grandTotalEl) grandTotalEl.textContent = grandTotal ? `Total Anggaran PO: ${formatCurrency(grandTotal)}` : "Surat Pesanan Resmi PT Bali Towerindo Sentra Tbk";
+
+  const modalApproveBtn = document.getElementById('modalApproveBtn');
+  if (modalApproveBtn) modalApproveBtn.style.display = 'none';
+
+  const cleanPoId = encodeURIComponent(poId);
+  const downloadBtn = document.getElementById('modalDownloadBtn');
+  if (downloadBtn) {
+    downloadBtn.href = `/api/documents/po/${cleanPoId}/download?download=true&t=${Date.now()}`;
+    downloadBtn.setAttribute('download', `${poId}.pdf`);
+  }
+
+  const openTabBtn = document.getElementById('modalOpenTabBtn');
+  if (openTabBtn) {
+    openTabBtn.href = `/api/documents/po/${cleanPoId}/download?inline=true&t=${Date.now()}`;
+  }
+
+  const iframe = document.getElementById('pdfPreviewIframe');
+  if (iframe) {
+    iframe.src = `/api/documents/po/${cleanPoId}/download?inline=true&t=${Date.now()}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`;
+  }
+
+  modal.classList.add('open');
+}
+
 // --- Approve Action From Inside Modal ---
 async function approvePrFromModal() {
   const prNumber = state.currentModalPrNumber;
@@ -1542,11 +1604,39 @@ async function approvePrQuick(prNumber) {
   }
 }
 
+// --- Interactive Prompt Auto-Resizing & Submission ---
+function autoResizePromptInput() {
+  const textarea = document.getElementById('promptInput');
+  if (!textarea) return;
+  textarea.style.height = 'auto';
+  const newHeight = Math.min(Math.max(textarea.scrollHeight, 24), 220);
+  textarea.style.height = newHeight + 'px';
+  
+  const container = textarea.closest('.input-bar-container');
+  if (container) {
+    if (newHeight > 34) {
+      container.classList.add('is-multiline');
+    } else {
+      container.classList.remove('is-multiline');
+    }
+  }
+}
+
+function initPromptInputAutoResize() {
+  const textarea = document.getElementById('promptInput');
+  if (!textarea) return;
+  textarea.addEventListener('input', autoResizePromptInput);
+  textarea.addEventListener('paste', () => setTimeout(autoResizePromptInput, 0));
+  textarea.addEventListener('focus', autoResizePromptInput);
+  autoResizePromptInput();
+}
+
 // --- Quick Action Chip Handler ---
 function quickFillPrompt(promptText) {
   const input = document.getElementById('promptInput');
   if (input) {
     input.value = promptText;
+    autoResizePromptInput();
     input.focus();
     submitPrompt();
   }
@@ -1557,6 +1647,8 @@ function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     submitPrompt();
+  } else if (e.key === 'Enter' && e.shiftKey) {
+    setTimeout(autoResizePromptInput, 0);
   }
 }
 
@@ -1578,6 +1670,8 @@ async function submitPrompt() {
 
   input.value = '';
   input.style.height = 'auto';
+  const barContainer = input.closest('.input-bar-container');
+  if (barContainer) barContainer.classList.remove('is-multiline');
 
   appendUserMessage(promptText);
 
@@ -1905,6 +1999,31 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
     }
   }
 
+  if (payload.po_id || payload.pdf_download_url) {
+    const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
+    if (artifactsSlot) {
+      const poId = payload.po_id || (payload.parsed_intent && payload.parsed_intent.po_id);
+      if (poId) {
+        const poNum = payload.po_number || poId;
+        const supplier = payload.supplier_name || 'Vendor Terdaftar';
+        const total = payload.grand_total || 0;
+        const st = payload.status || 'ORDERED';
+        artifactsSlot.innerHTML = `
+          <div style="display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px;">
+            <a href="/api/documents/po/${encodeURIComponent(poId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>Unduh PDF PO</span>
+            </a>
+            <button class="btn btn-primary btn-sm" onclick="openPoPdfModal('${escapeHtml(poId)}', '${escapeHtml(poNum)}', '${escapeHtml(supplier)}', ${total}, '${escapeHtml(st)}')">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Lihat Dokumen PO (PDF)</span>
+            </button>
+          </div>
+        `;
+      }
+    }
+  }
+
   scrollChatToBottom();
 }
 
@@ -1932,12 +2051,14 @@ function formatMarkdownResponse(text) {
   let html = '';
   let tableRows = [];
 
+  const cleanText = (str) => (str || '').replace(/\*\*/g, '').replace(/`/g, '');
+
   for (let line of lines) {
     const trimmed = line.trim();
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       if (trimmed.includes('---')) continue; // skip header separator
       inTable = true;
-      const cells = trimmed.split('|').slice(1, -1).map(c => c.trim());
+      const cells = trimmed.split('|').slice(1, -1).map(c => cleanText(c.trim()));
       tableRows.push(cells);
     } else {
       if (inTable && tableRows.length > 0) {
@@ -1949,10 +2070,11 @@ function formatMarkdownResponse(text) {
         inTable = false;
         tableRows = [];
       }
-      if (trimmed.startsWith('- ')) {
-        html += `<div style="margin: 3px 0 3px 12px; font-size: 12.5px;">• ${trimmed.substring(2)}</div>`;
-      } else if (trimmed.length > 0) {
-        html += `<div style="margin: 4px 0; font-size: 13px; line-height: 1.5;">${trimmed}</div>`;
+      const cLine = cleanText(trimmed);
+      if (cLine.startsWith('- ')) {
+        html += `<div style="margin: 3px 0 3px 12px; font-size: 12.5px;">- ${cLine.substring(2)}</div>`;
+      } else if (cLine.length > 0) {
+        html += `<div style="margin: 4px 0; font-size: 13px; line-height: 1.5;">${cLine}</div>`;
       }
     }
   }
@@ -1964,8 +2086,6 @@ function formatMarkdownResponse(text) {
       `</tbody></table></div>`;
   }
   
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
   return html;
 }
 
@@ -2003,6 +2123,112 @@ function appendAgentResponseCard(data) {
       <div class="agent-plan-box">
         <div style="font-size: 13px; color: #0F172A; line-height: 1.6;">
           ${formatMarkdownResponse(data.message || intent.reasoning || 'Instruksi telah diproses.')}
+        </div>
+      </div>
+    `;
+    feed.appendChild(container);
+    scrollChatToBottom();
+    return;
+  }
+
+  // Scenario 1b: Goods Receipt Confirmation (Penerimaan Barang Fisik Gudang via Prompt Chat)
+  if (actionType === 'goods_receipt') {
+    const isAlreadyDelivered = intent.workflow_id === 'goods_receipt_already_delivered';
+    const isClarification = intent.workflow_id === 'goods_receipt_clarification';
+    const isNotFound = intent.workflow_id === 'goods_receipt_not_found';
+    
+    let headerTitle = "PENERIMAAN BARANG FISIK BERHASIL DIBUKUKAN";
+    let badgeText = "DELIVERED";
+    let badgeClass = "badge-approved";
+    let borderStyle = "border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7;";
+    let headerColor = "#15803D";
+    
+    if (isAlreadyDelivered) {
+      headerTitle = "STATUS PENGIRIMAN: SUDAH PERNAH DITERIMA";
+      badgeText = "SELESAI";
+      badgeClass = "badge-approved";
+      borderStyle = "border-left: 4px solid #2563EB; background: #EFF6FF; border: 1px solid #BFDBFE;";
+      headerColor = "#1D4ED8";
+    } else if (isClarification) {
+      headerTitle = "PENGIRIMAN LOGISTIK DALAM PERJALANAN (IN_TRANSIT)";
+      badgeText = "IN_TRANSIT";
+      badgeClass = "badge-low_stock";
+      borderStyle = "border-left: 4px solid #D97706; background: #FFFBEB; border: 1px solid #FDE68A;";
+      headerColor = "#B45309";
+    } else if (isNotFound) {
+      headerTitle = "PURCHASE ORDER TIDAK DITEMUKAN";
+      badgeText = "PERIKSA KEMBALI";
+      badgeClass = "badge-rejected";
+      borderStyle = "border-left: 4px solid #DC2626; background: #FEF2F2; border: 1px solid #FECACA;";
+      headerColor = "#B91C1C";
+    }
+
+    const targetPoId = data.po_id || intent.po_id;
+    const poBtnHtml = (targetPoId && !isNotFound && !isClarification) ? `
+      <div style="display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px;">
+        <a href="/api/documents/po/${encodeURIComponent(targetPoId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span>Unduh PDF PO</span>
+        </a>
+        <button class="btn btn-secondary btn-sm" onclick="openPoPdfModal('${escapeHtml(targetPoId)}', '${escapeHtml(data.po_number || intent.po_number || targetPoId)}')">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Lihat Dokumen PO (PDF)</span>
+        </button>
+      </div>
+    ` : '';
+
+    container.innerHTML = `
+      ${getAgentBubbleHeaderHtml('Penerimaan Logistik')}
+      <div class="agent-plan-box">
+        <div class="action-card" style="${borderStyle} margin-top: 0;">
+          <div class="action-card-header">
+            <span style="font-weight: 700; font-size: 12.5px; color: ${headerColor};">${headerTitle}</span>
+            <span class="badge ${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="action-card-body" style="font-size: 13px; color: #0F172A; line-height: 1.6;">
+            ${formatMarkdownResponse(data.message)}
+            ${poBtnHtml}
+          </div>
+        </div>
+      </div>
+    `;
+    if (!isNotFound && !isClarification) {
+      openDataSidebar('canvas-pos');
+    }
+    feed.appendChild(container);
+    scrollChatToBottom();
+    return;
+  }
+
+  // Scenario 1c: View / Download PO Document via AI Prompt
+  if (actionType === 'view_po_document') {
+    const poId = data.po_id || intent.po_id;
+    const poNum = data.po_number || intent.po_number || poId;
+    const supplier = data.supplier_name || 'Vendor Terdaftar';
+    const total = data.grand_total || 0;
+    const st = data.status || 'ORDERED';
+
+    container.innerHTML = `
+      ${getAgentBubbleHeaderHtml('Dokumen PO (PDF)')}
+      <div class="agent-plan-box">
+        <div class="action-card" style="border-left: 4px solid #2563EB; background: #EFF6FF; border: 1px solid #BFDBFE; margin-top: 0;">
+          <div class="action-card-header">
+            <span style="font-weight: 700; font-size: 12.5px; color: #1D4ED8;">DOKUMEN RESMI PURCHASE ORDER TERBIT (PDF)</span>
+            <span class="badge badge-approved">${escapeHtml(st)}</span>
+          </div>
+          <div class="action-card-body" style="font-size: 13px; color: #1E3A8A; line-height: 1.6;">
+            ${formatMarkdownResponse(data.message)}
+            <div style="display: flex; justify-content: flex-end; margin-top: 12px; gap: 8px;">
+              <a href="/api/documents/po/${encodeURIComponent(poId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Unduh PDF</span>
+              </a>
+              <button class="btn btn-primary btn-sm" onclick="openPoPdfModal('${escapeHtml(poId)}', '${escapeHtml(poNum)}', '${escapeHtml(supplier)}', ${total}, '${escapeHtml(st)}')">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>Lihat Dokumen PDF</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -2301,6 +2527,7 @@ function useCopilotSuggestion(promptText) {
   const input = document.getElementById('promptInput');
   if (input) {
     input.value = promptText;
+    autoResizePromptInput();
     input.focus();
     input.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
