@@ -15,49 +15,49 @@
 
 ## 📝 Overview
 
-**AutoRestock-Agent** adalah platform sistem cerdas multi-agen terintegrasi berbasis **FastAPI**, **LangGraph**, **DuckDB**, dan **Typst Engine** yang dirancang untuk mengotomatisasi siklus pengadaan material infrastruktur menara telekomunikasi (*Tower*) dan serat optik (*Fiber Optic*) PT Bali Towerindo Sentra Tbk secara otonom, akuntabel, dan *end-to-end*.
+**AutoRestock-Agent** is an enterprise-grade autonomous multi-agent procurement and operational intelligence platform built with **FastAPI**, **LangGraph**, **DuckDB**, and **Typst Engine**. It is specifically engineered to automate and govern the procurement lifecycle for telecommunications tower infrastructure and fiber-optic network materials at PT Bali Towerindo Sentra Tbk in an autonomous, auditable, and end-to-end manner.
 
-Sistem ini memantau saldo inventaris di 7 hub logistik regional secara *real-time*, mengidentifikasi barang kritis berdasarkan *Reorder Point (ROP)*, menghitung kuantitas pemesanan ekonomis (*Economic Order Quantity / Safety Stock*), mencocokkan vendor rekanan terbaik, menyusun dokumen resmi **Purchase Requisition (PR)** dan **Purchase Order (PO)**, mengirimkan notifikasi otorisasi interaktif ke manajer via email SMTP, hingga mencatat penerimaan barang fisik (**Goods Receipt**) langsung ke saldo gudang regional.
+The system continuously monitors inventory balances across 7 regional logistics hubs in real time, detects critical materials falling below their *Reorder Point (ROP)*, computes optimal restock volumes (*Economic Order Quantity / Safety Stock*), matches verified vendor partners, compiles formal corporate **Purchase Requisition (PR)** and **Purchase Order (PO)** documents, dispatches interactive approval notifications to managers via SMTP email, and synchronizes physical **Goods Receipt** directly into regional warehouse balances.
 
 ---
 
 ## 🔄 End-to-End System Architecture & Workflow
 
-Diagram alir berikut menggambarkan keseluruhan siklus hidup pengadaan material dan tata kelola operasional perusahaan:
+The following flowchart illustrates the complete procurement and operational lifecycle across all multi-agent phases:
 
 ```mermaid
 flowchart TD
-    %% FASE 1: MONITORING & MULTI-AGENT ORCHESTRATION
-    subgraph Phase1 ["Fase 1: Monitoring Stok Regional & Multi-Agent Procurement Engine"]
-        A[("DuckDB: stock_balances<br/>(Saldo Fisik 7 Hub Logistik Regional)")] -->|Stok <= Reorder Point| B("Pemicu: AI Copilot / Auto Scheduler")
-        B --> C["Planner Agent (Nemotron-35)<br/>Hitung Kuantitas Reorder & Vendor Matching"]
-        C --> D["Auditor Agent (Nemotron-35)<br/>Validasi Batas Anggaran & Compliance"]
+    %% PHASE 1: MONITORING & MULTI-AGENT ORCHESTRATION
+    subgraph Phase1 ["Phase 1: Regional Stock Monitoring & Multi-Agent Procurement Engine"]
+        A[("DuckDB: stock_balances<br/>(Physical Stock Across 7 Regional Hubs)")] -->|Stock <= Reorder Point| B("Trigger: AI Copilot / Auto Scheduler")
+        B --> C["Planner Agent (Nemotron-35)<br/>Reorder Math & Vendor Matching"]
+        C --> D["Auditor Agent (Nemotron-35)<br/>Budget Compliance & Spending Cap Check"]
         D --> E{"DocGen Typst Engine"}
-        E -->|Kompilasi Berkas Resmi| F["Dokumen Purchase Requisition (PR)<br/>(Status: PENDING)"]
+        E -->|Compile Official PR Template| F["Draft Purchase Requisition (PR)<br/>(Status: PENDING)"]
     end
 
-    %% FASE 2: HUMAN-IN-THE-LOOP APPROVAL
-    subgraph Phase2 ["Fase 2: Human-In-The-Loop (HITL) & Otorisasi Manajer"]
-        F --> G["Dispatcher Email SMTP<br/>(Notifikasi Lengkap Tombol Otorisasi Cepat)"]
-        F -.->|Sinkronisasi Real-Time SSE| H["Web Dashboard: Tab PR Resmi<br/>(Tercatat Status: PENDING)"]
-        G & H --> I{"Keputusan Manajer"}
-        I -->|Tolak / Reject| J["PR DITOLAK (REJECTED)<br/>Alokasi Batal & Saldo Gudang Tetap"]
+    %% PHASE 2: HUMAN-IN-THE-LOOP APPROVAL
+    subgraph Phase2 ["Phase 2: Human-In-The-Loop (HITL) Managerial Approval"]
+        F --> G["SMTP Email Dispatcher<br/>(Interactive Notification with Quick Action Buttons)"]
+        F -.->|Real-Time SSE Sync| H["Web Dashboard: Official PR Tab<br/>(Status: PENDING)"]
+        G & H --> I{"Manager Decision"}
+        I -->|Reject| J["PR REJECTED<br/>Budget Allocation Cancelled & Stock Preserved"]
     end
 
-    %% FASE 3: PO ISSUANCE
-    subgraph Phase3 ["Fase 3: Penerbitan Purchase Order (PO) Resmi"]
-        I -->|Setujui / Approve| K["PR DISETUJUI (APPROVED)"]
-        K --> L["PO Konsolidasi Diterbitkan<br/>(Status Resmi: ORDERED)"]
-        L --> M["DocGen Typst PO Engine<br/>(Kompilasi PDF Resmi PO + PPN 11% + Terbilang)"]
-        L --> N["Web Dashboard: Tab PO Resmi<br/>(Muncul 1 Baris PO Konsolidasi + Tombol 'Terima Barang')"]
+    %% PHASE 3: PO ISSUANCE
+    subgraph Phase3 ["Phase 3: Official Purchase Order (PO) Issuance"]
+        I -->|Approve| K["PR APPROVED"]
+        K --> L["Consolidated PO Issued<br/>(Status: ORDERED)"]
+        L --> M["DocGen Typst PO Engine<br/>(Compile Formal PO PDF + 11% VAT + Indonesian Words)"]
+        L --> N["Web Dashboard: Official PO Tab<br/>(1 Consolidated PO Row + 'Terima Barang' Button)"]
     end
 
-    %% FASE 4: GOODS RECEIPT & PHYSICAL REPLENISHMENT
-    subgraph Phase4 ["Fase 4: Penerimaan Barang Fisik (Goods Receipt)"]
-        N -->|Barang Tiba di Hub Regional| O["Klik 'Terima Barang' / Instruksi AI Copilot"]
-        O --> P["Status PO Diperbarui: DELIVERED<br/>(Tercatat Tanggal Kedatangan Aktual)"]
-        P --> Q[("DuckDB: stock_balances<br/>(Kuantitas On-Hand Gudang Regional Bertambah)")]
-        Q --> R["Pemulihan Kesehatan Stok:<br/>CRITICAL / LOW_STOCK ➔ NORMAL 🟢"]
+    %% PHASE 4: GOODS RECEIPT & PHYSICAL REPLENISHMENT
+    subgraph Phase4 ["Phase 4: Physical Delivery & Goods Receipt"]
+        N -->|Physical Shipment Arrives at Regional Hub| O["Click 'Terima Barang' / Copilot Chat Prompt"]
+        O --> P["PO Status Updated: DELIVERED<br/>(Timestamped Actual Arrival Date)"]
+        P --> Q[("DuckDB: stock_balances<br/>(Target Warehouse On-Hand Stock Incremented)")]
+        Q --> R["Health Status Recalibrated:<br/>CRITICAL / LOW_STOCK ➔ NORMAL 🟢"]
     end
 
     %% STYLING
@@ -73,140 +73,140 @@ flowchart TD
 
 ---
 
-## ⚙️ Rincian 4 Fase Alur Pengadaan (*Procurement Lifecycle*)
+## ⚙️ Detailed 4-Phase Procurement Lifecycle
 
-### 1. Fase 1: Monitoring Stok & Multi-Agent Procurement Engine
-- **Granularitas Data Gudang**: Sistem melacak saldo fisik di 7 Logistics Hub regional (`WH-JKT-01`, `WH-BDG-01`, `WH-SBY-01`, `WH-SMG-01`, `WH-MDN-01`, `WH-MKS-01`, `WH-DPS-01`).
-- **Pendeteksian Dini**: Saat `quantity_on_hand <= reorder_point`, pemicu otomatis atau pengguna via AI Copilot memulai proses restock.
-- **Konsolidasi Kebutuhan SKU**: Jika beberapa gudang regional membutuhkan material yang sama, sistem menggabungkan total kuantitas per SKU material unik ke dalam 1 baris PR agar pesanan ke rekanan vendor tidak berulang.
-- **Auditor & Typst DocGen**: Agen mengaudit batasan plafon anggaran belanja dan menerbitkan draf resmi berkas PR format PDF Typst berstatus **`PENDING`**.
+### 1. Phase 1: Regional Stock Monitoring & Multi-Agent Procurement Engine
+- **Warehouse Data Granularity**: The system tracks physical stock balances across 7 regional logistics hubs (`WH-JKT-01`, `WH-BDG-01`, `WH-SBY-01`, `WH-SMG-01`, `WH-MDN-01`, `WH-MKS-01`, `WH-DPS-01`).
+- **Early Warning Detection**: When `quantity_on_hand <= reorder_point`, automated triggers or user chat commands via the AI Copilot initiate the restock process.
+- **SKU Demand Aggregation**: If multiple regional warehouses require the same material simultaneously, the system aggregates reorder quantities per unique material SKU into a single PR line item, avoiding redundant supplier inquiries.
+- **Auditor & Typst DocGen**: Multi-agent nodes verify budgetary compliance against spending thresholds and compile an official, corporate-letterhead PR document in vector PDF format with status **`PENDING`**.
 
-### 2. Fase 2: Human-In-The-Loop (HITL) Otorisasi Manajer
-- **Pemisahan Siklus Hidup**: Saat PR berstatus `PENDING`, pesanan pembelian (**PO**) **TIDAK** langsung diterbitkan ke vendor ataupun dimunculkan di tab PO dengan tombol terima barang.
-- **Notifikasi Email Interaktif**: Email otomatis terkirim ke manajer pengadaan melalui SMTP/dispatcher, berisikan rekapitulasi kebutuhan material, lampiran PDF PR, serta tombol aksi cepat *Approve* atau *Reject*.
-- **Web Dashboard Sync**: Antarmuka dashboard secara *real-time* menampilkan dokumen PR pada tab *Dokumen Purchase Requisition Resmi* berlabel kuning **`PENDING`**.
+### 2. Phase 2: Human-In-The-Loop (HITL) Managerial Approval
+- **Lifecycle Decoupling**: While a PR is in `PENDING` status, no Purchase Order (**PO**) is published to vendors, and no premature goods receipt button appears.
+- **Interactive Email Notifications**: An automated email is dispatched to the procurement manager via SMTP, complete with material summaries, the attached PR PDF, and embedded one-click *Approve* or *Reject* authorization buttons.
+- **Web Dashboard Synchronization**: The web dashboard real-time table displays the requisition under *Dokumen Purchase Requisition Resmi* with a yellow **`PENDING`** badge.
 
-### 3. Fase 3: Penerbitan Purchase Order (PO) Konsolidasi
-- **Pemicu Persetujuan**: Manajer menekan tombol *Approve* (melalui email atau antarmuka sistem).
-- **1 PO Konsolidasi per Dokumen PR**: Seluruh material di bawah PR yang disetujui disatukan ke dalam **1 nomor PO resmi** (contoh: `PO-2026-038` / `PO/BLT/2026/03/036`) berstatus **`ORDERED`**.
-- **Alokasi Cerdas Gudang Kritis**: Alokasi penerimaan PO otomatis diarahkan ke gudang regional yang stoknya berstatus `CRITICAL` atau `LOW_STOCK` (misal: material kabel FO otomatis diarahkan ke Hub Bandung `WH-BDG-01`).
-- **Kompilasi PO PDF Resmi**: Dokumen PO dikompilasi ke format PDF Typst lengkap dengan perhitungan PPN 11%, subtotal, total akhir, kalimat terbilang bahasa Indonesia (*Rupiah*), dan klausul syarat pengadaan resmi PT Bali Towerindo Sentra Tbk.
+### 3. Phase 3: Consolidated Purchase Order (PO) Issuance
+- **Approval Trigger**: The manager approves the requisition (via email or direct dashboard interaction).
+- **1 Consolidated PO per PR**: All items under the approved PR are consolidated under a **single official PO number** (e.g., `PO-2026-038` / `PO/BLT/2026/03/036`) with status **`ORDERED`**.
+- **Intelligent Regional Warehouse Targeting**: Each item's delivery destination is resolved dynamically to the regional logistics hub that originally triggered the critical stock alert (e.g., FO cables are routed to Bandung Hub `WH-BDG-01`).
+- **Official Typst PO Compilation**: The PO document is compiled to PDF format with 11% Indonesian VAT (*PPN*), itemized subtotal calculations, spelled-out grammatical currency (*terbilang*), and formal terms and conditions of PT Bali Towerindo Sentra Tbk.
 
-### 4. Fase 4: Penerimaan Barang Fisik (*Goods Receipt*) Sekali Klik
-- **Verifikasi Kedatangan**: Ketika kiriman fisik tiba di gudang tujuan, staf gudang cukup menekan **1 tombol `[✓ Terima Barang]`** pada baris PO di dashboard, atau mengirim instruksi ke Copilot: *"Barang untuk PO-2026-038 sudah sampai di gudang"*.
-- **Multi-Item Receipt Serentak**: Seluruh material di dalam PO tersebut diproses sekaligus:
-  1. Status PO berubah menjadi **`DELIVERED`** dengan stempel tanggal kedatangan aktual.
-  2. Kuantitas saldo fisik pada tabel `stock_balances` di gudang regional terkait bertambah (`quantity_on_hand += order_quantity`).
-  3. Status kesehatan stok dikalkulasi ulang dan pulih menjadi **`NORMAL`**.
-  4. Mencegah penambahan ganda (*Idempotent Protection*) demi integritas data inventaris.
+### 4. Phase 4: Single-Click Physical Goods Receipt (*Terima Barang*)
+- **Arrival Verification**: When the physical shipment arrives at the destination regional hub, warehouse personnel click **1 button `[✓ Terima Barang]`** on the dashboard row, or issue a prompt to the AI Copilot: *"Barang untuk PO-2026-038 sudah sampai di gudang"*.
+- **Multi-Item Simultaneous Receipt**: All materials under that PO are processed in a single transaction:
+  1. PO status updates to **`DELIVERED`** with the actual delivery date recorded.
+  2. Physical quantities on the `stock_balances` table for the respective regional warehouses are incremented (`quantity_on_hand += order_quantity`).
+  3. Stock health status recalibrates and recovers to **`NORMAL`** 🟢.
+  4. Idempotent guards prevent accidental double-increments to maintain absolute inventory integrity.
 
 ---
 
-## 🏛️ Arsitektur Multi-Tenant & Domain Bisnis Korporat
+## 🏛️ Multi-Tenant Architecture & Corporate Business Domains
 
-Sistem menerapkan isolasi data berbasis *Role-Based Access Control (RBAC)* dan skema multi-divisi korporat:
+The platform implements strict Role-Based Access Control (RBAC) and tenant isolation across corporate divisions:
 
-| Skema / Persona | Divisi Korporat | Tanggung Jawab & Fitur Utama |
+| Schema / Persona | Corporate Division | Responsibilities & Core Features |
 | :--- | :--- | :--- |
-| **Schema A** (`usera`) | **Logistik & Inventaris** | Monitoring saldo stok menara & FO 7 regional, reorder calculation, approval PR, penerimaan PO (*Goods Receipt*), registrasi SKU material baru. |
-| **Schema B** (`userb`) | **Human Resources & GA** | Pengajuan cuti teknisi lapangan/rigger, audit permohonan cuti pending (`WF-847DA5`), otorisasi email HR, pemotongan otomatis kuota cuti tahunan karyawan. |
-| **Schema C** (`userc`) | **Finance & Komersial** | Pendaftaran klien operator telekomunikasi (Telkomsel, Indosat Ooredoo Hutchison, XL Axiata, Smartfren), penyusunan draf kontrak sewa menara (*MLA*), penerbitan tagihan invoice pendapatan berkop surat Typst. |
-| **Super Admin** (`admin`) | **Enterprise Admin** | Akses bebas lintas tenant, orkestrasi alur kerja kustom (*Custom Workflow Orchestrator*), integrasi database master DuckDB, audit log sistem. |
+| **Schema A** (`usera`) | **Logistics & Inventory** | Monitoring 7 regional hub balances, calculating restock quantities, PR approval, single-click Goods Receipt, and new material SKU registration. |
+| **Schema B** (`userb`) | **Human Resources & GA** | Field technician/rigger leave submissions, pending leave audit workflow (`WF-847DA5`), HR email authorization, and automated annual leave quota deduction. |
+| **Schema C** (`userc`) | **Finance & Commercial** | Telecom operator client onboarding (Telkomsel, Indosat Ooredoo Hutchison, XL Axiata, Smartfren), Master Lease Agreement (MLA) contract drafting, and billing invoice generation. |
+| **Super Admin** (`admin`) | **Enterprise Admin** | Cross-tenant administrative access, dynamic Natural Language Custom Workflow Orchestration, DuckDB master database management, and system audit logging. |
 
 ---
 
 ## 💻 Tech Stack
 
-| Komponen | Teknologi | Keterangan |
+| Component | Technology | Description |
 | :--- | :--- | :--- |
-| **Core Backend** | Python 3.10+, FastAPI, Pydantic v2 | High-performance asynchronous API & REST routing |
-| **AI Multi-Agent** | LangGraph, NVIDIA Nemotron-35, Ollama / Gemini | Autonomous agent coordination, math planner, & budget auditor |
-| **Database OLAP** | DuckDB Embedded | High-speed in-process analytical SQL engine & dual CSV persistence |
+| **Core Backend** | Python 3.10+, FastAPI, Pydantic v2 | Asynchronous high-performance RESTful API service |
+| **AI Multi-Agent** | LangGraph, NVIDIA Nemotron-35, Ollama / Gemini | Autonomous agent coordination, math planner, and budget auditor |
+| **Analytical Database** | DuckDB Embedded | High-speed in-process OLAP engine with dual CSV persistence |
 | **Document Engine** | Typst Compiler (Python Typst 0.11+) | Ultra-fast vector PDF typesetting with corporate typography |
-| **Notification Engine**| Python smtplib / aiosmtplib | Interactive corporate HTML email dispatch with authorization buttons |
-| **Frontend UI** | Semantic HTML5, Vanilla CSS, JavaScript, SSE | Modern dark/light corporate dashboard, zero external CSS bloat |
+| **Notification Engine**| Python smtplib / aiosmtplib | Corporate HTML email dispatch with interactive action buttons |
+| **Frontend Dashboard** | Semantic HTML5, Vanilla CSS, JavaScript, SSE | Responsive modern dark/light corporate interface with zero external CSS bloat |
 
 ---
 
-## 🚀 Panduan Menjalankan Sistem
+## 🚀 Getting Started & Operational Guide
 
-### 1. Prasyarat Sistem
-- Python 3.10 atau versi lebih baru
+### 1. Prerequisites
+- Python 3.10 or higher
 - Git
-- Dukungan koneksi lokal atau server Linux (Ubuntu/Debian)
+- Local machine or Linux server (Ubuntu/Debian)
 
-### 2. Instalasi Dependensi
+### 2. Dependency Installation
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/daffaarigoh/AutoRestock-Agent.git
 cd AutoRestock-Agent
 
-# Buat & aktifkan virtual environment
+# Create and activate virtual environment
 python -m venv .venv
-# Linux/macOS:
+# On Linux/macOS:
 source .venv/bin/activate
-# Windows:
+# On Windows:
 .venv\Scripts\activate
 
-# Instalasi packages
+# Install required packages
 pip install -r requirements.txt
 ```
 
-### 3. Inisialisasi Database & Seeding
+### 3. Database Initialization & Seeding
 ```bash
-# Menyiapkan tabel DuckDB master dan data logistik Bali Tower
+# Initialize DuckDB master tables and seed Bali Tower logistics data
 python database/seed_data.py
 ```
 
-### 4. Menjalankan Server Backend & Dashboard
+### 4. Running Backend Server & Dashboard
 ```bash
-# Menjalankan aplikasi FastAPI pada port 8050
+# Launch FastAPI application on port 8050
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8050 --reload
 ```
 
-- **Akses Dashboard Web**: [http://localhost:8050](http://localhost:8050)
-- **Dokumentasi API Swagger**: [http://localhost:8050/docs](http://localhost:8050/docs)
-- **Akun Bawaan Sistem**:
+- **Web Dashboard UI**: [http://localhost:8050](http://localhost:8050)
+- **Interactive Swagger Docs**: [http://localhost:8050/docs](http://localhost:8050/docs)
+- **Default Corporate Credentials**:
   - `admin` / `admin123` (Super Admin)
-  - `usera` / `user123` (Divisi Inventaris & Gudang)
-  - `userb` / `user123` (Divisi HR & GA)
-  - `userc` / `user123` (Divisi Finance & Komersial)
+  - `usera` / `user123` (Inventory & Logistics Division)
+  - `userb` / `user123` (Human Resources & GA Division)
+  - `userc` / `user123` (Finance & Commercial Division)
 
 ---
 
-## 🧪 Verifikasi & Pengujian Otomatis
+## 🧪 Automated Testing & Verification
 
-Sistem dilengkapi dengan test suite lengkap untuk memvalidasi alur pengadaan:
+Run the automated test suite to validate the multi-agent procurement pipeline and document generation:
 
 ```bash
-# Menjalankan seluruh pengujian unit dan integrasi
+# Run all unit and integration tests
 python -m unittest discover -s tests -p "test_*.py"
 
-# Pengujian khusus kompilasi Typst PDF Purchase Order (PO)
+# Test Typst PDF Purchase Order compilation
 python tests/test_po_pdf_generation.py
 
-# Pengujian integrasi pipeline pengadaan end-to-end
+# Test end-to-end procurement API pipeline
 python tests/test_api_and_pipeline.py
 ```
 
 ---
 
-## 📂 Struktur Repositori
+## 📂 Repository Structure
 
 ```text
 AutoRestock-Agent/
-├── agents/                  # Multi-agent LangGraph (Planner, Auditor, Router, JSON Executor)
-├── api/                     # Endpoint FastAPI (Balitower, Approvals, Agents, Auth, Documents)
-├── core/                    # Konfigurasi aplikasi, env loader, schema Pydantic, security JWT
-├── data/                    # Berkas sumber data persisten CSV Bali Tower (Inventory, HR, Finance)
-├── database/                # Inisialisasi DuckDB, skema tabel master, script migrasi & seeding
-├── docgen/                  # Mesin kompilasi PDF Typst & template resmi (PR, PO, Cuti, Invoice)
-│   └── templates/           # Template berkas dokumen Typst (.typ)
-├── storage/                 # Arsip digital dokumen terbitan (PR, PO, BAST, Invoices) & DB lokal
-├── tests/                   # Test suite otomatis (Unit test, integration test, E2E flow)
-└── web/                     # Web Dashboard statis frontend (HTML, Vanilla CSS, JavaScript)
-    ├── static/              # Asset visual, modul JavaScript, dan CSS dashboard
-    └── templates/           # Berkas template halaman index dashboard
+├── agents/                  # LangGraph multi-agent logic (Planner, Auditor, Router, JSON Executor)
+├── api/                     # FastAPI endpoint routers (Balitower, Approvals, Agents, Auth, Documents)
+├── core/                    # System configurations, env loader, Pydantic schemas, JWT security
+├── data/                    # Persistent Bali Tower CSV datasets (Inventory, HR, Finance)
+├── database/                # DuckDB initialization, master schemas, migration & seeding scripts
+├── docgen/                  # Typst compilation engine & official templates (PR, PO, Leave, Invoice)
+│   └── templates/           # Typst document template source files (.typ)
+├── storage/                 # Digital document storage (PR, PO, BAST, Invoices) & local DuckDB
+├── tests/                   # Automated unit, integration, and E2E test suite
+└── web/                     # Frontend dashboard web assets (HTML, Vanilla CSS, JavaScript)
+    ├── static/              # Visual assets, dashboard JavaScript modules, and CSS design system
+    └── templates/           # Jinja2 / HTML index page templates
 ```
 
 ---
