@@ -23,11 +23,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install pytest
 
-    - name: Run Sample Asset Generator
+    - name: Generate Bali Tower Database & Sample Data
       run: |
-        python scripts/generate_sample_assets.py
+        python scripts/generate_balitower_data.py
 
     - name: Run Test Suites
       run: |
-        python -m unittest discover -s tests
+        pytest tests/
