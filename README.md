@@ -123,30 +123,49 @@ flowchart TD
 
 ### 👥 Pipeline B: Field Workforce Leave Management & Quota Deduction (`userb`)
 
-This workflow governs field technicians and tower riggers, ensuring leave requests undergo managerial verification before annual balances are deducted.
+This workflow governs field technicians and tower riggers across regional operations, ensuring leave requests undergo managerial verification before annual quotas are deducted.
 
 ```mermaid
 flowchart TD
-    subgraph B_Workflow ["Field Workforce Leave Authorization Lifecycle"]
-        B1([Technician / Rigger]) -->|Submit Leave Request| B2["AI Leave Form / Copilot Prompt<br/>(Start Date, End Date, Reason, Substitute)"]
-        B2 --> B3["Record in DuckDB: leave_requests<br/>(Status: PENDING_APPROVAL)"]
-        B3 --> B4["DocGen Typst Engine<br/>(Compile Official Corporate Leave Form PDF)"]
-        B4 --> B5["Interactive HR Email Dispatcher<br/>(Sends Email to HR Lead with Approve/Reject Actions)"]
-        
-        %% AUDIT ROUTE
-        B3 -.->|HR Audit Query / WF-847DA5| B6["hr.query_pending_leaves Tool<br/>(Displays Pending Summary in Chat & Emails Recap)"]
-
-        %% DECISION
-        B5 & B6 --> B7{"HR Lead Decision"}
-        B7 -->|Reject| B8["Leave Status: REJECTED<br/>(Quota Intact, Reason Logged)"]
-        B7 -->|Approve| B9["Leave Status: APPROVED<br/>(Digital Stamp Applied)"]
-        B9 --> B10[("DuckDB: employees<br/>(Deduct Days from leave_balance)")]
-        B10 --> B11["Final Confirmation Delivered to Employee & HR Records"]
+    %% PHASE 1: LEAVE SUBMISSION & FORM DRAFTING
+    subgraph B_Phase1 ["1. Leave Submission & Corporate Form Drafting"]
+        B1([Field Technician / Tower Rigger]) -->|Submit Leave Application| B2("Trigger: Copilot Chat / HR Web Portal")
+        B2 --> B3["Validate Against Balance<br/>(DuckDB: employees.leave_balance)"]
+        B3 --> B4[("DuckDB: leave_requests<br/>(Record Status: PENDING_APPROVAL)")]
+        B4 --> B5["DocGen Typst Engine<br/>(Compile Official Corporate Leave Form PDF)"]
+        B5 --> B6["Official Leave Form PDF Archived<br/>(storage/leave_requests/LV-2026-XXX.pdf)"]
     end
 
-    style B_Workflow fill:#f0fdf4,stroke:#059669,stroke-width:1.5px
-    style B3 fill:#fef08a,stroke:#ca8a04
-    style B10 fill:#bbf7d0,stroke:#059669
+    %% PHASE 2: MANAGERIAL AUTHORIZATION & AUDIT
+    subgraph B_Phase2 ["2. Human-In-The-Loop (HITL) HR Authorization & Audit"]
+        B6 --> B7["Interactive HR Email Dispatcher<br/>(Manager Email with One-Click Approve/Reject URLs)"]
+        B4 -.->|Real-Time SSE Sync| B8["HR Web Dashboard<br/>(Badge: PENDING_APPROVAL)"]
+        B4 -.->|Audit Workflow WF-847DA5| B9["hr.query_pending_leaves Tool<br/>(Recap Pending Queue in Chat & Email)"]
+        B7 & B8 & B9 --> B10{"HR Lead / Supervisor Decision"}
+        B10 -->|Reject| B11["Leave REJECTED<br/>(Quota Intact, Reason Logged & Employee Notified)"]
+    end
+
+    %% PHASE 3: FORMAL APPROVAL & DIGITAL ENDORSEMENT
+    subgraph B_Phase3 ["3. Formal Approval & Digital Endorsement"]
+        B10 -->|Approve| B12["Leave APPROVED"]
+        B12 --> B13["DocGen Typst Endorsement<br/>(Apply Official Digital Stamp to PDF Archive)"]
+        B12 --> B14["Web Dashboard Notification<br/>(Badge: APPROVED 🟢)"]
+    end
+
+    %% PHASE 4: QUOTA DEDUCTION & ROSTER MUTATION
+    subgraph B_Phase4 ["4. Quota Deduction & Workforce Scheduling Mutation"]
+        B12 --> B15[("DuckDB: employees<br/>(Deduct Days: leave_balance = balance - days)")]
+        B15 --> B16["Shift Coverage Reassigned<br/>(Substitute Technician Assigned to Tower Site)"]
+        B16 --> B17["Final Confirmation Delivered<br/>(Sent to Employee & HR Compliance Audit Log)"]
+    end
+
+    style B_Phase1 fill:#f8fafc,stroke:#059669,stroke-width:1.5px
+    style B_Phase2 fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px
+    style B_Phase3 fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px
+    style B_Phase4 fill:#fdf4ff,stroke:#9333ea,stroke-width:1.5px
+    style B4 fill:#fef08a,stroke:#ca8a04
+    style B12 fill:#bbf7d0,stroke:#16a34a
+    style B15 fill:#f5d0fe,stroke:#9333ea
 ```
 
 ---
@@ -157,23 +176,45 @@ This workflow governs commercial leasing for telecommunication operators (Telkom
 
 ```mermaid
 flowchart TD
-    subgraph C_Workflow ["Tower Infrastructure Leasing & Billing Lifecycle"]
-        C1([Account Manager / User C]) -->|Register Client & Site Lease| C2["Copilot / Admin Form<br/>(Operator Name, Site ID, Antenna Height, Period)"]
-        C2 --> C3["Draft Master Lease Agreement (MLA)<br/>(Status: PENDING_APPROVAL)"]
-        C3 --> C4["Calculate Lease Rates & Initial Invoice Estimation<br/>(Base Lease Rate + 11% Indonesian VAT)"]
-        C4 --> C5["Finance Email Dispatcher<br/>(Sends Contract Preview & One-Click Approval to Finance Lead)"]
-        
-        C5 --> C6{"Finance Lead Decision"}
-        C6 -->|Reject| C7["Contract REJECTED<br/>(Site Reservation Cancelled)"]
-        C6 -->|Approve| C8["Contract APPROVED & ACTIVATED<br/>(Registered in mla_contracts)"]
-        C8 --> C9[("DuckDB: revenue_invoices<br/>(Official Invoice Generated)")]
-        C9 --> C10["DocGen Typst Engine<br/>(Compiles Formal Tax Invoice PDF with Letterhead)"]
+    %% PHASE 1: REGISTRATION & CONTRACT DRAFTING
+    subgraph C_Phase1 ["1. Operator Onboarding & MLA Contract Drafting"]
+        C1([Account Manager / Commercial User]) -->|Register Operator & Site Lease| C2("Trigger: Copilot Chat / Commercial Portal")
+        C2 --> C3["Register Client Profile<br/>(DuckDB: telecom_clients: Telkomsel, IOH, XL, Smartfren)"]
+        C3 --> C4[("DuckDB: mla_contracts<br/>(Draft Contract Status: PENDING_APPROVAL)")]
+        C4 --> C5["Financial Assessment Engine<br/>(Base Lease Rate + Utility Surcharge + 11% Indonesian VAT)"]
+        C5 --> C6["Draft MLA Summary & Financial Projections Compiled"]
     end
 
-    style C_Workflow fill:#fffbeb,stroke:#d97706,stroke-width:1.5px
-    style C3 fill:#fef08a,stroke:#ca8a04
-    style C8 fill:#bbf7d0,stroke:#16a34a
-    style C10 fill:#fef3c7,stroke:#d97706
+    %% PHASE 2: FINANCIAL HITL AUTHORIZATION
+    subgraph C_Phase2 ["2. Human-In-The-Loop (HITL) Financial Authorization"]
+        C6 --> C7["Interactive Finance Email Dispatcher<br/>(CFO Preview with Cryptographic Approve/Reject Buttons)"]
+        C4 -.->|Real-Time SSE Sync| C8["Finance Web Dashboard<br/>(Badge: PENDING_APPROVAL)"]
+        C7 & C8 --> C9{"Finance Director / CFO Decision"}
+        C9 -->|Reject| C10["Contract REJECTED<br/>(Tower Colocation Reservation Released)"]
+    end
+
+    %% PHASE 3: CONTRACT ACTIVATION & SITE HANDOVER
+    subgraph C_Phase3 ["3. Contract Activation & Tower Colocation Handover"]
+        C9 -->|Approve| C11["Contract APPROVED & ACTIVATED"]
+        C11 --> C12[("DuckDB: mla_contracts<br/>(Status: ACTIVE, Effective Dates Locked)")]
+        C12 --> C13["Tower Asset Colocation Reserved<br/>(Antenna Slot & Power Capacity Allocated on Site)"]
+        C12 --> C14["Web Dashboard Notification<br/>(Badge: ACTIVE 🟢)"]
+    end
+
+    %% PHASE 4: TAX INVOICE COMPILATION & REVENUE RECOGNITION
+    subgraph C_Phase4 ["4. Tax Invoice Compilation & Revenue Recognition"]
+        C11 --> C15[("DuckDB: revenue_invoices<br/>(Invoice Generated: INV-2026-XXX)")]
+        C15 --> C16["DocGen Typst Engine<br/>(Compile Formal Tax Invoice PDF with Letterhead & 11% VAT)"]
+        C16 --> C17["Electronic Dispatch to Operator AP<br/>(Accounts Receivable Booked in Financial Ledger)"]
+    end
+
+    style C_Phase1 fill:#f8fafc,stroke:#d97706,stroke-width:1.5px
+    style C_Phase2 fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px
+    style C_Phase3 fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px
+    style C_Phase4 fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px
+    style C4 fill:#fef08a,stroke:#ca8a04
+    style C11 fill:#bbf7d0,stroke:#16a34a
+    style C15 fill:#bfdbfe,stroke:#2563eb
 ```
 
 ---
