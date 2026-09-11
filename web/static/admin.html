@@ -1058,7 +1058,7 @@
         <!-- Filter Workflow by Tenant Pills -->
         <div class="filter-bar" style="margin-top: 8px; margin-bottom: 14px;">
           <div class="tenant-filter-pills" id="wfTenantFilterPills">
-            <button class="pill-btn active" onclick="filterWorkflowsByTenant('ALL')">all (<span id="countWfAll">0</span>)</button>
+            <button class="pill-btn active" onclick="filterWorkflowsByTenant('ALL')">all (<span id="countWfPillAll">0</span>)</button>
             <button class="pill-btn" onclick="filterWorkflowsByTenant('usera')">usera (<span id="countWfTenantA">0</span>)</button>
             <button class="pill-btn" onclick="filterWorkflowsByTenant('userb')">userb (<span id="countWfTenantB">0</span>)</button>
             <button class="pill-btn" onclick="filterWorkflowsByTenant('userc')">userc (<span id="countWfTenantC">0</span>)</button>
@@ -1069,10 +1069,10 @@
         <div class="wf-filters-bar">
           <span style="font-size: 12px; font-weight: 700; color: #64748B; margin-right: 4px;">Filter Schema:</span>
           <button class="wf-filter-pill active" id="filterWfAllSchemas" onclick="setWorkflowFilter('ALL_SCHEMAS')">Semua (<span id="countWfTotal">0</span>)</button>
-          <button class="wf-filter-pill" id="filterWfAll" onclick="setWorkflowFilter('ALL')">Schema ALL (<span id="countWfAll">0</span>)</button>
-          <button class="wf-filter-pill" id="filterWfFinance" onclick="setWorkflowFilter('FINANCE')">Schema C - Keuangan (<span id="countWfFinance">0</span>)</button>
+          <button class="wf-filter-pill" id="filterWfAll" onclick="setWorkflowFilter('ALL')">Schema ALL (<span id="countWfSchemaAll">0</span>)</button>
           <button class="wf-filter-pill" id="filterWfInventory" onclick="setWorkflowFilter('INVENTORY')">Schema A - Inventory (<span id="countWfInventory">0</span>)</button>
           <button class="wf-filter-pill" id="filterWfHr" onclick="setWorkflowFilter('HR')">Schema B - HR (<span id="countWfHr">0</span>)</button>
+          <button class="wf-filter-pill" id="filterWfFinance" onclick="setWorkflowFilter('FINANCE')">Schema C - Keuangan (<span id="countWfFinance">0</span>)</button>
         </div>
 
         <div id="workflowList" style="display: flex; flex-direction: column; gap: 14px;">
@@ -1558,6 +1558,20 @@
         return;
       }
 
+      // Sort: Schema ALL -> Schema A -> Schema B -> Schema C, then by ID
+      const schemaOrder = {
+        'ALL': 1,
+        'INVENTORY': 2, 'TENANT_A': 2, 'USERA': 2, 'SCHEMA_A': 2,
+        'HR': 3, 'TENANT_B': 3, 'USERB': 3, 'SCHEMA_B': 3,
+        'FINANCE': 4, 'TENANT_C': 4, 'USERC': 4, 'SCHEMA_C': 4
+      };
+      filtered.sort((a, b) => {
+        const orderA = schemaOrder[(a.tenant_id || 'ALL').toUpperCase()] || 99;
+        const orderB = schemaOrder[(b.tenant_id || 'ALL').toUpperCase()] || 99;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.id || '').localeCompare(b.id || '');
+      });
+
       let html = '';
       filtered.forEach(wf => {
         const escapedJson = JSON.stringify(wf.compiled_json || {}, null, 2);
@@ -1638,10 +1652,15 @@
           const countHr = workflows.filter(w => ['HR', 'TENANT_B', 'USERB', 'SCHEMA_B'].includes((w.tenant_id || '').toUpperCase())).length;
 
           if (document.getElementById('countWfTotal')) document.getElementById('countWfTotal').textContent = countTotal;
-          if (document.getElementById('countWfAll')) document.getElementById('countWfAll').textContent = countAll;
-          if (document.getElementById('countWfFinance')) document.getElementById('countWfFinance').textContent = countFinance;
+          if (document.getElementById('countWfPillAll')) document.getElementById('countWfPillAll').textContent = countTotal;
+          if (document.getElementById('countWfTenantA')) document.getElementById('countWfTenantA').textContent = countInventory;
+          if (document.getElementById('countWfTenantB')) document.getElementById('countWfTenantB').textContent = countHr;
+          if (document.getElementById('countWfTenantC')) document.getElementById('countWfTenantC').textContent = countFinance;
+
+          if (document.getElementById('countWfSchemaAll')) document.getElementById('countWfSchemaAll').textContent = countAll;
           if (document.getElementById('countWfInventory')) document.getElementById('countWfInventory').textContent = countInventory;
           if (document.getElementById('countWfHr')) document.getElementById('countWfHr').textContent = countHr;
+          if (document.getElementById('countWfFinance')) document.getElementById('countWfFinance').textContent = countFinance;
 
           renderWorkflows();
         }

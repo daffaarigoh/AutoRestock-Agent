@@ -673,7 +673,8 @@ async def quick_approval_action(
 async def quick_leave_approval_action(
     leave_id: str,
     action: str = "APPROVE",
-    manager_name: str = "Eko Prasetyo (HR & GA Lead)"
+    manager_name: str = "Eko Prasetyo (HR & GA Lead)",
+    request: Request = None
 ):
     """
     Direct one-click approval/rejection endpoint used by HR Leave Email interactive action buttons.
@@ -681,13 +682,9 @@ async def quick_leave_approval_action(
     and returns a responsive corporate HTML confirmation landing page.
     """
     from database.db import get_db_connection
-    from core.config import settings
+    from core.config import settings, get_base_url
 
-    if settings.PUBLIC_URL:
-        base_url = settings.PUBLIC_URL.rstrip("/")
-    else:
-        host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
-        base_url = f"http://{host}:{settings.API_PORT}"
+    base_url = get_base_url(request)
 
     clean_action = action.strip().upper()
     is_approve = clean_action in ["APPROVE", "APPROVED"]
@@ -988,7 +985,8 @@ async def quick_leave_approval_action(
 async def quick_client_onboarding_action(
     onboarding_id: str,
     action: str = "APPROVE",
-    manager_name: str = "Finance & Commercial Lead"
+    manager_name: str = "Finance & Commercial Lead",
+    request: Request = None
 ):
     """
     Direct one-click approval/rejection endpoint for New Telecom Client Onboarding & MLA Lease Contract.
@@ -1000,13 +998,9 @@ async def quick_client_onboarding_action(
     Returns a responsive corporate HTML confirmation landing page.
     """
     from database.db import get_db_connection
-    from core.config import settings
+    from core.config import settings, get_base_url
 
-    if settings.PUBLIC_URL:
-        base_url = settings.PUBLIC_URL.rstrip("/")
-    else:
-        host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
-        base_url = f"http://{host}:{settings.API_PORT}"
+    base_url = get_base_url(request)
 
     clean_action = action.strip().upper()
     is_approve = clean_action in ["APPROVE", "APPROVED"]

@@ -3107,6 +3107,15 @@ async function submitLeaveRequestForm(formId) {
     const formCard = document.getElementById(formId);
 
     if (formCard) {
+      // Update parent bubble stream text to avoid duplicate text
+      const parentBox = formCard.closest('.agent-response-box');
+      if (parentBox) {
+        const streamText = parentBox.querySelector('.stream-text-content');
+        if (streamText) {
+          streamText.textContent = 'Permohonan cuti telah berhasil dicatat dan diajukan ke Divisi HR:';
+        }
+      }
+
       const typeLabelMap = {
         'ANNUAL_LEAVE': 'Cuti Tahunan',
         'SICK_LEAVE': 'Cuti Sakit',
@@ -3148,7 +3157,7 @@ async function submitLeaveRequestForm(formId) {
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
-            <span>Data otomatis tersimpan ke tabel DuckDB dan formulir resmi PDF telah diterbitkan & terkirim ke HR.</span>
+            <span>Berkas permohonan resmi format PDF telah diterbitkan dan notifikasi telah dikirimkan ke HR.</span>
           </div>
           <div class="leave-action-row">
             <button class="btn btn-primary btn-sm" onclick="openLeavePdfModal('${leaveId}', '${escapeHtml(d.applicant_name || '')}', '${escapeHtml(typeLabel)}', ${d.days_requested}, 'PENDING_APPROVAL')">

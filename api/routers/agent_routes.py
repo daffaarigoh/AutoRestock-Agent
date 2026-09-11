@@ -1113,18 +1113,15 @@ async def execute_prompt_logic(
                 from core.dispatcher import dispatcher
                 
                 # Dynamic recipient extraction from prompt text or request
+                from core.config import get_base_url
                 extracted_target = extract_recipient_email(request.prompt) or request.recipient_email
-                default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "zeiniahalfiah@gmail.com"
+                default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
                 target_recip = extracted_target or default_env_recip
 
                 if stage_callback:
                     await stage_callback("notification", f"Mengirimkan rekapitulasi cuti pending ke email {target_recip}...")
                 try:
-                    if settings.PUBLIC_URL:
-                        b_url = settings.PUBLIC_URL.rstrip("/")
-                    else:
-                        host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
-                        b_url = f"http://{host}:{settings.API_PORT}"
+                    b_url = get_base_url()
                         
                     rows_html = ""
                     for r in lv_rows:

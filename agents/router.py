@@ -86,7 +86,10 @@ def extract_recipient_email(prompt: str) -> str | None:
     p_lower = prompt.lower()
     named_map = {
         "zeiniah": "zeiniahalfiah@gmail.com",
-        "daffa": "daffaarigoh02@gmail.com",
+        "daffa": "muhammaddaffaarigoh@gmail.com",
+        "muhammad daffa": "muhammaddaffaarigoh@gmail.com",
+        "daffaarigoh": "muhammaddaffaarigoh@gmail.com",
+        "daffaarigoh02": "daffaarigoh02@gmail.com",
         "hr.operations": "hr.operations@balitower.co.id",
         "hrd": "hr.operations@balitower.co.id",
         "hr": "hr.operations@balitower.co.id",

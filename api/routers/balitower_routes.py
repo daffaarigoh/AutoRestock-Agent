@@ -15,7 +15,7 @@ Dilengkapi sistem otorisasi multi-tenant ketat:
 import re
 from datetime import datetime, timedelta
 from typing import Any
-from fastapi import APIRouter, HTTPException, Depends, Query, status
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, status
 from pydantic import BaseModel, Field
 from core.security import TokenData, get_current_user
 from database.db import get_db_connection
@@ -595,6 +595,7 @@ class LeaveCreateRequest(BaseModel):
 @router.post("/api/balitower/hr/leave-requests")
 async def create_leave_request(
     payload: LeaveCreateRequest,
+    request: Request = None,
     current_user: TokenData = Depends(require_hr_access)
 ):
     """
@@ -701,15 +702,16 @@ async def create_leave_request(
             f"- Alasan: {payload.reason}\n\n"
             f"Berkas resmi formulir pengajuan cuti berformat PDF terlampir."
         )
-        from core.config import settings
-        target_recipient = payload.recipient_email or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "zeiniahalfiah@gmail.com"
+        from core.config import settings, get_base_url
+        target_recipient = payload.recipient_email or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
         dispatch_res = await dispatcher.dispatch_email(
             recipient_email=target_recipient,
             subject=f"Pengajuan Cuti Karyawan: {new_leave_id} - {emp[1]}",
             content_text=email_msg,
             attachment_path=pdf_path,
             leave_id=new_leave_id,
-            leave_data=leave_data
+            leave_data=leave_data,
+            base_url=get_base_url(request)
         )
     except Exception as e:
         print(f"[WARN] Failed to dispatch email to HR: {e}")

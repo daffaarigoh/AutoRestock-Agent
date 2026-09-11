@@ -576,6 +576,7 @@ body.sidebar-collapsed .data-sidebar {
   padding: 8px 12px;
   color: var(--text-main);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .text-right { text-align: right; }

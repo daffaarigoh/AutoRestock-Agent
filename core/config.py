@@ -69,7 +69,8 @@ class Settings(_BaseSettings):
         self.SMTP_EMAIL = _clean(self.SMTP_EMAIL)
         self.SMTP_PASSWORD = _clean(self.SMTP_PASSWORD)
         self.SMTP_USERNAME = _clean(self.SMTP_USERNAME) or self.SMTP_EMAIL
-        self.DEFAULT_RECIPIENT_EMAIL = _clean(self.DEFAULT_RECIPIENT_EMAIL) or self.SMTP_EMAIL
+        self.DEFAULT_RECIPIENT_EMAIL = _clean(self.DEFAULT_RECIPIENT_EMAIL) or self.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
+        self.PUBLIC_URL = _clean(self.PUBLIC_URL) or "http://10.17.101.232:8050"
 
         # If LLM_KEY is provided, sync with MODEL_API_KEY
         if self.LLM_KEY and (self.MODEL_API_KEY in ["dummy-key", "dummy-key-for-local", "", None]):
@@ -101,4 +102,39 @@ settings.APPROVED_DIR.mkdir(parents=True, exist_ok=True)
 settings.REJECTED_DIR.mkdir(parents=True, exist_ok=True)
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
 settings.SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def get_base_url(request: Any = None) -> str:
+    """
+    Returns the reachable base URL for interactive email action buttons and PDF download links.
+    Detects public/LAN IP or request Host, preventing unroutable 127.0.0.1 in emails.
+    """
+    if request:
+        try:
+            r_url = str(request.base_url).rstrip("/")
+            if "localhost" not in r_url and "127.0.0.1" not in r_url:
+                return r_url
+        except Exception:
+            pass
+
+    if settings.PUBLIC_URL and settings.PUBLIC_URL.strip() not in ["", "http://localhost:8050", "http://127.0.0.1:8050"]:
+        return settings.PUBLIC_URL.rstrip("/")
+
+    # Detect active LAN IP via UDP socket
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        if ip and ip != "127.0.0.1":
+            return f"http://{ip}:{settings.API_PORT}"
+    except Exception:
+        pass
+
+    if settings.PUBLIC_URL and settings.PUBLIC_URL.strip():
+        return settings.PUBLIC_URL.rstrip("/")
+
+    return f"http://10.17.101.232:{settings.API_PORT}"
 

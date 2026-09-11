@@ -106,12 +106,10 @@ class MultiChannelDispatcher:
         Falls back to smart simulation if SMTP credentials are not configured.
         """
         import re
-        if settings.PUBLIC_URL:
-            base_url = base_url or settings.PUBLIC_URL.rstrip("/")
-        else:
-            host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
-            base_url = base_url or f"http://{host}:{settings.API_PORT}"
-        recipient = recipient_email or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "zeiniahalfiah@gmail.com"
+        from core.config import get_base_url
+        if not base_url:
+            base_url = get_base_url()
+        recipient = recipient_email or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
         is_smtp_configured = bool(settings.SMTP_EMAIL and settings.SMTP_PASSWORD)
 
         # Auto-detect PR number from subject, attachment_path, or content_text if not explicitly given

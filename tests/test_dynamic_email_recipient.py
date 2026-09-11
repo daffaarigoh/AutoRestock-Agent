@@ -18,7 +18,7 @@ class TestDynamicEmailRecipient(unittest.TestCase):
         # Test Zeiniah
         self.assertEqual(extract_recipient_email("Cek status cuti pending dan kirim ke zeiniah"), "zeiniahalfiah@gmail.com")
         # Test Daffa
-        self.assertEqual(extract_recipient_email("Cek data cuti pending dan kirim ke Daffa untuk persetujuan"), "daffaarigoh02@gmail.com")
+        self.assertEqual(extract_recipient_email("Cek data cuti pending dan kirim ke Daffa untuk persetujuan"), "muhammaddaffaarigoh@gmail.com")
         # Test HR
         self.assertEqual(extract_recipient_email("Kirim rekap cuti pending ke HR"), "hr.operations@balitower.co.id")
         # Test Manager

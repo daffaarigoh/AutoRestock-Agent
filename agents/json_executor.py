@@ -399,15 +399,11 @@ class JSONExecutionEngine:
                         p_src = str(context.get("prompt") or context.get("business_instruction") or compiled_json.get("business_instruction") or "")
                         step_recip = step.get("params", {}).get("recipient_email")
                         extracted_recip = step_recip or context.get("recipient_email") or extract_recipient_email(p_src)
-                        default_recip = extracted_recip or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "zeiniahalfiah@gmail.com"
+                        from core.config import get_base_url
+                        default_recip = extracted_recip or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
                         default_subj = f"Daftar Pengajuan Cuti Menunggu Persetujuan HR ({len(p_leaves)} Berkas)"
                         msg = context.get("hr_leave_pending_message") or f"Terdapat {len(p_leaves)} berkas cuti menunggu persetujuan HR."
-                        
-                        if settings.PUBLIC_URL:
-                            b_url = settings.PUBLIC_URL.rstrip("/")
-                        else:
-                            host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
-                            b_url = f"http://{host}:{settings.API_PORT}"
+                        b_url = get_base_url()
                             
                         rows_html = ""
                         for p in p_leaves:
@@ -480,11 +476,8 @@ class JSONExecutionEngine:
                         freq = ob_data.get("billing_frequency") or context.get("billing_frequency") or "QUARTERLY"
                         tot_inv = int(ob_data.get("first_invoice_amount") or context.get("total_billed") or (m_rate * (3 if freq == "QUARTERLY" else 1) * 1.11))
                         
-                        if settings.PUBLIC_URL:
-                            b_url = settings.PUBLIC_URL.rstrip("/")
-                        else:
-                            host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
-                            b_url = f"http://{host}:{settings.API_PORT}"
+                        from core.config import get_base_url
+                        b_url = get_base_url()
                             
                         appr_url = f"{b_url}/api/approval/client-onboarding-action?onboarding_id={ob_id}&action=APPROVE"
                         rej_url = f"{b_url}/api/approval/client-onboarding-action?onboarding_id={ob_id}&action=REJECT"
@@ -492,7 +485,7 @@ class JSONExecutionEngine:
                         
                         default_subj = f"Permohonan Otorisasi Sewa Menara Operator Baru: {ob_id} - {c_name}"
                         msg = f"Draft pendaftaran operator {c_name} ({ob_id}) untuk sewa menara Site {site_id} menunggu persetujuan otorisasi."
-                        default_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "zeiniahalfiah@gmail.com"
+                        default_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
                         
                         custom_html = f"""<!DOCTYPE html>
 <html lang="id">
@@ -573,7 +566,7 @@ class JSONExecutionEngine:
                         days = context.get("days_requested", 1)
                         msg = f"Surat Pengajuan Cuti {leave_id} telah diterbitkan untuk {applicant} ({days} hari kerja). Berkas resmi format PDF terlampir untuk verifikasi Divisi HR."
                         default_subj = f"Pengajuan Cuti Karyawan: {leave_id} - {applicant}"
-                        default_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "zeiniahalfiah@gmail.com"
+                        default_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
                     elif pr_number:
                         msg = f"Dokumen Purchase Requisition **{pr_number}** telah diterbitkan untuk **{items_len} barang menipis** dengan estimasi anggaran **Rp {context.get('total_budget', 0.0):,.2f}**.\n\n"
                         p_items = context.get("planned_items") or []
@@ -1459,7 +1452,7 @@ class JSONExecutionEngine:
             elif pr_num:
                 msg = f"Dokumen PR #{pr_num} telah diterbitkan dan menunggu persetujuan Anda."
             from core.config import settings
-            default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "zeiniahalfiah@gmail.com"
+            default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
             dispatch_res = await dispatcher.dispatch_email(
                 recipient_email=context.get("recipient_email") or (default_env_recip if (lv_id or ob_id) else None),
                 subject=f"Pengajuan Cuti Karyawan: {lv_id}" if lv_id else (f"Permohonan Otorisasi Sewa Menara: {ob_id}" if ob_id else (f"Permintaan Persetujuan Restock: {pr_num}" if pr_num else "Notifikasi Operasional")),

@@ -221,5 +221,53 @@
       ]
     },
     "tenant_id": "INVENTORY"
+  },
+  {
+    "id": "WF-ALL-01",
+    "name": "Cek Profil Akun & Hak Akses",
+    "description": "Melihat informasi profil pengguna yang sedang login, role, divisi tenant, dan modul yang dapat diakses.",
+    "business_instruction": "Periksa akun yang sedang login dan tampilkan detail hak akses serta batasan divisi.",
+    "compiled_json": {
+      "workflow": "check_user_profile",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "system.check_profile"
+        }
+      ]
+    },
+    "tenant_id": "ALL"
+  },
+  {
+    "id": "WF-ALL-02",
+    "name": "Informasi Sistem & Status Layanan",
+    "description": "Melihat ringkasan status operasional server, versi aplikasi, database DuckDB, dan gateway AI.",
+    "business_instruction": "Cek status operasional seluruh modul sistem AutoRestock-Agent.",
+    "compiled_json": {
+      "workflow": "system_health_info",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "system.get_system_info"
+        }
+      ]
+    },
+    "tenant_id": "ALL"
+  },
+  {
+    "id": "WF-ALL-03",
+    "name": "Panduan Operasional & Kontak Darurat",
+    "description": "Panduan SOP penggunaan sistem AutoRestock-Agent, navigasi modul, dan kontak darurat IT/Operasional.",
+    "business_instruction": "Tampilkan panduan operasional perusahaan dan kontak darurat lintas divisi.",
+    "compiled_json": {
+      "workflow": "company_guidelines",
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "system.get_company_guidelines"
+        }
+      ]
+    },
+    "tenant_id": "ALL"
   }
 ]
