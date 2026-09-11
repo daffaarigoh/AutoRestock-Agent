@@ -1024,6 +1024,9 @@ body.sidebar-collapsed .sidebar-resizer {
   padding: 12px 14px;
   margin-top: 10px;
   color: var(--text-main);
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .action-card-header {
@@ -1031,6 +1034,26 @@ body.sidebar-collapsed .sidebar-resizer {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-card-body {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+.action-card table.data-table {
+  width: 100%;
+  table-layout: auto;
+}
+
+.action-card table.data-table td:first-child,
+.action-card table.data-table th:first-child {
+  white-space: normal !important;
+  word-break: break-word;
+  min-width: 160px;
 }
 
 /* Status Badges */

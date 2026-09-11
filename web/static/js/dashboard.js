@@ -2102,6 +2102,27 @@ function updateStreamStage(streamBubble, stage, message) {
   const stagesContainer = streamBubble.querySelector('.stage-chips-container');
   if (!stagesContainer) return;
 
+  const msgTrimmed = (message || '').trim();
+  if (!msgTrimmed) return;
+
+  const existingChips = stagesContainer.querySelectorAll('.stage-chip');
+  
+  // If the initial default chip exists and matches or is active, update it rather than duplicating
+  if (existingChips.length === 1) {
+    const textSpan = existingChips[0].querySelector('span:not(.stage-pulse-dot)');
+    if (textSpan && textSpan.textContent.includes('Menganalisis instruksi')) {
+      textSpan.textContent = msgTrimmed;
+      return;
+    }
+  }
+
+  // If the last chip already has this exact text, do not duplicate
+  const lastChip = existingChips[existingChips.length - 1];
+  if (lastChip) {
+    const lastText = (lastChip.querySelector('span:not(.stage-pulse-dot)')?.textContent || '').trim();
+    if (lastText === msgTrimmed) return;
+  }
+
   const prevActive = stagesContainer.querySelector('.stage-chip.active');
   if (prevActive) {
     prevActive.classList.remove('active');
@@ -2116,7 +2137,7 @@ function updateStreamStage(streamBubble, stage, message) {
   chip.className = 'stage-chip active';
   chip.innerHTML = `
     <span class="stage-pulse-dot"></span>
-    <span>${escapeHtml(message)}</span>
+    <span>${escapeHtml(msgTrimmed)}</span>
   `;
 
   if (inlineCancel) {
@@ -2321,18 +2342,18 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
       `).join('');
 
       artifactsSlot.innerHTML = `
-        <div class="action-card" style="border-left: 4px solid #2563EB; background: #F8FAFC; border: 1px solid #E2E8F0; margin-top: 10px;">
-          <div class="action-card-header">
+        <div class="action-card" style="border-left: 4px solid #2563EB; background: #F8FAFC; border: 1px solid #E2E8F0; margin-top: 10px; max-width: 100%; box-sizing: border-box; overflow: hidden; border-radius: 8px;">
+          <div class="action-card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px;">
             <span style="font-weight: 700; font-size: 12.5px; color: #1E293B;">${title} (${items.length})</span>
             ${badge}
           </div>
-          <div class="action-card-body" style="padding: 6px 10px;">
-            <table class="data-table" style="font-size: 12px; margin: 4px 0;">
+          <div class="action-card-body" style="padding: 6px 10px; max-width: 100%; box-sizing: border-box; overflow-x: auto;">
+            <table class="data-table" style="font-size: 12px; margin: 4px 0; width: 100%; table-layout: auto;">
               <thead>
                 <tr>
-                  <th>Nama Barang</th>
-                  <th>Stok Fisik</th>
-                  <th>Batas Min</th>
+                  <th style="white-space: normal; min-width: 180px;">Nama Barang</th>
+                  <th style="white-space: nowrap; text-align: center;">Stok Fisik</th>
+                  <th style="white-space: nowrap; text-align: center;">Batas Min</th>
                 </tr>
               </thead>
               <tbody>

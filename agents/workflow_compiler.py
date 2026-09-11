@@ -84,7 +84,7 @@ Do not output any markdown formatting or extra commentary outside the JSON.
         
         steps = []
         # Case 1: Product Registration & Validation
-        if any(k in text_lower for k in ["daftar", "pendaftaran", "tambah barang", "register", "validasi"]):
+        if any(k in text_lower for k in ["daftar", "pendaftaran", "tambah barang", "tambah material", "register", "registrasi", "validasi", "catat item", "material baru", "item baru", "sku baru", "produk baru"]):
             steps.append({"type": "agent", "task": "agent.reason_and_validate"})
             steps.append({"type": "tool", "tool": "inventory.register_product"})
             if "email" in text_lower or "notifikasi" in text_lower or "lapor" in text_lower:

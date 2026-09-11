@@ -1649,7 +1649,7 @@ async def execute_prompt_logic(
             action_type = "finance_onboarding"
         elif "update_threshold" in compiled_json.get("workflow", ""):
             action_type = "update_threshold"
-        elif result.get("registered_item") or (("daftar" in compiled_json.get("workflow", "") or "register" in compiled_json.get("workflow", "") or "tambah" in compiled_json.get("workflow", "")) and not result.get("onboarding_id")):
+        elif result.get("registered_item") or (("daftar" in compiled_json.get("workflow", "") or "register" in compiled_json.get("workflow", "") or "registrasi" in compiled_json.get("workflow", "") or "tambah" in compiled_json.get("workflow", "")) and not result.get("onboarding_id")) or "register_product" in str(compiled_json.get("steps", [])):
             action_type = "register_product"
         elif result.get("pr_number"):
             action_type = "review_prs"
