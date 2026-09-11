@@ -472,9 +472,16 @@ class JSONExecutionEngine:
                         c_name = ob_data.get("client_name") or context.get("client_name") or "Operator Klien Baru"
                         c_type = ob_data.get("client_type") or "OPERATOR_SELULER"
                         site_id = ob_data.get("site_id") or context.get("site_id") or "JKS-MCP-001"
+                        site_name = ob_data.get("site_name")
+                        site_display = f"{site_id} ({site_name})" if site_name else site_id
                         m_rate = int(ob_data.get("monthly_rate") or context.get("monthly_rate") or 25000000)
                         freq = ob_data.get("billing_frequency") or context.get("billing_frequency") or "QUARTERLY"
                         tot_inv = int(ob_data.get("first_invoice_amount") or context.get("total_billed") or (m_rate * (3 if freq == "QUARTERLY" else 1) * 1.11))
+                        pic_dsp = ob_data.get("pic_info") or (f"{ob_data.get('pic_name')} ({ob_data.get('pic_phone')})" if ob_data.get('pic_name') else None)
+                        office_addr = ob_data.get("office_address")
+                        dur_label = ob_data.get("duration_label") or "1 Tahun"
+                        s_dt_disp = ob_data.get("start_date", "")
+                        e_dt_disp = ob_data.get("end_date", "")
                         
                         from core.config import get_base_url
                         b_url = get_base_url()
@@ -484,9 +491,21 @@ class JSONExecutionEngine:
                         pdf_view_url = f"{b_url}/api/documents/invoice/{ob_id}/download?inline=true"
                         
                         default_subj = f"Permohonan Otorisasi Sewa Menara Operator Baru: {ob_id} - {c_name}"
-                        msg = f"Draft pendaftaran operator {c_name} ({ob_id}) untuk sewa menara Site {site_id} menunggu persetujuan otorisasi."
+                        msg = f"Draft pendaftaran operator {c_name} ({ob_id}) untuk sewa menara Site {site_display} menunggu persetujuan otorisasi."
                         default_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
                         
+                        extra_rows_html = ""
+                        if pic_dsp:
+                            extra_rows_html += f"""<tr style="border-bottom: 1px solid #E2E8F0;">
+                    <td style="padding: 9px 0; color: #64748B;">PIC & Kontak</td>
+                    <td style="padding: 9px 0; font-weight: 600; text-align: right;">{pic_dsp}</td>
+                </tr>"""
+                        if office_addr:
+                            extra_rows_html += f"""<tr style="border-bottom: 1px solid #E2E8F0;">
+                    <td style="padding: 9px 0; color: #64748B;">Alamat Kantor</td>
+                    <td style="padding: 9px 0; font-weight: 600; text-align: right;">{office_addr}</td>
+                </tr>"""
+
                         custom_html = f"""<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -516,13 +535,14 @@ class JSONExecutionEngine:
                     <td style="padding: 9px 0; color: #64748B;">Nama Klien Operator</td>
                     <td style="padding: 9px 0; font-weight: 600; text-align: right;">{c_name}</td>
                 </tr>
+                {extra_rows_html}
                 <tr style="border-bottom: 1px solid #E2E8F0;">
                     <td style="padding: 9px 0; color: #64748B;">Tipe Entitas / NPWP</td>
                     <td style="padding: 9px 0; font-weight: 600; text-align: right;">{c_type} / {ob_data.get('npwp', '-')}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #E2E8F0;">
                     <td style="padding: 9px 0; color: #64748B;">Site Menara Disewa</td>
-                    <td style="padding: 9px 0; font-weight: 600; text-align: right; color: #0F172A;">{site_id}</td>
+                    <td style="padding: 9px 0; font-weight: 600; text-align: right; color: #0F172A;">{site_display}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #E2E8F0;">
                     <td style="padding: 9px 0; color: #64748B;">Tarif Sewa Bulanan</td>
@@ -531,6 +551,10 @@ class JSONExecutionEngine:
                 <tr style="border-bottom: 1px solid #E2E8F0;">
                     <td style="padding: 9px 0; color: #64748B;">Skema Billing</td>
                     <td style="padding: 9px 0; font-weight: 600; text-align: right;">{freq}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #E2E8F0;">
+                    <td style="padding: 9px 0; color: #64748B;">Durasi Sewa</td>
+                    <td style="padding: 9px 0; font-weight: 600; text-align: right;">{s_dt_disp} s/d {e_dt_disp} ({dur_label})</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #E2E8F0;">
                     <td style="padding: 9px 0; color: #64748B;">Estimasi Tagihan Perdana</td>
@@ -1023,28 +1047,55 @@ class JSONExecutionEngine:
                                 approved_by VARCHAR
                             );
                         """)
+                        try:
+                            conn.execute("ALTER TABLE pending_client_onboardings ADD COLUMN pic_contact VARCHAR;")
+                        except Exception:
+                            pass
+                        try:
+                            conn.execute("ALTER TABLE pending_client_onboardings ADD COLUMN office_address VARCHAR;")
+                        except Exception:
+                            pass
+                        try:
+                            conn.execute("ALTER TABLE pending_client_onboardings ADD COLUMN duration_months INT;")
+                        except Exception:
+                            pass
 
                         params = step.get("params") or step.get("parameters") or context.get("onboarding_data") or {}
                         prompt_str = str(context.get("prompt") or "")
 
                         c_name = params.get("client_name") or context.get("client_name")
                         if not c_name:
-                            # 1. Try matching explicit PT first
-                            match_pt_explicit = re.search(r'\b(PT\.?\s+[A-Za-z0-9\s\.,]+?)(?:\s+(?:untuk|menyewa|sewa|dengan|pada|site|di|tarif|kontrak)|$)', prompt_str, re.IGNORECASE)
+                            # 1. Try matching explicit PT first (support parentheses, slashes, dashes, e.g. PT Moratelindo (Oxygen.id))
+                            match_pt_explicit = re.search(r'\b(PT\.?\s+[A-Za-z0-9\s\.,\(\)\/\-]+?)(?=,\s*|\.\s+|\s+(?:pic|kontak|cp|dengan|alamat|untuk|menyewa|sewa|pada|site|di|tarif|kontrak)|$)', prompt_str, re.IGNORECASE)
                             if match_pt_explicit:
                                 c_name = match_pt_explicit.group(1).strip()
                             else:
-                                match_kw = re.search(r'(?:klien(?:\s+operator)?(?:\s+baru)?|operator(?:\s+baru)?)\s+([A-Za-z0-9\s\.,]+?)(?:\s+(?:untuk|menyewa|sewa|dengan|pada|site|di|tarif|kontrak)|$)', prompt_str, re.IGNORECASE)
+                                match_kw = re.search(r'(?:klien(?:\s+operator)?(?:\s+baru)?|operator(?:\s+baru)?)\s+([A-Za-z0-9\s\.,\(\)\/\-]+?)(?=,\s*|\.\s+|\s+(?:pic|kontak|cp|dengan|alamat|untuk|menyewa|sewa|pada|site|di|tarif|kontrak)|$)', prompt_str, re.IGNORECASE)
                                 if match_kw:
                                     c_name = match_kw.group(1).strip()
                                 else:
                                     c_name = "PT Nusantara Telekomunikasi Solusindo"
 
-                            # Clean filler words
+                            # Clean filler words & trailing punctuation
                             c_name = re.sub(r'^(?:operator(?:\s+baru)?|klien(?:\s+baru)?)\s+', '', c_name, flags=re.IGNORECASE).strip()
                             c_name = re.sub(r'\s+(?:untuk|sewa|menyewa)$', '', c_name, flags=re.IGNORECASE).strip()
+                            c_name = re.sub(r'[\s,\.]+$', '', c_name).strip()
                             if not c_name.upper().startswith("PT"):
                                 c_name = f"PT {c_name}"
+
+                        # Extract PIC
+                        m_pic = re.search(r'\b(?:pic|kontak|contact\s+person|cp)\s*[:\-]?\s*([A-Za-z\s]+?)(?:\s*\(([\d\+\s\-]+)\))?(?=[,\.]|\s+(?:dengan\s+alamat|alamat|di|no(?:mor)?\.?)|$)', prompt_str, re.IGNORECASE)
+                        pic_name = None
+                        pic_phone = None
+                        pic_info = None
+                        if m_pic:
+                            pic_name = m_pic.group(1).strip()
+                            pic_phone = m_pic.group(2).strip() if m_pic.group(2) else None
+                            pic_info = f"{pic_name} ({pic_phone})" if pic_phone else pic_name
+
+                        # Extract Office Address
+                        m_addr = re.search(r'(?:dengan\s+alamat|alamat\s+kantor|alamat)\s*(?:di|:)?\s*([^,\.]+?)(?=\.\s+|\s+(?:buatkan|draft|draf|kontrak|site|untuk|dengan\s+tarif)|$)', prompt_str, re.IGNORECASE)
+                        office_address = m_addr.group(1).strip() if m_addr else None
 
                         c_type = params.get("client_type") or "OPERATOR_SELULER"
                         npwp = params.get("npwp") or f"01.{len(c_name)*77 % 900 + 100:03d}.{len(c_name)*53 % 900 + 100:03d}.4-095.000"
@@ -1063,9 +1114,18 @@ class JSONExecutionEngine:
                             else:
                                 try:
                                     s_row = conn.execute("SELECT site_id FROM telecom_sites ORDER BY site_id ASC LIMIT 1").fetchone()
-                                    site_id = s_row[0] if s_row else "JKS-MCP-001"
+                                    site_id = s_row[0] if s_row else "JKP-TWR-003"
                                 except Exception:
-                                    site_id = "JKS-MCP-001"
+                                    site_id = "JKP-TWR-003"
+
+                        site_name = None
+                        try:
+                            s_info = conn.execute("SELECT site_name FROM telecom_sites WHERE site_id = ?", [site_id]).fetchone()
+                            if s_info and s_info[0]:
+                                site_name = s_info[0]
+                        except Exception:
+                            pass
+                        site_display = f"{site_id} ({site_name})" if site_name else site_id
 
                         monthly_rate = params.get("monthly_rate") or context.get("monthly_rate")
                         if not monthly_rate:
@@ -1075,22 +1135,51 @@ class JSONExecutionEngine:
                                 try:
                                     monthly_rate = int(clean_num)
                                     if monthly_rate < 1000000:
-                                        monthly_rate = 25000000
+                                        monthly_rate = 22000000
                                 except Exception:
-                                    monthly_rate = 25000000
+                                    monthly_rate = 22000000
                             else:
-                                monthly_rate = 25000000
+                                monthly_rate = 22000000
                         else:
                             monthly_rate = int(monthly_rate)
 
-                        billing_freq = params.get("billing_frequency") or ("MONTHLY" if "bulanan" in prompt_str.lower() else "QUARTERLY")
+                        # Billing frequency
+                        billing_freq = params.get("billing_frequency")
+                        if not billing_freq:
+                            if re.search(r'\b(?:triwulan|kuartal|quarterly|per\s+3\s+bulan|tiap\s+3\s+bulan)\b', prompt_str, re.IGNORECASE):
+                                billing_freq = "QUARTERLY"
+                            elif re.search(r'\b(?:bulanan|per\s+bulan|tiap\s+bulan|monthly|sebulan)\b', prompt_str, re.IGNORECASE):
+                                billing_freq = "MONTHLY"
+                            else:
+                                billing_freq = "QUARTERLY"
+
+                        # Duration parsing
+                        duration_months = 60
+                        duration_label = "5 Tahun"
+                        match_dur = re.search(r'(?:durasi|jangka\s+waktu|selama|kontrak|periode)?\s*(\d+)\s*(bulan|bln|tahun|thn|year|years|month|months)', prompt_str, re.IGNORECASE)
+                        if match_dur:
+                            num = int(match_dur.group(1))
+                            unit = match_dur.group(2).lower()
+                            if any(k in unit for k in ["thn", "tahun", "year"]):
+                                duration_months = num * 12
+                                duration_label = f"{num} Tahun"
+                            else:
+                                duration_months = num
+                                duration_label = f"{num} Bulan" if num % 12 != 0 else f"{num} Bulan ({num//12} Tahun)"
+
                         s_date = params.get("start_date") or datetime.now().strftime("%Y-%m-%d")
                         try:
                             start_dt = datetime.strptime(s_date, "%Y-%m-%d")
-                            end_dt = start_dt.replace(year=start_dt.year + 5)
+                            m_calc = start_dt.month - 1 + duration_months
+                            y_calc = start_dt.year + m_calc // 12
+                            mon_calc = m_calc % 12 + 1
+                            import calendar
+                            max_d = calendar.monthrange(y_calc, mon_calc)[1]
+                            d_calc = min(start_dt.day, max_d)
+                            end_dt = datetime(y_calc, mon_calc, d_calc)
                             e_date = end_dt.strftime("%Y-%m-%d")
                         except Exception:
-                            e_date = "2031-03-31"
+                            e_date = "2027-09-11"
 
                         max_cli = conn.execute("SELECT MAX(client_id) FROM telecom_clients;").fetchone()[0]
                         cli_num = 5
@@ -1186,12 +1275,19 @@ class JSONExecutionEngine:
                             "client_name": c_name,
                             "client_type": c_type,
                             "npwp": npwp,
+                            "pic_name": pic_name,
+                            "pic_phone": pic_phone,
+                            "pic_info": pic_info,
+                            "office_address": office_address,
                             "billing_email": billing_email,
                             "payment_terms": payment_terms,
                             "contract_id": new_contract_id,
                             "site_id": site_id,
+                            "site_name": site_name,
                             "monthly_rate": monthly_rate,
                             "billing_frequency": billing_freq,
+                            "duration_months": duration_months,
+                            "duration_label": duration_label,
                             "start_date": s_date,
                             "end_date": e_date,
                             "first_invoice_amount": total_billed,
@@ -1203,6 +1299,7 @@ class JSONExecutionEngine:
                         context["client_id"] = new_client_id
                         context["contract_id"] = new_contract_id
                         context["site_id"] = site_id
+                        context["site_name"] = site_name
                         context["monthly_rate"] = monthly_rate
                         context["billing_frequency"] = billing_freq
                         context["total_billed"] = total_billed
@@ -1215,22 +1312,33 @@ class JSONExecutionEngine:
                         except Exception as pdf_err:
                             print(f"[DOCGEN ERROR] Gagal compile PDF invoice: {pdf_err}")
 
+                        rows = [
+                            f"| Nomor Pengajuan | {new_onb_id} |",
+                            f"| Klien Operator | {c_name} (ID: {new_client_id}) |",
+                        ]
+                        if pic_info:
+                            rows.append(f"| PIC & Kontak | {pic_info} |")
+                        if office_address:
+                            rows.append(f"| Alamat Kantor | {office_address} |")
+                        rows.extend([
+                            f"| Tipe & NPWP | {c_type} / {npwp} |",
+                            f"| Email Billing | {billing_email} |",
+                            f"| Site Menara Dialokasikan | {site_display} |",
+                            f"| Draft Kontrak MLA | {new_contract_id} |",
+                            f"| Tarif Sewa Bulanan | Rp {monthly_rate:,} / bulan |",
+                            f"| Skema Tagihan & Termin | {billing_freq} ({payment_terms}) |",
+                            f"| Durasi Sewa | {s_date} s/d {e_date} ({duration_label}) |",
+                            f"| Estimasi Tagihan Perdana | Rp {total_billed:,} (Termasuk PPN 11%) |",
+                            f"| Status Verifikasi | PENDING_APPROVAL |"
+                        ])
+                        table_content = "\n".join(rows)
+
                         msg = (
                             f"Draft Pengajuan Sewa Menara Operator Baru Berhasil Disusun\n\n"
                             f"| INFORMASI BERKAS | RINCIAN OPERASIONAL |\n"
                             f"| :--- | :--- |\n"
-                            f"| Nomor Pengajuan | {new_onb_id} |\n"
-                            f"| Klien Operator | {c_name} (ID: {new_client_id}) |\n"
-                            f"| Tipe & NPWP | {c_type} / {npwp} |\n"
-                            f"| Email Billing | {billing_email} |\n"
-                            f"| Site Menara Dialokasikan | {site_id} |\n"
-                            f"| Draft Kontrak MLA | {new_contract_id} |\n"
-                            f"| Tarif Sewa Bulanan | Rp {monthly_rate:,} / bulan |\n"
-                            f"| Skema Tagihan & Termin | {billing_freq} ({payment_terms}) |\n"
-                            f"| Durasi Sewa | {s_date} s/d {e_date} (5 Tahun) |\n"
-                            f"| Estimasi Tagihan Perdana | Rp {total_billed:,} (Termasuk PPN 11%) |\n"
-                            f"| Status Verifikasi | PENDING_APPROVAL |\n\n"
-                            f"Catatan Keuangan: Berkas pendaftaran telah dicatat ke database dengan status pending. Dokumen resmi faktur dan perjanjian sewa telah dikirimkan ke email untuk otorisasi persetujuan."
+                            f"{table_content}\n\n"
+                            f"Catatan Keuangan: Berkas pendaftaran telah dicatat ke database dengan status pending. Dokumen resmi faktur dan perjanjian sewa telah dikirimkan ke email {billing_email} untuk otorisasi persetujuan."
                         )
                         context["finance_message"] = msg
                         execution_results.append({

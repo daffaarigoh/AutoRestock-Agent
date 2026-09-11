@@ -952,6 +952,12 @@
         </svg>
         <span>Database Master & Tenant</span>
       </button>
+      <button class="tab-btn" id="tabDbConsoleBtn" onclick="switchAdminTab('dbconsole')">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+        </svg>
+        <span>DuckDB Table Explorer</span>
+      </button>
       <button class="tab-btn" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')">
         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -1112,12 +1118,18 @@
             </h2>
             <p class="card-subtitle" style="margin-bottom: 0;">Seluruh akun pengguna terdaftar yang memiliki akses ke database AutoRestock.</p>
           </div>
-          <button class="btn btn-secondary" onclick="loadUsersDatabase()">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            <span>Refresh Data</span>
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadUsersDatabase()">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              <span>Refresh Data</span>
+            </button>
+            <button class="btn btn-primary" onclick="openCreateUserModal()" style="display: inline-flex; align-items: center; gap: 5px;">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>Tambah Pengguna</span>
+            </button>
+          </div>
         </div>
 
         <div class="data-table-container">
@@ -1179,6 +1191,61 @@
         </div>
       </div>
 
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: DUCKDB TABLE EXPLORER (CONSOLE)    -->
+    <!-- ========================================== -->
+    <div id="sectionDbConsole" style="display: none;">
+      <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 class="card-title">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+              </svg>
+              <span>DuckDB Table Explorer & Data Manager</span>
+            </h2>
+            <p class="card-subtitle" style="margin-bottom: 0;">
+              Kelola seluruh tabel basis data DuckDB (storage/balitower.db) secara leluasa: Tambah baris baru, ubah isi data, dan hapus baris langsung.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadSelectedDbTable()">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Refresh Tabel</span>
+            </button>
+            <button class="btn btn-primary" onclick="openInsertDbRowModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>Tambah Baris Baru</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Controls: Select Table & Filter -->
+        <div style="display: flex; gap: 12px; align-items: center; margin: 14px 0 16px 0; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 12px; font-weight: 700; color: #475569;">PILIH TABEL:</label>
+            <select id="dbTableSelect" class="form-input" style="font-weight: 700; color: #1E40AF; padding: 7px 12px; min-width: 240px; cursor: pointer;" onchange="onDbTableSelectChange()">
+              <option value="">Memuat tabel...</option>
+            </select>
+          </div>
+          <div style="position: relative; flex: 1; min-width: 220px;">
+            <input type="text" id="dbTableSearchInput" class="form-input" placeholder="Cari dalam tabel yang sedang dibuka..." oninput="onDbTableSearch()" style="width: 100%; padding-left: 32px; font-size: 12.5px;">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="position: absolute; left: 10px; top: 11px; color: var(--text-muted);">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <span id="dbTableInfoBadge" style="font-size: 12px; font-weight: 700; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; padding: 6px 12px; border-radius: 6px;">
+            0 Baris
+          </span>
+        </div>
+
+        <!-- Dynamic Table View -->
+        <div class="data-table-container" id="dbDynamicTableContainer" style="max-height: 580px; overflow: auto;">
+          <p style="text-align: center; color: var(--text-muted); padding: 32px;">Pilih tabel untuk melihat data.</p>
+        </div>
+      </div>
     </div>
 
     <!-- ========================================== -->
@@ -1340,6 +1407,254 @@
     </div>
   </div>
 
+  <!-- MODAL: CRUD USER ACCOUNT -->
+  <div class="modal-overlay" id="modalUserCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 460px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 id="modalUserTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Tambah Pengguna Baru</h3>
+        <button onclick="document.getElementById('modalUserCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
+      </div>
+      <input type="hidden" id="userCrudUserId">
+      <div style="margin-bottom: 12px;">
+        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">USERNAME</label>
+        <input type="text" id="userCrudUsername" class="form-input" style="width: 100%;" placeholder="e.g. userd">
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label id="userCrudPwdLabel" style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PASSWORD</label>
+        <input type="password" id="userCrudPassword" class="form-input" style="width: 100%;" placeholder="Minimal 6 karakter">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">HAK AKSES (ROLE)</label>
+          <select id="userCrudRole" class="form-input" style="width: 100%;">
+            <option value="USER">USER</option>
+            <option value="ADMIN">ADMIN (Superadmin)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">DIVISI (TENANT)</label>
+          <select id="userCrudTenant" class="form-input" style="width: 100%;">
+            <option value="INVENTORY">usera (Inventory)</option>
+            <option value="HR">userb (HR & Field)</option>
+            <option value="FINANCE">userc (Finance)</option>
+            <option value="ALL">ALL (Cross-Tenant)</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modalUserCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="submitUserCrud()">Simpan Pengguna</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CRUD MATERIAL (INVENTORY) -->
+  <div class="modal-overlay" id="modalMaterialCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 540px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 id="modalMaterialTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Tambah Material Baru</h3>
+        <button onclick="document.getElementById('modalMaterialCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
+      </div>
+      <input type="hidden" id="matCrudItemId">
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">NAMA MATERIAL</label>
+          <input type="text" id="matCrudName" class="form-input" style="width: 100%;" placeholder="Contoh: Kabel Drop Core FO 1 Core">
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">KATEGORI</label>
+          <input type="text" id="matCrudCategory" class="form-input" style="width: 100%;" placeholder="Kabel Fiber Optik">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SATUAN (UNIT)</label>
+          <input type="text" id="matCrudUnit" class="form-input" style="width: 100%;" placeholder="meter / unit / roll">
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">HARGA SATUAN (IDR)</label>
+          <input type="number" id="matCrudPrice" class="form-input" style="width: 100%;" placeholder="0">
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">BATAS MIN (ROP)</label>
+          <input type="number" id="matCrudMinStock" class="form-input" style="width: 100%;" placeholder="50">
+        </div>
+      </div>
+      <div id="matInitialStockRow" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">STOK AWAL GUDANG</label>
+          <input type="number" id="matCrudInitialStock" class="form-input" style="width: 100%;" placeholder="100">
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PILIH GUDANG</label>
+          <select id="matCrudWarehouse" class="form-input" style="width: 100%;">
+            <option value="WH-JKT-01">Gudang Sentral Jakarta (WH-JKT-01)</option>
+            <option value="WH-BDG-01">Hub Regional Bandung (WH-BDG-01)</option>
+            <option value="WH-SBY-01">Pusat Distribusi Surabaya (WH-SBY-01)</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modalMaterialCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="submitMaterialCrud()">Simpan Material</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CRUD EMPLOYEE (HR) -->
+  <div class="modal-overlay" id="modalEmployeeCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 520px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 id="modalEmployeeTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Tambah Karyawan Baru</h3>
+        <button onclick="document.getElementById('modalEmployeeCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
+      </div>
+      <input type="hidden" id="empCrudId">
+      <div style="margin-bottom: 12px;">
+        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">NAMA LENGKAP</label>
+        <input type="text" id="empCrudFullName" class="form-input" style="width: 100%;" placeholder="Contoh: Pratama Arhan">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">DEPARTEMEN</label>
+          <select id="empCrudDept" class="form-input" style="width: 100%;">
+            <option value="Tower Operations">Tower Operations</option>
+            <option value="Field Engineering">Field Engineering</option>
+            <option value="Maintenance & Power">Maintenance & Power</option>
+            <option value="Finance & Accounting">Finance & Accounting</option>
+            <option value="HR & General Affairs">HR & General Affairs</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">JABATAN</label>
+          <input type="text" id="empCrudJob" class="form-input" style="width: 100%;" placeholder="Lead Tower Rigger">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">STATUS KERJA</label>
+          <select id="empCrudStatus" class="form-input" style="width: 100%;">
+            <option value="PERMANENT">PERMANENT</option>
+            <option value="CONTRACT">CONTRACT</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SERTIFIKASI K3</label>
+          <select id="empCrudK3" class="form-input" style="width: 100%;">
+            <option value="TKPK_1">TKPK Tingkat 1</option>
+            <option value="TKPK_2">TKPK Tingkat 2</option>
+            <option value="K3_LISTRIK">K3 Teknisi Listrik</option>
+            <option value="NON_CERTIFIED">Belum Bersertifikat</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SISA CUTI</label>
+          <input type="number" id="empCrudLeaveBal" class="form-input" style="width: 100%;" value="12">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modalEmployeeCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="submitEmployeeCrud()" style="background: #047857; border-color: #047857;">Simpan Karyawan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CRUD INVOICE (FINANCE) -->
+  <div class="modal-overlay" id="modalInvoiceCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 520px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 id="modalInvoiceTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Tambah Invoice Tagihan</h3>
+        <button onclick="document.getElementById('modalInvoiceCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
+      </div>
+      <input type="hidden" id="invCrudInvoiceId">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">NOMOR INVOICE</label>
+          <input type="text" id="invCrudNumber" class="form-input" style="width: 100%;" placeholder="Otomatis jika kosong">
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">KLIEN OPERATOR</label>
+          <select id="invCrudClientId" class="form-input" style="width: 100%;">
+            <option value="CLI-001">PT Telekomunikasi Selular (Telkomsel)</option>
+            <option value="CLI-002">PT Indosat Ooredoo Hutchison Tbk</option>
+            <option value="CLI-003">PT XL Axiata Tbk</option>
+            <option value="CLI-004">PT Smartfren Telecom Tbk</option>
+            <option value="CLI-005">PT Bank Central Asia Tbk</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PERIODE SEWA</label>
+          <input type="text" id="invCrudPeriod" class="form-input" style="width: 100%;" placeholder="2026-Q2">
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">JATUH TEMPO</label>
+          <input type="date" id="invCrudDueDate" class="form-input" style="width: 100%;">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">TOTAL TAGIHAN (IDR)</label>
+          <input type="number" id="invCrudTotalBilled" class="form-input" style="width: 100%;" placeholder="66000000">
+        </div>
+        <div>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">STATUS PEMBAYARAN</label>
+          <select id="invCrudStatus" class="form-input" style="width: 100%;">
+            <option value="PAID">PAID (Lunas)</option>
+            <option value="PENDING">PENDING (Menunggu)</option>
+            <option value="UNPAID">UNPAID (Belum Bayar)</option>
+            <option value="OVERDUE">OVERDUE (Jatuh Tempo)</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modalInvoiceCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="submitInvoiceCrud()" style="background: #C2410C; border-color: #C2410C;">Simpan Invoice</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GENERIC DUCKDB TABLE ROW INSERT / EDIT -->
+  <div class="modal-overlay" id="modalDbRowCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 620px; max-width: 92vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0; max-height: 90vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 id="modalDbRowTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Kelola Baris Data</h3>
+        <button onclick="document.getElementById('modalDbRowCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
+      </div>
+      <div id="modalDbRowFieldsContainer" style="overflow-y: auto; flex: 1; padding-right: 6px; margin-bottom: 16px;">
+        <!-- Dynamic fields populated via JS -->
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #E2E8F0; padding-top: 14px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modalDbRowCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" id="btnSaveDbRow" onclick="submitDbRowModal()">Simpan Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: UNIVERSAL DELETE CONFIRMATION -->
+  <div class="modal-overlay" id="modalUniversalDelete" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 440px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #FCA5A5;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #FEE2E2; display: flex; align-items: center; justify-content: center; color: #DC2626; flex-shrink: 0;">
+          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <div>
+          <h3 id="delConfirmTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Konfirmasi Hapus Data</h3>
+          <p id="delConfirmSub" style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+      </div>
+      <p id="delConfirmMsg" style="font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 20px;">
+        Apakah Anda yakin ingin menghapus data ini dari basis data?
+      </p>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modalUniversalDelete').style.display='none'">Batal</button>
+        <button class="btn" id="btnConfirmDeleteAction" style="background: #DC2626; color: white; border: none; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+          Ya, Hapus Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="status-toast" id="toast">
     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#10B981">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -1375,22 +1690,26 @@
     let allLoadedTools = [];
     let currentToolCategoryFilter = 'ALL';
 
-    // Switch Tabs between Workflows, Users Database, and Tools Registry
+    // Switch Tabs between Workflows, Users Database, DuckDB Explorer, and Tools Registry
     function switchAdminTab(tabName) {
       const btnWf = document.getElementById('tabWorkflowsBtn');
       const btnUsers = document.getElementById('tabUsersBtn');
       const btnTools = document.getElementById('tabToolsBtn');
+      const btnDb = document.getElementById('tabDbConsoleBtn');
       const secWf = document.getElementById('sectionWorkflows');
       const secUsers = document.getElementById('sectionUsers');
       const secTools = document.getElementById('sectionTools');
+      const secDb = document.getElementById('sectionDbConsole');
 
       btnWf.classList.remove('active');
       btnUsers.classList.remove('active');
       if (btnTools) btnTools.classList.remove('active');
+      if (btnDb) btnDb.classList.remove('active');
 
       secWf.style.display = 'none';
       secUsers.style.display = 'none';
       if (secTools) secTools.style.display = 'none';
+      if (secDb) secDb.style.display = 'none';
 
       if (tabName === 'workflows') {
         btnWf.classList.add('active');
@@ -1400,6 +1719,10 @@
         btnUsers.classList.add('active');
         secUsers.style.display = 'block';
         loadUsersDatabase();
+      } else if (tabName === 'dbconsole') {
+        if (btnDb) btnDb.classList.add('active');
+        if (secDb) secDb.style.display = 'block';
+        initDbTableExplorer();
       } else if (tabName === 'tools') {
         if (btnTools) btnTools.classList.add('active');
         if (secTools) secTools.style.display = 'block';
@@ -2077,9 +2400,18 @@
                 <td><span style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">${metricLabel}</span></td>
                 <td><span class="badge-stock-safe">Normal</span></td>
                 <td>
-                  <button class="btn-action-edit" onclick="filterItemsByTenant('${u.username === 'admin' ? 'ALL' : u.username}')" style="padding: 3px 8px; font-size: 11.5px;">
-                    ${u.username === 'admin' ? 'Lihat Semua' : 'Filter ' + u.username}
-                  </button>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <button class="btn-action-edit" onclick="filterItemsByTenant('${u.username === 'admin' ? 'ALL' : u.username}')" style="padding: 4px 8px; font-size: 11.5px;">
+                      ${u.username === 'admin' ? 'Semua' : 'Filter'}
+                    </button>
+                    <button class="btn-action-edit" onclick="openEditUserModal('${u.user_id}', '${escapeHtml(u.username)}', '${escapeHtml(u.role)}', '${escapeHtml(u.tenant_id)}')" style="padding: 4px 8px; font-size: 11.5px; background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE;">
+                      Edit
+                    </button>
+                    ${u.username !== 'admin' ? `
+                    <button class="btn-action-edit" onclick="deleteUserAccount('${u.user_id}', '${escapeHtml(u.username)}')" style="padding: 4px 8px; font-size: 11.5px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">
+                      Hapus
+                    </button>` : ''}
+                  </div>
                 </td>
               </tr>
             `;
@@ -2205,10 +2537,17 @@
               <td style="text-align: right; font-weight: 600; color: #0F172A;">${formatCurrency(it.unit_price || 0)}</td>
               <td style="text-align: center;">${statusBadge}</td>
               <td style="text-align: center;">
-                <button class="btn-action-edit" onclick="openAdminStockModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.unit || 'pcs')}', ${Number(it.min_threshold || 0)})" style="padding: 4px 10px; font-size: 11.5px; background: #2563EB; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                  <span>Edit Stok</span>
-                </button>
+                <div style="display: flex; gap: 4px; justify-content: center;">
+                  <button class="btn-action-edit" onclick="openAdminStockModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.unit || 'pcs')}', ${Number(it.min_threshold || 0)})" style="padding: 3px 8px; font-size: 11px; background: #2563EB; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Sesuaikan Stok Gudang">
+                    Stok
+                  </button>
+                  <button class="btn-action-edit" onclick="openEditMaterialModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.category || '')}', '${escapeHtml(it.unit || '')}', ${Number(it.unit_price || 0)}, ${Number(it.min_threshold || 0)})" style="padding: 3px 8px; font-size: 11px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Edit Data Material">
+                    Edit
+                  </button>
+                  <button class="btn-action-edit" onclick="deleteInventoryItem('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Hapus Material">
+                    Hapus
+                  </button>
+                </div>
               </td>
             </tr>
           `;
@@ -2226,6 +2565,10 @@
               <span class="badge-tenant tenant-a">usera (Inventory)</span>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
+              <button onclick="openCreateMaterialModal()" class="btn btn-primary" style="font-size: 11.5px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Tambah Material</span>
+              </button>
               <button onclick="clearAllPrAndPoModal()" style="border: 1px solid #EF4444; color: #DC2626; background: #FEF2F2; font-weight: 700; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;" title="Kosongkan seluruh draf PR dan data PO di sistem">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 <span>Bersihkan Semua PR & PO</span>
@@ -2284,6 +2627,16 @@
               <td style="text-align: center;">${certBadge}</td>
               <td style="text-align: right; font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${it.leave_balance || 0} hari</td>
               <td style="text-align: center;"><span class="badge-stock-safe">${escapeHtml(it.status || 'Aktif')}</span></td>
+              <td style="text-align: center;">
+                <div style="display: flex; gap: 4px; justify-content: center;">
+                  <button class="btn-action-edit" onclick="openEditEmployeeModal('${escapeHtml(it.employee_id || it.item_id)}', '${escapeHtml(it.full_name || it.name)}', '${escapeHtml(it.department || '')}', '${escapeHtml(it.job_title || '')}', '${escapeHtml(it.employment_status || 'PERMANENT')}', '${escapeHtml(it.k3_certification || 'NON_CERTIFIED')}', ${Number(it.leave_balance || 0)})" style="padding: 3px 8px; font-size: 11px; background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                    Edit
+                  </button>
+                  <button class="btn-action-edit" onclick="deleteEmployeeRecord('${escapeHtml(it.employee_id || it.item_id)}', '${escapeHtml(it.full_name || it.name)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                    Hapus
+                  </button>
+                </div>
+              </td>
             </tr>
           `;
         }).join('');
@@ -2299,7 +2652,13 @@
               <span>Database Ketenagakerjaan & Personel Lapangan</span>
               <span class="badge-tenant tenant-b">userb (HR & Field)</span>
             </div>
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Personel Terdaftar</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button onclick="openCreateEmployeeModal()" class="btn btn-primary" style="font-size: 11.5px; padding: 5px 12px; background: #047857; border-color: #047857; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Tambah Personel</span>
+              </button>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Personel Terdaftar</span>
+            </div>
           </div>
 
           <div class="data-table-container">
@@ -2314,6 +2673,7 @@
                   <th style="text-align: center;">SERTIFIKASI K3</th>
                   <th style="text-align: right;">SISA CUTI</th>
                   <th style="text-align: center;">STATUS</th>
+                  <th style="text-align: center;">AKSI</th>
                 </tr>
               </thead>
               <tbody>
@@ -2346,6 +2706,16 @@
               <td style="text-align: center; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted);">${escapeHtml(it.due_date || '-')}</td>
               <td style="text-align: right; font-weight: 800; font-family: var(--font-mono); color: #0F172A;">${formatCurrency(it.total_billed || it.unit_price || 0)}</td>
               <td style="text-align: center;">${payBadge}</td>
+              <td style="text-align: center;">
+                <div style="display: flex; gap: 4px; justify-content: center;">
+                  <button class="btn-action-edit" onclick="openEditInvoiceModal('${escapeHtml(it.invoice_id || it.item_id)}', '${escapeHtml(it.invoice_number || '')}', '${escapeHtml(it.client_id || '')}', '${escapeHtml(it.period_covered || '')}', '${escapeHtml(it.due_date || '')}', ${Number(it.total_billed || it.unit_price || 0)}, '${escapeHtml(it.payment_status || 'PENDING')}')" style="padding: 3px 8px; font-size: 11px; background: #FFF7ED; color: #C2410C; border: 1px solid #FFEDD5; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                    Edit
+                  </button>
+                  <button class="btn-action-edit" onclick="deleteInvoiceRecord('${escapeHtml(it.invoice_id || it.item_id)}', '${escapeHtml(it.invoice_number || it.item_id)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                    Hapus
+                  </button>
+                </div>
+              </td>
             </tr>
           `;
         }).join('');
@@ -2361,7 +2731,13 @@
               <span>Database Penagihan & Invoice Sewa Menara Operator</span>
               <span class="badge-tenant tenant-c">userc (Finance & Billing)</span>
             </div>
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Invoice Terdaftar</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button onclick="openCreateInvoiceModal()" class="btn btn-primary" style="font-size: 11.5px; padding: 5px 12px; background: #C2410C; border-color: #C2410C; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Tambah Invoice</span>
+              </button>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Invoice Terdaftar</span>
+            </div>
           </div>
 
           <div class="data-table-container">
@@ -2374,6 +2750,7 @@
                   <th style="text-align: center;">JATUH TEMPO</th>
                   <th style="text-align: right;">TOTAL TAGIHAN (IDR)</th>
                   <th style="text-align: center;">STATUS PEMBAYARAN</th>
+                  <th style="text-align: center;">AKSI</th>
                 </tr>
               </thead>
               <tbody>
@@ -2538,6 +2915,795 @@
       } catch (e) {
         alert('Kesalahan jaringan: ' + e.message);
       }
+    }
+
+    // ==========================================
+    // UNIVERSAL DELETE HANDLER
+    // ==========================================
+    let pendingDeleteAction = null;
+    function triggerUniversalDelete(title, sub, msg, onConfirm) {
+      document.getElementById('delConfirmTitle').textContent = title || 'Konfirmasi Hapus Data';
+      document.getElementById('delConfirmSub').textContent = sub || 'Tindakan ini tidak dapat dibatalkan.';
+      document.getElementById('delConfirmMsg').innerHTML = msg || 'Apakah Anda yakin ingin menghapus data ini dari basis data?';
+      pendingDeleteAction = onConfirm;
+      document.getElementById('modalUniversalDelete').style.display = 'flex';
+    }
+
+    document.getElementById('btnConfirmDeleteAction').onclick = async function() {
+      if (pendingDeleteAction) {
+        await pendingDeleteAction();
+        pendingDeleteAction = null;
+      }
+      document.getElementById('modalUniversalDelete').style.display = 'none';
+    };
+
+    // ==========================================
+    // USER ACCOUNT CRUD
+    // ==========================================
+    function openCreateUserModal() {
+      document.getElementById('modalUserTitle').textContent = 'Tambah Pengguna Baru';
+      document.getElementById('userCrudUserId').value = '';
+      const un = document.getElementById('userCrudUsername');
+      un.value = '';
+      un.disabled = false;
+      document.getElementById('userCrudPassword').value = '';
+      document.getElementById('userCrudPwdLabel').textContent = 'PASSWORD';
+      document.getElementById('userCrudRole').value = 'USER';
+      document.getElementById('userCrudTenant').value = 'INVENTORY';
+      document.getElementById('modalUserCrud').style.display = 'flex';
+    }
+
+    function openEditUserModal(userId, username, role, tenantId) {
+      document.getElementById('modalUserTitle').textContent = `Edit Pengguna: ${username}`;
+      document.getElementById('userCrudUserId').value = userId;
+      const un = document.getElementById('userCrudUsername');
+      un.value = username;
+      un.disabled = true;
+      document.getElementById('userCrudPassword').value = '';
+      document.getElementById('userCrudPwdLabel').textContent = 'PASSWORD BARU (Kosongkan jika tidak diubah)';
+      document.getElementById('userCrudRole').value = role || 'USER';
+      document.getElementById('userCrudTenant').value = tenantId || 'ALL';
+      document.getElementById('modalUserCrud').style.display = 'flex';
+    }
+
+    async function submitUserCrud() {
+      const userId = document.getElementById('userCrudUserId').value;
+      const username = document.getElementById('userCrudUsername').value.trim();
+      const password = document.getElementById('userCrudPassword').value;
+      const role = document.getElementById('userCrudRole').value;
+      const tenantId = document.getElementById('userCrudTenant').value;
+
+      if (!userId && (!username || !password)) {
+        alert('Username dan password wajib diisi.');
+        return;
+      }
+
+      try {
+        let res;
+        if (userId) {
+          const body = { role, tenant_id: tenantId };
+          if (password) body.password = password;
+          res = await fetch(`/api/auth/admin/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify(body)
+          });
+        } else {
+          res = await fetch('/api/auth/admin/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              username,
+              password,
+              role,
+              tenant_id: tenantId
+            })
+          });
+        }
+
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('modalUserCrud').style.display = 'none';
+          showToast(data.message || 'Data pengguna berhasil disimpan!');
+          loadUsersDatabase();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Gagal menyimpan pengguna: ' + (err.detail || 'Terjadi kesalahan'));
+        }
+      } catch (e) {
+        alert('Kesalahan jaringan: ' + e.message);
+      }
+    }
+
+    function deleteUserAccount(userId, username) {
+      triggerUniversalDelete(
+        'Hapus Akun Pengguna',
+        'Akun tidak akan dapat login lagi',
+        `Apakah Anda yakin ingin menghapus akun pengguna <strong>${escapeHtml(username)}</strong> (${escapeHtml(userId)})?`,
+        async () => {
+          try {
+            const res = await fetch(`/api/auth/admin/users/${userId}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              showToast(data.message || 'Pengguna berhasil dihapus!');
+              loadUsersDatabase();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              alert('Gagal menghapus pengguna: ' + (err.detail || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            alert('Kesalahan jaringan: ' + e.message);
+          }
+        }
+      );
+    }
+
+    // ==========================================
+    // MATERIAL CRUD (INVENTORY)
+    // ==========================================
+    function openCreateMaterialModal() {
+      document.getElementById('modalMaterialTitle').textContent = 'Tambah Material Baru';
+      document.getElementById('matCrudItemId').value = '';
+      document.getElementById('matCrudName').value = '';
+      document.getElementById('matCrudCategory').value = 'Kabel Fiber Optik';
+      document.getElementById('matCrudUnit').value = 'meter';
+      document.getElementById('matCrudPrice').value = '15000';
+      document.getElementById('matCrudMinStock').value = '50';
+      document.getElementById('matCrudInitialStock').value = '100';
+      document.getElementById('matInitialStockRow').style.display = 'grid';
+      document.getElementById('modalMaterialCrud').style.display = 'flex';
+    }
+
+    function openEditMaterialModal(itemId, name, category, unit, price, minStock) {
+      document.getElementById('modalMaterialTitle').textContent = `Edit Material: ${name}`;
+      document.getElementById('matCrudItemId').value = itemId;
+      document.getElementById('matCrudName').value = name;
+      document.getElementById('matCrudCategory').value = category;
+      document.getElementById('matCrudUnit').value = unit;
+      document.getElementById('matCrudPrice').value = price;
+      document.getElementById('matCrudMinStock').value = minStock;
+      document.getElementById('matInitialStockRow').style.display = 'none';
+      document.getElementById('modalMaterialCrud').style.display = 'flex';
+    }
+
+    async function submitMaterialCrud() {
+      const itemId = document.getElementById('matCrudItemId').value;
+      const name = document.getElementById('matCrudName').value.trim();
+      const category = document.getElementById('matCrudCategory').value.trim();
+      const unit = document.getElementById('matCrudUnit').value.trim() || 'unit';
+      const unit_price = parseFloat(document.getElementById('matCrudPrice').value) || 0;
+      const min_threshold = parseInt(document.getElementById('matCrudMinStock').value, 10) || 10;
+
+      if (!name) {
+        alert('Nama material wajib diisi.');
+        return;
+      }
+
+      try {
+        let res;
+        if (itemId) {
+          res = await fetch('/api/auth/admin/inventory/items', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              item_id: itemId,
+              name,
+              category,
+              unit,
+              unit_price,
+              min_threshold
+            })
+          });
+        } else {
+          const initial_stock = parseInt(document.getElementById('matCrudInitialStock').value, 10) || 0;
+          const warehouse_id = document.getElementById('matCrudWarehouse').value || 'WH-JKT-01';
+          res = await fetch('/api/auth/admin/inventory/items', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              name,
+              category,
+              unit,
+              unit_price,
+              min_threshold,
+              initial_stock,
+              warehouse_id
+            })
+          });
+        }
+
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('modalMaterialCrud').style.display = 'none';
+          showToast(data.message || 'Material berhasil disimpan!');
+          loadUsersDatabase();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Gagal menyimpan material: ' + (err.detail || 'Terjadi kesalahan'));
+        }
+      } catch (e) {
+        alert('Kesalahan jaringan: ' + e.message);
+      }
+    }
+
+    function deleteInventoryItem(itemId, name) {
+      triggerUniversalDelete(
+        'Hapus Data Material',
+        'Data master material dan saldo stok gudangnya akan dihapus',
+        `Apakah Anda yakin ingin menghapus material <strong>${escapeHtml(name)}</strong> (${escapeHtml(itemId)})?`,
+        async () => {
+          try {
+            const res = await fetch(`/api/auth/admin/inventory/items?item_id=${encodeURIComponent(itemId)}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              showToast(data.message || 'Material berhasil dihapus!');
+              loadUsersDatabase();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              alert('Gagal menghapus material: ' + (err.detail || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            alert('Kesalahan jaringan: ' + e.message);
+          }
+        }
+      );
+    }
+
+    // ==========================================
+    // EMPLOYEE CRUD (HR)
+    // ==========================================
+    function openCreateEmployeeModal() {
+      document.getElementById('modalEmployeeTitle').textContent = 'Tambah Karyawan Baru';
+      document.getElementById('empCrudId').value = '';
+      document.getElementById('empCrudFullName').value = '';
+      document.getElementById('empCrudDept').value = 'Tower Operations';
+      document.getElementById('empCrudJob').value = 'Tower Field Technician';
+      document.getElementById('empCrudStatus').value = 'PERMANENT';
+      document.getElementById('empCrudK3').value = 'TKPK_1';
+      document.getElementById('empCrudLeaveBal').value = '12';
+      document.getElementById('modalEmployeeCrud').style.display = 'flex';
+    }
+
+    function openEditEmployeeModal(empId, fullName, dept, job, status, k3, leaveBal) {
+      document.getElementById('modalEmployeeTitle').textContent = `Edit Karyawan: ${fullName}`;
+      document.getElementById('empCrudId').value = empId;
+      document.getElementById('empCrudFullName').value = fullName;
+      document.getElementById('empCrudDept').value = dept || 'Tower Operations';
+      document.getElementById('empCrudJob').value = job || '';
+      document.getElementById('empCrudStatus').value = status || 'PERMANENT';
+      document.getElementById('empCrudK3').value = k3 || 'NON_CERTIFIED';
+      document.getElementById('empCrudLeaveBal').value = leaveBal || 0;
+      document.getElementById('modalEmployeeCrud').style.display = 'flex';
+    }
+
+    async function submitEmployeeCrud() {
+      const empId = document.getElementById('empCrudId').value;
+      const full_name = document.getElementById('empCrudFullName').value.trim();
+      const department = document.getElementById('empCrudDept').value;
+      const job_title = document.getElementById('empCrudJob').value.trim();
+      const employment_status = document.getElementById('empCrudStatus').value;
+      const k3_certification = document.getElementById('empCrudK3').value;
+      const leave_balance = parseInt(document.getElementById('empCrudLeaveBal').value, 10) || 0;
+
+      if (!full_name) {
+        alert('Nama karyawan wajib diisi.');
+        return;
+      }
+
+      try {
+        let res;
+        if (empId) {
+          res = await fetch('/api/auth/admin/hr/employees', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              employee_id: empId,
+              full_name,
+              department,
+              job_title,
+              employment_status,
+              k3_certification,
+              leave_balance
+            })
+          });
+        } else {
+          res = await fetch('/api/auth/admin/hr/employees', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              full_name,
+              department,
+              job_title,
+              employment_status,
+              k3_certification,
+              leave_balance
+            })
+          });
+        }
+
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('modalEmployeeCrud').style.display = 'none';
+          showToast(data.message || 'Karyawan berhasil disimpan!');
+          loadUsersDatabase();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Gagal menyimpan karyawan: ' + (err.detail || 'Terjadi kesalahan'));
+        }
+      } catch (e) {
+        alert('Kesalahan jaringan: ' + e.message);
+      }
+    }
+
+    function deleteEmployeeRecord(empId, fullName) {
+      triggerUniversalDelete(
+        'Hapus Data Karyawan',
+        'Data personel dan riwayat cuti terkait akan dihapus',
+        `Apakah Anda yakin ingin menghapus data karyawan <strong>${escapeHtml(fullName)}</strong> (${escapeHtml(empId)})?`,
+        async () => {
+          try {
+            const res = await fetch(`/api/auth/admin/hr/employees?employee_id=${encodeURIComponent(empId)}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              showToast(data.message || 'Data karyawan berhasil dihapus!');
+              loadUsersDatabase();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              alert('Gagal menghapus karyawan: ' + (err.detail || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            alert('Kesalahan jaringan: ' + e.message);
+          }
+        }
+      );
+    }
+
+    // ==========================================
+    // INVOICE CRUD (FINANCE)
+    // ==========================================
+    function openCreateInvoiceModal() {
+      document.getElementById('modalInvoiceTitle').textContent = 'Tambah Invoice Tagihan';
+      document.getElementById('invCrudInvoiceId').value = '';
+      document.getElementById('invCrudNumber').value = '';
+      document.getElementById('invCrudPeriod').value = '2026-Q2';
+      const today = new Date();
+      today.setDate(today.getDate() + 30);
+      document.getElementById('invCrudDueDate').value = today.toISOString().split('T')[0];
+      document.getElementById('invCrudTotalBilled').value = '66000000';
+      document.getElementById('invCrudStatus').value = 'PENDING';
+      document.getElementById('modalInvoiceCrud').style.display = 'flex';
+    }
+
+    function openEditInvoiceModal(invId, invNumber, clientId, period, dueDate, totalBilled, status) {
+      document.getElementById('modalInvoiceTitle').textContent = `Edit Invoice: ${invNumber}`;
+      document.getElementById('invCrudInvoiceId').value = invId;
+      document.getElementById('invCrudNumber').value = invNumber;
+      document.getElementById('invCrudClientId').value = clientId || 'CLI-001';
+      document.getElementById('invCrudPeriod').value = period || '';
+      document.getElementById('invCrudDueDate').value = dueDate || '';
+      document.getElementById('invCrudTotalBilled').value = totalBilled || 0;
+      document.getElementById('invCrudStatus').value = status || 'PENDING';
+      document.getElementById('modalInvoiceCrud').style.display = 'flex';
+    }
+
+    async function submitInvoiceCrud() {
+      const invId = document.getElementById('invCrudInvoiceId').value;
+      const invoice_number = document.getElementById('invCrudNumber').value.trim();
+      const client_id = document.getElementById('invCrudClientId').value;
+      const period_covered = document.getElementById('invCrudPeriod').value.trim();
+      const due_date = document.getElementById('invCrudDueDate').value;
+      const total_billed = parseFloat(document.getElementById('invCrudTotalBilled').value) || 0;
+      const payment_status = document.getElementById('invCrudStatus').value;
+
+      try {
+        let res;
+        if (invId) {
+          res = await fetch('/api/auth/admin/finance/invoices', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              invoice_id: invId,
+              client_id,
+              period_covered,
+              due_date,
+              total_billed,
+              payment_status
+            })
+          });
+        } else {
+          res = await fetch('/api/auth/admin/finance/invoices', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              invoice_number,
+              client_id,
+              period_covered,
+              due_date,
+              total_billed,
+              payment_status
+            })
+          });
+        }
+
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('modalInvoiceCrud').style.display = 'none';
+          showToast(data.message || 'Invoice berhasil disimpan!');
+          loadUsersDatabase();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Gagal menyimpan invoice: ' + (err.detail || 'Terjadi kesalahan'));
+        }
+      } catch (e) {
+        alert('Kesalahan jaringan: ' + e.message);
+      }
+    }
+
+    function deleteInvoiceRecord(invId, invNumber) {
+      triggerUniversalDelete(
+        'Hapus Data Invoice',
+        'Data tagihan sewa menara ini akan dihapus dari sistem keuangan',
+        `Apakah Anda yakin ingin menghapus invoice <strong>${escapeHtml(invNumber)}</strong>?`,
+        async () => {
+          try {
+            const res = await fetch(`/api/auth/admin/finance/invoices?invoice_id=${encodeURIComponent(invId)}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              showToast(data.message || 'Invoice berhasil dihapus!');
+              loadUsersDatabase();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              alert('Gagal menghapus invoice: ' + (err.detail || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            alert('Kesalahan jaringan: ' + e.message);
+          }
+        }
+      );
+    }
+
+    // ==========================================
+    // DUCKDB TABLE EXPLORER LOGIC (FULL CRUD)
+    // ==========================================
+    let currentDbTable = '';
+    let currentDbRows = [];
+    let currentDbColumns = [];
+    let currentDbPk = null;
+    let editingDbRowIndex = -1;
+
+    async function initDbTableExplorer() {
+      const select = document.getElementById('dbTableSelect');
+      select.innerHTML = '<option value="">Memuat daftar tabel...</option>';
+
+      try {
+        const res = await fetch('/api/auth/admin/db/tables', {
+          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const rawTables = data.table_names || data.tables || [];
+          const tables = rawTables.map(t => typeof t === 'string' ? t : (t.table_name || ''));
+          if (tables.length === 0) {
+            select.innerHTML = '<option value="">Tidak ada tabel di database</option>';
+            return;
+          }
+
+          select.innerHTML = tables.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+
+          if (!currentDbTable || !tables.includes(currentDbTable)) {
+            currentDbTable = tables[0];
+          }
+          select.value = currentDbTable;
+          loadSelectedDbTable();
+        } else {
+          select.innerHTML = '<option value="">Gagal memuat tabel</option>';
+        }
+      } catch (e) {
+        select.innerHTML = '<option value="">Kesalahan koneksi</option>';
+      }
+    }
+
+    function onDbTableSelectChange() {
+      currentDbTable = document.getElementById('dbTableSelect').value;
+      loadSelectedDbTable();
+    }
+
+    async function loadSelectedDbTable() {
+      const container = document.getElementById('dbDynamicTableContainer');
+      const infoBadge = document.getElementById('dbTableInfoBadge');
+      if (!currentDbTable) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 32px;">Pilih tabel untuk melihat data.</p>';
+        infoBadge.textContent = '0 Baris';
+        return;
+      }
+
+      container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 32px;">Memuat data tabel ' + escapeHtml(currentDbTable) + '...</p>';
+
+      try {
+        const res = await fetch(`/api/auth/admin/db/table/${encodeURIComponent(currentDbTable)}?limit=100`, {
+          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          currentDbRows = data.rows || [];
+          currentDbColumns = data.columns || [];
+          currentDbPk = data.primary_key || null;
+
+          infoBadge.textContent = `${currentDbRows.length} Baris (${currentDbColumns.length} Kolom)`;
+          renderDynamicDbTable(currentDbRows);
+        } else {
+          container.innerHTML = '<p style="text-align: center; color: var(--danger); padding: 32px;">Gagal memuat data tabel.</p>';
+        }
+      } catch (e) {
+        container.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 32px;">Kesalahan: ${escapeHtml(e.message)}</p>`;
+      }
+    }
+
+    function onDbTableSearch() {
+      const q = (document.getElementById('dbTableSearchInput').value || '').toLowerCase().trim();
+      if (!q) {
+        renderDynamicDbTable(currentDbRows);
+        return;
+      }
+
+      const filtered = currentDbRows.filter(row => {
+        return Object.values(row).some(v => String(v !== null && v !== undefined ? v : '').toLowerCase().includes(q));
+      });
+      renderDynamicDbTable(filtered);
+    }
+
+    function renderDynamicDbTable(rows) {
+      const container = document.getElementById('dbDynamicTableContainer');
+      if (currentDbColumns.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 32px;">Tabel tidak memiliki kolom.</p>';
+        return;
+      }
+
+      if (rows.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Tabel kosong atau tidak ada data yang cocok.</p>
+            <button class="btn btn-primary" onclick="openInsertDbRowModal()" style="font-size: 12px;">+ Tambah Baris Pertama</button>
+          </div>
+        `;
+        return;
+      }
+
+      let ths = currentDbColumns.map(col => `
+        <th style="font-size: 11px; white-space: nowrap; ${col === currentDbPk ? 'color: #1E40AF;' : ''}">
+          ${escapeHtml(col)} ${col === currentDbPk ? '<span style="font-size: 9px; background: #DBEAFE; color: #1E40AF; padding: 1px 4px; border-radius: 3px;">PK</span>' : ''}
+        </th>
+      `).join('');
+
+      ths += '<th style="text-align: center; font-size: 11px; width: 120px;">AKSI</th>';
+
+      let trs = rows.map((row, idx) => {
+        let tds = currentDbColumns.map(col => {
+          let val = row[col];
+          let displayVal = val === null || val === undefined ? '<span style="color: #94A3B8; font-style: italic;">NULL</span>' : escapeHtml(String(val));
+          if (String(val).length > 60) {
+            displayVal = `<span title="${escapeHtml(String(val))}">${escapeHtml(String(val).substring(0, 57))}...</span>`;
+          }
+          return `<td style="font-size: 12px; font-family: var(--font-mono); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis;">${displayVal}</td>`;
+        }).join('');
+
+        tds += `
+          <td style="text-align: center; white-space: nowrap;">
+            <div style="display: flex; gap: 4px; justify-content: center;">
+              <button class="btn-action-edit" onclick="openEditDbRowModal(${idx})" style="padding: 3px 8px; font-size: 11px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                Edit
+              </button>
+              <button class="btn-action-edit" onclick="deleteDbTableRow(${idx})" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                Hapus
+              </button>
+            </div>
+          </td>
+        `;
+
+        return `<tr>${tds}</tr>`;
+      }).join('');
+
+      container.innerHTML = `
+        <table class="data-table" style="min-width: 100%;">
+          <thead>
+            <tr>${ths}</tr>
+          </thead>
+          <tbody>
+            ${trs}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function openInsertDbRowModal() {
+      if (!currentDbTable || currentDbColumns.length === 0) {
+        alert('Pilih tabel terlebih dahulu.');
+        return;
+      }
+      editingDbRowIndex = -1;
+      document.getElementById('modalDbRowTitle').textContent = `Tambah Baris Baru ke [${currentDbTable}]`;
+      
+      const container = document.getElementById('modalDbRowFieldsContainer');
+      let fieldsHtml = '';
+
+      currentDbColumns.forEach(col => {
+        fieldsHtml += `
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              ${escapeHtml(col)} ${col === currentDbPk ? '<span style="color: #2563EB;">(Primary Key)</span>' : ''}
+            </label>
+            <input type="text" id="dbField_${escapeHtml(col)}" class="form-input" style="width: 100%; font-family: var(--font-mono); font-size: 12.5px;" placeholder="Nilai ${escapeHtml(col)}">
+          </div>
+        `;
+      });
+
+      container.innerHTML = fieldsHtml;
+      document.getElementById('modalDbRowCrud').style.display = 'flex';
+    }
+
+    function openEditDbRowModal(rowIdx) {
+      editingDbRowIndex = rowIdx;
+      const row = currentDbRows[rowIdx];
+      if (!row) return;
+
+      document.getElementById('modalDbRowTitle').textContent = `Edit Baris [${currentDbTable}]`;
+      const container = document.getElementById('modalDbRowFieldsContainer');
+      let fieldsHtml = '';
+
+      currentDbColumns.forEach(col => {
+        const val = row[col] !== null && row[col] !== undefined ? row[col] : '';
+        const isPk = col === currentDbPk;
+        fieldsHtml += `
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              ${escapeHtml(col)} ${isPk ? '<span style="color: #2563EB;">(Primary Key - Pengidentifikasi)</span>' : ''}
+            </label>
+            <input type="text" id="dbField_${escapeHtml(col)}" class="form-input" style="width: 100%; font-family: var(--font-mono); font-size: 12.5px; ${isPk ? 'background: #F8FAFC; color: #64748B;' : ''}" value="${escapeHtml(String(val))}" ${isPk ? 'readonly' : ''}>
+          </div>
+        `;
+      });
+
+      container.innerHTML = fieldsHtml;
+      document.getElementById('modalDbRowCrud').style.display = 'flex';
+    }
+
+    async function submitDbRowModal() {
+      const rowData = {};
+      currentDbColumns.forEach(col => {
+        const input = document.getElementById(`dbField_${col}`);
+        if (input) {
+          let v = input.value;
+          if (v === '') {
+            rowData[col] = null;
+          } else if (!isNaN(v) && v.trim() !== '') {
+            rowData[col] = Number(v);
+          } else {
+            rowData[col] = v;
+          }
+        }
+      });
+
+      try {
+        let res;
+        if (editingDbRowIndex >= 0) {
+          const originalRow = currentDbRows[editingDbRowIndex];
+          const pkCol = currentDbPk || currentDbColumns[0];
+          const pkVal = originalRow[pkCol];
+
+          res = await fetch(`/api/auth/admin/db/table/${encodeURIComponent(currentDbTable)}/update`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              row_data: rowData,
+              pk_column: pkCol,
+              pk_value: pkVal
+            })
+          });
+        } else {
+          res = await fetch(`/api/auth/admin/db/table/${encodeURIComponent(currentDbTable)}/insert`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+              row_data: rowData
+            })
+          });
+        }
+
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('modalDbRowCrud').style.display = 'none';
+          showToast(data.message || 'Operasi berhasil!');
+          loadSelectedDbTable();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Gagal menyimpan baris: ' + (err.detail || 'Terjadi kesalahan'));
+        }
+      } catch (e) {
+        alert('Kesalahan jaringan: ' + e.message);
+      }
+    }
+
+    function deleteDbTableRow(rowIdx) {
+      const row = currentDbRows[rowIdx];
+      if (!row) return;
+
+      const pkCol = currentDbPk || currentDbColumns[0];
+      const pkVal = row[pkCol];
+
+      triggerUniversalDelete(
+        `Hapus Baris dari ${currentDbTable}`,
+        'Baris ini akan dihapus secara permanen dari tabel',
+        `Apakah Anda yakin ingin menghapus baris dengan <strong>${escapeHtml(pkCol)} = ${escapeHtml(String(pkVal))}</strong>?`,
+        async () => {
+          try {
+            const res = await fetch(`/api/auth/admin/db/table/${encodeURIComponent(currentDbTable)}/delete`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+              },
+              body: JSON.stringify({
+                pk_column: pkCol,
+                pk_value: pkVal,
+                row_data: row
+              })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              showToast(data.message || 'Baris berhasil dihapus!');
+              loadSelectedDbTable();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              alert('Gagal menghapus baris: ' + (err.detail || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            alert('Kesalahan jaringan: ' + e.message);
+          }
+        }
+      );
     }
 
     // Default Load: Directly open Master Database

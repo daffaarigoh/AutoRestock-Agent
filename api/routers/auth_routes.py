@@ -1,6 +1,8 @@
 import json
+import uuid
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
@@ -11,6 +13,7 @@ from core.security import (
     create_access_token,
     get_current_admin,
     get_current_user,
+    get_password_hash,
     verify_password,
 )
 from database.db import get_db_connection
@@ -381,3 +384,541 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
         "users": users_list,
         "items": items_list
     }
+
+
+# =========================================================================
+# ADMIN DATABASE CRUD ENGINE (Unrestricted Table & Domain Management)
+# =========================================================================
+
+class AdminCreateUserRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "USER"
+    tenant_id: str = "INVENTORY"
+
+class AdminUpdateUserRequest(BaseModel):
+    role: str | None = None
+    tenant_id: str | None = None
+    password: str | None = None
+
+class AdminDbInsertRequest(BaseModel):
+    data: dict
+
+class AdminDbUpdateRequest(BaseModel):
+    pk_col: str
+    pk_val: Any
+    data: dict
+
+class AdminDbDeleteRequest(BaseModel):
+    pk_col: str
+    pk_val: Any
+
+
+@router.post("/admin/users")
+async def create_user(req: AdminCreateUserRequest, admin: TokenData = Depends(get_current_admin)):
+    """Create a new user account with hashed credentials in the users table."""
+    conn = get_db_connection(read_only=False)
+    existing = conn.execute("SELECT username FROM users WHERE username = ?", [req.username]).fetchone()
+    if existing:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Username '{req.username}' sudah terdaftar.")
+
+    user_id = f"USR-{uuid.uuid4().hex[:6].upper()}"
+    p_hash = get_password_hash(req.password)
+    tenant_val = _normalize_tenant_id(req.tenant_id)
+    role_val = req.role.strip().upper() if req.role else "USER"
+    if role_val not in ["ADMIN", "USER"]:
+        role_val = "USER"
+
+    conn.execute(
+        "INSERT INTO users (user_id, username, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
+        [user_id, req.username, p_hash, role_val, tenant_val]
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": f"Pengguna '{req.username}' berhasil ditambahkan.", "user_id": user_id}
+
+
+@router.put("/admin/users/{user_id}")
+async def update_user(user_id: str, req: AdminUpdateUserRequest, admin: TokenData = Depends(get_current_admin)):
+    """Update role, tenant_id, or password for a user account."""
+    conn = get_db_connection(read_only=False)
+    row = conn.execute("SELECT user_id, username FROM users WHERE user_id = ?", [user_id]).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Pengguna dengan ID '{user_id}' tidak ditemukan.")
+
+    updates = []
+    vals = []
+    if req.role:
+        r_val = req.role.strip().upper()
+        if r_val in ["ADMIN", "USER"]:
+            updates.append("role = ?")
+            vals.append(r_val)
+    if req.tenant_id:
+        updates.append("tenant_id = ?")
+        vals.append(_normalize_tenant_id(req.tenant_id))
+    if req.password and req.password.strip():
+        updates.append("password_hash = ?")
+        vals.append(get_password_hash(req.password.strip()))
+
+    if updates:
+        vals.append(user_id)
+        conn.execute(f"UPDATE users SET {', '.join(updates)} WHERE user_id = ?", vals)
+        conn.commit()
+    conn.close()
+    return {"status": "success", "message": f"Data pengguna '{row[1]}' berhasil diperbarui."}
+
+
+@router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str, admin: TokenData = Depends(get_current_admin)):
+    """Delete a user account from database."""
+    conn = get_db_connection(read_only=False)
+    row = conn.execute("SELECT username FROM users WHERE user_id = ?", [user_id]).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Pengguna '{user_id}' tidak ditemukan.")
+    if row[0] == admin.username:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Tidak dapat menghapus akun admin yang sedang Anda gunakan.")
+
+    conn.execute("DELETE FROM users WHERE user_id = ?", [user_id])
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": f"Akun pengguna '{row[0]}' berhasil dihapus."}
+
+
+# -------------------------------------------------------------------------
+# Generic DuckDB Table Explorer & CRUD Endpoints
+# -------------------------------------------------------------------------
+
+def _get_allowed_tables(conn) -> list[str]:
+    """Retrieve all table names from database."""
+    return [t[0] for t in conn.execute("SHOW TABLES;").fetchall()]
+
+
+@router.get("/admin/db/tables")
+async def list_database_tables(admin: TokenData = Depends(get_current_admin)):
+    """List all tables in storage/balitower.db with row counts and column schemas."""
+    conn = get_db_connection(read_only=True)
+    tables = _get_allowed_tables(conn)
+    result = []
+    for t in tables:
+        try:
+            cnt = conn.execute(f'SELECT COUNT(*) FROM "{t}";').fetchone()[0]
+            desc_rows = conn.execute(f'DESCRIBE "{t}";').fetchall()
+            cols = [{"name": r[0], "type": r[1]} for r in desc_rows]
+            result.append({
+                "table_name": t,
+                "row_count": cnt,
+                "columns": cols
+            })
+        except Exception:
+            pass
+    conn.close()
+    return {"tables": result, "table_names": tables}
+
+
+@router.get("/admin/db/table/{table_name}")
+async def get_table_data(
+    table_name: str,
+    limit: int = 50,
+    offset: int = 0,
+    search: str = "",
+    admin: TokenData = Depends(get_current_admin)
+):
+    """Fetch paginated rows from any DuckDB table with search filtering."""
+    conn = get_db_connection(read_only=True)
+    allowed = _get_allowed_tables(conn)
+    if table_name not in allowed:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Tabel '{table_name}' tidak ditemukan di database.")
+
+    desc_rows = conn.execute(f'DESCRIBE "{table_name}";').fetchall()
+    columns = [r[0] for r in desc_rows]
+    col_defs = [{"name": r[0], "type": r[1]} for r in desc_rows]
+
+    where_clause = ""
+    params = []
+    if search and search.strip():
+        search_terms = []
+        for c in columns:
+            search_terms.append(f'CAST("{c}" AS VARCHAR) ILIKE ?')
+            params.append(f"%{search.strip()}%")
+        where_clause = "WHERE " + " OR ".join(search_terms)
+
+    total_cnt = conn.execute(f'SELECT COUNT(*) FROM "{table_name}" {where_clause};', params).fetchone()[0]
+    
+    query = f'SELECT * FROM "{table_name}" {where_clause} LIMIT ? OFFSET ?;'
+    rows = conn.execute(query, params + [limit, offset]).fetchall()
+    conn.close()
+
+    data_rows = [dict(zip(columns, r)) for r in rows]
+    return {
+        "table_name": table_name,
+        "total_count": total_cnt,
+        "limit": limit,
+        "offset": offset,
+        "columns": col_defs,
+        "rows": data_rows
+    }
+
+
+@router.post("/admin/db/table/{table_name}/insert")
+async def insert_table_row(
+    table_name: str,
+    req: AdminDbInsertRequest,
+    admin: TokenData = Depends(get_current_admin)
+):
+    """Insert a new row into any DuckDB table."""
+    conn = get_db_connection(read_only=False)
+    allowed = _get_allowed_tables(conn)
+    if table_name not in allowed:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Tabel '{table_name}' tidak ditemukan.")
+
+    desc_rows = conn.execute(f'DESCRIBE "{table_name}";').fetchall()
+    valid_cols = {r[0]: r[1] for r in desc_rows}
+
+    clean_data = {}
+    for k, v in req.data.items():
+        if k in valid_cols:
+            clean_data[k] = v
+
+    if not clean_data:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Tidak ada kolom data yang valid untuk disimpan.")
+
+    cols = list(clean_data.keys())
+    placeholders = ", ".join(["?"] * len(cols))
+    col_names = ", ".join([f'"{c}"' for c in cols])
+    values = [clean_data[c] for c in cols]
+
+    try:
+        conn.execute(f'INSERT INTO "{table_name}" ({col_names}) VALUES ({placeholders});', values)
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal menambahkan data ke {table_name}: {str(e)}")
+
+    conn.close()
+    return {"status": "success", "message": f"Baris baru berhasil ditambahkan ke tabel '{table_name}'.", "data": clean_data}
+
+
+@router.put("/admin/db/table/{table_name}/update")
+async def update_table_row(
+    table_name: str,
+    req: AdminDbUpdateRequest,
+    admin: TokenData = Depends(get_current_admin)
+):
+    """Update a row in any DuckDB table by primary/key column."""
+    conn = get_db_connection(read_only=False)
+    allowed = _get_allowed_tables(conn)
+    if table_name not in allowed:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Tabel '{table_name}' tidak ditemukan.")
+
+    desc_rows = conn.execute(f'DESCRIBE "{table_name}";').fetchall()
+    valid_cols = {r[0]: r[1] for r in desc_rows}
+
+    if req.pk_col not in valid_cols:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Kolom identifikasi '{req.pk_col}' tidak valid di tabel {table_name}.")
+
+    set_clauses = []
+    vals = []
+    for k, v in req.data.items():
+        if k in valid_cols and k != req.pk_col:
+            set_clauses.append(f'"{k}" = ?')
+            vals.append(v)
+
+    if not set_clauses:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Tidak ada perubahan data yang diajukan.")
+
+    vals.append(req.pk_val)
+    try:
+        conn.execute(f'UPDATE "{table_name}" SET {", ".join(set_clauses)} WHERE "{req.pk_col}" = ?;', vals)
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal memperbarui data di {table_name}: {str(e)}")
+
+    conn.close()
+    return {"status": "success", "message": f"Data di tabel '{table_name}' ({req.pk_col}={req.pk_val}) berhasil diperbarui."}
+
+
+@router.delete("/admin/db/table/{table_name}/delete")
+async def delete_table_row(
+    table_name: str,
+    req: AdminDbDeleteRequest,
+    admin: TokenData = Depends(get_current_admin)
+):
+    """Delete a row from any DuckDB table by key column."""
+    conn = get_db_connection(read_only=False)
+    allowed = _get_allowed_tables(conn)
+    if table_name not in allowed:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Tabel '{table_name}' tidak ditemukan.")
+
+    desc_rows = conn.execute(f'DESCRIBE "{table_name}";').fetchall()
+    valid_cols = [r[0] for r in desc_rows]
+    if req.pk_col not in valid_cols:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Kolom '{req.pk_col}' tidak ditemukan di tabel {table_name}.")
+
+    try:
+        conn.execute(f'DELETE FROM "{table_name}" WHERE "{req.pk_col}" = ?;', [req.pk_val])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal menghapus data dari {table_name}: {str(e)}")
+
+    conn.close()
+    return {"status": "success", "message": f"Data ({req.pk_col}={req.pk_val}) berhasil dihapus dari tabel '{table_name}'."}
+
+
+# -------------------------------------------------------------------------
+# High-Level Domain Convenience CRUD Endpoints (Inventory, HR, Finance)
+# -------------------------------------------------------------------------
+
+class AdminMaterialRequest(BaseModel):
+    item_id: str | None = None
+    item_code: str | None = None
+    item_name: str | None = None
+    name: str | None = None
+    category: str | None = "Material Menara"
+    unit: str = "pcs"
+    unit_price: int | float = 0
+    min_stock: int | None = None
+    min_threshold: int | None = None
+    safety_stock: int | None = None
+    lead_time_days: int = 7
+    supplier_id: str = "SUP-001"
+    initial_stock: int = 50
+    warehouse_id: str = "WH-JKT-01"
+
+@router.post("/admin/inventory/items")
+async def create_inventory_material(req: AdminMaterialRequest, admin: TokenData = Depends(get_current_admin)):
+    conn = get_db_connection(read_only=False)
+    item_id = req.item_id or f"BLT-INV-{(conn.execute('SELECT COUNT(*) FROM inventory_items;').fetchone()[0] + 1):03d}"
+    item_code = req.item_code or item_id
+    item_name = req.item_name or req.name or "Material Baru"
+    category = req.category or "Material Menara"
+    min_stock = req.min_stock if req.min_stock is not None else (req.min_threshold if req.min_threshold is not None else 10)
+    safety_stock = req.safety_stock if req.safety_stock is not None else int(min_stock * 0.5)
+    unit_price = int(req.unit_price)
+
+    try:
+        conn.execute("""
+            INSERT INTO inventory_items (item_id, item_code, item_name, category, unit, unit_price, min_stock, safety_stock, lead_time_days, supplier_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, [item_id, item_code, item_name, category, req.unit, unit_price, min_stock, safety_stock, req.lead_time_days, req.supplier_id])
+
+        # Create corresponding stock balance row
+        bal_id = f"BAL-{uuid.uuid4().hex[:6].upper()}"
+        status_val = "NORMAL" if req.initial_stock > min_stock else ("CRITICAL" if req.initial_stock <= min_stock * 0.5 else "LOW")
+        conn.execute("""
+            INSERT INTO stock_balances (balance_id, item_id, warehouse_id, quantity_on_hand, quantity_reserved, reorder_point, stock_status, last_stock_take_date, last_updated)
+            VALUES (?, ?, ?, ?, 0, ?, ?, CAST(CURRENT_DATE AS VARCHAR), CAST(CURRENT_DATE AS VARCHAR));
+        """, [bal_id, item_id, req.warehouse_id, req.initial_stock, min_stock, status_val])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal menambahkan material: {str(e)}")
+
+    conn.close()
+    return {"status": "success", "message": f"Material '{item_name}' ({item_id}) berhasil didaftarkan.", "item_id": item_id}
+
+
+@router.put("/admin/inventory/items")
+@router.put("/admin/inventory/items/{item_id}")
+async def update_inventory_material(req: AdminMaterialRequest, item_id: str | None = None, admin: TokenData = Depends(get_current_admin)):
+    target_id = item_id or req.item_id
+    if not target_id:
+        raise HTTPException(status_code=400, detail="item_id harus disertakan.")
+    conn = get_db_connection(read_only=False)
+    item_name = req.item_name or req.name or "Material"
+    category = req.category or "Material Menara"
+    min_stock = req.min_stock if req.min_stock is not None else (req.min_threshold if req.min_threshold is not None else 10)
+    safety_stock = req.safety_stock if req.safety_stock is not None else int(min_stock * 0.5)
+    unit_price = int(req.unit_price)
+
+    try:
+        conn.execute("""
+            UPDATE inventory_items 
+            SET item_name = ?, category = ?, unit = ?, unit_price = ?, min_stock = ?, safety_stock = ?, supplier_id = ?
+            WHERE item_id = ?;
+        """, [item_name, category, req.unit, unit_price, min_stock, safety_stock, req.supplier_id, target_id])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal memperbarui material: {str(e)}")
+    conn.close()
+    return {"status": "success", "message": f"Material '{item_name}' ({target_id}) berhasil diperbarui."}
+
+
+@router.delete("/admin/inventory/items")
+@router.delete("/admin/inventory/items/{item_id}")
+async def delete_inventory_material(item_id: str | None = None, admin: TokenData = Depends(get_current_admin)):
+    if not item_id:
+        raise HTTPException(status_code=400, detail="item_id harus disertakan.")
+    conn = get_db_connection(read_only=False)
+    try:
+        conn.execute("DELETE FROM stock_balances WHERE item_id = ?;", [item_id])
+        conn.execute("DELETE FROM inventory_items WHERE item_id = ?;", [item_id])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal menghapus material: {str(e)}")
+    conn.close()
+    return {"status": "success", "message": f"Material '{item_id}' beserta alokasi stok berhasil dihapus."}
+
+
+class AdminEmployeeRequest(BaseModel):
+    employee_id: str | None = None
+    full_name: str | None = None
+    name: str | None = None
+    department: str = "Tower Operations"
+    job_title: str = "Field Technician"
+    employment_status: str = "PERMANENT"
+    k3_certification: str = "NON_CERTIFIED"
+    k3_cert_expiry: str | None = None
+    leave_balance: int = 12
+    hourly_overtime_rate: int = 45000
+
+@router.post("/admin/hr/employees")
+async def create_hr_employee(req: AdminEmployeeRequest, admin: TokenData = Depends(get_current_admin)):
+    conn = get_db_connection(read_only=False)
+    emp_id = req.employee_id or f"EMP-{(conn.execute('SELECT COUNT(*) FROM employees;').fetchone()[0] + 1):03d}"
+    full_name = req.full_name or req.name or "Karyawan Baru"
+    try:
+        conn.execute("""
+            INSERT INTO employees (employee_id, full_name, department, job_title, employment_status, k3_certification, k3_cert_expiry, leave_balance, hourly_overtime_rate)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, [emp_id, full_name, req.department, req.job_title, req.employment_status, req.k3_certification, req.k3_cert_expiry or "2027-12-31", req.leave_balance, req.hourly_overtime_rate])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal menambahkan karyawan: {str(e)}")
+    conn.close()
+    return {"status": "success", "message": f"Karyawan '{full_name}' ({emp_id}) berhasil ditambahkan.", "employee_id": emp_id}
+
+
+@router.put("/admin/hr/employees")
+@router.put("/admin/hr/employees/{employee_id}")
+async def update_hr_employee(req: AdminEmployeeRequest, employee_id: str | None = None, admin: TokenData = Depends(get_current_admin)):
+    target_id = employee_id or req.employee_id
+    if not target_id:
+        raise HTTPException(status_code=400, detail="employee_id harus disertakan.")
+    conn = get_db_connection(read_only=False)
+    full_name = req.full_name or req.name or "Karyawan"
+    try:
+        conn.execute("""
+            UPDATE employees
+            SET full_name = ?, department = ?, job_title = ?, employment_status = ?, k3_certification = ?, leave_balance = ?, hourly_overtime_rate = ?
+            WHERE employee_id = ?;
+        """, [full_name, req.department, req.job_title, req.employment_status, req.k3_certification, req.leave_balance, req.hourly_overtime_rate, target_id])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal memperbarui data karyawan: {str(e)}")
+    conn.close()
+    return {"status": "success", "message": f"Data karyawan '{full_name}' ({target_id}) berhasil diperbarui."}
+
+
+@router.delete("/admin/hr/employees")
+@router.delete("/admin/hr/employees/{employee_id}")
+async def delete_hr_employee(employee_id: str | None = None, admin: TokenData = Depends(get_current_admin)):
+    if not employee_id:
+        raise HTTPException(status_code=400, detail="employee_id harus disertakan.")
+    conn = get_db_connection(read_only=False)
+    try:
+        conn.execute("DELETE FROM leave_requests WHERE employee_id = ?;", [employee_id])
+        conn.execute("DELETE FROM attendances WHERE employee_id = ?;", [employee_id])
+        conn.execute("DELETE FROM employees WHERE employee_id = ?;", [employee_id])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal menghapus karyawan: {str(e)}")
+    conn.close()
+    return {"status": "success", "message": f"Karyawan '{employee_id}' berhasil dihapus."}
+
+
+class AdminInvoiceRequest(BaseModel):
+    invoice_id: str | None = None
+    invoice_number: str | None = None
+    contract_id: str = "MLA-2026-001"
+    client_id: str = "CLI-001"
+    period_covered: str = "2026-Q2"
+    amount_subtotal: int | float | None = None
+    tax_ppn: int | float | None = None
+    total_billed: int | float = 73260000
+    due_date: str = "2026-05-15"
+    payment_status: str = "PENDING"
+
+@router.post("/admin/finance/invoices")
+async def create_finance_invoice(req: AdminInvoiceRequest, admin: TokenData = Depends(get_current_admin)):
+    conn = get_db_connection(read_only=False)
+    last_num = conn.execute("SELECT COUNT(*) FROM revenue_invoices;").fetchone()[0] + 1
+    inv_id = req.invoice_id or f"INV-2026-{last_num:03d}"
+    inv_num = req.invoice_number or f"INV/BLT/2026/04/{last_num:03d}"
+    total_billed = int(req.total_billed)
+    subtotal = int(req.amount_subtotal) if req.amount_subtotal is not None else int(total_billed / 1.11)
+    ppn = int(req.tax_ppn) if req.tax_ppn is not None else (total_billed - subtotal)
+    
+    try:
+        conn.execute("""
+            INSERT INTO revenue_invoices (invoice_id, invoice_number, contract_id, client_id, period_covered, amount_subtotal, tax_ppn, total_billed, invoice_date, due_date, payment_status, payment_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CAST(CURRENT_DATE AS VARCHAR), ?, ?, NULL);
+        """, [inv_id, inv_num, req.contract_id, req.client_id, req.period_covered, subtotal, ppn, total_billed, req.due_date, req.payment_status])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal menambahkan invoice: {str(e)}")
+    conn.close()
+    return {"status": "success", "message": f"Invoice '{inv_num}' ({inv_id}) berhasil diterbitkan.", "invoice_id": inv_id}
+
+
+@router.put("/admin/finance/invoices")
+@router.put("/admin/finance/invoices/{invoice_id}")
+async def update_finance_invoice(req: AdminInvoiceRequest, invoice_id: str | None = None, admin: TokenData = Depends(get_current_admin)):
+    target_id = invoice_id or req.invoice_id
+    if not target_id:
+        raise HTTPException(status_code=400, detail="invoice_id harus disertakan.")
+    conn = get_db_connection(read_only=False)
+    total_billed = int(req.total_billed)
+    subtotal = int(req.amount_subtotal) if req.amount_subtotal is not None else int(total_billed / 1.11)
+    ppn = int(req.tax_ppn) if req.tax_ppn is not None else (total_billed - subtotal)
+    
+    try:
+        p_date = "CAST(CURRENT_DATE AS VARCHAR)" if req.payment_status == "PAID" else "NULL"
+        conn.execute(f"""
+            UPDATE revenue_invoices
+            SET period_covered = ?, amount_subtotal = ?, tax_ppn = ?, total_billed = ?, due_date = ?, payment_status = ?, payment_date = {p_date}
+            WHERE invoice_id = ?;
+        """, [req.period_covered, subtotal, ppn, total_billed, req.due_date, req.payment_status, target_id])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal memperbarui invoice: {str(e)}")
+    conn.close()
+    return {"status": "success", "message": f"Invoice '{target_id}' berhasil diperbarui."}
+
+
+@router.delete("/admin/finance/invoices")
+@router.delete("/admin/finance/invoices/{invoice_id}")
+async def delete_finance_invoice(invoice_id: str | None = None, admin: TokenData = Depends(get_current_admin)):
+    if not invoice_id:
+        raise HTTPException(status_code=400, detail="invoice_id harus disertakan.")
+    conn = get_db_connection(read_only=False)
+    try:
+        conn.execute("DELETE FROM revenue_invoices WHERE invoice_id = ?;", [invoice_id])
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Gagal menghapus invoice: {str(e)}")
+    conn.close()
+    return {"status": "success", "message": f"Invoice '{invoice_id}' berhasil dihapus."}
+
+
