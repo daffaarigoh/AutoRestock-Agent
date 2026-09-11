@@ -1496,6 +1496,7 @@ class JSONExecutionEngine:
             "target_po_number": context.get("target_po_number"),
             "leave_id": context.get("leave_id"),
             "onboarding_id": context.get("onboarding_id"),
+            "registered_item": context.get("registered_item"),
             "email_sent": context.get("email_sent", False),
             "pdf_download_url": pdf_download_url,
             "execution_steps": execution_results,
