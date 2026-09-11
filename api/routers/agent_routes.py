@@ -1243,7 +1243,7 @@ async def execute_prompt_logic(
                 ORDER BY sewa_lahan_tahunan DESC
                 LIMIT 8;
             """).fetchall()
-            msg = "**Audit Beban Operasional Site: Tagihan Listrik PLN & Jatuh Tempo Sewa Lahan**\n\n"
+            msg = "**Audit Beban Operasional Site (OPEX): Tagihan Listrik PLN & Jatuh Tempo Sewa Lahan**\n\n"
             msg += "| Site ID | Nama Lokasi Site | Beban Listrik PLN (IDR) | Sewa Lahan / Thn | Jatuh Tempo Lahan |\n"
             msg += "| :--- | :--- | :---: | :---: | :---: |\n"
             tot_pln = 0
