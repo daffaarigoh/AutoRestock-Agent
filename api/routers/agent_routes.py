@@ -1337,10 +1337,11 @@ async def execute_prompt_logic(
             return {"parsed_intent": {"workflow_id": "po_query"}, "action_type": "info", "message": msg, "generated_prs": [], "affected_items": []}
 
         # I. Inventory - Cek Stok Material (Menipis vs Umum)
-        is_restock_action = any(w in lower_prompt for w in [
-            "beli", "pesan", "restock", "buat", "buatkan", "bikin", "draf", "draft", "terbitkan", "pipeline", "reorder", "pengadaan", "kirim pr", "kirimkan pr"
+        is_action_prompt = any(w in lower_prompt for w in [
+            "beli", "pesan", "restock", "buat", "buatkan", "bikin", "draf", "draft", "terbitkan", "pipeline", "reorder", "pengadaan", "kirim pr", "kirimkan pr",
+            "tambah", "tambahkan", "daftar", "daftarkan", "registrasi", "catat", "masukkan", "input", "update", "ubah", "ganti"
         ]) or ("pr" in lower_prompt and any(w in lower_prompt for w in ["kirim", "email", "ajukan", "proses", "terbit", "buat"]))
-        if any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "menipis", "habis"]) and not is_restock_action:
+        if any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "menipis", "habis"]) and not is_action_prompt:
             is_low_stock_filter = any(w in lower_prompt for w in ["menipis", "kritis", "kurang", "habis", "rendah", "limit", "minimum", "reorder"])
             
             if is_low_stock_filter:
