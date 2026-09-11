@@ -28,6 +28,14 @@ You must build the execution pipeline using the official Agentic Building Blocks
    - {"type": "tool", "tool": "inventory.crud_record"} -> Generic database record operations.
    - {"type": "tool", "tool": "po.query_orders"} -> Queries Purchase Orders (PO) filtered by status ("ACTIVE", "IN_TRANSIT", "PENDING_APPROVAL", "APPROVED").
    - {"type": "tool", "tool": "po.approve"} -> Approves a Purchase Order and updates its status to "APPROVED".
+   - {"type": "tool", "tool": "hr.submit_leave_request"} -> Records an employee leave application into the DuckDB database.
+   - {"type": "tool", "tool": "hr.query_pending_leaves"} -> Queries all employee leave applications with PENDING_APPROVAL status from DuckDB for review and dispatch.
+   - {"type": "tool", "tool": "finance.draft_client_onboarding"} -> Prepares a draft onboarding for a new telecom client operator and tower lease contract (MLA) with PENDING_APPROVAL status.
+   - {"type": "tool", "tool": "finance.approve_client_onboarding"} -> Approves an onboarding request and activates client, contract, and invoice.
+   - {"type": "tool", "tool": "finance.audit_client_onboardings"} -> Queries all pending client onboarding and lease contract requests.
+   - {"type": "tool", "tool": "finance.revenue_report"} -> Generates operator revenue and billed accounts receivable report.
+   - {"type": "tool", "tool": "finance.opex_audit"} -> Audits operational expenses (PLN electricity, land lease, fuel).
+   - {"type": "tool", "tool": "finance.cashflow_summary"} -> Calculates net operational cash flow.
 
 3. NOTIFICATION & DISPATCH (Tools):
    - {"type": "tool", "tool": "notification.dispatch"} or {"type": "tool", "tool": "notification.send_email"} -> Sends email notifications, alert dispatches, or operational reports.
@@ -35,6 +43,7 @@ You must build the execution pipeline using the official Agentic Building Blocks
 4. DOCUMENT GENERATION (Tools):
    - {"type": "tool", "tool": "docgen.compile"} -> Generates Purchase Requisition (PR) draf documents and Typst PDFs.
    - {"type": "tool", "tool": "docgen.compile_po"} -> Compiles official Purchase Order (PO) PDF documents with PT Bali Towerindo Sentra Tbk letterhead.
+   - {"type": "tool", "tool": "docgen.compile_leave_pdf"} -> Compiles official Employee Leave Request PDF documents with PT Bali Towerindo Sentra Tbk letterhead.
 
 CRITICAL RULES:
 - DO NOT use MongoDB syntax (such as $in, collection, projection). The database is DuckDB SQL.
@@ -117,7 +126,35 @@ Do not output any markdown formatting or extra commentary outside the JSON.
             if "email" in text_lower or "notifikasi" in text_lower:
                 steps.append({"type": "tool", "tool": "notification.dispatch"})
 
-        # Case 7: Specific stock check
+        # Case 7: Audit / Query Pending Employee Leaves & HR Notification
+        elif any(k in text_lower for k in ["pending", "status cuti", "cek cuti", "audit cuti", "rekap cuti", "belum disetujui", "daftar cuti"]):
+            steps.append({"type": "tool", "tool": "hr.query_pending_leaves"})
+            if any(k in text_lower for k in ["email", "notifikasi", "kirim", "dispatch", "persetujuan", "approve"]):
+                from agents.router import extract_recipient_email
+                extracted = extract_recipient_email(instruction)
+                disp_step = {"type": "tool", "tool": "notification.dispatch"}
+                if extracted:
+                    disp_step["params"] = {"recipient_email": extracted}
+                steps.append(disp_step)
+
+        # Case 8: Employee Leave Request, PDF Compilation & HR Notification
+        elif any(k in text_lower for k in ["cuti", "leave", "permohonan cuti", "pengajuan cuti", "izin cuti"]):
+            steps.append({"type": "tool", "tool": "hr.submit_leave_request"})
+            steps.append({"type": "tool", "tool": "docgen.compile_leave_pdf"})
+            if any(k in text_lower for k in ["email", "notifikasi", "kirim", "dispatch", "surat"]):
+                from agents.router import extract_recipient_email
+                extracted = extract_recipient_email(instruction)
+                disp_step = {"type": "tool", "tool": "notification.dispatch"}
+                if extracted:
+                    disp_step["params"] = {"recipient_email": extracted}
+                steps.append(disp_step)
+
+        # Case 9: Telecom Client Onboarding & Tower Lease Contract (Approval Workflow)
+        elif any(k in text_lower for k in ["klien baru", "operator baru", "daftar operator", "sewa baru", "kontrak baru", "onboarding", "daftarkan operator", "sewa menara baru", "draft kontrak"]):
+            steps.append({"type": "tool", "tool": "finance.draft_client_onboarding"})
+            steps.append({"type": "tool", "tool": "notification.send_email"})
+
+        # Case 10: Specific stock check
         elif any(k in text_lower for k in ["spesifik", "cek stok"]):
             steps.append({"type": "tool", "tool": "inventory.check_specific_stock"})
 

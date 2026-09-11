@@ -669,6 +669,644 @@ async def quick_approval_action(
     return HTMLResponse(content=html_content)
 
 
+@router.get("/leave-quick-action", response_class=HTMLResponse)
+async def quick_leave_approval_action(
+    leave_id: str,
+    action: str = "APPROVE",
+    manager_name: str = "Eko Prasetyo (HR & GA Lead)"
+):
+    """
+    Direct one-click approval/rejection endpoint used by HR Leave Email interactive action buttons.
+    Updates DuckDB leave_requests and employees tables, regenerates the official Typst PDF,
+    and returns a responsive corporate HTML confirmation landing page.
+    """
+    from database.db import get_db_connection
+    from core.config import settings
+
+    if settings.PUBLIC_URL:
+        base_url = settings.PUBLIC_URL.rstrip("/")
+    else:
+        host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
+        base_url = f"http://{host}:{settings.API_PORT}"
+
+    clean_action = action.strip().upper()
+    is_approve = clean_action in ["APPROVE", "APPROVED"]
+    db_status = "APPROVED" if is_approve else "REJECTED"
+
+    conn = get_db_connection(read_only=False)
+    try:
+        row = conn.execute("""
+            SELECT 
+                l.leave_id,
+                l.employee_id,
+                e.full_name AS applicant_name,
+                e.job_title,
+                e.department,
+                e.leave_balance,
+                l.leave_type,
+                l.start_date,
+                l.end_date,
+                l.days_requested,
+                l.reason,
+                COALESCE(sub.full_name, '-') AS substitute_name,
+                l.approval_status
+            FROM leave_requests l
+            JOIN employees e ON l.employee_id = e.employee_id
+            LEFT JOIN employees sub ON l.substitute_employee_id = sub.employee_id
+            WHERE l.leave_id = ?;
+        """, [leave_id]).fetchone()
+
+        if not row:
+            return HTMLResponse(
+                content=f"""<!DOCTYPE html>
+<html>
+<head><title>Dokumen Tidak Ditemukan | {leave_id}</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F1F5F9; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0;">
+    <div style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 32px; max-width: 480px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
+        <h2 style="color: #0F172A; margin-top: 0;">Dokumen Tidak Ditemukan</h2>
+        <p style="color: #475569; font-size: 14px;">Pengajuan cuti nomor <strong>{leave_id}</strong> tidak ditemukan di basis data operasional.</p>
+        <a href="{base_url}/" style="display: inline-block; margin-top: 16px; background: #0F172A; color: #FFFFFF; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 13px;">Buka Dashboard</a>
+    </div>
+</body>
+</html>""",
+                status_code=404
+            )
+
+        cols = [
+            "leave_id", "employee_id", "applicant_name", "job_title", "department",
+            "leave_balance", "leave_type", "start_date", "end_date", "days_requested",
+            "reason", "substitute_name", "current_status"
+        ]
+        leave_info = dict(zip(cols, row))
+
+        # Update approval status in leave_requests
+        conn.execute(
+            "UPDATE leave_requests SET approval_status = ?, approved_by = 'EMP-BLT-005' WHERE leave_id = ?;",
+            [db_status, leave_id]
+        )
+
+        # If approving and wasn't already approved, deduct quota from employee leave_balance
+        prev_status = leave_info.get("current_status")
+        updated_balance = leave_info.get("leave_balance", 0)
+        if is_approve and prev_status != "APPROVED":
+            days = max(1, int(leave_info.get("days_requested", 1)))
+            conn.execute(
+                "UPDATE employees SET leave_balance = GREATEST(0, leave_balance - ?) WHERE employee_id = ?;",
+                [days, leave_info["employee_id"]]
+            )
+            fresh_bal = conn.execute("SELECT leave_balance FROM employees WHERE employee_id = ?;", [leave_info["employee_id"]]).fetchone()
+            if fresh_bal:
+                updated_balance = fresh_bal[0]
+                leave_info["leave_balance"] = updated_balance
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Regenerate Typst PDF to reflect official approved status
+    try:
+        from docgen.compiler import generate_leave_pdf
+        generate_leave_pdf(leave_id)
+    except Exception as pdf_err:
+        print(f"[WARN] Failed to re-compile leave PDF: {pdf_err}")
+
+    # Render confirmation landing page
+    if is_approve:
+        status_badge = '<span style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;">STATUS: DISETUJUI (APPROVED)</span>'
+        heading_text = "Otorisasi Cuti Karyawan Berhasil Disahkan"
+        desc_text = f"Permohonan cuti untuk <strong>{leave_info['applicant_name']}</strong> ({leave_id}) telah resmi disetujui. Status pada sistem database HR dan berkas resmi PDF telah diperbarui secara otomatis."
+    else:
+        status_badge = '<span style="background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;">STATUS: DITOLAK (REJECTED)</span>'
+        heading_text = "Pengajuan Cuti Karyawan Ditolak"
+        desc_text = f"Permohonan cuti untuk <strong>{leave_info['applicant_name']}</strong> ({leave_id}) telah ditolak. Kuota hak cuti tahunan karyawan tetap utuh."
+
+    type_map = {
+        "ANNUAL_LEAVE": "Cuti Tahunan",
+        "SICK_LEAVE": "Cuti Sakit",
+        "SPECIAL_LEAVE": "Cuti Khusus / Alasan Penting",
+        "EMERGENCY_LEAVE": "Cuti Alasan Mendesak",
+        "MATERNITY_LEAVE": "Cuti Melahirkan"
+    }
+    raw_type = str(leave_info.get("leave_type", "ANNUAL_LEAVE")).upper()
+    type_label = type_map.get(raw_type, raw_type)
+    pdf_download_url = f"/api/documents/leave/{leave_id}/download?inline=true"
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konfirmasi Otorisasi Cuti | {leave_id}</title>
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F1F5F9;
+            color: #0F172A;
+            margin: 0;
+            padding: 32px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }}
+        .receipt-card {{
+            background: #FFFFFF;
+            border: 1px solid #CBD5E1;
+            border-radius: 8px;
+            max-width: 620px;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }}
+        .receipt-header {{
+            background: #0F172A;
+            color: #FFFFFF;
+            padding: 22px 28px;
+            border-bottom: 3px solid #2563EB;
+        }}
+        .corp-name {{
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #F8FAFC;
+            margin: 0;
+        }}
+        .corp-dept {{
+            font-size: 12px;
+            color: #94A3B8;
+            margin: 4px 0 0 0;
+        }}
+        .receipt-body {{
+            padding: 32px 28px;
+        }}
+        .status-container {{
+            margin-bottom: 20px;
+        }}
+        h1 {{
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F172A;
+            margin: 0 0 10px 0;
+            line-height: 1.3;
+        }}
+        p.lead-desc {{
+            color: #475569;
+            font-size: 13.5px;
+            line-height: 1.6;
+            margin: 0 0 20px 0;
+        }}
+        .meta-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            font-size: 13px;
+        }}
+        .meta-table td {{
+            padding: 10px 12px;
+            border-bottom: 1px solid #E2E8F0;
+        }}
+        .meta-label {{
+            color: #64748B;
+            width: 40%;
+            font-weight: 500;
+        }}
+        .meta-val {{
+            color: #0F172A;
+            font-weight: 600;
+            text-align: right;
+        }}
+        .btn-row {{
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+        }}
+        .btn {{
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            transition: background 0.15s ease;
+        }}
+        .btn-primary {{
+            background: #0F172A;
+            color: #FFFFFF !important;
+            border: 1px solid #0F172A;
+        }}
+        .btn-primary:hover {{
+            background: #1E293B;
+        }}
+        .btn-secondary {{
+            background: #FFFFFF;
+            color: #334155 !important;
+            border: 1px solid #CBD5E1;
+        }}
+        .btn-secondary:hover {{
+            background: #F8FAFC;
+        }}
+        .receipt-footer {{
+            background: #F8FAFC;
+            border-top: 1px solid #E2E8F0;
+            padding: 16px 28px;
+            font-size: 11.5px;
+            color: #94A3B8;
+            text-align: center;
+        }}
+    </style>
+</head>
+<body>
+    <div class="receipt-card">
+        <div class="receipt-header">
+            <h2 class="corp-name">PT Bali Towerindo Sentra Tbk</h2>
+            <p class="corp-dept">Divisi Human Resources & Field Operations</p>
+        </div>
+        <div class="receipt-body">
+            <div class="status-container">
+                {status_badge}
+            </div>
+            <h1>{heading_text}</h1>
+            <p class="lead-desc">{desc_text}</p>
+
+            <table class="meta-table">
+                <tr>
+                    <td class="meta-label">Nomor Dokumen Cuti</td>
+                    <td class="meta-val" style="font-family: 'Consolas', monospace; color: #1D4ED8;">{leave_id}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Karyawan Pemohon</td>
+                    <td class="meta-val">{leave_info['applicant_name']} ({leave_info['employee_id']})</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Posisi & Departemen</td>
+                    <td class="meta-val">{leave_info['job_title']} ({leave_info['department']})</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Jenis Permohonan</td>
+                    <td class="meta-val">{type_label}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Durasi Cuti</td>
+                    <td class="meta-val">{leave_info['days_requested']} Hari Kerja ({leave_info['start_date']} s/d {leave_info['end_date']})</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Personil Pengganti</td>
+                    <td class="meta-val">{leave_info['substitute_name']}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Sisa Kuota Cuti Terbaru</td>
+                    <td class="meta-val">{leave_info['leave_balance']} Hari</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Diverifikasi Oleh</td>
+                    <td class="meta-val">{manager_name}</td>
+                </tr>
+            </table>
+
+            <div class="btn-row">
+                <a href="{pdf_download_url}" class="btn btn-secondary" target="_blank">Lihat Dokumen PDF Resmi</a>
+                <a href="{base_url}/" class="btn btn-primary">Buka Dashboard Web</a>
+            </div>
+        </div>
+        <div class="receipt-footer">
+            PT Bali Towerindo Sentra Tbk | Wisma Kodel Lantai 6, Jl. H.R. Rasuna Said Kav. B-4, Jakarta Selatan 12920
+        </div>
+    </div>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html_content, status_code=200)
+
+
+@router.get("/client-onboarding-action", response_class=HTMLResponse)
+async def quick_client_onboarding_action(
+    onboarding_id: str,
+    action: str = "APPROVE",
+    manager_name: str = "Finance & Commercial Lead"
+):
+    """
+    Direct one-click approval/rejection endpoint for New Telecom Client Onboarding & MLA Lease Contract.
+    When APPROVED:
+      1. Updates pending_client_onboardings status to 'APPROVED'
+      2. Inserts new client into telecom_clients
+      3. Inserts new contract into mla_contracts
+      4. Generates initial invoice in revenue_invoices
+    Returns a responsive corporate HTML confirmation landing page.
+    """
+    from database.db import get_db_connection
+    from core.config import settings
+
+    if settings.PUBLIC_URL:
+        base_url = settings.PUBLIC_URL.rstrip("/")
+    else:
+        host = "127.0.0.1" if settings.API_HOST in ["0.0.0.0", ""] else settings.API_HOST
+        base_url = f"http://{host}:{settings.API_PORT}"
+
+    clean_action = action.strip().upper()
+    is_approve = clean_action in ["APPROVE", "APPROVED"]
+    db_status = "APPROVED" if is_approve else "REJECTED"
+
+    conn = get_db_connection(read_only=False)
+    try:
+        # Ensure pending table exists
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS pending_client_onboardings (
+                onboarding_id VARCHAR PRIMARY KEY,
+                client_id VARCHAR,
+                client_name VARCHAR,
+                client_type VARCHAR,
+                npwp VARCHAR,
+                billing_email VARCHAR,
+                payment_terms VARCHAR,
+                contract_id VARCHAR,
+                site_id VARCHAR,
+                monthly_rate BIGINT,
+                billing_frequency VARCHAR,
+                start_date VARCHAR,
+                end_date VARCHAR,
+                first_invoice_amount BIGINT,
+                approval_status VARCHAR DEFAULT 'PENDING_APPROVAL',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                approved_at TIMESTAMP,
+                approved_by VARCHAR
+            );
+        """)
+
+        row = conn.execute("""
+            SELECT 
+                onboarding_id, client_id, client_name, client_type, npwp, billing_email,
+                payment_terms, contract_id, site_id, monthly_rate, billing_frequency,
+                start_date, end_date, first_invoice_amount, approval_status
+            FROM pending_client_onboardings
+            WHERE onboarding_id = ?;
+        """, [onboarding_id]).fetchone()
+
+        if not row:
+            return HTMLResponse(
+                content=f"""<!DOCTYPE html>
+<html>
+<head><title>Dokumen Onboarding Tidak Ditemukan | {onboarding_id}</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F1F5F9; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0;">
+    <div style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 32px; max-width: 480px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
+        <h2 style="color: #0F172A; margin-top: 0;">Dokumen Tidak Ditemukan</h2>
+        <p style="color: #475569; font-size: 14px;">Berkas onboarding nomor <strong>{onboarding_id}</strong> tidak ditemukan di basis data Finance.</p>
+        <a href="{base_url}/" style="display: inline-block; margin-top: 16px; background: #0F172A; color: #FFFFFF; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 13px;">Buka Dashboard</a>
+    </div>
+</body>
+</html>""",
+                status_code=404
+            )
+
+        cols = [
+            "onboarding_id", "client_id", "client_name", "client_type", "npwp", "billing_email",
+            "payment_terms", "contract_id", "site_id", "monthly_rate", "billing_frequency",
+            "start_date", "end_date", "first_invoice_amount", "current_status"
+        ]
+        ob_info = dict(zip(cols, row))
+        prev_status = ob_info.get("current_status")
+
+        # Update approval status in pending_client_onboardings
+        conn.execute("""
+            UPDATE pending_client_onboardings
+            SET approval_status = ?, approved_at = CURRENT_TIMESTAMP, approved_by = ?
+            WHERE onboarding_id = ?;
+        """, [db_status, manager_name, onboarding_id])
+
+        inv_id = None
+        inv_number = None
+
+        if is_approve and prev_status != "APPROVED":
+            # 1. Update/Insert telecom_clients
+            existing_c = conn.execute("SELECT client_id FROM telecom_clients WHERE client_id = ?", [ob_info["client_id"]]).fetchone()
+            if not existing_c:
+                conn.execute("""
+                    INSERT INTO telecom_clients (client_id, client_name, client_type, npwp, billing_email, payment_terms)
+                    VALUES (?, ?, ?, ?, ?, ?);
+                """, [
+                    ob_info["client_id"], ob_info["client_name"], ob_info["client_type"],
+                    ob_info["npwp"], ob_info["billing_email"], ob_info["payment_terms"]
+                ])
+
+            # 2. Update/Insert mla_contracts
+            existing_mla = conn.execute("SELECT contract_id FROM mla_contracts WHERE contract_id = ?", [ob_info["contract_id"]]).fetchone()
+            if not existing_mla:
+                conn.execute("""
+                    INSERT INTO mla_contracts (contract_id, client_id, site_id, monthly_rate, billing_frequency, start_date, end_date, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE');
+                """, [
+                    ob_info["contract_id"], ob_info["client_id"], ob_info["site_id"],
+                    ob_info["monthly_rate"], ob_info["billing_frequency"], ob_info["start_date"],
+                    ob_info["end_date"]
+                ])
+            else:
+                conn.execute("UPDATE mla_contracts SET status = 'ACTIVE' WHERE contract_id = ?;", [ob_info["contract_id"]])
+
+            # 3. Update existing invoice to PAID, or insert if not exists
+            existing_inv = conn.execute("SELECT invoice_id FROM revenue_invoices WHERE contract_id = ?", [ob_info["contract_id"]]).fetchone()
+            if existing_inv:
+                conn.execute("""
+                    UPDATE revenue_invoices 
+                    SET payment_status = 'PAID', payment_date = CAST(CURRENT_DATE AS VARCHAR) 
+                    WHERE contract_id = ? OR client_id = ?;
+                """, [ob_info["contract_id"], ob_info["client_id"]])
+            else:
+                max_inv = conn.execute("SELECT MAX(invoice_id) FROM revenue_invoices;").fetchone()[0]
+                last_inv_num = 8
+                if max_inv and "INV-2026-" in str(max_inv):
+                    try:
+                        last_inv_num = int(str(max_inv).split("-")[-1])
+                    except Exception:
+                        last_inv_num = 8
+                inv_id = f"INV-2026-{(last_inv_num + 1):03d}"
+                inv_number = f"INV/BLT/2026/04/{(last_inv_num + 1):03d}"
+                
+                period_cov = "2026-Q2" if ob_info["billing_frequency"] == "QUARTERLY" else "2026-04"
+                months_mult = 3 if ob_info["billing_frequency"] == "QUARTERLY" else 1
+                subtotal = int(ob_info["monthly_rate"]) * months_mult
+                ppn = int(subtotal * 0.11)
+                total_bill = subtotal + ppn
+
+                conn.execute("""
+                    INSERT INTO revenue_invoices (
+                        invoice_id, invoice_number, contract_id, client_id, period_covered,
+                        amount_subtotal, tax_ppn, total_billed, invoice_date, due_date,
+                        payment_status, payment_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CAST(CURRENT_DATE AS VARCHAR), CAST(CURRENT_DATE + INTERVAL 30 DAY AS VARCHAR), 'PAID', CAST(CURRENT_DATE AS VARCHAR));
+                """, [
+                    inv_id, inv_number, ob_info["contract_id"], ob_info["client_id"],
+                    period_cov, subtotal, ppn, total_bill
+                ])
+        elif not is_approve:
+            conn.execute("UPDATE mla_contracts SET status = 'REJECTED' WHERE contract_id = ?;", [ob_info["contract_id"]])
+            conn.execute("UPDATE revenue_invoices SET payment_status = 'CANCELLED' WHERE contract_id = ?;", [ob_info["contract_id"]])
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Confirmation HTML
+    if is_approve:
+        status_badge = '<span style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;">STATUS: DISETUJUI (APPROVED)</span>'
+        heading_text = "Kontrak Sewa Menara Resmi Disetujui & Database Terintegrasi"
+        desc_text = f"Pendaftaran klien operator <strong>{ob_info['client_name']}</strong> ({ob_info['client_id']}) dan kontrak MLA <strong>{ob_info['contract_id']}</strong> telah disahkan. Seluruh tabel basis data (klien, kontrak, invoice) telah otomatis terupdate."
+    else:
+        status_badge = '<span style="background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;">STATUS: DITOLAK (REJECTED)</span>'
+        heading_text = "Pengajuan Kontrak Sewa Ditolak"
+        desc_text = f"Pengajuan sewa menara untuk <strong>{ob_info['client_name']}</strong> ({onboarding_id}) telah ditolak. Data tidak ditambahkan ke daftar klien aktif."
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konfirmasi Persetujuan Kontrak Sewa | {onboarding_id}</title>
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F1F5F9;
+            margin: 0;
+            padding: 40px 16px;
+            color: #0F172A;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }}
+        .receipt-card {{
+            background: #FFFFFF;
+            border: 1px solid #CBD5E1;
+            border-radius: 12px;
+            max-width: 640px;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }}
+        .receipt-header {{
+            background: #0F172A;
+            color: #FFFFFF;
+            padding: 24px 32px;
+            border-bottom: 3px solid #2563EB;
+        }}
+        .receipt-body {{
+            padding: 32px;
+        }}
+        .meta-table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 18px;
+        }}
+        .meta-table td {{
+            padding: 10px 0;
+            border-bottom: 1px solid #F1F5F9;
+        }}
+        .meta-label {{
+            color: #64748B;
+            width: 42%;
+            font-weight: 500;
+        }}
+        .meta-val {{
+            color: #0F172A;
+            font-weight: 600;
+            text-align: right;
+        }}
+        .btn-row {{
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+        }}
+        .btn {{
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+        }}
+        .btn-primary {{
+            background: #0F172A;
+            color: #FFFFFF !important;
+        }}
+        .receipt-footer {{
+            background: #F8FAFC;
+            border-top: 1px solid #E2E8F0;
+            padding: 16px 32px;
+            font-size: 11.5px;
+            color: #64748B;
+            text-align: center;
+        }}
+    </style>
+</head>
+<body>
+    <div class="receipt-card">
+        <div class="receipt-header">
+            <h1 style="font-size: 15px; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.08em; color: #F8FAFC;">PT Bali Towerindo Sentra Tbk</h1>
+            <p style="font-size: 12px; color: #94A3B8; margin: 4px 0 0 0;">Divisi Keuangan & Komersial (Finance Operations)</p>
+        </div>
+        <div class="receipt-body">
+            <div style="margin-bottom: 16px;">
+                {status_badge}
+            </div>
+            <h2 style="font-size: 18px; font-weight: 700; margin: 0 0 8px 0; color: #0F172A;">{heading_text}</h2>
+            <p style="font-size: 13.5px; color: #475569; margin: 0 0 24px 0; line-height: 1.5;">{desc_text}</p>
+
+            <table class="meta-table">
+                <tr>
+                    <td class="meta-label">Nomor Pengajuan (ID)</td>
+                    <td class="meta-val" style="font-family: monospace; color: #1D4ED8;">{onboarding_id}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Nama Klien Operator</td>
+                    <td class="meta-val">{ob_info['client_name']} ({ob_info['client_id']})</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Kontrak Sewa (MLA)</td>
+                    <td class="meta-val">{ob_info['contract_id']} (Site: {ob_info['site_id']})</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Tarif Sewa Bulanan</td>
+                    <td class="meta-val">Rp {int(ob_info['monthly_rate']):,} / bulan</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Frekuensi & Durasi</td>
+                    <td class="meta-val">{ob_info['billing_frequency']} ({ob_info['start_date']} s/d {ob_info['end_date']})</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Status Tagihan Perdana</td>
+                    <td class="meta-val" style="color: {'#15803D' if is_approve else '#64748B'};">
+                        {f'{inv_id} ({inv_number}) — UNPAID' if inv_id else ('Diterbitkan Otomatis' if is_approve else '-')}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="meta-label">Diverifikasi Oleh</td>
+                    <td class="meta-val">{manager_name}</td>
+                </tr>
+            </table>
+
+            <div class="btn-row">
+                <a href="{base_url}/" class="btn btn-primary">Buka Dashboard Web PT Bali Tower</a>
+            </div>
+        </div>
+        <div class="receipt-footer">
+            PT Bali Towerindo Sentra Tbk | Wisma Kodel Lantai 6, Jl. H.R. Rasuna Said Kav. B-4, Jakarta Selatan 12920
+        </div>
+    </div>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html_content, status_code=200)
+
+
 @router.get("/{pr_number}", response_model=PurchaseRequisitionDoc)
 async def get_requisition_by_number(pr_number: str):
     """Returns a single purchase requisition by PR Number."""

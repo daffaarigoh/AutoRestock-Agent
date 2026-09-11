@@ -1022,10 +1022,10 @@
           <input type="hidden" id="wfId">
           <input type="text" id="wfName" class="form-input" placeholder="Nama Workflow (contoh: Pengecekan Stok Kritis Harian)" style="flex: 2; min-width: 200px;">
           <select id="wfTenantId" class="form-input" style="flex: 1.2; min-width: 220px; font-weight: 600; cursor: pointer; color: #1E40AF; background: #FFFFFF;">
-            <option value="ALL">🌐 all (Schema ALL - Lintas Divisi)</option>
-            <option value="INVENTORY">📦 usera (Schema A - Divisi Inventory)</option>
-            <option value="HR">👥 userb (Schema B - Divisi HR & Field)</option>
-            <option value="FINANCE">💰 userc (Schema C - Divisi Keuangan)</option>
+            <option value="ALL">all (Schema ALL - Lintas Divisi)</option>
+            <option value="INVENTORY">usera (Schema A - Divisi Inventory)</option>
+            <option value="HR">userb (Schema B - Divisi HR & Field)</option>
+            <option value="FINANCE">userc (Schema C - Divisi Keuangan)</option>
           </select>
           <input type="text" id="wfDesc" class="form-input" placeholder="Deskripsi Singkat Tujuan Workflow" style="flex: 2; min-width: 200px;">
         </div>
@@ -1069,10 +1069,10 @@
         <div class="wf-filters-bar">
           <span style="font-size: 12px; font-weight: 700; color: #64748B; margin-right: 4px;">Filter Schema:</span>
           <button class="wf-filter-pill active" id="filterWfAllSchemas" onclick="setWorkflowFilter('ALL_SCHEMAS')">Semua (<span id="countWfTotal">0</span>)</button>
-          <button class="wf-filter-pill" id="filterWfAll" onclick="setWorkflowFilter('ALL')">🌐 Schema ALL (<span id="countWfAll">0</span>)</button>
-          <button class="wf-filter-pill" id="filterWfFinance" onclick="setWorkflowFilter('FINANCE')">💰 Schema C - Keuangan (<span id="countWfFinance">0</span>)</button>
-          <button class="wf-filter-pill" id="filterWfInventory" onclick="setWorkflowFilter('INVENTORY')">📦 Schema A - Inventory (<span id="countWfInventory">0</span>)</button>
-          <button class="wf-filter-pill" id="filterWfHr" onclick="setWorkflowFilter('HR')">👥 Schema B - HR (<span id="countWfHr">0</span>)</button>
+          <button class="wf-filter-pill" id="filterWfAll" onclick="setWorkflowFilter('ALL')">Schema ALL (<span id="countWfAll">0</span>)</button>
+          <button class="wf-filter-pill" id="filterWfFinance" onclick="setWorkflowFilter('FINANCE')">Schema C - Keuangan (<span id="countWfFinance">0</span>)</button>
+          <button class="wf-filter-pill" id="filterWfInventory" onclick="setWorkflowFilter('INVENTORY')">Schema A - Inventory (<span id="countWfInventory">0</span>)</button>
+          <button class="wf-filter-pill" id="filterWfHr" onclick="setWorkflowFilter('HR')">Schema B - HR (<span id="countWfHr">0</span>)</button>
         </div>
 
         <div id="workflowList" style="display: flex; flex-direction: column; gap: 14px;">
@@ -1252,6 +1252,7 @@
         <div class="filter-pills" id="toolCategoryPills">
           <button class="filter-pill active" onclick="setToolCategoryFilter('ALL')">Semua Building Blocks</button>
           <button class="filter-pill" onclick="setToolCategoryFilter('Inventory Operations')">Inventory Operations</button>
+          <button class="filter-pill" onclick="setToolCategoryFilter('HR & Workforce')">HR & Workforce</button>
           <button class="filter-pill" onclick="setToolCategoryFilter('Reasoning & Validation')">Reasoning & Validation</button>
           <button class="filter-pill" onclick="setToolCategoryFilter('Document Generation')">Document Generation</button>
           <button class="filter-pill" onclick="setToolCategoryFilter('Notification & Dispatch')">Notification & Dispatch</button>
@@ -1507,6 +1508,18 @@
     // Workflows State & Filtering
     let allLoadedWorkflows = [];
     let currentWfFilter = 'ALL_SCHEMAS';
+    function filterWorkflowsByTenant(tenant) {
+      document.querySelectorAll('#wfTenantFilterPills .pill-btn').forEach(b => {
+        b.classList.toggle('active', (b.getAttribute('onclick') || '').includes(`'${tenant}'`));
+      });
+      const map = {
+        'ALL': 'ALL_SCHEMAS',
+        'usera': 'INVENTORY',
+        'userb': 'HR',
+        'userc': 'FINANCE'
+      };
+      setWorkflowFilter(map[tenant] || tenant);
+    }
 
     function setWorkflowFilter(filterVal) {
       currentWfFilter = filterVal;
@@ -1551,13 +1564,13 @@
         
         // Accurate Tenant & Schema Badging
         const tid = (wf.tenant_id || 'ALL').toUpperCase();
-        let tenantBadge = '<span class="badge-tenant-all">🌐 Schema ALL (Global)</span>';
+        let tenantBadge = '<span class="badge-tenant-all">Schema ALL (Global)</span>';
         if (['FINANCE', 'TENANT_C', 'USERC', 'SCHEMA_C'].includes(tid)) {
-          tenantBadge = '<span class="badge-tenant-c">💰 Schema C (Finance - userc)</span>';
+          tenantBadge = '<span class="badge-tenant-c">Schema C (Finance - userc)</span>';
         } else if (['INVENTORY', 'TENANT_A', 'USERA', 'SCHEMA_A'].includes(tid)) {
-          tenantBadge = '<span class="badge-tenant-a">📦 Schema A (Inventory - usera)</span>';
+          tenantBadge = '<span class="badge-tenant-a">Schema A (Inventory - usera)</span>';
         } else if (['HR', 'TENANT_B', 'USERB', 'SCHEMA_B'].includes(tid)) {
-          tenantBadge = '<span class="badge-tenant-b">👥 Schema B (HR & Field - userb)</span>';
+          tenantBadge = '<span class="badge-tenant-b">Schema B (HR & Field - userb)</span>';
         }
 
         html += `
@@ -1571,13 +1584,13 @@
                 <p class="workflow-id">ID: ${escapeHtml(wf.id)}</p>
               </div>
               <div class="workflow-actions-group">
-                <button class="btn-action-edit" onclick='editWf(${JSON.stringify(wf).replace(/'/g, "&#39;")})'>
+                <button class="btn-action-edit" onclick="editWf('${escapeHtml(wf.id)}')">
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                   </svg>
                   <span>Edit</span>
                 </button>
-                <button class="btn-action-delete" onclick="deleteWf('${wf.id}')">
+                <button class="btn-action-delete" onclick="deleteWf('${escapeHtml(wf.id)}')">
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -1608,7 +1621,14 @@
         
         if (res.ok) {
           const workflows = await res.json();
-          allLoadedWorkflows = workflows;
+          allLoadedWorkflows = workflows || [];
+          allWorkflowsList = workflows || [];
+          allWorkflowsMap = {};
+          (workflows || []).forEach(w => {
+            if (w && w.id) {
+              allWorkflowsMap[w.id] = w;
+            }
+          });
 
           // Update counts
           const countTotal = workflows.length;
@@ -1711,27 +1731,63 @@
       listDiv.innerHTML = html;
     }
 
-    function editWf(id) {
-      const wf = allWorkflowsMap[id];
-      if (!wf) return;
-      document.getElementById('wfId').value = wf.id;
-      document.getElementById('wfName').value = wf.name || '';
-      document.getElementById('wfDesc').value = wf.description || '';
-      document.getElementById('wfInstruction').value = wf.business_instruction || '';
-      const tid = (wf.tenant_id || 'ALL').toUpperCase();
-      if (['FINANCE', 'TENANT_C', 'USERC', 'SCHEMA_C'].includes(tid)) {
-        document.getElementById('wfTenantId').value = 'FINANCE';
-      } else if (['INVENTORY', 'TENANT_A', 'USERA', 'SCHEMA_A'].includes(tid)) {
-        document.getElementById('wfTenantId').value = 'INVENTORY';
-      } else if (['HR', 'TENANT_B', 'USERB', 'SCHEMA_B'].includes(tid)) {
-        document.getElementById('wfTenantId').value = 'HR';
-      } else {
-        document.getElementById('wfTenantId').value = 'ALL';
+    function editWf(param) {
+      let wf = null;
+      if (typeof param === 'object' && param !== null) {
+        wf = param;
+      } else if (typeof param === 'string') {
+        wf = allWorkflowsMap[param] || (allLoadedWorkflows || []).find(w => w.id === param);
       }
-      document.getElementById('formTitleText').textContent = `Edit Workflow: ${wf.name}`;
-      document.getElementById('btnSubmitText').textContent = 'Update Workflow';
-      document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+      if (!wf) {
+        console.error("Workflow not found for edit:", param);
+        alert("Workflow tidak ditemukan: " + param);
+        return;
+      }
+
+      const elWfId = document.getElementById('wfId');
+      const elWfName = document.getElementById('wfName');
+      const elWfDesc = document.getElementById('wfDesc');
+      const elWfInstruction = document.getElementById('wfInstruction');
+      const elWfTenantId = document.getElementById('wfTenantId');
+      const elFormTitle = document.getElementById('formTitleText');
+      const elBtnSubmit = document.getElementById('btnSubmitText');
+      const elCancelBtn = document.getElementById('cancelEditBtn');
+
+      if (elWfId) elWfId.value = wf.id || '';
+      if (elWfName) elWfName.value = wf.name || '';
+      if (elWfDesc) elWfDesc.value = wf.description || '';
+      if (elWfInstruction) elWfInstruction.value = wf.business_instruction || '';
+
+      const tid = (wf.tenant_id || 'ALL').toUpperCase();
+      if (elWfTenantId) {
+        if (['FINANCE', 'TENANT_C', 'USERC', 'SCHEMA_C'].includes(tid)) {
+          elWfTenantId.value = 'FINANCE';
+        } else if (['INVENTORY', 'TENANT_A', 'USERA', 'SCHEMA_A'].includes(tid)) {
+          elWfTenantId.value = 'INVENTORY';
+        } else if (['HR', 'TENANT_B', 'USERB', 'SCHEMA_B'].includes(tid)) {
+          elWfTenantId.value = 'HR';
+        } else {
+          elWfTenantId.value = 'ALL';
+        }
+      }
+
+      if (elFormTitle) elFormTitle.textContent = `Edit Workflow: ${wf.name}`;
+      if (elBtnSubmit) elBtnSubmit.textContent = 'Update Workflow';
+      if (elCancelBtn) elCancelBtn.style.display = 'inline-flex';
+
+      // Highlight form card visually
+      const formCard = document.getElementById('wfName')?.closest('.card');
+      if (formCard) {
+        formCard.style.outline = '2px solid #2563EB';
+        formCard.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.15)';
+        setTimeout(() => {
+          formCard.style.outline = '';
+          formCard.style.boxShadow = '';
+        }, 2500);
+      }
+
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('wfName')?.focus();
     }
 
     async function deleteWf(id) {
@@ -1772,6 +1828,8 @@
 
     function getToolCategory(toolName) {
       if (toolName.startsWith('inventory.')) return 'Inventory Operations';
+      if (toolName.startsWith('hr.')) return 'HR & Workforce';
+      if (toolName.startsWith('finance.')) return 'Finance & Commercial';
       if (toolName.startsWith('notification.')) return 'Notification & Dispatch';
       if (toolName.startsWith('docgen.') || toolName.startsWith('purchase_order.')) return 'Document Generation';
       return 'Reasoning & Validation';
@@ -1780,6 +1838,8 @@
     function getCategoryBadgeClass(category) {
       switch (category) {
         case 'Inventory Operations': return 'cat-inventory';
+        case 'HR & Workforce': return 'cat-inventory';
+        case 'Finance & Commercial': return 'cat-inventory';
         case 'Notification & Dispatch': return 'cat-notification';
         case 'Document Generation': return 'cat-docgen';
         default: return 'cat-reasoning';
@@ -1811,6 +1871,42 @@
         'inventory.crud_record': {
           params: 'table: string, action: "insert" | "update" | "delete", data: object',
           example: '{"type": "tool", "tool": "inventory.crud_record"}'
+        },
+        'hr.submit_leave_request': {
+          params: 'employee_id: string, leave_type: string, start_date: string, days_requested: int, reason: string, substitute_employee_id?: string',
+          example: '{"type": "tool", "tool": "hr.submit_leave_request"}'
+        },
+        'hr.query_pending_leaves': {
+          params: 'None (Audit all pending leave requests from DuckDB)',
+          example: '{"type": "tool", "tool": "hr.query_pending_leaves"}'
+        },
+        'finance.draft_client_onboarding': {
+          params: 'client_name: string, site_id: string, monthly_rate?: int, billing_frequency?: string, billing_email?: string',
+          example: '{"type": "tool", "tool": "finance.draft_client_onboarding"}'
+        },
+        'finance.approve_client_onboarding': {
+          params: 'onboarding_id: string (e.g. "ONB-2026-001")',
+          example: '{"type": "tool", "tool": "finance.approve_client_onboarding"}'
+        },
+        'finance.audit_client_onboardings': {
+          params: 'None (Audit all pending client onboarding & lease requests)',
+          example: '{"type": "tool", "tool": "finance.audit_client_onboardings"}'
+        },
+        'finance.revenue_report': {
+          params: 'None (Compiles revenue & invoice summary per operator)',
+          example: '{"type": "tool", "tool": "finance.revenue_report"}'
+        },
+        'finance.opex_audit': {
+          params: 'None (Audits operational expenses, PLN electricity, site land leases)',
+          example: '{"type": "tool", "tool": "finance.opex_audit"}'
+        },
+        'finance.cashflow_summary': {
+          params: 'None (Calculates net operational cash flow)',
+          example: '{"type": "tool", "tool": "finance.cashflow_summary"}'
+        },
+        'docgen.compile_leave_pdf': {
+          params: 'leave_id: string, template: "leave_request.typ"',
+          example: '{"type": "tool", "tool": "docgen.compile_leave_pdf"}'
         },
         'purchase_order.create_draft': {
           params: 'items: list[RestockItem], total_budget: float',
