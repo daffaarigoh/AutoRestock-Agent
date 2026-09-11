@@ -9,10 +9,11 @@ def _extract_item_attributes_from_text(prompt: str) -> dict:
     item = {}
     
     # 1. Extract Name
-    name_match = re.search(r'(?:nama\s+material|nama\s+produk|nama\s+barang|nama\s+item|material|produk|barang|item)\s*[:=]?\s*([A-Za-z0-9\s\-]+?)(?=,\s*|\s+kategori|\s+stok|\s+batas|\s+min|\s+harga|\s+dam|$)', prompt, re.IGNORECASE)
+    name_match = re.search(r'(?:nama\s+material|nama\s+produk|nama\s+barang|nama\s+item|material\s+baru|produk\s+baru|barang\s+baru|item\s+baru|material|produk|barang|item)\s*[:=]?\s*([A-Za-z0-9\s\-]+?)(?=,\s*|\s+kategori|\s+stok|\s+batas|\s+min|\s+harga|\s+dam|$)', prompt, re.IGNORECASE)
     if name_match:
         name_val = name_match.group(1).strip()
         name_val = re.sub(r'^(?:baru\s+|tambah\s+|tambahkan\s+|bernama\s+)+', '', name_val, flags=re.IGNORECASE).strip()
+        name_val = name_val.lstrip(":= ").strip()
         if name_val and name_val.lower() not in ["baru", "produk", "barang", "material", "item"]:
             item["name"] = name_val
             
