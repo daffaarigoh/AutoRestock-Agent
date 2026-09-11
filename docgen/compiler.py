@@ -182,12 +182,12 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
     ensure_storage_directories()
     from database.db import get_db_connection
 
-    po_dict = {}
+    rows = []
     if isinstance(po_input, str):
         conn = get_db_connection()
         try:
             # Exact match first
-            row = conn.execute("""
+            rows = conn.execute("""
                 SELECT po.po_id, po.po_number, po.supplier_id, COALESCE(s.supplier_name, po.supplier_id) AS supplier_name, COALESCE(s.category, 'General') AS sup_cat,
                        COALESCE(s.phone, '-') AS phone, COALESCE(s.email, '-') AS email, COALESCE(s.payment_terms, 'Net 30') AS payment_terms, po.item_id, COALESCE(i.item_name, po.item_id) AS item_name, COALESCE(i.item_code, po.item_id) AS item_code,
                        COALESCE(i.category, 'Logistics') AS item_cat, COALESCE(i.unit, 'pcs') AS unit, po.order_quantity, po.unit_price, po.total_amount,
@@ -198,13 +198,13 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
                 LEFT JOIN inventory_items i ON po.item_id = i.item_id
                 LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
                 WHERE UPPER(po.po_id) = ? OR UPPER(po.po_number) = ?;
-            """, [po_input.upper(), po_input.upper()]).fetchone()
+            """, [po_input.upper(), po_input.upper()]).fetchall()
             
             # Fallback to trailing digits or partial lookup (e.g. PO-2026-032 -> 032)
-            if not row:
+            if not rows:
                 digits = re.findall(r'\d+', po_input)
                 last_num = digits[-1].zfill(3) if digits else po_input
-                row = conn.execute("""
+                rows = conn.execute("""
                     SELECT po.po_id, po.po_number, po.supplier_id, COALESCE(s.supplier_name, po.supplier_id) AS supplier_name, COALESCE(s.category, 'General') AS sup_cat,
                            COALESCE(s.phone, '-') AS phone, COALESCE(s.email, '-') AS email, COALESCE(s.payment_terms, 'Net 30') AS payment_terms, po.item_id, COALESCE(i.item_name, po.item_id) AS item_name, COALESCE(i.item_code, po.item_id) AS item_code,
                            COALESCE(i.category, 'Logistics') AS item_cat, COALESCE(i.unit, 'pcs') AS unit, po.order_quantity, po.unit_price, po.total_amount,
@@ -215,9 +215,9 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
                     LEFT JOIN inventory_items i ON po.item_id = i.item_id
                     LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
                     WHERE po.po_number LIKE ? OR po.po_id LIKE ?;
-                """, [f"%{last_num}%", f"%{last_num}%"]).fetchone()
+                """, [f"%{last_num}%", f"%{last_num}%"]).fetchall()
 
-            if not row:
+            if not rows:
                 raise ValueError(f"Purchase Order '{po_input}' tidak ditemukan di database.")
             cols = [
                 "po_id", "po_number", "supplier_id", "supplier_name", "sup_cat",
@@ -226,11 +226,32 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
                 "status", "order_date", "expected_delivery", "actual_delivery",
                 "warehouse_id", "warehouse_name", "region", "address", "supervisor"
             ]
-            po_dict = dict(zip(cols, row))
+            po_dict = dict(zip(cols, rows[0]))
         finally:
             conn.close()
     elif isinstance(po_input, dict):
         po_dict = po_input
+        if "items" in po_dict and isinstance(po_dict["items"], list):
+            rows = []
+            for itm in po_dict["items"]:
+                rows.append([
+                    po_dict.get("po_id"), po_dict.get("po_number"), po_dict.get("supplier_id"), po_dict.get("supplier_name"), po_dict.get("sup_cat", "General"),
+                    po_dict.get("phone", "-"), po_dict.get("email", "-"), po_dict.get("payment_terms", "Net 30"),
+                    itm.get("item_id"), itm.get("item_name"), itm.get("item_code"), itm.get("category", "Logistics"),
+                    itm.get("unit", "pcs"), itm.get("order_quantity", 1), itm.get("unit_price", 0), itm.get("total_amount", 0),
+                    po_dict.get("status", "ORDERED"), po_dict.get("order_date"), po_dict.get("expected_delivery"), po_dict.get("actual_delivery"),
+                    itm.get("warehouse_id", po_dict.get("warehouse_id")), itm.get("warehouse_name", po_dict.get("warehouse_name")),
+                    itm.get("region", po_dict.get("region")), itm.get("address", po_dict.get("address")), itm.get("supervisor", po_dict.get("supervisor"))
+                ])
+        else:
+            rows = [[
+                po_dict.get("po_id"), po_dict.get("po_number"), po_dict.get("supplier_id"), po_dict.get("supplier_name"), po_dict.get("sup_cat", "General"),
+                po_dict.get("phone", "-"), po_dict.get("email", "-"), po_dict.get("payment_terms", "Net 30"),
+                po_dict.get("item_id"), po_dict.get("item_name"), po_dict.get("item_code"), po_dict.get("item_cat", "Logistics"),
+                po_dict.get("unit", "pcs"), po_dict.get("order_quantity", 1), po_dict.get("unit_price", 0), po_dict.get("total_amount", 0),
+                po_dict.get("status", "ORDERED"), po_dict.get("order_date"), po_dict.get("expected_delivery"), po_dict.get("actual_delivery"),
+                po_dict.get("warehouse_id"), po_dict.get("warehouse_name"), po_dict.get("region"), po_dict.get("address"), po_dict.get("supervisor")
+            ]]
     else:
         raise ValueError("po_input must be a string (po_id) or dict.")
 
@@ -246,26 +267,30 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
         template_str = f.read()
 
     # Financial calculations
-    subtotal = float(po_dict.get("total_amount", 0))
+    subtotal = sum(float(r[15] or 0) for r in rows)
     ppn = round(subtotal * 0.11)
     grand_total = subtotal + ppn
     terbilang = angka_ke_terbilang(grand_total)
 
-    # Build items table row
-    item_code_esc = escape_typst(po_dict.get("item_code", ""))
-    item_name_esc = escape_typst(po_dict.get("item_name", ""))
-    category_esc = escape_typst(po_dict.get("item_cat") or po_dict.get("category", ""))
-    unit_esc = escape_typst(po_dict.get("unit", "pcs"))
-    qty = int(po_dict.get("order_quantity", 1))
-    unit_price = float(po_dict.get("unit_price", 0))
-
-    items_row = f"""    [1],
+    # Build items table rows
+    item_row_strings = []
+    for idx, r in enumerate(rows, 1):
+        item_code_esc = escape_typst(r[10] or "")
+        item_name_esc = escape_typst(r[9] or "")
+        category_esc = escape_typst(r[11] or "")
+        unit_esc = escape_typst(r[12] or "pcs")
+        qty = int(r[13] or 1)
+        unit_price = float(r[14] or 0)
+        line_total = float(r[15] or 0)
+        item_row_strings.append(f"""    [{idx}],
     [{item_code_esc}],
     [*{item_name_esc}*],
     [{category_esc}],
     [*{qty:,}* {unit_esc}],
     [{format_currency(unit_price)}],
-    [*{format_currency(subtotal)}*],"""
+    [*{format_currency(line_total)}*],""")
+
+    items_table_rows = "\n".join(item_row_strings)
 
     actual_deliv = po_dict.get("actual_delivery")
     actual_deliv_str = str(actual_deliv) if actual_deliv else "-"
@@ -289,7 +314,7 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
         .replace("{{WAREHOUSE_SUPERVISOR}}", escape_typst(po_dict.get("supervisor", "Logistics Lead")))
         .replace("{{EXPECTED_DELIVERY}}", escape_typst(po_dict.get("expected_delivery", "-")))
         .replace("{{ACTUAL_DELIVERY}}", escape_typst(actual_deliv_str))
-        .replace("{{ITEMS_TABLE_ROWS}}", items_row)
+        .replace("{{ITEMS_TABLE_ROWS}}", items_table_rows)
         .replace("{{SUBTOTAL_FMT}}", format_currency(subtotal))
         .replace("{{PPN_FMT}}", format_currency(ppn))
         .replace("{{GRAND_TOTAL_FMT}}", format_currency(grand_total))

@@ -375,24 +375,34 @@ def get_purchase_orders(current_user: TokenData = Depends(require_inventory_acce
             SELECT 
                 po.po_id,
                 po.po_number,
-                po.supplier_id,
-                COALESCE(s.supplier_name, po.supplier_id) AS supplier_name,
-                po.item_id,
-                COALESCE(i.item_name, po.item_id) AS item_name,
-                po.warehouse_id,
-                COALESCE(w.warehouse_name, po.warehouse_id) AS warehouse_name,
-                po.order_quantity,
-                po.unit_price,
-                po.total_amount,
-                po.order_date,
-                po.expected_delivery,
-                po.status,
-                po.status AS po_status
+                MIN(po.supplier_id) AS supplier_id,
+                CASE 
+                    WHEN COUNT(DISTINCT s.supplier_name) > 1 THEN 'Multi-Vendor Rekanan (' || COUNT(DISTINCT s.supplier_name) || ' Vendor)'
+                    ELSE COALESCE(MIN(s.supplier_name), MIN(po.supplier_id))
+                END AS supplier_name,
+                MIN(po.item_id) AS item_id,
+                CASE 
+                    WHEN COUNT(po.item_id) > 1 THEN COUNT(po.item_id) || ' Material Pengadaan (' || STRING_AGG(DISTINCT i.item_name, ', ')[:55] || '...)'
+                    ELSE COALESCE(MIN(i.item_name), MIN(po.item_id))
+                END AS item_name,
+                MIN(po.warehouse_id) AS warehouse_id,
+                CASE 
+                    WHEN COUNT(DISTINCT w.warehouse_name) > 1 THEN 'Multi-Gudang Regional (' || COUNT(DISTINCT w.warehouse_name) || ' Gudang)'
+                    ELSE COALESCE(MIN(w.warehouse_name), MIN(po.warehouse_id))
+                END AS warehouse_name,
+                SUM(po.order_quantity) AS order_quantity,
+                CAST(AVG(po.unit_price) AS BIGINT) AS unit_price,
+                SUM(po.total_amount) AS total_amount,
+                MIN(po.order_date) AS order_date,
+                MIN(po.expected_delivery) AS expected_delivery,
+                MIN(po.status) AS status,
+                MIN(po.status) AS po_status
             FROM purchase_orders po
             LEFT JOIN suppliers s ON po.supplier_id = s.supplier_id
             LEFT JOIN inventory_items i ON po.item_id = i.item_id
             LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
-            ORDER BY po.order_date DESC, po.po_id DESC;
+            GROUP BY po.po_id, po.po_number
+            ORDER BY MIN(po.order_date) DESC, po.po_id DESC;
         """
         rows = conn.execute(query).fetchall()
         cols = [desc[0] for desc in conn.description]

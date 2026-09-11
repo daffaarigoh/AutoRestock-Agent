@@ -161,19 +161,25 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
         delivery_s = (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d")
         month_s = datetime.now().strftime("%Y/%m")
 
-        for idx, item in enumerate(items_to_create, 1):
-            next_idx = current_max + idx
-            new_po_id = f"PO-2026-{next_idx:03d}"
-            new_po_num = f"PO/BLT/{month_s}/{(30 + next_idx):03d}"
+        # 1 Consolidated PO per PR document
+        new_po_id = f"PO-2026-{(current_max + 1):03d}"
+        new_po_num = f"PO/BLT/{month_s}/{(30 + current_max + 1):03d}"
 
+        for idx, item in enumerate(items_to_create, 1):
             # Resolve valid supplier_id from inventory_items
             sup_id = item["vendor_id"]
             if not sup_id or not str(sup_id).startswith("SUP-"):
                 sup_row = conn.execute("SELECT supplier_id FROM inventory_items WHERE item_id = ?;", [item["item_id"]]).fetchone()
                 sup_id = sup_row[0] if sup_row and sup_row[0] else "SUP-001"
 
-            # Resolve warehouse_id from stock_balances or default
-            wh_row = conn.execute("SELECT warehouse_id FROM stock_balances WHERE item_id = ? ORDER BY quantity_on_hand ASC LIMIT 1;", [item["item_id"]]).fetchone()
+            # Resolve warehouse_id from stock_balances that has critical/low stock
+            wh_row = conn.execute("""
+                SELECT warehouse_id FROM stock_balances 
+                WHERE item_id = ? AND (stock_status IN ('CRITICAL', 'LOW_STOCK') OR quantity_on_hand <= reorder_point)
+                ORDER BY quantity_on_hand ASC LIMIT 1;
+            """, [item["item_id"]]).fetchone()
+            if not wh_row:
+                wh_row = conn.execute("SELECT warehouse_id FROM stock_balances WHERE item_id = ? ORDER BY quantity_on_hand ASC LIMIT 1;", [item["item_id"]]).fetchone()
             target_wh = wh_row[0] if wh_row and wh_row[0] else "WH-BDG-01"
 
             conn.execute("""
@@ -185,7 +191,7 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
                 item["quantity"], item["unit_price"], item["total_price"],
                 today_s, delivery_s, target_wh, pr_number
             ])
-            created_po_ids.append(new_po_id)
+        created_po_ids.append(new_po_id)
 
     # Pre-compile official Typst PO PDFs
     try:

@@ -729,21 +729,39 @@ class JSONExecutionEngine:
 
                         # Pre-create draft PO in purchase_orders table with status 'PENDING_APPROVAL' linked to pr_number
                         try:
-                            max_po = conn.execute("SELECT MAX(po_id) FROM purchase_orders;").fetchone()[0]
-                            last_num = 16
-                            if max_po and "PO-2026-" in str(max_po):
-                                try:
-                                    last_num = int(str(max_po).split("-")[-1])
-                                except Exception:
-                                    last_num = 16
+                            all_pos = conn.execute("SELECT po_id FROM purchase_orders;").fetchall()
+                            last_num = 0
+                            for (p_val,) in all_pos:
+                                d_matches = re.findall(r'\d+', str(p_val))
+                                if d_matches:
+                                    val = int(d_matches[-1])
+                                    if val > last_num:
+                                        last_num = val
+                            if last_num == 0:
+                                last_num = 16
                             
-                            for idx, it in enumerate(planned_items, 1):
-                                next_id = f"PO-2026-{(last_num + idx):03d}"
-                                next_num = f"PO/BLT/2026/03/{(35 + idx):03d}"
+                            # 1 Consolidated PO per PR document
+                            next_id = f"PO-2026-{(last_num + 1):03d}"
+                            month_s = datetime.now().strftime("%Y/%m")
+                            next_num = f"PO/BLT/{month_s}/{(30 + last_num + 1):03d}"
+                            context["target_po_id"] = next_id
+                            context["target_po_number"] = next_num
+                            
+                            for it in planned_items:
+                                # Resolve actual target warehouse that has critical/low stock for this item
+                                wh_row = conn.execute("""
+                                    SELECT warehouse_id FROM stock_balances 
+                                    WHERE item_id = ? AND (stock_status IN ('CRITICAL', 'LOW_STOCK') OR quantity_on_hand <= reorder_point)
+                                    ORDER BY quantity_on_hand ASC LIMIT 1;
+                                """, [it.item_id]).fetchone()
+                                if not wh_row:
+                                    wh_row = conn.execute("SELECT warehouse_id FROM stock_balances WHERE item_id = ? ORDER BY quantity_on_hand ASC LIMIT 1;", [it.item_id]).fetchone()
+                                target_wh = wh_row[0] if wh_row and wh_row[0] else "WH-BDG-01"
+
                                 conn.execute("""
                                     INSERT INTO purchase_orders (po_id, po_number, supplier_id, item_id, order_quantity, unit_price, total_amount, status, order_date, expected_delivery, warehouse_id, pr_number)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, 'ORDERED', CAST(CURRENT_DATE AS VARCHAR), CAST(CURRENT_DATE + INTERVAL 10 DAY AS VARCHAR), 'WH-JKT-01', ?);
-                                """, [next_id, next_num, it.vendor_id, it.item_id, int(it.reorder_qty), int(it.unit_price), int(it.total_price), pr_number])
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, 'ORDERED', CAST(CURRENT_DATE AS VARCHAR), CAST(CURRENT_DATE + INTERVAL 10 DAY AS VARCHAR), ?, ?);
+                                """, [next_id, next_num, it.vendor_id, it.item_id, int(it.reorder_qty), int(it.unit_price), int(it.total_price), target_wh, pr_number])
 
                             # Also insert into purchase_requests table
                             items_summary = json.dumps([{

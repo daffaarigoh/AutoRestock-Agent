@@ -436,12 +436,12 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
 
     conn = get_db_connection(read_only=True)
     try:
-        po_row = None
+        po_rows = []
         
         # A. Pencarian berbasis nomor PO resmi (PO/BLT/...)
         if m_po_num:
             po_num_str = m_po_num.group(0).upper()
-            po_row = conn.execute("""
+            po_rows = conn.execute("""
                 SELECT po.po_id, po.po_number, po.supplier_id, s.supplier_name, po.item_id, 
                        i.item_name, i.item_code, i.category, i.unit, po.order_quantity, 
                        po.total_amount, po.status, po.actual_delivery, po.warehouse_id, 
@@ -451,17 +451,17 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                 JOIN inventory_items i ON po.item_id = i.item_id
                 JOIN warehouses w ON po.warehouse_id = w.warehouse_id
                 WHERE UPPER(po.po_number) = ?;
-            """, [po_num_str]).fetchone()
+            """, [po_num_str]).fetchall()
             
         # B. Pencarian berbasis ID PO (PO-2026-006, PO-006, PO-6)
-        if not po_row and m_po_id:
+        if not po_rows and m_po_id:
             raw_po_str = m_po_id.group(0).upper().replace(" ", "-").replace("_", "-")
             digits = re.findall(r'\d+', raw_po_str)
             digits_str = digits[-1] if digits else ""
             padded_digits = digits_str.zfill(3)
 
             canonical_po_id = f"PO-2026-{padded_digits}"
-            po_row = conn.execute("""
+            po_rows = conn.execute("""
                 SELECT po.po_id, po.po_number, po.supplier_id, s.supplier_name, po.item_id, 
                        i.item_name, i.item_code, i.category, i.unit, po.order_quantity, 
                        po.total_amount, po.status, po.actual_delivery, po.warehouse_id, 
@@ -471,10 +471,10 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                 JOIN inventory_items i ON po.item_id = i.item_id
                 JOIN warehouses w ON po.warehouse_id = w.warehouse_id
                 WHERE UPPER(po.po_id) = ? OR UPPER(po.po_id) = ?;
-            """, [raw_po_str, canonical_po_id]).fetchone()
+            """, [raw_po_str, canonical_po_id]).fetchall()
 
-            if not po_row:
-                po_row = conn.execute("""
+            if not po_rows:
+                po_rows = conn.execute("""
                     SELECT po.po_id, po.po_number, po.supplier_id, s.supplier_name, po.item_id, 
                            i.item_name, i.item_code, i.category, i.unit, po.order_quantity, 
                            po.total_amount, po.status, po.actual_delivery, po.warehouse_id, 
@@ -484,10 +484,10 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                     JOIN inventory_items i ON po.item_id = i.item_id
                     JOIN warehouses w ON po.warehouse_id = w.warehouse_id
                     WHERE UPPER(po.po_number) LIKE ?;
-                """, [f"%{padded_digits}"]).fetchone()
+                """, [f"%{padded_digits}"]).fetchall()
 
         # C. Jika tidak ada kode PO eksplisit, cari PO yang berstatus ORDERED berdasarkan material / gudang
-        if not po_row:
+        if not po_rows:
             in_transit_rows = conn.execute("""
                 SELECT po.po_id, po.po_number, po.supplier_id, s.supplier_name, po.item_id, 
                        i.item_name, i.item_code, i.category, i.unit, po.order_quantity, 
@@ -511,17 +511,36 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                 elif r_item in lower_prompt or (len(r_item.split()) > 1 and " ".join(r_item.split()[:2]) in lower_prompt):
                     matched_pos.append(r)
 
-            if len(matched_pos) == 1:
-                po_row = matched_pos[0]
-            elif len(matched_pos) > 1 or len(in_transit_rows) > 0:
-                candidates = matched_pos if matched_pos else in_transit_rows
+            if len(matched_pos) > 0:
+                target_p_id = matched_pos[0][0]
+                # Check if all matched belonged to same PO
+                if all(m[0] == target_p_id for m in matched_pos):
+                    po_rows = [r for r in in_transit_rows if r[0] == target_p_id]
+                else:
+                    candidates = matched_pos
+                    msg = "**Sistem Mendeteksi Purchase Order Aktif (`ORDERED`)**\n\n"
+                    msg += "Mohon sebutkan nomor PO spesifik yang telah sampai di gudang fisik:\n\n"
+                    msg += "| No. PO | Kode Referensi | Material | Volume | Gudang Tujuan | Estimasi Tiba |\n"
+                    msg += "| :--- | :--- | :--- | :---: | :--- | :---: |\n"
+                    for c in candidates[:6]:
+                        msg += f"| **{c[0]}** | `{c[1]}` | {c[5]} | {c[9]:,} {c[8]} | {c[14]} ({c[15]}) | {c[19] or '-'} |\n"
+                    msg += "\n*Contoh instruksi:* `Barang untuk PO-2026-038 sudah sampai di gudang, tolong catat penerimaannya.`"
+                    return {
+                        "parsed_intent": {"workflow_id": "goods_receipt_clarification"},
+                        "action_type": "goods_receipt",
+                        "message": msg,
+                        "generated_prs": [],
+                        "affected_items": []
+                    }
+            elif len(in_transit_rows) > 0:
+                candidates = in_transit_rows
                 msg = "**Sistem Mendeteksi Purchase Order Aktif (`ORDERED`)**\n\n"
                 msg += "Mohon sebutkan nomor PO spesifik yang telah sampai di gudang fisik:\n\n"
                 msg += "| No. PO | Kode Referensi | Material | Volume | Gudang Tujuan | Estimasi Tiba |\n"
                 msg += "| :--- | :--- | :--- | :---: | :--- | :---: |\n"
                 for c in candidates[:6]:
                     msg += f"| **{c[0]}** | `{c[1]}` | {c[5]} | {c[9]:,} {c[8]} | {c[14]} ({c[15]}) | {c[19] or '-'} |\n"
-                msg += "\n*Contoh instruksi:* `Barang untuk PO-2026-006 sudah sampai di Gudang Bandung, tolong catat penerimaannya.`"
+                msg += "\n*Contoh instruksi:* `Barang untuk PO-2026-038 sudah sampai di gudang, tolong catat penerimaannya.`"
                 return {
                     "parsed_intent": {"workflow_id": "goods_receipt_clarification"},
                     "action_type": "goods_receipt",
@@ -532,29 +551,27 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
     finally:
         conn.close()
 
-    if not po_row:
+    if not po_rows:
         return {
             "parsed_intent": {"workflow_id": "goods_receipt_not_found"},
             "action_type": "goods_receipt",
-            "message": "Nomor Purchase Order (PO) yang Anda sebutkan tidak ditemukan dalam basis data logistik. Pastikan nomor PO benar (contoh: `PO-2026-006` atau `PO/BLT/2026/03/008`).",
+            "message": "Nomor Purchase Order (PO) yang Anda sebutkan tidak ditemukan dalam basis data logistik. Pastikan nomor PO benar (contoh: `PO-2026-006` atau `PO-2026-038`).",
             "generated_prs": [],
             "affected_items": []
         }
 
-    # Atribut PO
-    (po_id, po_number, supplier_id, supplier_name, item_id, 
-     item_name, item_code, category, unit, order_quantity, 
-     total_amount, po_status, actual_delivery, warehouse_id, 
-     warehouse_name, region, supervisor, min_stock, order_date, expected_delivery) = po_row
+    canonical_po_id = po_rows[0][0]
+    canonical_po_number = po_rows[0][1]
+    supplier_name = po_rows[0][3]
 
-    # 4. Validasi jika PO sudah pernah berstatus DELIVERED
-    if po_status == 'DELIVERED':
+    # 4. Validasi jika seluruh item dalam PO sudah pernah berstatus DELIVERED
+    all_delivered = all(r[11] == 'DELIVERED' for r in po_rows)
+    if all_delivered:
         msg = f"**Informasi Penerimaan: Barang Sudah Pernah Diterima**\n\n"
-        msg += f"Pesanan **{po_id}** (`{po_number}`) untuk material **{item_name}** ({order_quantity:,} {unit}) telah tercatat **DELIVERED** sebelumnya pada tanggal **{actual_delivery or '2026-01-22'}** di **{warehouse_name}** ({region}).\n\n"
-        msg += f"- **Supervisor Gudang**: {supervisor}\n"
+        msg += f"Seluruh pesanan dalam **{canonical_po_id}** (`{canonical_po_number}`) telah tercatat **DELIVERED** sebelumnya pada tanggal **{po_rows[0][12] or '2026-01-22'}**.\n\n"
         msg += f"- **Status Fisik**: Seluruh kuantitas barang telah masuk ke saldo gudang dan tidak dilakukan penambahan ganda demi integritas data persediaan."
         return {
-            "parsed_intent": {"workflow_id": "goods_receipt_already_delivered", "po_id": po_id},
+            "parsed_intent": {"workflow_id": "goods_receipt_already_delivered", "po_id": canonical_po_id},
             "action_type": "goods_receipt",
             "message": msg,
             "generated_prs": [],
@@ -566,68 +583,98 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
     now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     w_conn = get_db_connection(read_only=False)
+    processed_items = []
+    affected_items = []
+
     try:
-        # A. Update purchase_orders ke status DELIVERED
+        # A. Update purchase_orders ke status DELIVERED untuk semua item dalam PO ini
         w_conn.execute("""
             UPDATE purchase_orders 
             SET status = 'DELIVERED', actual_delivery = ?
-            WHERE po_id = ?;
-        """, [today_str, po_id])
+            WHERE po_id = ? OR po_number = ?;
+        """, [today_str, canonical_po_id, canonical_po_number])
 
-        # B. Update kuantitas fisik di stock_balances
-        sb_row = w_conn.execute("""
-            SELECT balance_id, quantity_on_hand, quantity_reserved, reorder_point, stock_status
-            FROM stock_balances
-            WHERE warehouse_id = ? AND item_id = ?;
-        """, [warehouse_id, item_id]).fetchone()
+        # B. Update kuantitas fisik di stock_balances untuk setiap item
+        for r in po_rows:
+            (row_po_id, row_po_num, sup_id, sup_n, itm_id, 
+             itm_name, itm_code, itm_cat, itm_unit, itm_qty, 
+             itm_amount, itm_status, itm_actual_deliv, itm_wh_id, 
+             itm_wh_name, itm_region, itm_supervisor, itm_min_stock, itm_order_date, itm_exp_deliv) = r
 
-        if sb_row:
-            bal_id, old_qty, res_qty, rop, old_status = sb_row
-            new_qty = old_qty + order_quantity
-            # Kalkulasi ulang status kesehatan stok
-            if new_qty <= rop * 0.5:
-                new_status = 'CRITICAL'
-            elif new_qty <= rop:
-                new_status = 'LOW_STOCK'
+            sb_row = w_conn.execute("""
+                SELECT balance_id, quantity_on_hand, quantity_reserved, reorder_point, stock_status
+                FROM stock_balances
+                WHERE warehouse_id = ? AND item_id = ?;
+            """, [itm_wh_id, itm_id]).fetchone()
+
+            if sb_row:
+                bal_id, old_qty, res_qty, rop, old_status = sb_row
+                new_qty = old_qty + itm_qty
+                if new_qty <= rop * 0.5:
+                    new_status = 'CRITICAL'
+                elif new_qty <= rop:
+                    new_status = 'LOW_STOCK'
+                else:
+                    new_status = 'NORMAL'
+
+                w_conn.execute("""
+                    UPDATE stock_balances
+                    SET quantity_on_hand = ?, stock_status = ?, last_updated = ?
+                    WHERE balance_id = ?;
+                """, [new_qty, new_status, now_ts, bal_id])
             else:
-                new_status = 'NORMAL'
+                bal_id = f"STK-{itm_wh_id}-{itm_id}"
+                old_qty = 0
+                old_status = "TIDAK ADA"
+                new_qty = itm_qty
+                rop = itm_min_stock
+                new_status = 'NORMAL' if new_qty > rop else ('LOW_STOCK' if new_qty > rop * 0.5 else 'CRITICAL')
+                w_conn.execute("""
+                    INSERT INTO stock_balances VALUES (?, ?, ?, ?, 0, ?, ?, ?);
+                """, [bal_id, itm_id, itm_wh_id, new_qty, rop, new_status, now_ts])
 
+            # C. Sinkronisasi tabel kompatibilitas 'items'
             w_conn.execute("""
-                UPDATE stock_balances
-                SET quantity_on_hand = ?, stock_status = ?, last_updated = ?
-                WHERE balance_id = ?;
-            """, [new_qty, new_status, now_ts, bal_id])
-        else:
-            bal_id = f"STK-{warehouse_id}-{item_id}"
-            old_qty = 0
-            old_status = "TIDAK ADA"
-            new_qty = order_quantity
-            rop = min_stock
-            new_status = 'NORMAL' if new_qty > rop else ('LOW_STOCK' if new_qty > rop * 0.5 else 'CRITICAL')
-            w_conn.execute("""
-                INSERT INTO stock_balances VALUES (?, ?, ?, ?, 0, ?, ?, ?);
-            """, [bal_id, item_id, warehouse_id, new_qty, rop, new_status, now_ts])
+                UPDATE items
+                SET current_stock = (
+                    SELECT COALESCE(SUM(quantity_on_hand), 0)
+                    FROM stock_balances
+                    WHERE stock_balances.item_id = items.item_id
+                ),
+                min_threshold = (
+                    SELECT COALESCE(SUM(reorder_point), items.min_threshold)
+                    FROM stock_balances
+                    WHERE stock_balances.item_id = items.item_id
+                ),
+                max_threshold = (
+                    SELECT COALESCE(SUM(reorder_point * 3), items.max_threshold)
+                    FROM stock_balances
+                    WHERE stock_balances.item_id = items.item_id
+                )
+                WHERE item_id = ?;
+            """, [itm_id])
 
-        # C. Sinkronisasi tabel kompatibilitas 'items'
-        w_conn.execute("""
-            UPDATE items
-            SET current_stock = (
-                SELECT COALESCE(SUM(quantity_on_hand), 0)
-                FROM stock_balances
-                WHERE stock_balances.item_id = items.item_id
-            ),
-            min_threshold = (
-                SELECT COALESCE(SUM(reorder_point), items.min_threshold)
-                FROM stock_balances
-                WHERE stock_balances.item_id = items.item_id
-            ),
-            max_threshold = (
-                SELECT COALESCE(SUM(reorder_point * 3), items.max_threshold)
-                FROM stock_balances
-                WHERE stock_balances.item_id = items.item_id
-            )
-            WHERE item_id = ?;
-        """, [item_id])
+            processed_items.append({
+                "name": itm_name,
+                "code": itm_code,
+                "category": itm_cat,
+                "quantity": itm_qty,
+                "unit": itm_unit,
+                "warehouse_name": itm_wh_name,
+                "warehouse_id": itm_wh_id,
+                "region": itm_region,
+                "old_qty": old_qty,
+                "new_qty": new_qty,
+                "old_status": old_status,
+                "new_status": new_status,
+                "min_stock": rop
+            })
+            affected_items.append({
+                "name": itm_name,
+                "current_stock": new_qty,
+                "min_stock": rop,
+                "unit": itm_unit
+            })
 
         # D. Ekspor balik ke berkas CSV agar tersimpan permanen
         try:
@@ -646,56 +693,45 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
 
     # 6. Format Respon Konfirmasi Korporat Bali Tower
     msg = f"**Konfirmasi Penerimaan Barang Fisik Berhasil Dibukukan**\n\n"
-    msg += f"Penerimaan material pesanan **{po_id}** (`{po_number}`) telah diverifikasi tiba di gudang dan berhasil dicatatkan ke dalam basis data inventaris PT Bali Towerindo Sentra Tbk.\n\n"
-    msg += "| Parameter | Rincian Transaksi Logistik |\n"
-    msg += "| :--- | :--- |\n"
-    msg += f"| **No. Purchase Order** | `{po_id}` ({po_number}) |\n"
-    msg += f"| **Nama Material** | {item_name} (`{item_code}`) |\n"
-    msg += f"| **Kategori & Volume** | {category} — **{order_quantity:,} {unit}** |\n"
-    msg += f"| **Supplier / Rekanan** | {supplier_name} |\n"
-    msg += f"| **Gudang Tujuan** | {warehouse_name} (`{warehouse_id}`) |\n"
-    msg += f"| **Wilayah & Supervisor** | {region} — {supervisor} |\n"
-    msg += f"| **Tanggal Penerimaan** | {today_str} (Tercatat Hari Ini) |\n"
-    msg += f"| **Status Purchase Order** | Sebelumnya `{po_status}` ➔ **`DELIVERED`** |\n"
-    msg += f"| **Saldo Fisik Gudang** | {old_qty:,} {unit} ➔ **{new_qty:,} {unit}** |\n"
-    msg += f"| **Status Kesehatan Stok** | `{old_status}` ➔ **`{new_status}`** |\n\n"
-    msg += f"*Saldo fisik gudang regional telah bertambah dan status pesanan telah otomatis disinkronkan ke DuckDB Enterprise.*"
+    msg += f"Penerimaan material pesanan **{canonical_po_id}** (`{canonical_po_number}`) telah diverifikasi tiba di gudang fisik dan berhasil dicatatkan ke dalam basis data inventaris PT Bali Towerindo Sentra Tbk.\n\n"
+    msg += f"- **No. Purchase Order**: `{canonical_po_id}` ({canonical_po_number})\n"
+    msg += f"- **Supplier / Rekanan**: {supplier_name}\n"
+    msg += f"- **Tanggal Penerimaan**: {today_str} (Tercatat Hari Ini)\n"
+    msg += f"- **Status Pesanan**: Diperbarui menjadi **`DELIVERED`**\n"
+    msg += f"- **Total Material Diterima**: **{len(processed_items)} jenis barang**\n\n"
+    msg += "| No | Nama Material & Kode | Volume Diterima | Gudang Tujuan | Saldo Fisik Gudang | Status Kesehatan |\n"
+    msg += "| :-: | :--- | :---: | :--- | :---: | :---: |\n"
+    for idx, p in enumerate(processed_items, 1):
+        msg += f"| {idx} | **{p['name']}**<br>`{p['code']}` | **{p['quantity']:,} {p['unit']}** | {p['warehouse_name']} ({p['region']}) | {p['old_qty']:,} ➔ **{p['new_qty']:,} {p['unit']}** | `{p['old_status']}` ➔ **`{p['new_status']}`** |\n"
+    msg += f"\n*Saldo fisik di seluruh gudang regional terkait telah bertambah dan status kesehatan persediaan telah dipulihkan secara otomatis di DuckDB Enterprise.*"
 
     # Pre-generate official Typst PO PDF document for immediate preview / download
     try:
         from docgen.compiler import generate_po_pdf
-        generate_po_pdf(po_id)
+        generate_po_pdf(canonical_po_id)
     except Exception as err:
         print(f"[Goods Receipt] PO PDF pre-generation note: {err}")
 
+    first_item = processed_items[0] if processed_items else {}
     return {
         "parsed_intent": {
             "workflow_id": "goods_receipt",
-            "po_id": po_id,
-            "po_number": po_number,
-            "item_id": item_id,
-            "warehouse_id": warehouse_id,
-            "quantity_received": order_quantity
+            "po_id": canonical_po_id,
+            "po_number": canonical_po_number,
+            "total_items": len(processed_items)
         },
         "action_type": "goods_receipt",
         "message": msg,
-        "po_id": po_id,
-        "po_number": po_number,
+        "po_id": canonical_po_id,
+        "po_number": canonical_po_number,
         "po_status": "DELIVERED",
         "status": "DELIVERED",
-        "quantity_received": order_quantity,
-        "stock_before": old_qty,
-        "stock_after": new_qty,
-        "pdf_download_url": f"/api/documents/po/{po_id}/download",
+        "total_items_received": len(processed_items),
+        "pdf_download_url": f"/api/documents/po/{canonical_po_id}/download",
         "generated_prs": [],
-        "affected_items": [{
-            "name": item_name,
-            "current_stock": new_qty,
-            "min_stock": rop,
-            "unit": unit
-        }],
+        "affected_items": affected_items,
         "email_sent": False,
-        "total_items_analyzed": 1,
+        "total_items_analyzed": len(processed_items),
         "target_destinations": ["database", "pdf"]
     }
 
