@@ -553,7 +553,29 @@ class TenantSchemaAdapter:
         unit_price_usd = round(unit_price / 16000.0, 2)
 
         try:
-            if effective_tenant == "TENANT_A":
+            existing_tables = [r[0] for r in conn.execute("SHOW TABLES").fetchall()]
+            registered_id = item_data.get("item_code") or f"SKU-{uuid.uuid4().hex[:6].upper()}"
+
+            if "inventory_items" in existing_tables:
+                internal_id = f"ITEM-{uuid.uuid4().hex[:6].upper()}"
+                supplier_id = item_data.get("supplier_id") or "SUP-001"
+                conn.execute("""
+                    INSERT INTO inventory_items (item_id, item_code, item_name, category, unit, unit_price, min_stock, safety_stock, lead_time_days, supplier_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, [internal_id, registered_id, name, category, unit, unit_price, min_thresh, min_thresh, lead_time, supplier_id])
+
+                if "stock_balances" in existing_tables:
+                    wh_id = item_data.get("warehouse_id") or "WH-BDG-01"
+                    bal_id = f"BAL-{uuid.uuid4().hex[:6].upper()}"
+                    st_status = "NORMAL" if stock > min_thresh else ("LOW_STOCK" if stock > min_thresh * 0.5 else "CRITICAL")
+                    from datetime import datetime
+                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    conn.execute("""
+                        INSERT INTO stock_balances (balance_id, item_id, warehouse_id, quantity_on_hand, quantity_reserved, reorder_point, stock_status, last_stock_take_date, last_updated)
+                        VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?);
+                    """, [bal_id, internal_id, wh_id, stock, min_thresh, st_status, now_str[:10], now_str])
+
+            elif effective_tenant == "TENANT_A" and "mfg_electronics_inventory" in existing_tables:
                 part_no = item_data.get("part_number") or f"PART-{uuid.uuid4().hex[:6].upper()}"
                 conn.execute("""
                     INSERT INTO mfg_electronics_inventory (Part_Number, Component_Name, Manufacturer, Package_Footprint, Stock_Quantity, Min_Safety_Stock, Lead_Time_Days, Unit_Price_USD)
@@ -561,7 +583,7 @@ class TenantSchemaAdapter:
                 """, [part_no, name, unit, stock, min_thresh, lead_time, unit_price_usd])
                 registered_id = part_no
 
-            elif effective_tenant == "TENANT_B":
+            elif effective_tenant == "TENANT_B" and "pharma_fmcg_inventory" in existing_tables:
                 drug_name = name
                 brand_name = item_data.get("brand_name") or "PharmaGeneric"
                 conn.execute("""
@@ -570,7 +592,7 @@ class TenantSchemaAdapter:
                 """, [drug_name, brand_name, unit, stock, stock, lead_time, unit_price_usd])
                 registered_id = drug_name.replace(" ", "_").upper()[:12]
 
-            else: # TENANT_C
+            elif "fleet_maintenance_parts" in existing_tables:
                 line_text = name
                 model = item_data.get("vehicle_model") or "Fleet General"
                 conn.execute("""
@@ -579,16 +601,18 @@ class TenantSchemaAdapter:
                 """, [model, line_text, category, stock, min_thresh, lead_time, int(unit_price)])
                 registered_id = f"FLT-{line_text.replace(' ', '_').upper()[:10]}"
 
-            # Also register to legacy items & vendors for backward compatibility
-            conn.execute("""
-                INSERT INTO items (item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
-                VALUES (?, ?, ?, ?, ?, ?, 1.0, ?, ?, ?);
-            """, [registered_id, name, category, stock, min_thresh, min_thresh * 3, lead_time, unit, effective_tenant])
+            # Also register to legacy items & vendors if tables exist
+            if "items" in existing_tables:
+                conn.execute("""
+                    INSERT INTO items (item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit, tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?, 1.0, ?, ?, ?);
+                """, [registered_id, name, category, stock, min_thresh, min_thresh * 3, lead_time, unit, effective_tenant])
 
-            conn.execute("""
-                INSERT INTO vendors (vendor_id, name, item_id, unit_price, lead_time_days, rating, tenant_id)
-                VALUES (?, 'Standard Verified Supplier', ?, ?, ?, 4.8, ?);
-            """, [f"VND-{registered_id[-4:]}", registered_id, unit_price, lead_time, effective_tenant])
+            if "vendors" in existing_tables:
+                conn.execute("""
+                    INSERT INTO vendors (vendor_id, name, item_id, unit_price, lead_time_days, rating, tenant_id)
+                    VALUES (?, 'Standard Verified Supplier', ?, ?, ?, 4.8, ?);
+                """, [f"VND-{registered_id[-4:]}", registered_id, unit_price, lead_time, effective_tenant])
 
             conn.commit()
             return {
