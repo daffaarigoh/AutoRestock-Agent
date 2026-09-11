@@ -401,6 +401,16 @@ def get_purchase_orders(current_user: TokenData = Depends(require_inventory_acce
             LEFT JOIN suppliers s ON po.supplier_id = s.supplier_id
             LEFT JOIN inventory_items i ON po.item_id = i.item_id
             LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
+            WHERE (
+                po.pr_number IS NULL 
+                OR po.pr_number IN (
+                    SELECT pr_number FROM orders WHERE status IN ('APPROVED', 'DISETUJUI')
+                    UNION
+                    SELECT pr_number FROM purchase_requests WHERE status IN ('APPROVED', 'DISETUJUI')
+                )
+                OR po.status = 'DELIVERED'
+            )
+            AND po.status != 'PENDING_APPROVAL'
             GROUP BY po.po_id, po.po_number
             ORDER BY MIN(po.order_date) DESC, po.po_id DESC;
         """
