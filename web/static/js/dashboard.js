@@ -1911,7 +1911,12 @@ async function submitPrompt() {
   appendUserMessage(promptText);
 
   const lower = promptText.toLowerCase();
-  const isLeaveFormIntent = ["ajukan cuti", "input cuti", "form cuti", "formulir cuti", "permohonan cuti", "isi cuti", "minta cuti", "mau cuti", "input data cuti", "buat cuti"].some(k => lower.includes(k));
+  const isAuditOrReview = ["periksa", "cek", "audit", "tinjau", "lihat", "daftar", "rekap", "pending", "status", "laporan", "otorisasi", "persetujuan"].some(w => lower.includes(w));
+  const isLeaveFormIntent = !isAuditOrReview && [
+    "ajukan cuti", "input cuti", "buka form cuti", "buka formulir cuti", "isi form cuti", 
+    "isi formulir cuti", "minta cuti", "mau cuti", "input data cuti", "buat pengajuan cuti",
+    "buat cuti", "form permohonan cuti", "formulir permohonan cuti"
+  ].some(k => lower.includes(k));
 
   if (isLeaveFormIntent && (getEffectiveTenant() === 'HR' || getEffectiveTenant() === 'ALL')) {
     renderLeaveRequestChatForm();

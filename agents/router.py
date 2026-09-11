@@ -254,6 +254,35 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
         prompt_lower = prompt.lower()
         extracted_email = extract_recipient_email(prompt)
 
+        # Check for direct workflow ID or title mention
+        for row in workflows:
+            wf_id_term = row[0].lower()
+            wf_name_term = row[1].lower()
+            if wf_id_term in prompt_lower or (len(wf_name_term) > 6 and wf_name_term in prompt_lower):
+                return {
+                    "workflow_id": row[0],
+                    "send_email": bool(extracted_email) or ("email" in prompt_lower),
+                    "recipient_email": extracted_email
+                }
+
+        # Check for HR leave audit & pending review intent (User B)
+        is_leave_audit_intent = (
+            any(k in prompt_lower for k in ["periksa", "audit", "cek", "tinjau", "lihat", "daftar", "rekap", "laporan", "status", "otorisasi"])
+            and any(k in prompt_lower for k in ["cuti", "pending", "pending_approval", "permohonan cuti", "pengajuan cuti", "izin"])
+        )
+        if is_leave_audit_intent:
+            for row in workflows:
+                w_name = row[1].lower()
+                w_desc = (row[2] or "").lower()
+                if any(w in w_name for w in ["audit cuti", "cuti pending", "periksa cuti", "otorisasi hr"]) or (
+                    "cuti" in w_name and ("pending" in w_name or "audit" in w_name or "email" in w_name)
+                ):
+                    return {
+                        "workflow_id": row[0],
+                        "send_email": True,
+                        "recipient_email": extracted_email
+                    }
+
         # Check for client operator onboarding intent first (User C)
         is_onboarding_intent = any(k in prompt_lower for k in ["klien", "operator", "sewa", "onboarding", "mla", "menara", "kontrak"]) and any(k in prompt_lower for k in ["daftar", "daftarkan", "baru", "onboard", "tambah", "ajukan"])
         if is_onboarding_intent:
@@ -343,6 +372,19 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
         if is_onboarding_intent or any(k in prompt_lower for k in ["klien baru", "operator baru", "daftar operator", "sewa baru", "kontrak baru", "onboarding", "daftarkan operator", "sewa menara baru", "tambah operator"]):
             for row in workflows:
                 if any(w in row[1].lower() for w in ["onboard", "klien", "kontrak", "mla"]) or ("daftar" in row[1].lower() and "operator" in row[1].lower()):
+                    return {
+                        "workflow_id": row[0],
+                        "send_email": True,
+                        "recipient_email": extracted_email
+                    }
+
+        # Check for HR Leave Audit / Review (Schema B)
+        if is_leave_audit_intent or any(k in prompt_lower for k in ["audit cuti", "cuti pending", "periksa cuti", "pending_approval", "permohonan cuti"]):
+            for row in workflows:
+                w_name = row[1].lower()
+                if any(w in w_name for w in ["audit cuti", "cuti pending", "periksa cuti", "otorisasi hr"]) or (
+                    "cuti" in w_name and ("pending" in w_name or "audit" in w_name or "email" in w_name)
+                ):
                     return {
                         "workflow_id": row[0],
                         "send_email": True,

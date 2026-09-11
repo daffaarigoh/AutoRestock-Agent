@@ -1061,12 +1061,13 @@ async def execute_prompt_logic(
             return {"parsed_intent": {"workflow_id": "hr_attendance_audit"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
 
         # C. HR - Cuti & Izin
-        is_leave_request_intent = any(w in lower_prompt for w in [
-            "ajukan cuti", "input cuti", "form cuti", "formulir cuti", "permohonan cuti",
+        is_audit_or_review = any(w in lower_prompt for w in ["periksa", "cek", "audit", "tinjau", "lihat", "daftar", "rekap", "pending", "status", "laporan", "otorisasi", "persetujuan"])
+        is_leave_request_intent = (not is_audit_or_review) and (any(w in lower_prompt for w in [
+            "ajukan cuti", "input cuti", "form cuti", "formulir cuti",
             "isi cuti", "minta cuti", "mau cuti", "buat cuti", "ambil cuti", "buat permohonan cuti",
             "daftar cuti baru", "input data cuti", "mau isi data cuti", "isi data cuti", "mau isi cuti",
-            "pengajuan cuti", "rekam cuti", "catat cuti", "form permohonan cuti"
-        ]) or (("cuti" in lower_prompt or "izin" in lower_prompt) and any(k in lower_prompt for k in ["isi", "input", "ajukan", "buat", "form", "minta", "mau", "baru", "rekam"]))
+            "pengajuan cuti", "rekam cuti", "catat cuti", "form permohonan cuti", "formulir permohonan cuti"
+        ]) or (("cuti" in lower_prompt or "izin" in lower_prompt) and any(k in lower_prompt for k in ["isi", "input", "ajukan", "buat", "form", "minta", "mau", "baru", "rekam"])))
         if is_leave_request_intent:
             if stage_callback:
                 await stage_callback("reasoning", "Menyiapkan formulir interaktif pengajuan cuti teknisi...")
@@ -1078,7 +1079,22 @@ async def execute_prompt_logic(
                 "affected_items": []
             }
 
-        if any(w in lower_prompt for w in ["cuti", "izin", "sakit", "leave"]):
+        # If there is a matching custom HR workflow in database (such as WF-847DA5 or audit cuti pending),
+        # do NOT intercept with static query! Let it fall through to SemanticRouter & JSONExecutionEngine!
+        has_custom_leave_wf = False
+        if is_audit_or_review:
+            try:
+                custom_wf_row = conn.execute("""
+                    SELECT id FROM workflows 
+                    WHERE tenant_id IN ('HR', 'userb', 'ALL') 
+                      AND (compiled_json LIKE '%hr.query_pending_leaves%' OR LOWER(name) LIKE '%audit cuti%' OR LOWER(name) LIKE '%cuti pending%')
+                """).fetchone()
+                if custom_wf_row:
+                    has_custom_leave_wf = True
+            except Exception:
+                pass
+
+        if not has_custom_leave_wf and any(w in lower_prompt for w in ["cuti", "izin", "sakit", "leave"]):
             if stage_callback:
                 await stage_callback("database", "Memeriksa status pengajuan cuti karyawan...")
             
@@ -1654,6 +1670,8 @@ async def execute_prompt_logic(
             action_type = "register_product"
         elif result.get("pr_number"):
             action_type = "review_prs"
+        elif "pending_leaves" in context or "hr.query_pending_leaves" in str(compiled_json.get("steps", [])):
+            action_type = "hr_query"
         elif context.get("send_email") and "email" in str(compiled_json.get("steps", [])):
             action_type = "notify_email"
             
