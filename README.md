@@ -1,5 +1,4 @@
 <div align="center">
-  <h1>🏢 PT BALI TOWERINDO SENTRA TBK</h1>
   <h3>📦 AutoRestock-Agent — Autonomous Multi-Agent Procurement & Enterprise Intelligence Platform</h3>
   <p>
     <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python Version" />
@@ -15,7 +14,7 @@
 
 ## 📝 Executive Overview
 
-**AutoRestock-Agent** is an enterprise-grade autonomous multi-agent operating system engineered for **PT Bali Towerindo Sentra Tbk** (IDX: `BALI`). Built upon **FastAPI**, **LangGraph**, **DuckDB**, and **Typst Engine**, the platform automates and orchestrates mission-critical operations across three core corporate divisions and enterprise administration:
+**AutoRestock-Agent** is an enterprise-grade autonomous multi-agent operating system engineered. Built upon **FastAPI**, **LangGraph**, **DuckDB**, and **Typst Engine**, the platform automates and orchestrates mission-critical operations across three core corporate divisions and enterprise administration:
 
 1. **📦 Schema A — Inventory & Logistics Hubs (`usera`)**:
    Autonomous regional stock monitoring across 7 logistics hubs, algorithmic reorder calculations (*Reorder Point & Safety Stock*), multi-agent Purchase Requisition (PR) compilation, single-consolidated Purchase Order (PO) issuance, and single-click regional Goods Receipt.
@@ -351,8 +350,3 @@ AutoRestock-Agent/
 ```
 
 ---
-
-<div align="center">
-  <p><strong>PT Bali Towerindo Sentra Tbk</strong> &bull; Telecommunication Infrastructure & Fiber Optic Solutions</p>
-  <p><em>Wisma Kodel Lantai 6, Jl. H.R. Rasuna Said Kav. B-4, Setiabudi, Jakarta Selatan 12920, Indonesia</em></p>
-</div>
