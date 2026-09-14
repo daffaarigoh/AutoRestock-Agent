@@ -19,15 +19,15 @@
   <!-- Top Executive Header -->
   <header class="app-header">
     <div class="brand-section">
-      <button class="brand-logo-btn" onclick="toggleDataSidebar()" title="Klik untuk Buka/Tutup Katalog & Modul" aria-label="Toggle Sidebar">
+      <button class="brand-logo-btn" onclick="toggleDataSidebar()" title="Toggle Data Catalog & Modules" aria-label="Toggle Sidebar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
           <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
           <line x1="12" y1="22.08" x2="12" y2="12"></line>
         </svg>
       </button>
-      <div class="brand-info" onclick="toggleDataSidebar()" style="cursor: pointer;" title="Klik untuk Buka/Tutup Panel Data">
-        <div class="brand-name">Bali Tower <span class="brand-badge">Enterprise</span></div>
+      <div class="brand-info" onclick="toggleDataSidebar()" style="cursor: pointer;" title="Toggle Data Panel">
+        <div class="brand-name"><span style="color: var(--primary);">Bali</span><span style="color: var(--accent-orange); margin-left: 3px;">Tower</span> <span class="brand-badge">Enterprise</span></div>
         <span class="brand-subtitle" id="brandSubtitle">PT Bali Towerindo Sentra Tbk — Operations</span>
       </div>
     </div>
@@ -36,15 +36,15 @@
     <div class="header-actions">
       <!-- Fast Module Switcher Pills (Filtered by Role/Tenant) -->
       <div class="module-quick-switch" id="moduleQuickSwitch">
-        <button class="mod-pill active" id="modPillInventory" onclick="openDataSidebar('canvas-inventory')" title="Modul Material & Logistik">
+        <button class="mod-pill active" id="modPillInventory" onclick="openDataSidebar('canvas-inventory')" title="Material & Logistics Module">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
           <span>Inventory</span>
         </button>
-        <button class="mod-pill" id="modPillHr" onclick="openDataSidebar('canvas-hr')" title="Modul HR & Teknisi Lapangan">
+        <button class="mod-pill" id="modPillHr" onclick="openDataSidebar('canvas-hr')" title="HR & Field Operations Module">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           <span>HR & Field</span>
         </button>
-        <button class="mod-pill" id="modPillFinance" onclick="openDataSidebar('canvas-finance')" title="Modul Keuangan & Invoices">
+        <button class="mod-pill" id="modPillFinance" onclick="openDataSidebar('canvas-finance')" title="Finance & Invoices Module">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
           <span>Finance</span>
         </button>
@@ -56,6 +56,15 @@
         <span id="apiHealthText">API Online</span>
       </div>
 
+      <!-- Circular Help Guide Button in Header -->
+      <button class="header-circle-help-btn" onclick="openFlowHelpModal()" title="Workflow Guide & Example Prompts" aria-label="Workflow Guide">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </button>
+
       <!-- User Profile Pill (Minimalist & Clean) -->
       <div class="user-profile-pill">
         <svg class="user-pill-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,11 +74,11 @@
         <span class="user-tenant-tag" id="displayTenant" style="display: none;">ALL</span>
         <div class="user-pill-divider"></div>
         <a href="/static/admin.html" class="btn btn-secondary btn-sm" id="btnAdminNav" style="display: none; padding: 2px 8px; font-size: 11px; text-decoration: none; border-radius: 4px;" title="Admin Management Panel">Admin Panel</a>
-        <button class="btn-logout" onclick="logoutSession()" title="Keluar dari sesi">
+        <button class="btn-logout" onclick="logoutSession()" title="Sign out of session">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
-          <span>Keluar</span>
+          <span>Sign Out</span>
         </button>
       </div>
     </div>
@@ -84,15 +93,15 @@
       <!-- Sidebar Header with Distinct Tabs (Filtered by Role/Tenant) -->
       <div class="sidebar-header">
         <div class="sidebar-tabs">
-          <button class="sidebar-tab-btn active" id="sidebarTabInventory" data-target="canvas-inventory" onclick="switchCanvasTab('canvas-inventory')" title="Katalog Material Menara & FO">
+          <button class="sidebar-tab-btn active" id="sidebarTabInventory" data-target="canvas-inventory" onclick="switchCanvasTab('canvas-inventory')" title="Tower Material & FO Catalog">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
             <span>Inventory</span>
           </button>
-          <button class="sidebar-tab-btn" id="sidebarTabHr" data-target="canvas-hr" onclick="switchCanvasTab('canvas-hr')" title="HR, Absensi Site & Rekrutmen">
+          <button class="sidebar-tab-btn" id="sidebarTabHr" data-target="canvas-hr" onclick="switchCanvasTab('canvas-hr')" title="HR, Site Attendance & Hiring">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             <span>HR</span>
           </button>
-          <button class="sidebar-tab-btn" id="sidebarTabFinance" data-target="canvas-finance" onclick="switchCanvasTab('canvas-finance')" title="Laporan Keuangan & Invoices">
+          <button class="sidebar-tab-btn" id="sidebarTabFinance" data-target="canvas-finance" onclick="switchCanvasTab('canvas-finance')" title="Finance Reports & Invoices">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             <span>Finance</span>
           </button>
@@ -111,12 +120,12 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 4px;">
-          <button class="btn-sidebar-expand" id="btnExpandSidebar" onclick="toggleExpandSidebar()" title="Perlebar / Kembalikan Ukuran Panel">
+          <button class="btn-sidebar-expand" id="btnExpandSidebar" onclick="toggleExpandSidebar()" title="Expand / Restore Sidebar">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
             </svg>
           </button>
-          <button class="btn-sidebar-close" onclick="closeDataSidebar()" title="Tutup Sidebar">
+          <button class="btn-sidebar-close" onclick="closeDataSidebar()" title="Close Sidebar">
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -128,25 +137,25 @@
       <div class="canvas-tab-content active" id="canvas-inventory">
         <!-- Sub-Tab Navigation Bar -->
         <div class="sub-tab-bar">
-          <button class="sub-tab-btn active" onclick="switchInvSubTab('sub-inv-items')">Katalog Material</button>
-          <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-balances')">Saldo Gudang</button>
-          <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-warehouses')">Lokasi Gudang</button>
-          <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-suppliers')">Supplier Rekanan</button>
+          <button class="sub-tab-btn active" onclick="switchInvSubTab('sub-inv-items')">Material Catalog</button>
+          <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-balances')">Warehouse Stock</button>
+          <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-warehouses')">Warehouse Locations</button>
+          <button class="sub-tab-btn" onclick="switchInvSubTab('sub-inv-suppliers')">Partner Suppliers</button>
         </div>
 
-        <!-- Sub-View 1: Katalog Material -->
+        <!-- Sub-View 1: Material Catalog -->
         <div class="sub-tab-content active" id="sub-inv-items">
           <div class="table-toolbar">
             <div class="search-box-wrapper">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" class="search-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
-              <input type="text" id="searchCatalog" class="input-search" placeholder="Cari SKU atau nama material..." oninput="filterCatalogTable()">
+              <input type="text" id="searchCatalog" class="input-search" placeholder="Search SKU or material name..." oninput="filterCatalogTable()">
             </div>
             <select id="filterCategory" class="select-category" onchange="filterCatalogTable()">
-              <option value="">Semua Kategori</option>
+              <option value="">All Categories</option>
             </select>
-            <button class="btn btn-secondary btn-sm" id="btnRefreshCatalog" onclick="triggerVisualRefresh('btnRefreshCatalog', loadAllData)" title="Segarkan Data">
+            <button class="btn btn-secondary btn-sm" id="btnRefreshCatalog" onclick="triggerVisualRefresh('btnRefreshCatalog', loadAllData)" title="Refresh Data">
               <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
@@ -158,16 +167,16 @@
               <thead>
                 <tr>
                   <th>SKU</th>
-                  <th>Nama Material</th>
-                  <th>Kategori</th>
-                  <th class="text-right">Total Stok</th>
-                  <th class="text-right">Batas Min / Max</th>
-                  <th class="text-right">Harga (IDR)</th>
+                  <th>Material Name</th>
+                  <th>Category</th>
+                  <th class="text-right">Total Stock</th>
+                  <th class="text-right">Min / Max ROP</th>
+                  <th class="text-right">Price (IDR)</th>
                   <th class="text-center">Status</th>
                 </tr>
               </thead>
               <tbody id="catalogTableBody">
-                <tr><td colspan="7" class="text-center" style="padding: 28px; color: var(--text-muted);">Memuat material...</td></tr>
+                <tr><td colspan="7" class="text-center" style="padding: 28px; color: var(--text-muted);">Loading materials...</td></tr>
               </tbody>
             </table>
           </div>
@@ -180,15 +189,15 @@
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" class="search-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
-              <input type="text" id="searchBalances" class="input-search" placeholder="Cari material / gudang / wilayah..." oninput="filterBalancesTable()">
+              <input type="text" id="searchBalances" class="input-search" placeholder="Search material / warehouse / region..." oninput="filterBalancesTable()">
             </div>
             <select id="filterBalanceStatus" class="select-category" onchange="filterBalancesTable()">
-              <option value="">Semua Status Stok</option>
+              <option value="">All Stock Statuses</option>
               <option value="CRITICAL">CRITICAL</option>
               <option value="LOW">LOW</option>
               <option value="NORMAL">NORMAL</option>
             </select>
-            <button class="btn btn-secondary btn-sm" id="btnRefreshBalances" onclick="triggerVisualRefresh('btnRefreshBalances', loadStockBalances)" title="Segarkan Saldo">
+            <button class="btn btn-secondary btn-sm" id="btnRefreshBalances" onclick="triggerVisualRefresh('btnRefreshBalances', loadStockBalances)" title="Refresh Balances">
               <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
@@ -198,19 +207,19 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID Balance</th>
-                  <th>Nama Material</th>
-                  <th>Gudang</th>
-                  <th>Wilayah</th>
-                  <th class="text-right">Stok Fisik</th>
+                  <th>Balance ID</th>
+                  <th>Material Name</th>
+                  <th>Warehouse</th>
+                  <th>Region</th>
+                  <th class="text-right">Physical Stock</th>
                   <th class="text-right">Reserved</th>
                   <th class="text-right">Reorder Point</th>
                   <th class="text-center">Status</th>
-                  <th class="text-center">Opname Terakhir</th>
+                  <th class="text-center">Last Stocktake</th>
                 </tr>
               </thead>
               <tbody id="invBalancesTableBody">
-                <tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Memuat saldo gudang...</td></tr>
+                <tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Loading warehouse balances...</td></tr>
               </tbody>
             </table>
           </div>
@@ -222,17 +231,17 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID Gudang</th>
-                  <th>Nama Gudang</th>
-                  <th>Tipe Gudang</th>
-                  <th>Wilayah</th>
-                  <th>Alamat Fasilitas</th>
-                  <th class="text-right">Kapasitas (m²)</th>
+                  <th>Warehouse ID</th>
+                  <th>Warehouse Name</th>
+                  <th>Type</th>
+                  <th>Region</th>
+                  <th>Facility Address</th>
+                  <th class="text-right">Capacity (m²)</th>
                   <th class="text-center">Status</th>
                 </tr>
               </thead>
               <tbody id="invWarehousesTableBody">
-                <tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">Memuat daftar gudang...</td></tr>
+                <tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">Loading warehouses...</td></tr>
               </tbody>
             </table>
           </div>
@@ -244,17 +253,17 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID Supplier</th>
-                  <th>Nama Perusahaan</th>
-                  <th>Kategori Pengadaan</th>
-                  <th>Kontak PIC</th>
-                  <th>Telepon / Email</th>
+                  <th>Supplier ID</th>
+                  <th>Company Name</th>
+                  <th>Procurement Category</th>
+                  <th>PIC Contact</th>
+                  <th>Phone / Email</th>
                   <th class="text-center">Rating</th>
-                  <th class="text-center">Termin Bayar</th>
+                  <th class="text-center">Payment Terms</th>
                 </tr>
               </thead>
               <tbody id="invSuppliersTableBody">
-                <tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">Memuat supplier...</td></tr>
+                <tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">Loading suppliers...</td></tr>
               </tbody>
             </table>
           </div>
@@ -267,41 +276,41 @@
         <!-- HR KPI Strip -->
         <div class="kpi-mini-grid">
           <div class="kpi-mini-card">
-            <span class="kpi-label">Karyawan</span>
+            <span class="kpi-label">Employees</span>
             <span class="kpi-value" id="kpiHrTotalEmp">12</span>
           </div>
           <div class="kpi-mini-card">
-            <span class="kpi-label">Teknisi Rigger</span>
+            <span class="kpi-label">Rigger Techs</span>
             <span class="kpi-value" id="kpiHrFieldTech">7</span>
           </div>
           <div class="kpi-mini-card">
-            <span class="kpi-label">K3 TKPK Valid</span>
+            <span class="kpi-label">Valid K3 Certs</span>
             <span class="kpi-value highlight-green" id="kpiHrK3Cert">4</span>
           </div>
           <div class="kpi-mini-card">
-            <span class="kpi-label">Total Lembur</span>
+            <span class="kpi-label">Total Overtime</span>
             <span class="kpi-value highlight-orange" id="kpiHrOvertime">112 Jam</span>
           </div>
         </div>
 
         <!-- HR Sub-Tabs -->
         <div class="sub-tab-bar">
-          <button class="sub-tab-btn active" onclick="switchHrSubTab('sub-hr-employees')">Data Karyawan</button>
-          <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-leaves')">Pengajuan Cuti</button>
-          <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-candidates')">Filter Pelamar K3</button>
-          <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-jobs')">Lowongan Posisi</button>
+          <button class="sub-tab-btn active" onclick="switchHrSubTab('sub-hr-employees')">Employee Directory</button>
+          <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-leaves')">Leave Requests</button>
+          <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-candidates')">K3 Candidates</button>
+          <button class="sub-tab-btn" onclick="switchHrSubTab('sub-hr-jobs')">Job Openings</button>
         </div>
 
-        <!-- Sub-View 1: Data Karyawan -->
+        <!-- Sub-View 1: Employee Directory -->
         <div class="sub-tab-content active" id="sub-hr-employees">
           <div class="table-toolbar">
             <div class="search-box-wrapper">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" class="search-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
-              <input type="text" id="searchEmployees" class="input-search" placeholder="Cari nama / posisi / departemen..." oninput="filterEmployeesTable()">
+              <input type="text" id="searchEmployees" class="input-search" placeholder="Search name / position / department..." oninput="filterEmployeesTable()">
             </div>
-            <button class="btn btn-secondary btn-sm" id="btnRefreshEmployees" onclick="triggerVisualRefresh('btnRefreshEmployees', loadEmployees)" title="Segarkan Data Karyawan">
+            <button class="btn btn-secondary btn-sm" id="btnRefreshEmployees" onclick="triggerVisualRefresh('btnRefreshEmployees', loadEmployees)" title="Refresh Employees">
               <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
@@ -311,28 +320,28 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID Karyawan</th>
-                  <th>Nama Lengkap</th>
-                  <th>Departemen</th>
-                  <th>Posisi Jabatan</th>
-                  <th class="text-center">Status Kerja</th>
-                  <th class="text-center">Sertifikasi K3</th>
-                  <th class="text-center">Sisa Cuti</th>
+                  <th>Employee ID</th>
+                  <th>Full Name</th>
+                  <th>Department</th>
+                  <th>Position</th>
+                  <th class="text-center">Work Status</th>
+                  <th class="text-center">Safety Certification</th>
+                  <th class="text-center">Leave Balance</th>
                 </tr>
               </thead>
               <tbody id="hrEmployeesTableBody">
-                <tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat karyawan...</td></tr>
+                <tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading employees...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Sub-View 2: Pengajuan Cuti -->
+        <!-- Sub-View 2: Leave Requests -->
         <div class="sub-tab-content" id="sub-hr-leaves">
           <div class="table-toolbar" style="justify-content: space-between;">
-            <span style="font-size: 12.5px; font-weight: 600; color: #1E293B;">Riwayat Permohonan Cuti Karyawan</span>
+            <span style="font-size: 12.5px; font-weight: 600; color: #1E293B;">Employee Leave Request History</span>
             <div style="display: flex; gap: 8px;">
-              <button class="btn btn-secondary btn-sm" id="btnRefreshLeaves" onclick="triggerVisualRefresh('btnRefreshLeaves', loadHrData)" title="Segarkan Data Cuti">
+              <button class="btn btn-secondary btn-sm" id="btnRefreshLeaves" onclick="triggerVisualRefresh('btnRefreshLeaves', loadHrData)" title="Refresh Leave Requests">
                 <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
@@ -343,18 +352,18 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>No. Pengajuan</th>
-                  <th>Pemohon</th>
-                  <th>Jenis Cuti</th>
-                  <th class="text-center">Hari</th>
-                  <th>Alasan</th>
-                  <th>Pengganti</th>
+                  <th>Request No.</th>
+                  <th>Applicant</th>
+                  <th>Leave Type</th>
+                  <th class="text-center">Days</th>
+                  <th>Reason</th>
+                  <th>Cover Person</th>
                   <th class="text-center">Status</th>
-                  <th class="text-center">Dokumen PDF</th>
+                  <th class="text-center">PDF Document</th>
                 </tr>
               </thead>
               <tbody id="hrLeavesTableBody">
-                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat cuti...</td></tr>
+                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading leave requests...</td></tr>
               </tbody>
             </table>
           </div>
@@ -366,16 +375,16 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Kandidat</th>
-                  <th>Posisi</th>
-                  <th class="text-center">Sertifikat K3</th>
-                  <th class="text-center">Tes Medis</th>
-                  <th class="text-right">Skor</th>
-                  <th class="text-center">Tahap</th>
+                  <th>Candidate</th>
+                  <th>Position</th>
+                  <th class="text-center">K3 Certificate</th>
+                  <th class="text-center">Medical Check</th>
+                  <th class="text-right">Score</th>
+                  <th class="text-center">Stage</th>
                 </tr>
               </thead>
               <tbody id="hrCandidatesTableBody">
-                <tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat pelamar...</td></tr>
+                <tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading candidates...</td></tr>
               </tbody>
             </table>
           </div>
@@ -387,18 +396,18 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID Job</th>
-                  <th>Posisi Lowongan</th>
-                  <th>Departemen</th>
-                  <th class="text-center">Syarat K3</th>
-                  <th class="text-center">Min. Pengalaman</th>
-                  <th class="text-center">Formasi</th>
-                  <th>Lokasi Penempatan</th>
+                  <th>Job ID</th>
+                  <th>Open Position</th>
+                  <th>Department</th>
+                  <th class="text-center">K3 Requirement</th>
+                  <th class="text-center">Min. Experience</th>
+                  <th class="text-center">Openings</th>
+                  <th>Location</th>
                   <th class="text-center">Status</th>
                 </tr>
               </thead>
               <tbody id="hrJobsTableBody">
-                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat lowongan kerja...</td></tr>
+                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading job openings...</td></tr>
               </tbody>
             </table>
           </div>
@@ -410,30 +419,30 @@
         <!-- Finance KPI Strip -->
         <div class="kpi-mini-grid">
           <div class="kpi-mini-card">
-            <span class="kpi-label">Pendapatan Q1</span>
+            <span class="kpi-label">Q1 Revenue</span>
             <span class="kpi-value highlight-blue" id="kpiFinRevenue">Rp 618.8M</span>
           </div>
           <div class="kpi-mini-card">
-            <span class="kpi-label">Tagihan Lunas</span>
+            <span class="kpi-label">Collected AR</span>
             <span class="kpi-value highlight-green" id="kpiFinPaid">Rp 505.0M</span>
           </div>
           <div class="kpi-mini-card">
-            <span class="kpi-label">Piutang (AR)</span>
+            <span class="kpi-label">Outstanding AR</span>
             <span class="kpi-value highlight-orange" id="kpiFinUnpaid">Rp 113.8M</span>
           </div>
           <div class="kpi-mini-card">
-            <span class="kpi-label">Arus Kas Bersih</span>
+            <span class="kpi-label">Net Cash Flow</span>
             <span class="kpi-value highlight-green" id="kpiFinNetCash">+Rp 152.7M</span>
           </div>
         </div>
 
         <!-- Finance Sub-Tabs -->
         <div class="sub-tab-bar">
-          <button class="sub-tab-btn active" onclick="switchFinSubTab('sub-fin-invoices')">Invoices Sewa Menara</button>
-          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-clients')">Klien Operator</button>
-          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-mla')">Kontrak MLA Menara</button>
-          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-leases')">Sewa Lahan Site</button>
-          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-utilities')">Biaya PLN & Genset</button>
+          <button class="sub-tab-btn active" onclick="switchFinSubTab('sub-fin-invoices')">Tower Lease Invoices</button>
+          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-clients')">Client Operators</button>
+          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-mla')">MLA Tower Contracts</button>
+          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-leases')">Site Land Leases</button>
+          <button class="sub-tab-btn" onclick="switchFinSubTab('sub-fin-utilities')">Power & Generator Cost</button>
         </div>
 
         <!-- Sub-View 1: Invoices Sewa Menara -->
@@ -443,9 +452,9 @@
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" class="search-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
-              <input type="text" id="searchInvoices" class="input-search" placeholder="Cari invoice / nama klien operator..." oninput="filterInvoicesTable()">
+              <input type="text" id="searchInvoices" class="input-search" placeholder="Search invoice / client operator name..." oninput="filterInvoicesTable()">
             </div>
-            <button class="btn btn-secondary btn-sm" id="btnRefreshInvoices" onclick="triggerVisualRefresh('btnRefreshInvoices', loadFinanceData)" title="Segarkan Data Invoice">
+            <button class="btn btn-secondary btn-sm" id="btnRefreshInvoices" onclick="triggerVisualRefresh('btnRefreshInvoices', loadFinanceData)" title="Refresh Invoices">
               <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
@@ -455,17 +464,17 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>No. Invoice</th>
-                  <th>Operator Klien</th>
-                  <th>Periode</th>
-                  <th class="text-right">Total Tagihan (IDR)</th>
-                  <th class="text-center">Jatuh Tempo</th>
+                  <th>Invoice No.</th>
+                  <th>Client Operator</th>
+                  <th>Period</th>
+                  <th class="text-right">Total Billed (IDR)</th>
+                  <th class="text-center">Due Date</th>
                   <th class="text-center">Status</th>
-                  <th class="text-center">Dokumen PDF</th>
+                  <th class="text-center">PDF Document</th>
                 </tr>
               </thead>
               <tbody id="finInvoicesTableBody">
-                <tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat invoice...</td></tr>
+                <tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading invoices...</td></tr>
               </tbody>
             </table>
           </div>
@@ -478,17 +487,17 @@
               <thead>
                 <tr>
                   <th>Client ID</th>
-                  <th>Nama Operator</th>
-                  <th>Tipe Klien</th>
-                  <th>NPWP</th>
-                  <th>Email Penagihan</th>
-                  <th class="text-center">Menara Tersewa</th>
-                  <th class="text-right">Plafon Kredit (IDR)</th>
-                  <th class="text-center">Termin (Hari)</th>
+                  <th>Operator Name</th>
+                  <th>Client Type</th>
+                  <th>Tax ID (NPWP)</th>
+                  <th>Billing Email</th>
+                  <th class="text-center">Leased Towers</th>
+                  <th class="text-right">Credit Limit (IDR)</th>
+                  <th class="text-center">Terms (Days)</th>
                 </tr>
               </thead>
               <tbody id="finClientsTableBody">
-                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat klien operator...</td></tr>
+                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading client operators...</td></tr>
               </tbody>
             </table>
           </div>
@@ -500,18 +509,18 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID Kontrak</th>
-                  <th>Operator Klien</th>
-                  <th>Site Menara</th>
-                  <th class="text-right">Tarif Bulanan (IDR)</th>
-                  <th class="text-center">Frekuensi Tagih</th>
-                  <th class="text-center">Masa Kontrak</th>
-                  <th class="text-center">Listrik PLN</th>
-                  <th class="text-center">Status Kontrak</th>
+                  <th>Contract ID</th>
+                  <th>Client Operator</th>
+                  <th>Tower Site</th>
+                  <th class="text-right">Monthly Rate (IDR)</th>
+                  <th class="text-center">Billing Cycle</th>
+                  <th class="text-center">Contract Term</th>
+                  <th class="text-center">PLN Power</th>
+                  <th class="text-center">Contract Status</th>
                 </tr>
               </thead>
               <tbody id="finMlaTableBody">
-                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat kontrak sewa MLA...</td></tr>
+                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading MLA contracts...</td></tr>
               </tbody>
             </table>
           </div>
@@ -523,18 +532,18 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID Sewa</th>
-                  <th>Site Menara</th>
-                  <th>Wilayah</th>
-                  <th>Pemilik Tanah</th>
-                  <th class="text-right">Biaya/Tahun (IDR)</th>
-                  <th class="text-center">Durasi</th>
-                  <th class="text-center">Akhir Sewa</th>
+                  <th>Lease ID</th>
+                  <th>Tower Site</th>
+                  <th>Region</th>
+                  <th>Land Owner</th>
+                  <th class="text-right">Annual Rent (IDR)</th>
+                  <th class="text-center">Duration</th>
+                  <th class="text-center">Lease Expiry</th>
                   <th class="text-center">Status</th>
                 </tr>
               </thead>
               <tbody id="finLandLeasesTableBody">
-                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat sewa lahan...</td></tr>
+                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading land leases...</td></tr>
               </tbody>
             </table>
           </div>
@@ -546,18 +555,18 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID Utilitas</th>
-                  <th>Site Menara</th>
-                  <th>Periode</th>
-                  <th>ID Meter PLN</th>
-                  <th class="text-right">Listrik PLN (IDR)</th>
-                  <th class="text-right">BBM Genset (IDR)</th>
-                  <th class="text-right">Total Utilitas (IDR)</th>
-                  <th class="text-center">Status Bayar</th>
+                  <th>Utility ID</th>
+                  <th>Tower Site</th>
+                  <th>Period</th>
+                  <th>PLN Meter ID</th>
+                  <th class="text-right">PLN Power (IDR)</th>
+                  <th class="text-right">Generator Fuel (IDR)</th>
+                  <th class="text-right">Total Utilities (IDR)</th>
+                  <th class="text-center">Payment Status</th>
                 </tr>
               </thead>
               <tbody id="finUtilitiesTableBody">
-                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Memuat tagihan utilitas...</td></tr>
+                <tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Loading utilities...</td></tr>
               </tbody>
             </table>
           </div>
@@ -567,7 +576,7 @@
       <!-- TAB 4: PURCHASE REQUISITIONS -->
       <div class="canvas-tab-content" id="canvas-prs">
         <div class="table-toolbar" style="justify-content: space-between;">
-          <span style="font-size: 12.5px; font-weight: 700; color: #1E293B;">Dokumen Purchase Requisition Resmi</span>
+          <span style="font-size: 12.5px; font-weight: 700; color: #1E293B;">Official Purchase Requisitions (PR)</span>
           <button class="btn btn-secondary btn-sm" id="btnRefreshPrs" onclick="triggerVisualRefresh('btnRefreshPrs', loadApprovals)">
             <svg width="13" height="13" class="refresh-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -580,16 +589,16 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Nomor PR</th>
-                <th>Supplier Rekanan</th>
-                <th class="text-center">Item</th>
+                <th>PR Number</th>
+                <th>Partner Supplier</th>
+                <th class="text-center">Items</th>
                 <th class="text-right">Total (IDR)</th>
                 <th class="text-center">Status</th>
-                <th class="text-center">Aksi</th>
+                <th class="text-center">Actions</th>
               </tr>
             </thead>
             <tbody id="prsTableBody">
-              <tr><td colspan="6" class="text-center" style="padding: 28px; color: var(--text-muted);">Memuat data PR...</td></tr>
+              <tr><td colspan="6" class="text-center" style="padding: 28px; color: var(--text-muted);">Loading PR records...</td></tr>
             </tbody>
           </table>
         </div>
@@ -599,7 +608,7 @@
       <div class="canvas-tab-content" id="canvas-pos">
         <div class="table-toolbar" style="justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 12.5px; font-weight: 700; color: #1E293B;">Purchase Orders Resmi (PO)</span>
+            <span style="font-size: 12.5px; font-weight: 700; color: #1E293B;">Official Purchase Orders (PO)</span>
             <span class="badge badge-approved" id="topPoCountBadge" style="font-size: 11px;">16 PO</span>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -616,19 +625,19 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>No. PO</th>
-                <th>Supplier Rekanan</th>
-                <th>Material Dipesan</th>
+                <th>PO Number</th>
+                <th>Partner Supplier</th>
+                <th>Ordered Items</th>
                 <th class="text-right">Qty</th>
-                <th class="text-right">Total Anggaran (IDR)</th>
-                <th class="text-center">Tgl Order</th>
-                <th class="text-center">Estimasi Tiba</th>
-                <th class="text-center">Status PO</th>
-                <th class="text-center">Dokumen</th>
+                <th class="text-right">Total Budget (IDR)</th>
+                <th class="text-center">Order Date</th>
+                <th class="text-center">ETA</th>
+                <th class="text-center">PO Status</th>
+                <th class="text-center">Document</th>
               </tr>
             </thead>
             <tbody id="topPosTableBody">
-              <tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Memuat Purchase Orders...</td></tr>
+              <tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Loading Purchase Orders...</td></tr>
             </tbody>
           </table>
         </div>
@@ -648,7 +657,7 @@
     </aside>
 
     <!-- 2. DRAGGABLE RESIZER SPLITTER -->
-    <div class="sidebar-resizer" id="sidebarResizer" title="Geser untuk mengatur lebar panel modul">
+    <div class="sidebar-resizer" id="sidebarResizer" title="Drag to resize module panel">
       <div class="resizer-handle-pill"></div>
     </div>
 
@@ -656,16 +665,16 @@
     <section class="gemini-chat-container is-empty-state" id="geminiChatContainer">
       
       <!-- Top Chat Action Bar (Inside Chat Area) -->
-      <div class="chat-top-bar" id="chatTopBar">
-        <button class="btn-clear-chat-pill" onclick="clearCopilotFeed()" title="Bersihkan riwayat percakapan">
+      <div class="chat-top-bar" id="chatTopBar" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn-clear-chat-pill" onclick="clearCopilotFeed()" title="Clear conversation history">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
-          <span>Bersihkan Aktivitas</span>
+          <span>Clear Activity</span>
         </button>
       </div>
 
-      <!-- HERO EMPTY STATE (Clean, Personalized per User, NO SHORTCUT CHIPS) -->
+      <!-- HERO EMPTY STATE (Clean, Minimalist, No Clutter) -->
       <div class="gemini-hero-empty" id="geminiHeroEmpty">
         <div class="hero-sparkle-icon">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -691,10 +700,10 @@
           
           <!-- Main Input Bar -->
           <div class="input-bar-container">
-            <textarea id="promptInput" class="prompt-textarea" placeholder="Ketik instruksi atau pertanyaan analisis operasional..." rows="1" onkeydown="handleKey(event)" oninput="autoResizePromptInput()"></textarea>
+            <textarea id="promptInput" class="prompt-textarea" placeholder="Type operational instruction or prompt..." rows="1" onkeydown="handleKey(event)" oninput="autoResizePromptInput()"></textarea>
 
             <button class="btn btn-primary btn-send" id="btnSendPrompt" onclick="submitPrompt()">
-              <span>Kirim</span>
+              <span>Send</span>
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
               </svg>
@@ -702,7 +711,7 @@
           </div>
 
           <div class="input-hint" id="inputHintText">
-            PT Bali Towerindo Sentra Tbk — Terhubung langsung ke DuckDB Enterprise.
+            PT Bali Towerindo Sentra Tbk — Connected directly to DuckDB Enterprise.
           </div>
         </div>
       </div>
@@ -727,37 +736,74 @@
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
-          <span>Tutup</span>
+          <span>Close</span>
         </button>
       </div>
       <div class="modal-body">
         <iframe id="pdfPreviewIframe" class="pdf-iframe" src="about:blank"></iframe>
       </div>
       <div class="modal-footer">
-        <div style="font-size: 13.5px; font-weight: 700; color: #0F172A;" id="modalGrandTotal">Total Anggaran: Rp 0</div>
+        <div style="font-size: 13.5px; font-weight: 700; color: #0F172A;" id="modalGrandTotal">Grand Total: Rp 0</div>
         <div style="display: flex; gap: 8px;" id="modalFooterActions">
           <a href="#" id="modalOpenTabBtn" target="_blank" class="btn btn-secondary btn-sm">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
             </svg>
-            <span>Buka Tab Baru</span>
+            <span>Open New Tab</span>
           </a>
           <a href="#" id="modalDownloadBtn" target="_blank" class="btn btn-secondary btn-sm">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
             </svg>
-            <span>Unduh PDF</span>
+            <span>Download PDF</span>
           </a>
           <button id="modalApproveBtn" class="btn btn-success btn-sm" style="display: none;" onclick="approvePrFromModal()">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
-            <span>Setujui PR</span>
+            <span>Approve PR</span>
           </button>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Modal Bantuan Alur & Contoh Pertanyaan -->
+  <div class="modal-backdrop" id="flowHelpModal" style="display: none;">
+    <div class="flow-help-modal-container">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span style="font-weight: 700; color: #0F172A;" id="helpModalTenantTitle">Operational Workflow Guide</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="closeFlowHelpModal()">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+          <span>Close</span>
+        </button>
+      </div>
+      <div class="flow-help-modal-body" id="flowHelpModalBody">
+        <!-- Dynamic flow list and examples injected via JS -->
+      </div>
+      <div class="modal-footer" style="padding: 14px 24px; background: #FFFFFF; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-muted);">Tip: You can also type "help" in chat to view this guide.</span>
+        <button class="btn btn-primary btn-sm" onclick="closeFlowHelpModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Circular Help Button (Professional Web SaaS Pattern) -->
+  <button class="fab-help-btn" id="fabHelpBtn" onclick="openFlowHelpModal()" title="Workflow Guide & Prompt Examples" aria-label="Workflow Guide">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+    <span class="fab-help-tooltip">Workflow Guide</span>
+  </button>
 
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container"></div>

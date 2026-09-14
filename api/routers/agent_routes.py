@@ -781,10 +781,87 @@ async def execute_prompt_logic(
             "affected_items": []
         }
 
+    # 2.2 Help / Flow Inquiries Handler (Role-Specific Help Without Emojis)
+    help_standalone = ["help", "/help", "help?", "?", "bantuan", "menu", "list flow", "list workflow", "daftar alur", "daftar flow", "panduan", "contoh", "contoh pertanyaan", "contoh prompt", "info alur"]
+    is_explicit_help = lower_prompt in help_standalone or any(lower_prompt == k for k in help_standalone)
+    is_flow_keyword = any(k in lower_prompt for k in ["list flow", "daftar alur", "daftar workflow", "contoh pertanyaan", "contoh prompt", "panduan flow", "alur kerja apa saja", "bantuan alur"])
+    is_short_help = any(w in lower_prompt for w in ["help", "bantuan", "panduan"]) and len(lower_prompt.split()) <= 4 and not any(w in lower_prompt for w in ["stok", "po", "pr", "cuti", "invoice", "saldo", "lembur", "rigger"])
+
+    if is_explicit_help or is_flow_keyword or is_short_help:
+        user_tenant = str(getattr(current_user, 'tenant_id', 'ALL')).upper()
+        user_role = str(getattr(current_user, 'role', 'USER')).upper()
+
+        tenant_variants = [user_tenant, "ALL"]
+        if user_tenant in ["INVENTORY", "USERA", "TENANT_A", "SCHEMA_A", "SCHEMA A"]:
+            tenant_variants = ["INVENTORY", "USERA", "TENANT_A", "SCHEMA_A", "ALL"]
+            header_title = "Panduan Alur Kerja Divisi Logistik & Inventaris (Schema A)"
+        elif user_tenant in ["HR", "USERB", "TENANT_B", "SCHEMA_B", "SCHEMA B"]:
+            tenant_variants = ["HR", "USERB", "TENANT_B", "SCHEMA_B", "ALL"]
+            header_title = "Panduan Alur Kerja Divisi Human Resources & Operasional Lapangan (Schema B)"
+        elif user_tenant in ["FINANCE", "USERC", "TENANT_C", "SCHEMA_C", "SCHEMA C"]:
+            tenant_variants = ["FINANCE", "USERC", "TENANT_C", "SCHEMA_C", "ALL"]
+            header_title = "Panduan Alur Kerja Divisi Keuangan & Billing Komersial (Schema C)"
+        else:
+            tenant_variants = ["ALL", "INVENTORY", "HR", "FINANCE"]
+            header_title = "Panduan Alur Kerja Superadministrator Enterprise (Lintas Divisi)"
+
+        import json
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=True)
+        try:
+            placeholders = ", ".join(["?"] * len(tenant_variants))
+            db_workflows = conn.execute(f"""
+                SELECT id, name, description, example_prompts 
+                FROM workflows 
+                WHERE tenant_id IN ({placeholders})
+                ORDER BY id ASC
+            """, tenant_variants).fetchall()
+        finally:
+            conn.close()
+
+        lines = [f"### {header_title}\n", "Berikut adalah daftar alur kerja aktif dan contoh pertanyaan yang dapat Anda gunakan:\n"]
+        if db_workflows:
+            for idx, wf_row in enumerate(db_workflows, 1):
+                wf_id, wf_name, wf_desc, wf_ex_raw = wf_row
+                lines.append(f"{idx}. {wf_name} ({wf_id})")
+                if wf_desc:
+                    lines.append(f"   Deskripsi: {wf_desc}")
+                
+                ex_list = []
+                if isinstance(wf_ex_raw, str):
+                    try:
+                        ex_list = json.loads(wf_ex_raw)
+                    except:
+                        pass
+                elif isinstance(wf_ex_raw, list):
+                    ex_list = wf_ex_raw
+                
+                if not ex_list:
+                    from agents.workflow_compiler import WorkflowCompiler
+                    ex_list = WorkflowCompiler.generate_heuristic_examples(wf_name, wf_desc or "")
+                
+                if ex_list:
+                    lines.append("   Contoh Pertanyaan:")
+                    for ex in ex_list:
+                        lines.append(f"   - \"{ex}\"")
+                lines.append("")
+        else:
+            lines.append("Belum ada alur kerja aktif yang dikonfigurasi untuk divisi ini.\n")
+
+        lines.append("Petunjuk: Anda dapat mengetik pertanyaan di atas atau mengklik tombol bantuan alur pada antarmuka web.")
+        help_text = "\n".join(lines)
+
+        return {
+            "parsed_intent": {"workflow_id": "system_help_guide"},
+            "action_type": "help",
+            "message": help_text,
+            "generated_prs": [],
+            "affected_items": []
+        }
+
     from agents.router import SemanticRouter, check_clarification_needs, extract_recipient_email
     from agents.json_executor import JSONExecutionEngine
     from database.db import get_db_connection
-    import json
 
     # 2.5 Clarification Check (Human-in-the-Loop Clarification Guard)
     clarification = check_clarification_needs(request.prompt, current_user.tenant_id)

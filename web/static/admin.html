@@ -17,10 +17,16 @@
       --bg-subtle: #F1F5F9;
       --header-height: 60px;
 
-      --primary: #2563EB;
-      --primary-hover: #1D4ED8;
-      --primary-light: #EFF6FF;
-      --primary-border: #BFDBFE;
+      /* Bali Tower Telecom Palette */
+      --primary: #0A4D9C;
+      --primary-hover: #083D7C;
+      --primary-light: #EBF3FC;
+      --primary-border: #BAD6F7;
+
+      --accent-orange: #F37021;
+      --accent-orange-hover: #D95D10;
+      --accent-orange-light: #FFF3EB;
+      --accent-orange-border: #FFD6BF;
 
       --text-main: #0F172A;
       --text-secondary: #334155;
@@ -63,8 +69,287 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Navbar */
-    .app-header {
+    /* App Layout (Fixed Topbar + Dynamic Body) */
+    .admin-app-layout {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      width: 100%;
+      background-color: var(--bg-app);
+    }
+
+    .admin-body-layout {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* Left Sidebar */
+    .admin-sidebar {
+      width: 260px;
+      min-width: 260px;
+      max-width: 260px;
+      background: #FFFFFF;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: var(--header-height);
+      height: calc(100vh - var(--header-height));
+      z-index: 100;
+      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Collapsible Sidebar Styles - Rail Mode with Centered Icons */
+    .admin-app-layout.sidebar-collapsed .admin-sidebar {
+      width: 72px;
+      min-width: 72px;
+      max-width: 72px;
+    }
+    .admin-app-layout.sidebar-collapsed .nav-label,
+    .admin-app-layout.sidebar-collapsed .nav-group-label,
+    .admin-app-layout.sidebar-collapsed .sidebar-footer {
+      display: none !important;
+    }
+    .admin-app-layout.sidebar-collapsed .sidebar-nav {
+      padding: 16px 8px;
+    }
+    .admin-app-layout.sidebar-collapsed .sidebar-nav-item,
+    .admin-app-layout.sidebar-collapsed .tab-btn {
+      justify-content: center;
+      padding: 12px 8px;
+    }
+    .admin-app-layout.sidebar-collapsed .nav-icon {
+      margin: 0;
+    }
+
+    /* Workflow Orchestrator Enhancements */
+    .workflow-stats-banner {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .wf-stat-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: var(--shadow-xs);
+    }
+    .wf-stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .wf-stat-num {
+      font-size: 19px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.2;
+    }
+    .wf-stat-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #64748B;
+    }
+
+    .workflow-form-grid {
+      display: grid;
+      grid-template-columns: 2fr 1.2fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 768px) {
+      .workflow-form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .form-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-field-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .sidebar-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      height: var(--header-height);
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+      flex-shrink: 0;
+    }
+
+    .brand-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Sidebar Navigation Links */
+    .sidebar-nav {
+      flex: 1;
+      padding: 18px 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-group-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94A3B8;
+      letter-spacing: 0.08em;
+      padding: 10px 12px 4px 12px;
+      text-transform: uppercase;
+    }
+
+    .sidebar-nav-item, .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: #475569;
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .sidebar-nav-item:hover, .tab-btn:hover {
+      background: #F1F5F9;
+      color: #0F172A;
+    }
+
+    .sidebar-nav-item.active, .tab-btn.active {
+      background: #EFF6FF;
+      color: #2563EB;
+      font-weight: 700;
+      box-shadow: none;
+    }
+
+    .sidebar-nav-item.active .nav-icon, .tab-btn.active .nav-icon {
+      color: #2563EB;
+    }
+
+    .nav-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #64748B;
+      transition: color 0.15s ease;
+    }
+
+    .nav-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Sidebar Footer */
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      background: #FFFFFF;
+    }
+
+    .system-status-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 2px;
+    }
+
+    .status-pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+
+    .status-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    .status-desc {
+      font-size: 10.5px;
+      color: #64748B;
+      font-weight: 500;
+    }
+
+    /* Admin Topbar (Fixed at top across 100% width) */
+    .admin-topbar {
       height: var(--header-height);
       background: #FFFFFF;
       border-bottom: 1px solid var(--border-color);
@@ -74,85 +359,115 @@
       justify-content: space-between;
       position: sticky;
       top: 0;
-      z-index: 100;
-      box-shadow: var(--shadow-xs);
+      z-index: 500;
+      box-shadow: 0 1px 3px rgba(10, 77, 156, 0.05);
     }
 
-    .brand-section {
+    .topbar-left {
       display: flex;
       align-items: center;
       gap: 12px;
-      text-decoration: none;
-      color: inherit;
+      font-size: 13.5px;
     }
 
-    .brand-logo {
+    .topbar-sidebar-toggle-btn {
+      background: #F8FAFC;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
       width: 34px;
       height: 34px;
-      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .topbar-sidebar-toggle-btn:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: var(--primary-border);
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topbar-brand .brand-logo {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #0A4D9C 0%, #083D7C 100%);
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #FFFFFF;
-      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+      box-shadow: 0 2px 6px rgba(10, 77, 156, 0.28);
+      flex-shrink: 0;
     }
 
-    .brand-title {
-      font-size: 15.5px;
+    .topbar-brand .brand-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar-brand .brand-title {
+      font-size: 15px;
       font-weight: 800;
       color: var(--text-main);
       letter-spacing: -0.02em;
+      line-height: 1.15;
     }
 
-    /* Minimalist Tab Navigation in Header */
-    .nav-tabs {
+    .topbar-brand .brand-subtitle {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    .topbar-breadcrumb-wrap {
       display: flex;
       align-items: center;
       gap: 6px;
-      background: var(--bg-subtle);
-      padding: 4px;
-      border-radius: 9px;
-      border: 1px solid var(--border-color);
     }
 
-    .tab-btn {
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 12.5px;
-      font-weight: 600;
-      font-family: var(--font-main);
-      color: var(--text-muted);
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.15s ease;
+    .topbar-breadcrumb {
+      color: #64748B;
+      font-weight: 500;
     }
 
-    .tab-btn:hover {
-      color: var(--text-main);
+    .topbar-sep {
+      color: #CBD5E1;
     }
 
-    .tab-btn.active {
-      background: #FFFFFF;
-      color: var(--primary);
-      box-shadow: var(--shadow-xs);
+    .topbar-current-page {
+      color: #0F172A;
       font-weight: 700;
+      letter-spacing: -0.01em;
     }
 
-    .user-controls {
+    .topbar-right {
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
+    .topbar-divider {
+      width: 1px;
+      height: 20px;
+      background: #E2E8F0;
+    }
+
     .badge-admin {
-      background: #FEF3C7;
-      color: #B45309;
-      border: 1px solid #FDE68A;
+      background: #FFF3EB;
+      color: #D95D10;
+      border: 1px solid #FFD6BF;
       padding: 4px 10px;
       border-radius: 6px;
       font-size: 11px;
@@ -189,14 +504,28 @@
       border-color: var(--danger-border);
     }
 
-    /* Main Container & Cards */
-    .container {
-      max-width: 1100px;
-      margin: 24px auto;
-      padding: 0 20px 48px 20px;
+    /* Admin Content Body */
+    .admin-content-body, .container {
+      flex: 1;
+      padding: 28px 32px 64px 32px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .admin-app-layout {
+        flex-direction: column;
+      }
+      .admin-sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+      }
     }
 
     .card {
@@ -207,11 +536,397 @@
       box-shadow: var(--shadow-sm);
     }
 
-    .card-header {
+    /* Professional Admin Flow Guide Layout (Clean Direct Grid) */
+    .admin-help-group {
+      margin-bottom: 32px;
+    }
+
+    .admin-help-group-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .category-indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2563EB;
+      flex-shrink: 0;
+    }
+
+    .category-count-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748B;
+      background: #F1F5F9;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-left: 4px;
+    }
+
+    .admin-flow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 20px;
+    }
+
+    .admin-flow-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .admin-flow-card:hover {
+      border-color: #93C5FD;
+      box-shadow: 0 8px 22px rgba(37, 99, 235, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .admin-flow-card-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .admin-flow-badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: #1D4ED8;
+      background: #EFF6FF;
+      border: 1px solid #DBEAFE;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-use-builder {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      color: #334155;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-use-builder:hover {
+      background: #2563EB;
+      color: #FFFFFF;
+      border-color: #2563EB;
+    }
+
+    .admin-flow-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 5px;
+      line-height: 1.4;
+    }
+
+    .admin-flow-desc {
+      font-size: 12.5px;
+      color: #64748B;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .admin-inst-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+
+    .admin-inst-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+
+    .admin-inst-text {
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .admin-prompt-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .admin-prompts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .admin-prompt-item {
+      font-size: 12px;
+      color: #1E40AF;
+      background: #EFF6FF;
+      padding: 7px 11px;
+      border-radius: 6px;
+      border: 1px solid #DBEAFE;
+      line-height: 1.45;
+      transition: all 0.15s ease;
+    }
+
+    .admin-prompt-item:hover {
+      background: #DBEAFE;
+      border-color: #93C5FD;
+    }
+
+    /* Admin Help System Documentation Styling */
+    .help-subnav-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid #E2E8F0;
+      scrollbar-width: none;
+    }
+    .help-subnav-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .help-subnav-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748B;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .help-subnav-btn:hover {
+      color: #1E40AF;
+      background: #EFF6FF;
+      border-color: #BFDBFE;
+    }
+
+    .help-subnav-btn.active {
+      color: #FFFFFF;
+      background: #2563EB;
+      border-color: #2563EB;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
+
+    .doc-hero-banner {
+      background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
+      border: 1px solid #DBEAFE;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .doc-hero-title {
+      font-size: 15.5px;
+      font-weight: 800;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .doc-hero-desc {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.6;
+      max-width: 860px;
+    }
+
+    .doc-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .doc-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .doc-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+    }
+
+    .doc-card-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    .doc-step-item {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .doc-step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #EFF6FF;
+      color: #2563EB;
+      font-weight: 800;
+      font-size: 11.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid #BFDBFE;
+      margin-top: 2px;
+    }
+
+    .doc-step-body {
+      flex: 1;
+    }
+
+    .doc-step-body h4 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #1E293B;
+      margin-bottom: 4px;
+    }
+
+    .doc-step-body p {
+      font-size: 12.5px;
+      color: #64748B;
+      line-height: 1.55;
+    }
+
+    .doc-code-block {
+      background: #0F172A;
+      color: #E2E8F0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+      border: 1px solid #1E293B;
+      margin: 10px 0;
+    }
+
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin: 10px 0;
+    }
+
+    .doc-table th {
+      background: #F8FAFC;
+      color: #475569;
+      font-weight: 700;
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .doc-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #F1F5F9;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .doc-badge-pill {
+      display: inline-block;
+      font-size: 10.5px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #EFF6FF;
+      color: #1E40AF;
+      border: 1px solid #DBEAFE;
+    }
+
+    .doc-shortcut-btn {
+      background: #FFFFFF;
+      border: 1px solid #2563EB;
+      color: #2563EB;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .doc-shortcut-btn:hover {
+      background: #2563EB;
+      color: #FFFFFF;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      margin-bottom: 16px;
     }
 
     .card-title {
@@ -226,9 +941,9 @@
     .card-subtitle {
       font-size: 13px;
       color: var(--text-muted);
-      margin-top: -6px;
+      margin-top: 8px;
       margin-bottom: 16px;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
     /* Form Fields */
@@ -930,173 +1645,277 @@
 </head>
 <body>
 
-  <header class="app-header">
-    <div class="brand-section">
-      <div class="brand-logo">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-          <line x1="8" y1="21" x2="16" y2="21"></line>
-          <line x1="12" y1="17" x2="12" y2="21"></line>
-        </svg>
-      </div>
-      <div>
-        <div class="brand-title">AutoRestock Admin</div>
-      </div>
-    </div>
+  <div class="admin-app-layout" id="adminAppLayout">
+    <!-- Fixed Executive Topbar across full screen width -->
+    <header class="admin-topbar">
+      <div class="topbar-left">
+        <button class="topbar-sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleAdminSidebar()" title="Toggle Navigation Sidebar (Ctrl+B)">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
 
-    <!-- Navigation Tabs -->
-    <div class="nav-tabs">
-      <button class="tab-btn active" id="tabUsersBtn" onclick="switchAdminTab('users')">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-        </svg>
-        <span>Database Master & Tenant</span>
-      </button>
-      <button class="tab-btn" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-        </svg>
-        <span>Workflow Orchestrator</span>
-      </button>
-      <button class="tab-btn" id="tabToolsBtn" onclick="switchAdminTab('tools')">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <span>Agent Tools Registry</span>
-      </button>
-    </div>
-
-    <div class="user-controls">
-      <span class="badge-admin">
-        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-        </svg>
-        <span>SUPERADMIN</span>
-      </span>
-
-      <span id="usernameDisplay" class="user-name-display">admin</span>
-
-      <button class="btn-logout" onclick="logout()">
-        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-        </svg>
-        <span>Keluar</span>
-      </button>
-    </div>
-  </header>
-
-  <main class="container">
-
-    <!-- ========================================== -->
-    <!-- TAB 1: WORKFLOW ORCHESTRATOR               -->
-    <!-- ========================================== -->
-    <div id="sectionWorkflows" style="display: none;">
-      <!-- Form Workflow Builder -->
-      <div class="card" style="margin-bottom: 20px;">
-        <div class="card-header">
-          <h2 class="card-title" id="formTitle">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        <div class="topbar-brand">
+          <div class="brand-logo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
-            <span id="formTitleText">Buat Workflow Baru (Data-Driven Engine)</span>
-          </h2>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEdit()" style="display: none;">
-              Batal
-            </button>
-            <button class="btn btn-primary" id="createWfBtn" onclick="submitWorkflow()">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-              </svg>
-              <span id="btnSubmitText">Compile & Simpan Workflow</span>
-            </button>
+          </div>
+          <div class="brand-info">
+            <div class="brand-title"><span style="color: var(--primary);">Auto</span><span style="color: var(--accent-orange);">Restock</span></div>
+            <div class="brand-subtitle">ADMIN CONSOLE</div>
           </div>
         </div>
-        
-        <p class="card-subtitle">
-          Tulis instruksi bisnis dalam bahasa natural. Sistem LLM akan menyusun instruksi Anda menjadi struktur graph JSON eksekusi yang terstruktur.
-        </p>
 
-        <div class="form-row" style="flex-wrap: wrap;">
-          <input type="hidden" id="wfId">
-          <input type="text" id="wfName" class="form-input" placeholder="Nama Workflow (contoh: Pengecekan Stok Kritis Harian)" style="flex: 2; min-width: 200px;">
-          <select id="wfTenantId" class="form-input" style="flex: 1.2; min-width: 220px; font-weight: 600; cursor: pointer; color: #1E40AF; background: #FFFFFF;">
-            <option value="ALL">all (Schema ALL - Lintas Divisi)</option>
-            <option value="INVENTORY">usera (Schema A - Divisi Inventory)</option>
-            <option value="HR">userb (Schema B - Divisi HR & Field)</option>
-            <option value="FINANCE">userc (Schema C - Divisi Keuangan)</option>
-          </select>
-          <input type="text" id="wfDesc" class="form-input" placeholder="Deskripsi Singkat Tujuan Workflow" style="flex: 2; min-width: 200px;">
-        </div>
+        <div class="topbar-divider"></div>
 
-        <div style="margin-top: 8px;">
-          <textarea id="wfInstruction" class="form-input" placeholder="Tulis aturan bisnis pengadaan di sini...&#10;Contoh: Periksa stok produk setiap hari. Jika kurang dari ambang batas minimum, hitung ulang kebutuhan restock, buatkan draft Purchase Requisition (PR), dan kirim notifikasi approval ke manager."></textarea>
+        <div class="topbar-breadcrumb-wrap">
+          <span class="topbar-breadcrumb">Admin</span>
+          <span class="topbar-sep">/</span>
+          <span class="topbar-current-page" id="topbarCurrentTitle">Workflow Orchestrator</span>
         </div>
       </div>
 
-      <!-- Active Workflows List -->
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+      <div class="topbar-right">
+        <span class="badge-admin">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          <span>SUPERADMIN</span>
+        </span>
+
+        <span id="usernameDisplay" class="user-name-display">admin</span>
+
+        <div class="topbar-divider"></div>
+
+        <button class="btn-logout" onclick="logout()">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          <span>Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Admin Body Layout (Sidebar + Main Content Area) -->
+    <div class="admin-body-layout">
+      <!-- Left Sidebar -->
+      <aside class="admin-sidebar" id="adminSidebar">
+        <nav class="sidebar-nav">
+          <div class="nav-group-label">MAIN CONTROL</div>
+
+          <button class="sidebar-nav-item tab-btn active" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')" title="Workflow Orchestrator">
+            <span class="nav-icon">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
-              <span>Daftar Workflow Aktif</span>
-            </h2>
-            <p class="card-subtitle" style="margin-bottom: 0;">Seluruh pipeline alur kerja otonom yang dikonfigurasi per tenant.</p>
-          </div>
-          <button class="btn btn-secondary" onclick="loadWorkflows()">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            <span>Refresh</span>
+            </span>
+            <span class="nav-label">Workflow Orchestrator</span>
           </button>
-        </div>
 
-        <!-- Filter Workflow by Tenant Pills -->
-        <div class="filter-bar" style="margin-top: 8px; margin-bottom: 14px;">
-          <div class="tenant-filter-pills" id="wfTenantFilterPills">
-            <button class="pill-btn active" onclick="filterWorkflowsByTenant('ALL')">all (<span id="countWfPillAll">0</span>)</button>
-            <button class="pill-btn" onclick="filterWorkflowsByTenant('usera')">usera (<span id="countWfTenantA">0</span>)</button>
-            <button class="pill-btn" onclick="filterWorkflowsByTenant('userb')">userb (<span id="countWfTenantB">0</span>)</button>
-            <button class="pill-btn" onclick="filterWorkflowsByTenant('userc')">userc (<span id="countWfTenantC">0</span>)</button>
+          <button class="sidebar-nav-item tab-btn" id="tabUsersBtn" onclick="switchAdminTab('users')" title="Master Database & Tenant">
+            <span class="nav-icon">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+            </span>
+            <span class="nav-label">Master Database & Tenant</span>
+          </button>
+
+          <button class="sidebar-nav-item tab-btn" id="tabToolsBtn" onclick="switchAdminTab('tools')" title="Agent Tools Registry">
+            <span class="nav-icon">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </span>
+            <span class="nav-label">Agent Tools Registry</span>
+          </button>
+
+          <div class="nav-group-label" style="margin-top: 18px;">DOCUMENTATION & SYSTEM</div>
+
+          <button class="sidebar-nav-item tab-btn" id="tabHelpBtn" onclick="switchAdminTab('help')" title="Help Center & Documentation">
+            <span class="nav-icon">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </span>
+            <span class="nav-label">Help Center & Documentation</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="system-status-card">
+            <div class="status-indicator">
+              <span class="status-pulse-dot"></span>
+              <span class="status-label">Engine Online</span>
+            </div>
+            <div class="status-desc">Multi-Tenant Active</div>
           </div>
         </div>
+      </aside>
 
-        <div id="workflowList" style="display: flex; flex-direction: column; gap: 14px;">
-          <p style="color: var(--text-muted); font-size: 13px;">Memuat daftar workflow...</p>
+      <main class="admin-content-body">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: WORKFLOW ORCHESTRATOR               -->
+        <!-- ========================================== -->
+        <div id="sectionWorkflows" style="display: block;">
+
+          <!-- Workflow Orchestrator Stats Banner -->
+          <div class="workflow-stats-banner">
+            <div class="wf-stat-card">
+              <div class="wf-stat-icon" style="background: #EFF6FF; color: #2563EB;">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <div>
+                <div class="wf-stat-num" id="wfTotalStat">14</div>
+                <div class="wf-stat-label">Active Workflow Pipelines</div>
+              </div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-icon" style="background: #ECFDF5; color: #059669;">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <div class="wf-stat-num" style="color: #059669;">Autonomous</div>
+                <div class="wf-stat-label">AI Execution Engine Status</div>
+              </div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-icon" style="background: #FAF5FF; color: #7E22CE;">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              </div>
+              <div>
+                <div class="wf-stat-num">3 Tenants</div>
+                <div class="wf-stat-label">Inventory, HR & Finance Isolation</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Workflow Builder Card -->
+          <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; margin-bottom: 20px;">
+              <div style="flex: 1; max-width: 680px;">
+                <h2 class="card-title" id="formTitle" style="margin-bottom: 6px;">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                  <span id="formTitleText">Create New Workflow (Data-Driven Engine)</span>
+                </h2>
+                <p class="card-subtitle" style="margin-bottom: 0; line-height: 1.6; color: var(--text-muted);">
+                  Define business rules in natural language. The autonomous LLM agent compiles your prompt into an executable workflow graph.
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px; flex-shrink: 0; align-items: center;">
+                <button class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEdit()" style="display: none;">
+                  Cancel
+                </button>
+                <button class="btn btn-primary" id="createWfBtn" onclick="submitWorkflow()" style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 9px 18px;">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                  </svg>
+                  <span id="btnSubmitText">Compile & Save Workflow</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Structured Form Fields -->
+            <input type="hidden" id="wfId">
+            <div class="workflow-form-grid">
+              <div class="form-field-group">
+                <label class="form-field-label" for="wfName">Workflow Name</label>
+                <input type="text" id="wfName" class="form-input" placeholder="e.g. Critical Tower Material Restock">
+              </div>
+              <div class="form-field-group">
+                <label class="form-field-label" for="wfTenantId">Target Division / Tenant</label>
+                <select id="wfTenantId" class="form-input" style="font-weight: 600; cursor: pointer; color: #1E40AF; background: #FFFFFF;">
+                  <option value="ALL">All Divisions (Global - ALL)</option>
+                  <option value="INVENTORY">Inventory & Logistics (usera - Schema A)</option>
+                  <option value="HR">HR & Field Personnel (userb - Schema B)</option>
+                  <option value="FINANCE">Finance & Billing (userc - Schema C)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-field-group" style="margin-bottom: 14px;">
+              <label class="form-field-label" for="wfDesc">Objective Summary</label>
+              <input type="text" id="wfDesc" class="form-input" placeholder="Short description of this workflow pipeline's goal">
+            </div>
+
+            <div class="form-field-group">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label class="form-field-label" for="wfInstruction">Business Rules & Natural Language Instruction</label>
+                <span style="font-size: 11px; color: var(--text-muted);">Indonesian natural language prompt</span>
+              </div>
+              <textarea id="wfInstruction" class="form-input" rows="4" style="line-height: 1.5; font-size: 13px;" placeholder="Tulis aturan bisnis pengadaan di sini...&#10;Contoh: Periksa stok produk setiap hari. Jika kurang dari ambang batas minimum, hitung ulang kebutuhan restock, buatkan draft Purchase Requisition (PR), dan kirim notifikasi approval ke manager."></textarea>
+            </div>
+          </div>
+
+          <!-- Active Workflows List Card -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                  </svg>
+                  <span>Active Workflows</span>
+                </h2>
+                <p class="card-subtitle" style="margin-bottom: 0;">Autonomous execution pipelines configured per tenant division.</p>
+              </div>
+              <button class="btn btn-secondary" onclick="loadWorkflows()" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            <!-- Filter Workflow by Tenant Pills -->
+            <div class="filter-bar" style="margin-top: 8px; margin-bottom: 14px;">
+              <div class="tenant-filter-pills" id="wfTenantFilterPills">
+                <button class="pill-btn active" onclick="filterWorkflowsByTenant('ALL')">All (<span id="countWfPillAll">0</span>)</button>
+                <button class="pill-btn" onclick="filterWorkflowsByTenant('usera')">Inventory (<span id="countWfTenantA">0</span>)</button>
+                <button class="pill-btn" onclick="filterWorkflowsByTenant('userb')">HR & Field (<span id="countWfTenantB">0</span>)</button>
+                <button class="pill-btn" onclick="filterWorkflowsByTenant('userc')">Finance (<span id="countWfTenantC">0</span>)</button>
+              </div>
+            </div>
+
+            <div id="workflowList" style="display: flex; flex-direction: column; gap: 14px;">
+              <p style="color: var(--text-muted); font-size: 13px;">Loading active workflows...</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
     <!-- ========================================== -->
     <!-- TAB 2: DATABASE PENGGUNA & INVENTARIS      -->
     <!-- ========================================== -->
-    <div id="sectionUsers">
+    <div id="sectionUsers" style="display: none;">
       
       <!-- KPI Stats -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-label">Total Akun Pengguna</div>
-          <div class="kpi-value" id="kpiTotalUsers">4 Akun</div>
-          <div class="kpi-sub">Multi-Tenant Terisolasi</div>
+          <div class="kpi-label">Total User Accounts</div>
+          <div class="kpi-value" id="kpiTotalUsers">4 Accounts</div>
+          <div class="kpi-sub">Multi-Tenant Isolated</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Material & Logistik (usera)</div>
+          <div class="kpi-label">Inventory & Logistics (usera)</div>
           <div class="kpi-value" id="kpiInvCount">14 SKU</div>
-          <div class="kpi-sub">Kabel FO & Perangkat BTS</div>
+          <div class="kpi-sub">Tower Materials & Fiber Optic</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">SDM & Personel K3 (userb)</div>
-          <div class="kpi-value" id="kpiHrCount">12 Personel</div>
-          <div class="kpi-sub">Rigger & Kualifikasi TKPK</div>
+          <div class="kpi-label">HR & Field Staff (userb)</div>
+          <div class="kpi-value" id="kpiHrCount">12 Staff</div>
+          <div class="kpi-sub">Field Riggers & K3 Certified</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Billing Operator (userc)</div>
+          <div class="kpi-label">Finance & Invoices (userc)</div>
           <div class="kpi-value" id="kpiFinCount">8 Invoices</div>
-          <div class="kpi-sub">Penagihan Sewa Menara</div>
+          <div class="kpi-sub">Operator MLA Contracts</div>
         </div>
       </div>
 
@@ -1108,20 +1927,20 @@
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
-              <span>Master Akun & Hak Akses Pengguna</span>
+              <span>User Accounts & Access Control</span>
             </h2>
-            <p class="card-subtitle" style="margin-bottom: 0;">Seluruh akun pengguna terdaftar yang memiliki akses ke database AutoRestock.</p>
+            <p class="card-subtitle" style="margin-bottom: 0;">All registered tenant accounts with access to the AutoRestock enterprise system.</p>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-secondary" onclick="loadUsersDatabase()">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
-              <span>Refresh Data</span>
+              <span>Refresh</span>
             </button>
             <button class="btn btn-primary" onclick="openCreateUserModal()" style="display: inline-flex; align-items: center; gap: 5px;">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              <span>Tambah Pengguna</span>
+              <span>Add User</span>
             </button>
           </div>
         </div>
@@ -1135,14 +1954,14 @@
                 <th>Role</th>
                 <th>Tenant</th>
                 <th>Total SKU / Data</th>
-                <th>Stok / Nilai Operasional</th>
+                <th>Operational Stock / Value</th>
                 <th>Status</th>
-                <th>Aksi</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="usersTableBody">
               <tr>
-                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Memuat data pengguna...</td>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading user accounts...</td>
               </tr>
             </tbody>
           </table>
@@ -1157,22 +1976,22 @@
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
               </svg>
-              <span>Database Master Operasional Multi-Tenant</span>
+              <span>Operational Master Data & Entities</span>
             </h2>
-            <p class="card-subtitle" style="margin-bottom: 0;">Seluruh produk barang dan entitas data operasional yang terdaftar di database DuckDB (storage/balitower.db).</p>
+            <p class="card-subtitle" style="margin-bottom: 0;">Master operational inventory and enterprise entities partitioned across divisional tenants.</p>
           </div>
         </div>
 
         <!-- Filter & Search Bar -->
         <div class="filter-bar">
           <div class="tenant-filter-pills" id="tenantFilterPills">
-            <button class="pill-btn active" onclick="filterItemsByTenant('ALL')">all (<span id="countAll">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('usera')">usera (<span id="countTenantA">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('userb')">userb (<span id="countTenantB">0</span>)</button>
-            <button class="pill-btn" onclick="filterItemsByTenant('userc')">userc (<span id="countTenantC">0</span>)</button>
+            <button class="pill-btn active" onclick="filterItemsByTenant('ALL')">All (<span id="countAll">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('usera')">Inventory (<span id="countTenantA">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('userb')">HR & Field (<span id="countTenantB">0</span>)</button>
+            <button class="pill-btn" onclick="filterItemsByTenant('userc')">Finance (<span id="countTenantC">0</span>)</button>
           </div>
           <div style="position: relative; width: 280px;">
-            <input type="text" id="itemSearchInput" class="form-input" placeholder="Cari nama, ID, kategori..." oninput="filterItemsSearch()" style="width: 100%; padding-left: 32px; font-size: 12.5px;">
+            <input type="text" id="itemSearchInput" class="form-input" placeholder="Search by name, ID, category..." oninput="filterItemsSearch()" style="width: 100%; padding-left: 32px; font-size: 12.5px;">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="position: absolute; left: 10px; top: 12px; color: var(--text-muted);">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
@@ -1181,66 +2000,13 @@
 
         <!-- Dynamic Multi-Domain Master Tables Container -->
         <div id="masterTablesContainer">
-          <div style="text-align: center; color: var(--text-muted); padding: 32px;">Memuat database operasional...</div>
+          <div style="text-align: center; color: var(--text-muted); padding: 32px;">Loading master database records...</div>
         </div>
       </div>
 
     </div>
 
-    <!-- ========================================== -->
-    <!-- TAB 4: DUCKDB TABLE EXPLORER (CONSOLE)    -->
-    <!-- ========================================== -->
-    <div id="sectionDbConsole" style="display: none;">
-      <div class="card">
-        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
-          <div>
-            <h2 class="card-title">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
-              </svg>
-              <span>DuckDB Table Explorer & Data Manager</span>
-            </h2>
-            <p class="card-subtitle" style="margin-bottom: 0;">
-              Kelola seluruh tabel basis data DuckDB (storage/balitower.db) secara leluasa: Tambah baris baru, ubah isi data, dan hapus baris langsung.
-            </p>
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" onclick="loadSelectedDbTable()">
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              <span>Refresh Tabel</span>
-            </button>
-            <button class="btn btn-primary" onclick="openInsertDbRowModal()" style="display: inline-flex; align-items: center; gap: 6px;">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              <span>Tambah Baris Baru</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Controls: Select Table & Filter -->
-        <div style="display: flex; gap: 12px; align-items: center; margin: 14px 0 16px 0; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <label style="font-size: 12px; font-weight: 700; color: #475569;">PILIH TABEL:</label>
-            <select id="dbTableSelect" class="form-input" style="font-weight: 700; color: #1E40AF; padding: 7px 12px; min-width: 240px; cursor: pointer;" onchange="onDbTableSelectChange()">
-              <option value="">Memuat tabel...</option>
-            </select>
-          </div>
-          <div style="position: relative; flex: 1; min-width: 220px;">
-            <input type="text" id="dbTableSearchInput" class="form-input" placeholder="Cari dalam tabel yang sedang dibuka..." oninput="onDbTableSearch()" style="width: 100%; padding-left: 32px; font-size: 12.5px;">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="position: absolute; left: 10px; top: 11px; color: var(--text-muted);">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-          </div>
-          <span id="dbTableInfoBadge" style="font-size: 12px; font-weight: 700; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; padding: 6px 12px; border-radius: 6px;">
-            0 Baris
-          </span>
-        </div>
-
-        <!-- Dynamic Table View -->
-        <div class="data-table-container" id="dbDynamicTableContainer" style="max-height: 580px; overflow: auto;">
-          <p style="text-align: center; color: var(--text-muted); padding: 32px;">Pilih tabel untuk melihat data.</p>
-        </div>
-      </div>
-    </div>
+<!-- DuckDB raw explorer decommissioned as requested -->
 
     <!-- ========================================== -->
     <!-- TAB 3: AGENT TOOLS REGISTRY               -->
@@ -1317,7 +2083,393 @@
 
     </div>
 
-  </main>
+    <!-- ========================================== -->
+    <!-- TAB 4: PANDUAN ALUR & CONTOH PROMPT (HELP) -->
+    <!-- ========================================== -->
+    <div id="sectionHelp" style="display: none;">
+      <!-- Hero Header & Sub-Navigation Card -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header" style="margin-bottom: 8px;">
+          <div>
+            <h2 class="card-title">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+              </svg>
+              <span>Help Center & Operations Documentation</span>
+            </h2>
+            <p class="card-subtitle" style="margin-top: 8px; line-height: 1.6; color: #475569; max-width: 960px;">
+              Technical and operational documentation for AutoRestock-Agent: multi-tenant architecture, autonomous workflow authoring, agent tools catalog, and prompt repository.
+            </p>
+          </div>
+        </div>
+
+        <!-- Sub-Navigation Pills -->
+        <div class="help-subnav-container" id="helpSubNavContainer">
+          <button class="help-subnav-btn active" id="helpNavBtnDb" onclick="switchAdminHelpSection('db')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+            </svg>
+            <span>1. Database Architecture & Multi-Tenant</span>
+          </button>
+          <button class="help-subnav-btn" id="helpNavBtnWorkflow" onclick="switchAdminHelpSection('workflow')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span>2. Workflow Orchestrator Guide</span>
+          </button>
+          <button class="help-subnav-btn" id="helpNavBtnTools" onclick="switchAdminHelpSection('tools')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span>3. AI Agent Tools Architecture</span>
+          </button>
+          <button class="help-subnav-btn" id="helpNavBtnFlows" onclick="switchAdminHelpSection('flows')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+            </svg>
+            <span>4. Workflow Catalog & Prompt Examples</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- SUB-SECTION 1: MANAJEMEN BASIS DATA        -->
+      <!-- ========================================== -->
+      <div id="helpSecDb" style="display: block;">
+        <!-- Banner Intro -->
+        <div class="doc-hero-banner">
+          <div>
+            <div class="doc-hero-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+              <span>Multi-Tenant Database Architecture & Analytics Storage</span>
+            </div>
+            <div class="doc-hero-desc">
+              Sistem AutoRestock-Agent menggunakan basis data tertanam DuckDB (lokasi: <code style="font-family: var(--font-mono); font-weight: 600; color: #1E40AF;">data/balitower/inventory.duckdb</code>) untuk memproses mutasi inventaris, SDM, dan keuangan secara cepat. Seluruh data dipartisi secara logis sesuai hak akses divisi (*tenant isolation*).
+            </div>
+          </div>
+          <button class="doc-shortcut-btn" onclick="switchAdminTab('users')">
+            <span>View Master Database</span>
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </div>
+
+        <div class="doc-grid-2">
+          <!-- Card 1.1: Pembagian Schema Tenant -->
+          <div class="doc-card">
+            <div class="doc-card-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              <span>Pembagian Skema Tenant Operasional</span>
+            </div>
+            <p style="font-size: 12.5px; color: #64748B; margin-bottom: 12px; line-height: 1.5;">
+              Tiap pengguna dibatasi hanya dapat mengakses tabel dan entitas data sesuai perannya:
+            </p>
+
+            <table class="doc-table">
+              <thead>
+                <tr>
+                  <th>Divisi Tenant</th>
+                  <th>Akun Pengguna</th>
+                  <th>Entitas Tabel Utama</th>
+                </tr>
+              </thead>
+              <tbody id="helpTenantSchemaTbody">
+                <tr>
+                  <td><span class="doc-badge-pill">INVENTORY</span></td>
+                  <td><strong>usera</strong> (Logistik)</td>
+                  <td><code>inventory_items</code>, <code>stock_balances</code>, <code>purchase_orders</code>, <code>purchase_requests</code>, <code>warehouses</code>, <code>suppliers</code></td>
+                </tr>
+                <tr>
+                  <td><span class="doc-badge-pill">HR</span></td>
+                  <td><strong>userb</strong> (SDM & Field)</td>
+                  <td><code>employees</code>, <code>attendances</code> (GPS geofencing), <code>leave_requests</code>, <code>candidates</code> (Rigger K3), <code>job_postings</code></td>
+                </tr>
+                <tr>
+                  <td><span class="doc-badge-pill">FINANCE</span></td>
+                  <td><strong>userc</strong> (Keuangan)</td>
+                  <td><code>mla_contracts</code> (Sewa menara), <code>revenue_invoices</code>, <code>site_utilities_cost</code> (PLN & genset), <code>financial_transactions</code></td>
+                </tr>
+                <tr>
+                  <td><span class="doc-badge-pill">ALL</span></td>
+                  <td><strong>admin</strong> (Superadmin)</td>
+                  <td>Akses global ke seluruh tabel, audit log transaksi, dan eksekusi instruksi lintas divisi.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Card 1.2: Panduan Master Database & Tenant -->
+          <div class="doc-card">
+            <div class="doc-card-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+              <span>Tata Cara Pengelolaan Master Database & Tenant</span>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">1</div>
+              <div class="doc-step-body">
+                <h4>Pilih Domain Operasional</h4>
+                <p>Buka tab Master Database & Tenants, pilih filter divisi: Semua User, Logistik & Material, SDM & Lapangan, atau Keuangan.</p>
+              </div>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">2</div>
+              <div class="doc-step-body">
+                <h4>Pencarian Data Real-Time</h4>
+                <p>Gunakan search bar di pojok kanan atas tabel untuk memfilter baris data instan berdasarkan kode item, NIK karyawan, atau nomor faktur.</p>
+              </div>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">3</div>
+              <div class="doc-step-body">
+                <h4>Penambahan Data Baru (Insert)</h4>
+                <p>Gunakan tombol "Add Material", "Add Employee", atau "Add Invoice" untuk menambahkan rekaman master secara terstruktur.</p>
+              </div>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">4</div>
+              <div class="doc-step-body">
+                <h4>Penyesuaian Saldo Stok & Aksi CRUD</h4>
+                <p>Gunakan tombol "Stock" untuk override saldo rak gudang, atau gunakan tombol "Edit" dan "Delete" untuk mengelola rekaman data.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 1.3: Admin Stock Override -->
+        <div class="doc-card" style="margin-bottom: 24px;">
+          <div class="doc-card-title">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            <span>Mekanisme Penyesuaian Manual Saldo Stok (Admin Stock Override)</span>
+          </div>
+          <p style="font-size: 13px; color: #475569; line-height: 1.6; margin-bottom: 12px;">
+            Jika terjadi perbedaan fisik antara inventaris aktual di rak gudang dengan catatan DuckDB (akibat audit stock opname atau selisih penerimaan), Administrator dapat melakukan penyesuaian manual langsung melalui tombol aksi pada tabel inventaris di tab <strong>Database Master</strong>:
+          </p>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 18px; font-size: 12.5px; color: #334155;">
+            <div><strong>1. Saldo Fisik Gudang</strong>: Mengubah nilai kuantitas pada tabel <code style="font-family: var(--font-mono);">stock_balances</code> per gudang (misal: WH-JKT-01, WH-BDG-01).</div>
+            <div><strong>2. Sinkronisasi Agregat</strong>: Kuantitas total pada tabel kompatibilitas <code style="font-family: var(--font-mono);">items.current_stock</code> otomatis terhitung ulang.</div>
+            <div><strong>3. Status Stok Otomatis</strong>: Sistem langsung mengategorikan item menjadi <span class="doc-badge-pill">NORMAL</span>, <span class="doc-badge-pill" style="color: #D97706; background: #FEF3C7; border-color: #FDE68A;">LOW_STOCK</span>, atau <span class="doc-badge-pill" style="color: #DC2626; background: #FEE2E2; border-color: #FECACA;">CRITICAL</span>.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- SUB-SECTION 2: PANDUAN WORKFLOW BUILDER    -->
+      <!-- ========================================== -->
+      <div id="helpSecWorkflow" style="display: none;">
+        <!-- Banner Intro -->
+        <div class="doc-hero-banner">
+          <div>
+            <div class="doc-hero-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <span>Panduan Penyusunan Alur Kerja (Workflow Orchestrator)</span>
+            </div>
+            <div class="doc-hero-desc">
+              Workflow Orchestrator memungkinkan Anda merancang proses bisnis baru tanpa menulis kode. Kompiler AI membaca instruksi bisnis bahasa alami dan mengubahnya menjadi sequence graph eksekusi terstruktur yang langsung aktif di sistem chat.
+            </div>
+          </div>
+          <button class="doc-shortcut-btn" onclick="switchAdminTab('workflows')">
+            <span>Buka Workflow Builder</span>
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </div>
+
+        <div class="doc-grid-2">
+          <!-- Card 2.1: Langkah-Langkah -->
+          <div class="doc-card">
+            <div class="doc-card-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+              <span>Langkah-Langkah Membuat Alur Kerja Baru</span>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">1</div>
+              <div class="doc-step-body">
+                <h4>Identitas & Nama Alur Kerja</h4>
+                <p>Isi Nama Alur yang jelas (contoh: <em>Penerimaan Barang Fisik PO & Update Saldo</em>) dan deskripsi tujuan alur.</p>
+              </div>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">2</div>
+              <div class="doc-step-body">
+                <h4>Pilih Tenant Divisi Sasaran</h4>
+                <p>Pilih apakah alur diperuntukkan bagi <strong>usera (INVENTORY)</strong>, <strong>userb (HR)</strong>, <strong>userc (FINANCE)</strong>, atau <strong>all (SUPERADMIN)</strong>.</p>
+              </div>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">3</div>
+              <div class="doc-step-body">
+                <h4>Tulis Aturan Bisnis (Business Instruction)</h4>
+                <p>Tulis prosedur operasional lengkap dalam bahasa Indonesia (kondisi pemicu, penghitungan, dokumen yang diterbitkan, dan email notifikasi).</p>
+              </div>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">4</div>
+              <div class="doc-step-body">
+                <h4>Compile & Simpan Workflow</h4>
+                <p>Klik tombol kompilasi. AI Compiler mem-parsing aturan menjadi langkah eksekusi JSON dan <strong>menghasilkan 2-3 contoh pertanyaan otomatis</strong>.</p>
+              </div>
+            </div>
+
+            <div class="doc-step-item">
+              <div class="doc-step-num">5</div>
+              <div class="doc-step-body">
+                <h4>Aktivasi Instan & Sinkronisasi Bantuan</h4>
+                <p>Alur kerja langsung tersimpan di basis data DuckDB dan muncul pada modal Bantuan Chat pengguna seketika.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2.2: Anatomi JSON Alur Kerja -->
+          <div class="doc-card">
+            <div class="doc-card-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+              <span>Anatomi Graph JSON Alur Kerja</span>
+            </div>
+            <p style="font-size: 12.5px; color: #64748B; margin-bottom: 8px;">
+              Hasil kompilasi AI menghasilkan struktur eksekusi seperti berikut:
+            </p>
+            <div class="doc-code-block">{
+  "workflow": "pipeline_pengadaan_material_pr_to_po",
+  "version": 1,
+  "steps": [
+    { "type": "tool", "tool": "inventory.get_low_stock_products" },
+    { "type": "agent", "task": "calculate_reorder_quantity" },
+    { "type": "tool", "tool": "docgen.compile" },
+    { "type": "tool", "tool": "notification.dispatch" }
+  ],
+  "example_prompts": [
+    "Periksa seluruh stok material menara yang kritis dan buat draft PR",
+    "Cek material fiber optic di bawah safety stock lalu kirim email approval"
+  ]
+}</div>
+            <div style="font-size: 12px; color: #475569; line-height: 1.5; margin-top: 10px;">
+              <div>• <strong>type: "tool"</strong>: Menjalankan fungsi spesifik dari registry tools terdaftar.</div>
+              <div>• <strong>type: "agent"</strong>: Meminta evaluasi penalaran matematis atau validasi dari model AI.</div>
+              <div>• <strong>example_prompts</strong>: Kalimat pertanyaan otomatis untuk memandu pengguna di ruang obrolan.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2.3: Tips Penulisan -->
+        <div class="doc-card" style="margin-bottom: 24px;">
+          <div class="doc-card-title">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Tips Menulis Instruksi Bisnis yang Efektif</span>
+          </div>
+          <div class="doc-grid-3" style="margin-bottom: 0;">
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px;">
+              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">1. Gunakan Kata Kerja Aksi</h5>
+              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Gunakan instruksi terarah seperti: <em>"Periksa saldo stok"</em>, <em>"Tarik data absensi"</em>, <em>"Kalkulasi kuantitas"</em>, <em>"Terbitkan dokumen PDF"</em>, atau <em>"Kirim email otorisasi"</em>.</p>
+            </div>
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px;">
+              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">2. Sebutkan Entitas Spesifik</h5>
+              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Sebutkan nama entitas yang terlibat: kabel fiber optic, modul rectifier, kontrak sewa menara MLA, surat pesanan PO, permohonan cuti, atau tagihan PLN.</p>
+            </div>
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px;">
+              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">3. Definisikan Status Akhir</h5>
+              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Tentukan status data dokumen yang diharapkan, misalnya: <em>"Simpan draft dengan status PENDING_APPROVAL"</em> atau <em>"Ubah status menjadi DELIVERED"</em>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- SUB-SECTION 3: ARSITEKTUR & AGENT TOOLS    -->
+      <!-- ========================================== -->
+      <div id="helpSecTools" style="display: none;">
+        <!-- Banner Intro -->
+        <div class="doc-hero-banner">
+          <div>
+            <div class="doc-hero-title">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              <span>Arsitektur & Mekanisme Kerja Agent Tools</span>
+            </div>
+            <div class="doc-hero-desc">
+              Agent Tools adalah blok fungsi modular (*building blocks*) yang menghubungkan kecerdasan agen LLM dengan basis data DuckDB, generator berkas PDF Typst, dan pengirim email SMTP. Setiap tool memiliki tanggung jawab unik dan validasi skema parameter yang ketat.
+            </div>
+          </div>
+          <button class="doc-shortcut-btn" onclick="switchAdminTab('tools')">
+            <span>Buka Tools Registry</span>
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </div>
+
+        <!-- Mekanisme Kerja Engine -->
+        <div class="doc-card" style="margin-bottom: 20px;">
+          <div class="doc-card-title">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>Alur Eksekusi Agen Cerdas (Execution Lifecycle)</span>
+          </div>
+          <div style="background: #0F172A; color: #E2E8F0; padding: 16px 20px; border-radius: 8px; font-family: var(--font-mono); font-size: 12px; line-height: 1.7; overflow-x: auto;">
+[Input Chat Pengguna] 
+       │
+       ▼
+[Semantic Router] ──► Deteksi Intent & Batasan Tenant (usera / userb / userc / admin)
+       │
+       ▼
+[Workflow / Plan Resolver] ──► Menentukan Sequence Langkah & Tools yang Dibutuhkan
+       │
+       ▼
+[JSON Execution Engine] ──► Validasi Skema Parameter & Hak Akses Data
+       │
+       ▼
+[Tool Invocation] ──► Query/Update DuckDB ──► Generate Typst PDF ──► Dispatch Email SMTP
+       │
+       ▼
+[Sintesis Balasan AI] ──► Mengembalikan Respons Terstruktur & Tautan Unduhan Dokumen
+          </div>
+        </div>
+
+        <!-- Dynamic Live Tools Section -->
+        <div id="helpDynamicToolsContainer">
+          <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
+            Memuat arsitektur tools real-time dari backend...
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- SUB-SECTION 4: KATALOG ALUR & CONTOH PROMPT-->
+      <!-- ========================================== -->
+      <div id="helpSecFlows" style="display: none;">
+        <!-- Filter Card -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header" style="margin-bottom: 8px;">
+            <div>
+              <h3 style="font-size: 14.5px; font-weight: 700; color: #0F172A; margin: 0;">Katalog Alur Kerja Aktif & Contoh Prompt Chat</h3>
+              <p style="font-size: 12.5px; color: #64748B; margin: 4px 0 0 0;">
+                Daftar alur kerja terdaftar pada basis data DuckDB. Klik "Gunakan di Builder" untuk memuat parameter ke form penyusun alur, atau salin contoh pertanyaan untuk diuji langsung pada ruang obrolan.
+              </p>
+            </div>
+          </div>
+
+          <!-- Filter Per Tenant -->
+          <div class="filter-pills" id="adminHelpFilterPills" style="margin-top: 10px;">
+            <button class="filter-pill active" onclick="filterAdminHelp('ALL')">Semua Divisi</button>
+            <button class="filter-pill" onclick="filterAdminHelp('INVENTORY')">Divisi Inventory (Schema A)</button>
+            <button class="filter-pill" onclick="filterAdminHelp('HR')">Divisi HR (Schema B)</button>
+            <button class="filter-pill" onclick="filterAdminHelp('FINANCE')">Divisi Finance (Schema C)</button>
+            <button class="filter-pill" onclick="filterAdminHelp('SUPERADMIN')">Superadmin (Schema ALL)</button>
+          </div>
+        </div>
+
+        <!-- Help Content Container (Dynamic Clean Flow Grid) -->
+        <div id="adminHelpContainer">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+    </div>
+
+      </main>
+    </div>
+  </div>
 
   <!-- Modal Edit Saldo Stok Fisik Barang (Admin Stock Override) -->
   <div class="modal-overlay" id="modalEditStock" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
@@ -1328,29 +2480,29 @@
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
           </div>
           <div>
-            <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0F172A;">Ubah Saldo Stok Fisik Barang</h3>
-            <p style="margin: 0; font-size: 11.5px; color: #64748B;">Admin Override: Sesuaikan kuantitas stok per gudang secara bebas</p>
+            <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0F172A;">Adjust Physical Stock Balance</h3>
+            <p style="margin: 0; font-size: 11.5px; color: #64748B;">Admin Override: Freely calibrate warehouse stock quantities</p>
           </div>
         </div>
         <button onclick="closeAdminStockModal()" style="background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; color: #94A3B8;">&times;</button>
       </div>
 
       <div style="margin-bottom: 14px;">
-        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">MATERIAL / BARANG</label>
+        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">MATERIAL / ITEM</label>
         <div id="editStockItemName" style="font-size: 13px; font-weight: 700; color: #0F172A; background: #F8FAFC; padding: 8px 12px; border-radius: 6px; border: 1px solid #E2E8F0;">-</div>
         <input type="hidden" id="editStockItemId">
       </div>
 
       <div style="margin-bottom: 14px;">
-        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PILIH GUDANG PENYIMPANAN</label>
+        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SELECT WAREHOUSE</label>
         <select id="editStockWarehouseSelect" class="form-input" style="width: 100%; font-size: 13px; font-weight: 600; color: #1E293B;" onchange="onAdminStockWarehouseChange()">
-          <option value="">Memuat gudang...</option>
+          <option value="">Loading warehouses...</option>
         </select>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">STOK FISIK BARU</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">NEW PHYSICAL STOCK</label>
           <div style="position: relative;">
             <input type="number" id="editStockQtyInput" class="form-input" placeholder="0" min="0" style="width: 100%; font-size: 14px; font-weight: 700; color: #0F172A; font-family: var(--font-mono); padding-right: 48px;">
             <span id="editStockUnitBadge" style="position: absolute; right: 10px; top: 9px; font-size: 11px; color: #64748B; font-weight: 600;">unit</span>
@@ -1364,14 +2516,14 @@
 
       <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 6px; padding: 10px 12px; margin-bottom: 18px; font-size: 12px; color: #166534; display: flex; align-items: flex-start; gap: 8px;">
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="flex-shrink: 0; margin-top: 1px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <span>Status kesehatan (<strong>Normal</strong>, <strong>Menipis</strong>, atau <strong>Kritis</strong>) akan dihitung ulang secara otomatis berdasarkan rumus matematis baku setelah disimpan.</span>
+        <span>Stock health statuses (<strong>Normal</strong>, <strong>Low Stock</strong>, or <strong>Critical</strong>) will be re-evaluated automatically according to baseline formula upon saving.</span>
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="closeAdminStockModal()">Batal</button>
+        <button class="btn btn-secondary" onclick="closeAdminStockModal()">Cancel</button>
         <button class="btn btn-primary" id="btnSaveAdminStock" onclick="saveAdminStockOverride()" style="display: inline-flex; align-items: center; gap: 6px;">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-          <span>Simpan Perubahan</span>
+          <span>Save Changes</span>
         </button>
       </div>
     </div>
@@ -1385,17 +2537,17 @@
           <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         <div>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Bersihkan Semua PR & PO?</h3>
-          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">Tindakan ini akan mengosongkan antrean draf PR dan riwayat PO.</p>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Clear All PR & PO Documents?</h3>
+          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">This action resets all pending PR drafts and PO logs.</p>
         </div>
       </div>
       <p style="font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 20px;">
-        Seluruh antrean dokumen <strong>Purchase Requisition (PR)</strong>, <strong>Purchase Order (PO)</strong>, serta berkas PDF sementara akan dihapus dari sistem. Status persediaan akan kembali bersih tanpa antrean belanja.
+        All pending <strong>Purchase Requisition (PR)</strong>, <strong>Purchase Order (PO)</strong>, and temporary PDF files will be purged from the database.
       </p>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalClearAllPrPo').style.display='none'">Batal</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalClearAllPrPo').style.display='none'">Cancel</button>
         <button class="btn" onclick="executeClearAllPrPo()" style="background: #DC2626; color: white; border: none; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-          <span>Ya, Bersihkan Sekarang</span>
+          <span>Yes, Clear Now</span>
         </button>
       </div>
     </div>
@@ -1405,7 +2557,7 @@
   <div class="modal-overlay" id="modalUserCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
     <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 460px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 id="modalUserTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Tambah Pengguna Baru</h3>
+        <h3 id="modalUserTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Manage User Account</h3>
         <button onclick="document.getElementById('modalUserCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
       </div>
       <input type="hidden" id="userCrudUserId">
@@ -1415,18 +2567,18 @@
       </div>
       <div style="margin-bottom: 12px;">
         <label id="userCrudPwdLabel" style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PASSWORD</label>
-        <input type="password" id="userCrudPassword" class="form-input" style="width: 100%;" placeholder="Minimal 6 karakter">
+        <input type="password" id="userCrudPassword" class="form-input" style="width: 100%;" placeholder="Min. 6 characters">
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">HAK AKSES (ROLE)</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">ROLE</label>
           <select id="userCrudRole" class="form-input" style="width: 100%;">
             <option value="USER">USER</option>
             <option value="ADMIN">ADMIN (Superadmin)</option>
           </select>
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">DIVISI (TENANT)</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">TENANT DIVISION</label>
           <select id="userCrudTenant" class="form-input" style="width: 100%;">
             <option value="INVENTORY">usera (Inventory)</option>
             <option value="HR">userb (HR & Field)</option>
@@ -1436,8 +2588,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalUserCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="submitUserCrud()">Simpan Pengguna</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalUserCrud').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="submitUserCrud()">Save User</button>
       </div>
     </div>
   </div>
@@ -1446,41 +2598,41 @@
   <div class="modal-overlay" id="modalMaterialCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
     <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 540px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0; max-height: 90vh; overflow-y: auto;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 id="modalMaterialTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Tambah Material Baru</h3>
+        <h3 id="modalMaterialTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Manage Material</h3>
         <button onclick="document.getElementById('modalMaterialCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
       </div>
       <input type="hidden" id="matCrudItemId">
       <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">NAMA MATERIAL</label>
-          <input type="text" id="matCrudName" class="form-input" style="width: 100%;" placeholder="Contoh: Kabel Drop Core FO 1 Core">
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">MATERIAL NAME</label>
+          <input type="text" id="matCrudName" class="form-input" style="width: 100%;" placeholder="e.g. Kabel Drop Core FO 1 Core">
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">KATEGORI</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">CATEGORY</label>
           <input type="text" id="matCrudCategory" class="form-input" style="width: 100%;" placeholder="Kabel Fiber Optik">
         </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SATUAN (UNIT)</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">UNIT</label>
           <input type="text" id="matCrudUnit" class="form-input" style="width: 100%;" placeholder="meter / unit / roll">
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">HARGA SATUAN (IDR)</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">UNIT PRICE (IDR)</label>
           <input type="number" id="matCrudPrice" class="form-input" style="width: 100%;" placeholder="0">
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">BATAS MIN (ROP)</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">MIN STOCK (ROP)</label>
           <input type="number" id="matCrudMinStock" class="form-input" style="width: 100%;" placeholder="50">
         </div>
       </div>
       <div id="matInitialStockRow" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">STOK AWAL GUDANG</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">INITIAL STOCK</label>
           <input type="number" id="matCrudInitialStock" class="form-input" style="width: 100%;" placeholder="100">
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PILIH GUDANG</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SELECT WAREHOUSE</label>
           <select id="matCrudWarehouse" class="form-input" style="width: 100%;">
             <option value="WH-JKT-01">Gudang Sentral Jakarta (WH-JKT-01)</option>
             <option value="WH-BDG-01">Hub Regional Bandung (WH-BDG-01)</option>
@@ -1489,8 +2641,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalMaterialCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="submitMaterialCrud()">Simpan Material</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalMaterialCrud').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="submitMaterialCrud()">Save Material</button>
       </div>
     </div>
   </div>
@@ -1499,17 +2651,17 @@
   <div class="modal-overlay" id="modalEmployeeCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
     <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 520px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 id="modalEmployeeTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Tambah Karyawan Baru</h3>
+        <h3 id="modalEmployeeTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Manage Employee</h3>
         <button onclick="document.getElementById('modalEmployeeCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
       </div>
       <input type="hidden" id="empCrudId">
       <div style="margin-bottom: 12px;">
-        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">NAMA LENGKAP</label>
-        <input type="text" id="empCrudFullName" class="form-input" style="width: 100%;" placeholder="Contoh: Pratama Arhan">
+        <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">FULL NAME</label>
+        <input type="text" id="empCrudFullName" class="form-input" style="width: 100%;" placeholder="e.g. Pratama Arhan">
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">DEPARTEMEN</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">DEPARTMENT</label>
           <select id="empCrudDept" class="form-input" style="width: 100%;">
             <option value="Tower Operations">Tower Operations</option>
             <option value="Field Engineering">Field Engineering</option>
@@ -1519,35 +2671,35 @@
           </select>
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">JABATAN</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">POSITION</label>
           <input type="text" id="empCrudJob" class="form-input" style="width: 100%;" placeholder="Lead Tower Rigger">
         </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">STATUS KERJA</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">EMPLOYMENT STATUS</label>
           <select id="empCrudStatus" class="form-input" style="width: 100%;">
             <option value="PERMANENT">PERMANENT</option>
             <option value="CONTRACT">CONTRACT</option>
           </select>
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SERTIFIKASI K3</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SAFETY CERTIFICATION</label>
           <select id="empCrudK3" class="form-input" style="width: 100%;">
-            <option value="TKPK_1">TKPK Tingkat 1</option>
-            <option value="TKPK_2">TKPK Tingkat 2</option>
-            <option value="K3_LISTRIK">K3 Teknisi Listrik</option>
-            <option value="NON_CERTIFIED">Belum Bersertifikat</option>
+            <option value="TKPK_1">TKPK Level 1</option>
+            <option value="TKPK_2">TKPK Level 2</option>
+            <option value="K3_LISTRIK">K3 Electrical Tech</option>
+            <option value="NON_CERTIFIED">Non Certified</option>
           </select>
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SISA CUTI</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">LEAVE BALANCE</label>
           <input type="number" id="empCrudLeaveBal" class="form-input" style="width: 100%;" value="12">
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalEmployeeCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="submitEmployeeCrud()" style="background: #047857; border-color: #047857;">Simpan Karyawan</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalEmployeeCrud').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="submitEmployeeCrud()" style="background: #047857; border-color: #047857;">Save Employee</button>
       </div>
     </div>
   </div>
@@ -1556,17 +2708,17 @@
   <div class="modal-overlay" id="modalInvoiceCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
     <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 520px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 id="modalInvoiceTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Tambah Invoice Tagihan</h3>
+        <h3 id="modalInvoiceTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Manage Invoice</h3>
         <button onclick="document.getElementById('modalInvoiceCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
       </div>
       <input type="hidden" id="invCrudInvoiceId">
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">NOMOR INVOICE</label>
-          <input type="text" id="invCrudNumber" class="form-input" style="width: 100%;" placeholder="Otomatis jika kosong">
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">INVOICE NUMBER</label>
+          <input type="text" id="invCrudNumber" class="form-input" style="width: 100%;" placeholder="Auto-generated if empty">
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">KLIEN OPERATOR</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">CLIENT OPERATOR</label>
           <select id="invCrudClientId" class="form-input" style="width: 100%;">
             <option value="CLI-001">PT Telekomunikasi Selular (Telkomsel)</option>
             <option value="CLI-002">PT Indosat Ooredoo Hutchison Tbk</option>
@@ -1578,49 +2730,32 @@
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PERIODE SEWA</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">BILLING PERIOD</label>
           <input type="text" id="invCrudPeriod" class="form-input" style="width: 100%;" placeholder="2026-Q2">
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">JATUH TEMPO</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">DUE DATE</label>
           <input type="date" id="invCrudDueDate" class="form-input" style="width: 100%;">
         </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">TOTAL TAGIHAN (IDR)</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">TOTAL BILLED (IDR)</label>
           <input type="number" id="invCrudTotalBilled" class="form-input" style="width: 100%;" placeholder="66000000">
         </div>
         <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">STATUS PEMBAYARAN</label>
+          <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">PAYMENT STATUS</label>
           <select id="invCrudStatus" class="form-input" style="width: 100%;">
-            <option value="PAID">PAID (Lunas)</option>
-            <option value="PENDING">PENDING (Menunggu)</option>
-            <option value="UNPAID">UNPAID (Belum Bayar)</option>
-            <option value="OVERDUE">OVERDUE (Jatuh Tempo)</option>
+            <option value="PAID">PAID</option>
+            <option value="PENDING">PENDING</option>
+            <option value="UNPAID">UNPAID</option>
+            <option value="OVERDUE">OVERDUE</option>
           </select>
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalInvoiceCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="submitInvoiceCrud()" style="background: #C2410C; border-color: #C2410C;">Simpan Invoice</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: GENERIC DUCKDB TABLE ROW INSERT / EDIT -->
-  <div class="modal-overlay" id="modalDbRowCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
-    <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 620px; max-width: 92vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0; max-height: 90vh; display: flex; flex-direction: column;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 id="modalDbRowTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Kelola Baris Data</h3>
-        <button onclick="document.getElementById('modalDbRowCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
-      </div>
-      <div id="modalDbRowFieldsContainer" style="overflow-y: auto; flex: 1; padding-right: 6px; margin-bottom: 16px;">
-        <!-- Dynamic fields populated via JS -->
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #E2E8F0; padding-top: 14px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalDbRowCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" id="btnSaveDbRow" onclick="submitDbRowModal()">Simpan Data</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalInvoiceCrud').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="submitInvoiceCrud()" style="background: #C2410C; border-color: #C2410C;">Save Invoice</button>
       </div>
     </div>
   </div>
@@ -1633,17 +2768,17 @@
           <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         <div>
-          <h3 id="delConfirmTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Konfirmasi Hapus Data</h3>
-          <p id="delConfirmSub" style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">Tindakan ini tidak dapat dibatalkan.</p>
+          <h3 id="delConfirmTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Confirm Delete Record</h3>
+          <p id="delConfirmSub" style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">This action cannot be undone.</p>
         </div>
       </div>
       <p id="delConfirmMsg" style="font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 20px;">
-        Apakah Anda yakin ingin menghapus data ini dari basis data?
+        Are you sure you want to permanently delete this record from the database?
       </p>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalUniversalDelete').style.display='none'">Batal</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalUniversalDelete').style.display='none'">Cancel</button>
         <button class="btn" id="btnConfirmDeleteAction" style="background: #DC2626; color: white; border: none; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
-          Ya, Hapus Sekarang
+          Yes, Delete Now
         </button>
       </div>
     </div>
@@ -1684,44 +2819,660 @@
     let allLoadedTools = [];
     let currentToolCategoryFilter = 'ALL';
 
-    // Switch Tabs between Workflows, Users Database, DuckDB Explorer, and Tools Registry
+    // ==============================================================================
+    // COLLAPSIBLE SIDEBAR LOGIC (TOGGLE OPEN / CLOSE RAIL)
+    // Note: AutoRestock Header in Topbar remains fixed and visible at all times!
+    // ==============================================================================
+    function toggleAdminSidebar() {
+      const layout = document.getElementById('adminAppLayout');
+      if (!layout) return;
+      layout.classList.toggle('sidebar-collapsed');
+      const isCollapsed = layout.classList.contains('sidebar-collapsed');
+      try {
+        localStorage.setItem('admin_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+      } catch (e) {}
+    }
+
+    // Default to OPEN on first load. Restore state only if explicitly set to true
+    try {
+      if (localStorage.getItem('admin_sidebar_collapsed') === 'true') {
+        const layout = document.getElementById('adminAppLayout');
+        if (layout) layout.classList.add('sidebar-collapsed');
+      }
+    } catch (e) {}
+
+    // Keyboard shortcut: Ctrl+B or Cmd+B to toggle sidebar
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleAdminSidebar();
+      }
+    });
+
+    // Switch Tabs between Workflows, Users Database, Tools Registry, and Help Guide
     function switchAdminTab(tabName) {
       const btnWf = document.getElementById('tabWorkflowsBtn');
       const btnUsers = document.getElementById('tabUsersBtn');
       const btnTools = document.getElementById('tabToolsBtn');
-      const btnDb = document.getElementById('tabDbConsoleBtn');
+      const btnHelp = document.getElementById('tabHelpBtn');
       const secWf = document.getElementById('sectionWorkflows');
       const secUsers = document.getElementById('sectionUsers');
       const secTools = document.getElementById('sectionTools');
-      const secDb = document.getElementById('sectionDbConsole');
+      const secHelp = document.getElementById('sectionHelp');
+      const topbarTitle = document.getElementById('topbarCurrentTitle');
 
-      btnWf.classList.remove('active');
-      btnUsers.classList.remove('active');
+      if (btnWf) btnWf.classList.remove('active');
+      if (btnUsers) btnUsers.classList.remove('active');
       if (btnTools) btnTools.classList.remove('active');
-      if (btnDb) btnDb.classList.remove('active');
+      if (btnHelp) btnHelp.classList.remove('active');
 
-      secWf.style.display = 'none';
-      secUsers.style.display = 'none';
+      if (secWf) secWf.style.display = 'none';
+      if (secUsers) secUsers.style.display = 'none';
       if (secTools) secTools.style.display = 'none';
-      if (secDb) secDb.style.display = 'none';
+      if (secHelp) secHelp.style.display = 'none';
 
       if (tabName === 'workflows') {
-        btnWf.classList.add('active');
-        secWf.style.display = 'block';
+        if (btnWf) btnWf.classList.add('active');
+        if (secWf) secWf.style.display = 'block';
+        if (topbarTitle) topbarTitle.textContent = 'Workflow Orchestrator';
         loadWorkflows();
       } else if (tabName === 'users') {
-        btnUsers.classList.add('active');
-        secUsers.style.display = 'block';
+        if (btnUsers) btnUsers.classList.add('active');
+        if (secUsers) secUsers.style.display = 'block';
+        if (topbarTitle) topbarTitle.textContent = 'Master Database & Tenants';
         loadUsersDatabase();
-      } else if (tabName === 'dbconsole') {
-        if (btnDb) btnDb.classList.add('active');
-        if (secDb) secDb.style.display = 'block';
-        initDbTableExplorer();
       } else if (tabName === 'tools') {
         if (btnTools) btnTools.classList.add('active');
         if (secTools) secTools.style.display = 'block';
+        if (topbarTitle) topbarTitle.textContent = 'Agent Tools Registry';
         loadAgentTools();
+      } else if (tabName === 'help') {
+        if (btnHelp) btnHelp.classList.add('active');
+        if (secHelp) secHelp.style.display = 'block';
+        if (topbarTitle) topbarTitle.textContent = 'Help Center & Documentation';
+        switchAdminHelpSection(currentAdminHelpSection || 'db');
       }
+    }
+
+    // ==============================================================================
+    // ADMIN FLOW HELP & PROMPTS REGISTRY (MINIMALIST, NO EMOJIS)
+    // ==============================================================================
+    const ADMIN_HELP_REGISTRY = [
+      {
+        category: 'INVENTORY',
+        categoryLabel: 'Divisi Inventory (Schema A)',
+        flows: [
+          {
+            id: 'WF-A01',
+            name: 'Pipeline Pengadaan Material PR-to-PO',
+            desc: 'Pengecekan stok menara/FO di bawah safety stock, kalkulasi reorder otomatis, dan kompilasi PR PDF resmi.',
+            instruction: 'Periksa seluruh saldo stok material menara dan kabel fiber optic di gudang logistik usera yang berada di bawah ambang batas minimum. Hitung kuantitas reorder dan vendor rekanan terbaik, terbitkan dokumen resmi Purchase Requisition (PR) dan draf PO PENDING_APPROVAL, lalu kirim email notifikasi ke manajer.',
+            examples: [
+              'Periksa seluruh stok material menara yang kritis dan buat draft PR pengadaan barang',
+              'Cek material fiber optic di bawah safety stock lalu kirim email persetujuan ke manajer'
+            ]
+          },
+          {
+            id: 'WF-A02',
+            name: 'Penerimaan Barang Fisik PO & Update Saldo',
+            desc: 'Verifikasi kedatangan barang PO di gudang regional dan sinkronisasi penambahan saldo fisik DuckDB.',
+            instruction: 'Verifikasi kedatangan barang Purchase Order yang tiba di gudang, catat penerimaan aktual, update status DELIVERED, dan tambahkan stok ke saldo gudang.',
+            examples: [
+              'PO-2026-006 sudah sampai di gudang Bandung, tolong catat penerimaan barang',
+              'Konfirmasi kedatangan material PO-2026-001 di gudang Jakarta dan tambahkan ke saldo fisik'
+            ]
+          },
+          {
+            id: 'WF-A03',
+            name: 'Tracking Pengiriman PO & Cetak Berkas PDF',
+            desc: 'Audit PO aktif (IN_TRANSIT) dan penerbitan berkas resmi format PDF Typst.',
+            instruction: 'Audit status PO yang sedang dikirim (IN_TRANSIT), tampilkan nomor PO dan total nilai, serta terbitkan berkas PDF surat pesanan resmi untuk diunduh.',
+            examples: [
+              'Lacak status pengiriman PO yang sedang aktif dalam perjalanan',
+              'Tampilkan daftar purchase order berstatus in transit dan unduh dokumen resminya'
+            ]
+          }
+        ]
+      },
+      {
+        category: 'HR',
+        categoryLabel: 'Divisi HR (Schema B)',
+        flows: [
+          {
+            id: 'WF-08BEBD',
+            name: 'Pengajuan Cuti Teknisi & Dokumen PDF HR',
+            desc: 'Pencatatan permohonan cuti teknisi, pemotongan kuota cuti tahunan, dan pengiriman notifikasi PDF.',
+            instruction: 'Catat permohonan cuti karyawan ke dalam database, cetak formulir resmi cuti format PDF dengan kop surat PT Bali Towerindo Sentra Tbk, lalu kirimkan notifikasi dan lampiran PDF ke email HR.',
+            examples: [
+              'Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok',
+              'Buat formulir permohonan cuti rigger dan terbitkan dokumen PDF resmi'
+            ]
+          },
+          {
+            id: 'WF-847DA5',
+            name: 'Audit Cuti Pending & Email Otorisasi HR',
+            desc: 'Pemeriksaan pengajuan cuti berstatus pending dan pengiriman rekapitulasi ke email manajer.',
+            instruction: 'Audit seluruh data permohonan cuti karyawan yang masih berstatus pending approval di database. Tampilkan rincian daftar pengajuan cuti yang belum disetujui di chat, lalu kirimkan rekapitulasi ke email HR agar dapat diajukan persetujuan langsung.',
+            examples: [
+              'Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR',
+              'Tampilkan seluruh permohonan cuti karyawan yang belum disetujui'
+            ]
+          },
+          {
+            id: 'WF-002',
+            name: 'Cek Absensi & Lembur Teknisi',
+            desc: 'Audit absensi kunjungan site menara dengan validasi geofencing GPS dan kalkulasi jam lembur.',
+            instruction: 'Tarik data absensi teknisi lapangan dengan validasi geofencing GPS dan kalkulasi biaya lembur.',
+            examples: [
+              'Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi bulan ini',
+              'Cek validasi geofencing presensi teknisi lapangan minggu ini'
+            ]
+          },
+          {
+            id: 'WF-003',
+            name: 'Filter Pelamar Rigger K3 TKPK',
+            desc: 'Menyaring kandidat rigger tower dengan sertifikasi TKPK 1/2 dan evaluasi medis ketinggian.',
+            instruction: 'Filter kandidat rigger berdasarkan sertifikasi TKPK 1/2 dan tes kesehatan.',
+            examples: [
+              'Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 1',
+              'Tampilkan pelamar rigger yang lolos uji medis kelayakan bekerja di ketinggian'
+            ]
+          }
+        ]
+      },
+      {
+        category: 'FINANCE',
+        categoryLabel: 'Divisi Finance (Schema C)',
+        flows: [
+          {
+            id: 'WF-3959D6',
+            name: 'Pendaftaran Klien Operator & Kontrak Sewa MLA',
+            desc: 'Pendaftaran operator telekomunikasi baru, kontrak sewa menara, dan email otorisasi persetujuan.',
+            instruction: 'Susun draf pendaftaran operator klien baru dan kontrak sewa menara (MLA) ke dalam basis data dengan status PENDING_APPROVAL. Hitung estimasi tagihan invoice perdana dan kirimkan email notifikasi ke manajer keuangan berisikan rincian kontrak serta tombol otorisasi persetujuan.',
+            examples: [
+              'Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan',
+              'Susun draft Master Lease Agreement operator Indosat dan kirim otorisasi ke email finance manager'
+            ]
+          },
+          {
+            id: 'WF-004',
+            name: 'Laporan Pendapatan Sewa Menara',
+            desc: 'Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, Indosat, XL, Smartfren).',
+            instruction: 'Tarik data invoice sewa menara per operator dan status pembayarannya.',
+            examples: [
+              'Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya',
+              'Berapa total tagihan invoice operator yang jatuh tempo bulan ini?'
+            ]
+          },
+          {
+            id: 'WF-005',
+            name: 'Audit Beban Listrik PLN & Sewa Lahan',
+            desc: 'Laporan pengeluaran operasional utilitas listrik PLN, BBM genset, dan sewa lahan site tower.',
+            instruction: 'Analisis beban operasional per site mencakup tagihan PLN dan jatuh tempo sewa tanah.',
+            examples: [
+              'Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat',
+              'Tampilkan beban utilitas genset dan tagihan listrik site tertinggi'
+            ]
+          },
+          {
+            id: 'WF-006',
+            name: 'Ringkasan Arus Kas (Cash Flow)',
+            desc: 'Laporan arus kas masuk vs keluar operasional dan posisi saldo kas bersih.',
+            instruction: 'Hitung net cash flow dari transaksi inflow dan outflow.',
+            examples: [
+              'Tampilkan ringkasan arus kas masuk dan keluar beserta posisi saldo bersih terkini',
+              'Berapa saldo kas operasional saat ini?'
+            ]
+          }
+        ]
+      },
+      {
+        category: 'SUPERADMIN',
+        categoryLabel: 'Superadmin (Schema ALL)',
+        flows: [
+          {
+            id: 'WF-ALL-01',
+            name: 'Cek Profil Akun & Hak Akses',
+            desc: 'Pemeriksaan akun pengguna, wewenang role, dan batasan tenant divisi.',
+            instruction: 'Periksa akun yang sedang login dan tampilkan detail hak akses serta batasan divisi.',
+            examples: [
+              'Tampilkan informasi profil akun dan batasan hak akses divisi',
+              'Audit wewenang pengguna usera, userb, dan userc'
+            ]
+          },
+          {
+            id: 'WF-ALL-02',
+            name: 'Informasi Sistem & Status Layanan',
+            desc: 'Ringkasan status operasional server, versi aplikasi, DuckDB, dan koneksi AI gateway.',
+            instruction: 'Cek status operasional seluruh modul sistem AutoRestock-Agent.',
+            examples: [
+              'Cek status kesehatan seluruh modul sistem, server API, dan koneksi AI gateway',
+              'Tampilkan status server dan koneksi database'
+            ]
+          },
+          {
+            id: 'WF-ALL-03',
+            name: 'Panduan Operasional & Kontak Darurat',
+            desc: 'Panduan SOP operasional perusahaan, navigasi modul, dan kontak darurat NOC/IT.',
+            instruction: 'Tampilkan panduan operasional perusahaan dan kontak darurat lintas divisi.',
+            examples: [
+              'Tampilkan panduan operasional perusahaan dan kontak darurat helpdesk',
+              'Buka kontak bantuan teknis NOC dan tower support'
+            ]
+          }
+        ]
+      }
+    ];
+
+    let currentAdminHelpSection = 'db';
+
+    function switchAdminHelpSection(subSec) {
+      currentAdminHelpSection = subSec;
+      const secDb = document.getElementById('helpSecDb');
+      const secWorkflow = document.getElementById('helpSecWorkflow');
+      const secTools = document.getElementById('helpSecTools');
+      const secFlows = document.getElementById('helpSecFlows');
+
+      const btnDb = document.getElementById('helpNavBtnDb');
+      const btnWorkflow = document.getElementById('helpNavBtnWorkflow');
+      const btnTools = document.getElementById('helpNavBtnTools');
+      const btnFlows = document.getElementById('helpNavBtnFlows');
+
+      [btnDb, btnWorkflow, btnTools, btnFlows].forEach(b => { if (b) b.classList.remove('active'); });
+      [secDb, secWorkflow, secTools, secFlows].forEach(s => { if (s) s.style.display = 'none'; });
+
+      if (subSec === 'db') {
+        if (btnDb) btnDb.classList.add('active');
+        if (secDb) secDb.style.display = 'block';
+        renderDynamicAdminDbHelp();
+      } else if (subSec === 'workflow') {
+        if (btnWorkflow) btnWorkflow.classList.add('active');
+        if (secWorkflow) secWorkflow.style.display = 'block';
+      } else if (subSec === 'tools') {
+        if (btnTools) btnTools.classList.add('active');
+        if (secTools) secTools.style.display = 'block';
+        renderDynamicAdminToolsHelp();
+      } else if (subSec === 'flows') {
+        if (btnFlows) btnFlows.classList.add('active');
+        if (secFlows) secFlows.style.display = 'block';
+        renderAdminHelp();
+      }
+    }
+
+    // Dynamic Master Database & Tenant Schema Loader for Help Section
+    async function renderDynamicAdminDbHelp() {
+      const tbody = document.getElementById('helpTenantSchemaTbody');
+      if (!tbody) return;
+      try {
+        const res = await fetch(`/api/auth/admin/users?t=${Date.now()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const users = data.users || [];
+          if (users.length > 0) {
+            tbody.innerHTML = users.map(u => {
+              let domainPill = 'ALL';
+              let tableList = 'Akses global ke seluruh tabel, audit log transaksi, dan eksekusi instruksi lintas divisi.';
+              if (['TENANT_A', 'INVENTORY'].includes(u.tenant_id) || u.username === 'usera') {
+                domainPill = 'INVENTORY';
+                tableList = '<code>inventory_items</code>, <code>stock_balances</code>, <code>purchase_orders</code>, <code>purchase_requests</code>, <code>warehouses</code>, <code>suppliers</code>';
+              } else if (['TENANT_B', 'HR'].includes(u.tenant_id) || u.username === 'userb') {
+                domainPill = 'HR';
+                tableList = '<code>employees</code>, <code>attendances</code> (GPS geofencing), <code>leave_requests</code>, <code>candidates</code> (Rigger K3), <code>job_postings</code>';
+              } else if (['TENANT_C', 'FINANCE'].includes(u.tenant_id) || u.username === 'userc') {
+                domainPill = 'FINANCE';
+                tableList = '<code>mla_contracts</code> (Sewa menara), <code>revenue_invoices</code>, <code>site_utilities_cost</code> (PLN & genset), <code>financial_transactions</code>';
+              }
+
+              return `
+                <tr>
+                  <td><span class="doc-badge-pill">${escapeHtml(domainPill)}</span></td>
+                  <td><strong>${escapeHtml(u.username)}</strong> (${escapeHtml(u.full_name || u.role || 'User')})</td>
+                  <td>${tableList}</td>
+                </tr>
+              `;
+            }).join('');
+          }
+        }
+      } catch (e) {
+        console.warn("[HELP DB] Live user schema fetch error, default table active:", e);
+      }
+    }
+
+    const TOOL_HELP_DESCRIPTIONS = {
+      'inventory.get_low_stock_products': 'Mengidentifikasi barang di bawah batas minimum (safety stock) untuk diajukan restock.',
+      'inventory.check_specific_stock': 'Memeriksa saldo fisik barang spesifik pada gudang Jakarta, Bandung, atau Surabaya.',
+      'inventory.crud_record': 'Melakukan penambahan stok fisik masuk atau pengeluaran barang material site.',
+      'inventory.register_product': 'Mendaftarkan SKU material baru ke dalam master katalog inventaris.',
+      'inventory.get_all_products': 'Mengambil seluruh data katalog master inventaris menara dan fiber optic.',
+      'inventory.update_threshold': 'Menyesuaikan batas minimum (safety stock) dan maksimum kuantitas barang.',
+      'po.query_orders': 'Melacak daftar purchase order aktif, nomor PO, vendor, dan status pengiriman.',
+      'po.approve': 'Mengubah status persetujuan dokumen pesanan menjadi APPROVED.',
+      'hr.audit_attendance': 'Audit absensi GPS geofencing teknisi site tower dan perhitungan jam lembur.',
+      'hr.filter_candidates': 'Penyaringan kandidat Rigger Menara berkualifikasi sertifikat TKPK tingkat 1.',
+      'hr.submit_leave_request': 'Mencatat formulir cuti teknisi ke basis data dengan status pengajuan pending.',
+      'hr.approve_leave': 'Otorisasi cuti karyawan dan pemotongan otomatis kuota saldo cuti tahunan.',
+      'hr.query_pending_leaves': 'Mengambil seluruh pengajuan cuti yang masih menunggu persetujuan HR.',
+      'finance.query_invoices': 'Rekapitulasi tagihan sewa menara per operator telekomunikasi (Telkomsel, Indosat, XL).',
+      'finance.audit_utility_expenses': 'Audit pengeluaran listrik PLN, bahan bakar genset, dan sewa lahan site tower.',
+      'finance.cashflow_summary': 'Menghitung selisih arus kas masuk vs keluar dan saldo kas bersih terkini.',
+      'finance.generate_invoice': 'Menerbitkan draf invoice penagihan sewa menara BTS baru ke operator.',
+      'docgen.compile': 'Mengompilasi berkas PDF resmi beresolusi tinggi menggunakan mesin Typst.',
+      'docgen.compile_po': 'Mengompilasi berkas resmi Purchase Order (PO) format PDF.',
+      'notification.dispatch': 'Mengirimkan notifikasi email SMTP dengan lampiran PDF resmi dan tombol otorisasi.',
+      'notification.send_email': 'Mengirimkan email notifikasi ke manajer operasional atau direksi.',
+      'agent.reason_and_validate': 'Inferensi pemikiran AI untuk memvalidasi kelayakan aturan bisnis sebelum commit ke basis data.',
+      'system.check_profile': 'Pemeriksaan kredensial akun login, role pengguna, dan batasan tenant.',
+      'system.get_system_info': 'Audit status kesehatan layanan sistem, DuckDB backend, dan gateway LLM.',
+      'system.get_company_guidelines': 'Menampilkan panduan SOP dan kontak darurat operasional PT Bali Towerindo Sentra Tbk.'
+    };
+
+    // Dynamic AI Agent Tools Architecture Loader for Help Section
+    async function renderDynamicAdminToolsHelp() {
+      const container = document.getElementById('helpDynamicToolsContainer');
+      if (!container) return;
+
+      container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">Memuat registry tools real-time dari backend...</div>';
+
+      try {
+        const res = await fetch(`/api/agent/tools?t=${Date.now()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const tools = data.available_tools || [];
+          if (tools.length === 0) {
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">Belum ada tools terdaftar di registry.</div>';
+            return;
+          }
+
+          const groups = {
+            'INVENTORY': {
+              title: 'Modul Logistik & Pengadaan Menara',
+              badge: 'INVENTORY',
+              color: '#1D4ED8',
+              tools: []
+            },
+            'HR': {
+              title: 'Modul SDM Lapangan & Sertifikasi K3',
+              badge: 'HR',
+              color: '#047857',
+              tools: []
+            },
+            'FINANCE': {
+              title: 'Modul Keuangan & Billing Sewa Menara',
+              badge: 'FINANCE',
+              color: '#B45309',
+              tools: []
+            },
+            'SYSTEM': {
+              title: 'Modul Dokumen Typst, Notifikasi Email & Penalaran AI',
+              badge: 'SYSTEM & DISPATCH',
+              color: '#7C3AED',
+              tools: []
+            }
+          };
+
+          tools.forEach(t => {
+            const name = typeof t === 'string' ? t : (t.name || t.tool || '');
+            const desc = typeof t === 'string' ? (TOOL_HELP_DESCRIPTIONS[name] || 'Fungsi operasional otomatis AI Agent.') : (t.description || TOOL_HELP_DESCRIPTIONS[name] || 'Fungsi operasional otomatis AI Agent.');
+            const item = { name, desc };
+
+            if (name.startsWith('inventory.')) {
+              groups.INVENTORY.tools.push(item);
+            } else if (name.startsWith('hr.')) {
+              groups.HR.tools.push(item);
+            } else if (name.startsWith('finance.')) {
+              groups.FINANCE.tools.push(item);
+            } else {
+              groups.SYSTEM.tools.push(item);
+            }
+          });
+
+          let html = `
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <span style="font-size: 13px; color: #64748B;">Menampilkan seluruh agent tools aktif yang terdaftar otomatis pada Python AI backend:</span>
+              <span class="doc-badge-pill" style="font-size: 11.5px; font-weight: 700; color: #2563EB; background: #EFF6FF; border-color: #BFDBFE;">${tools.length} Live Tools Terdaftar</span>
+            </div>
+            <div class="doc-grid-2">
+          `;
+
+          ['INVENTORY', 'HR', 'FINANCE', 'SYSTEM'].forEach(key => {
+            const grp = groups[key];
+            if (grp.tools.length === 0) return;
+
+            html += `
+              <div class="doc-card" style="margin-bottom: 16px;">
+                <div class="doc-card-title">
+                  <span class="doc-badge-pill" style="font-size: 11px;">${grp.badge}</span>
+                  <span>${escapeHtml(grp.title)}</span>
+                  <span style="font-size: 11.5px; color: var(--text-muted); font-weight: 600; margin-left: auto;">${grp.tools.length} Tools</span>
+                </div>
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40%;">Nama Tool</th>
+                      <th>Fungsi Operasional</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+            `;
+
+            grp.tools.forEach(tool => {
+              html += `
+                <tr>
+                  <td><code style="font-size: 11.5px; color: ${grp.color};">${escapeHtml(tool.name)}</code></td>
+                  <td>${escapeHtml(tool.desc)}</td>
+                </tr>
+              `;
+            });
+
+            html += `
+                  </tbody>
+                </table>
+              </div>
+            `;
+          });
+
+          html += `</div>`;
+          container.innerHTML = html;
+        }
+      } catch (e) {
+        console.error("Gagal memuat dynamic tools help:", e);
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--danger);">Gagal memuat registry tools dari backend.</div>';
+      }
+    }
+
+    let selectedAdminHelpCategory = 'ALL';
+
+    function filterAdminHelp(cat) {
+      selectedAdminHelpCategory = cat;
+      const pills = document.querySelectorAll('#adminHelpFilterPills .filter-pill');
+      pills.forEach(p => {
+        if (p.getAttribute('onclick') && p.getAttribute('onclick').includes(`'${cat}'`)) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+      renderAdminHelp();
+    }
+
+    // Dynamic Live Workflow Catalog & Prompt Examples Loader
+    async function renderAdminHelp() {
+      const container = document.getElementById('adminHelpContainer');
+      if (!container) return;
+
+      container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;"><div class="spinner" style="margin: 0 auto 8px;"></div>Memuat katalog alur kerja real-time...</div>';
+
+      let dynamicFlows = [];
+      try {
+        const res = await fetch(`/api/workflows/help-catalog?tenant=all&t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          dynamicFlows = data.workflows || [];
+        }
+      } catch (err) {
+        console.warn("[HELP CATALOG] Could not fetch from help-catalog, fallback to admin workflows:", err);
+      }
+
+      if (!dynamicFlows || dynamicFlows.length === 0) {
+        try {
+          const res2 = await fetch(`/api/auth/admin/workflows?t=${Date.now()}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res2.ok) {
+            dynamicFlows = await res2.json();
+          }
+        } catch (e2) {}
+      }
+
+      if (dynamicFlows && dynamicFlows.length > 0) {
+        allLoadedWorkflows = dynamicFlows;
+      }
+
+      const catConfigs = [
+        {
+          category: 'INVENTORY',
+          categoryLabel: 'Divisi Inventory (Schema A)',
+          matches: t => ['INVENTORY', 'TENANT_A', 'USERA', 'SCHEMA_A'].includes((t || '').toUpperCase())
+        },
+        {
+          category: 'HR',
+          categoryLabel: 'Divisi HR (Schema B)',
+          matches: t => ['HR', 'TENANT_B', 'USERB', 'SCHEMA_B'].includes((t || '').toUpperCase())
+        },
+        {
+          category: 'FINANCE',
+          categoryLabel: 'Divisi Finance (Schema C)',
+          matches: t => ['FINANCE', 'TENANT_C', 'USERC', 'SCHEMA_C'].includes((t || '').toUpperCase())
+        },
+        {
+          category: 'SUPERADMIN',
+          categoryLabel: 'Superadmin (Schema ALL)',
+          matches: t => {
+            const u = (t || '').toUpperCase();
+            return ['ALL', 'SUPERADMIN', 'GLOBAL', ''].includes(u) || (!['INVENTORY', 'TENANT_A', 'USERA', 'SCHEMA_A', 'HR', 'TENANT_B', 'USERB', 'SCHEMA_B', 'FINANCE', 'TENANT_C', 'USERC', 'SCHEMA_C'].includes(u));
+          }
+        }
+      ];
+
+      const sourceList = (allLoadedWorkflows && allLoadedWorkflows.length > 0) ? allLoadedWorkflows : (ADMIN_HELP_REGISTRY.flatMap(g => g.flows) || []);
+
+      let groups = catConfigs.map(cfg => {
+        const flows = sourceList
+          .filter(w => cfg.matches(w.tenant_id))
+          .map(w => ({
+            id: w.id,
+            name: w.name,
+            desc: w.description || w.desc || '',
+            instruction: w.business_instruction || w.instruction || '',
+            examples: Array.isArray(w.example_prompts) && w.example_prompts.length > 0
+              ? w.example_prompts
+              : (Array.isArray(w.examples) ? w.examples : [
+                  `Jalankan alur kerja ${w.name}`,
+                  `Tolong periksa status dan eksekusi instruksi: ${w.name}`
+                ])
+          }));
+        return {
+          category: cfg.category,
+          categoryLabel: cfg.categoryLabel,
+          flows: flows
+        };
+      }).filter(g => g.flows.length > 0);
+
+      const filtered = selectedAdminHelpCategory === 'ALL'
+        ? groups
+        : groups.filter(g => g.category === selectedAdminHelpCategory);
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">Tidak ada alur workflow yang ditemukan untuk kategori ini.</div>';
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(group => {
+        html += `
+          <div class="admin-help-group">
+            <div class="admin-help-group-title">
+              <span class="category-indicator-dot"></span>
+              <span>${escapeHtml(group.categoryLabel)}</span>
+              <span class="category-count-badge">${group.flows.length} Alur</span>
+            </div>
+            <div class="admin-flow-grid">
+        `;
+
+        group.flows.forEach(f => {
+          const safeName = escapeHtml(f.name).replace(/'/g, "\\'");
+          const safeTenant = escapeHtml(group.category === 'SUPERADMIN' ? 'ALL' : group.category);
+          const safeDesc = escapeHtml(f.desc || '').replace(/'/g, "\\'");
+          const safeInst = escapeHtml(f.instruction || '').replace(/'/g, "\\'");
+
+          html += `
+            <div class="admin-flow-card">
+              <div>
+                <div class="admin-flow-card-top">
+                  <span class="admin-flow-badge">${escapeHtml(f.id)}</span>
+                  <button type="button" class="btn-use-builder" onclick="useHelpInBuilder('${safeName}', '${safeTenant}', '${safeDesc}', '${safeInst}')" title="Muat ke Workflow Builder">
+                    <span>Gunakan di Builder</span>
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                    </svg>
+                  </button>
+                </div>
+                <div class="admin-flow-title">${escapeHtml(f.name)}</div>
+                <div class="admin-flow-desc">${escapeHtml(f.desc || '')}</div>
+                
+                <div class="admin-inst-box">
+                  <div class="admin-inst-label">Instruksi Bisnis:</div>
+                  <div class="admin-inst-text">${escapeHtml(f.instruction || '')}</div>
+                </div>
+              </div>
+
+              <div>
+                <div class="admin-prompt-label">Contoh Prompt Chat:</div>
+                <div class="admin-prompts-list">
+          `;
+
+          (f.examples || []).forEach(ex => {
+            html += `
+              <div class="admin-prompt-item">
+                <span style="font-weight: 700; color: #3B82F6; margin-right: 4px;">&ldquo;</span><span>${escapeHtml(ex)}</span><span style="font-weight: 700; color: #3B82F6; margin-left: 4px;">&rdquo;</span>
+              </div>
+            `;
+          });
+
+          html += `
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function useHelpInBuilder(name, tenant, desc, instruction) {
+      switchAdminTab('workflows');
+      const wfName = document.getElementById('wfName');
+      const wfTenant = document.getElementById('wfTenantId');
+      const wfDesc = document.getElementById('wfDesc');
+      const wfInst = document.getElementById('wfInstruction');
+
+      if (wfName) wfName.value = name;
+      if (wfTenant) wfTenant.value = tenant;
+      if (wfDesc) wfDesc.value = desc;
+      if (wfInst) wfInst.value = instruction;
+
+      const formTitle = document.getElementById('formTitle');
+      if (formTitle) formTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     let allWorkflowsList = [];
@@ -1896,14 +3647,14 @@
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
-                  <span>Hapus</span>
+                  <span>Delete</span>
                 </button>
                 <span class="badge-status-active">ACTIVE</span>
               </div>
             </div>
             <p class="workflow-desc">${escapeHtml(wf.description || 'Tidak ada deskripsi.')}</p>
             <details class="workflow-details">
-              <summary>Lihat Detail JSON Execution</summary>
+              <summary>View JSON Execution Graph</summary>
               <pre>${escapeHtml(escapedJson)}</pre>
             </details>
           </div>
@@ -1938,15 +3689,23 @@
           const countHr = workflows.filter(w => ['HR', 'TENANT_B', 'USERB', 'SCHEMA_B'].includes((w.tenant_id || '').toUpperCase())).length;
           const countFinance = workflows.filter(w => ['FINANCE', 'TENANT_C', 'USERC', 'SCHEMA_C'].includes((w.tenant_id || '').toUpperCase())).length;
 
+          // Update pills
           if (document.getElementById('countWfPillAll')) document.getElementById('countWfPillAll').textContent = countTotal;
           if (document.getElementById('countWfTenantA')) document.getElementById('countWfTenantA').textContent = countInventory;
           if (document.getElementById('countWfTenantB')) document.getElementById('countWfTenantB').textContent = countHr;
           if (document.getElementById('countWfTenantC')) document.getElementById('countWfTenantC').textContent = countFinance;
 
+          // Update top quick stats banner
+          if (document.getElementById('wfStatTotalCount')) document.getElementById('wfStatTotalCount').textContent = countTotal;
+          if (document.getElementById('wfStatInventoryCount')) document.getElementById('wfStatInventoryCount').textContent = countInventory;
+          if (document.getElementById('wfStatHrCount')) document.getElementById('wfStatHrCount').textContent = countHr;
+          if (document.getElementById('wfStatFinanceCount')) document.getElementById('wfStatFinanceCount').textContent = countFinance;
+
           renderWorkflows();
+          renderAdminHelp();
         }
       } catch (err) {
-        listDiv.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Gagal memuat workflow.</p>';
+        listDiv.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Failed to load workflows from server.</p>';
       }
     }
 
@@ -1955,7 +3714,7 @@
       if (!listDiv) return;
 
       if (allWorkflowsList.length === 0) {
-        listDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Belum ada workflow yang dibuat.</p>';
+        listDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No workflows registered yet.</p>';
         return;
       }
 
@@ -1975,7 +3734,7 @@
       });
 
       if (filtered.length === 0) {
-        listDiv.innerHTML = `<p style="color: var(--text-muted); font-size: 13px;">Tidak ada workflow untuk filter target tenant "${selectedWfTenantFilter}".</p>`;
+        listDiv.innerHTML = `<p style="color: var(--text-muted); font-size: 13px;">No workflows found for filter "${selectedWfTenantFilter}".</p>`;
         return;
       }
 
@@ -2015,14 +3774,14 @@
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
-                  <span>Hapus</span>
+                  <span>Delete</span>
                 </button>
                 <span class="badge-status-active">ACTIVE</span>
               </div>
             </div>
             <p class="workflow-desc">${escapeHtml(wf.description || 'Tidak ada deskripsi.')}</p>
             <details class="workflow-details">
-              <summary>Lihat Detail JSON Execution</summary>
+              <summary>View JSON Execution Graph</summary>
               <pre>${escapeHtml(escapedJson)}</pre>
             </details>
           </div>
@@ -2392,18 +4151,18 @@
                 <td>${tenantBadge}</td>
                 <td><span style="font-weight: 700;">${skuLabel}</span></td>
                 <td><span style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">${metricLabel}</span></td>
-                <td><span class="badge-stock-safe">Normal</span></td>
+                <td><span class="badge-stock-safe">Active</span></td>
                 <td>
                   <div style="display: flex; gap: 6px; align-items: center;">
                     <button class="btn-action-edit" onclick="filterItemsByTenant('${u.username === 'admin' ? 'ALL' : u.username}')" style="padding: 4px 8px; font-size: 11.5px;">
-                      ${u.username === 'admin' ? 'Semua' : 'Filter'}
+                      ${u.username === 'admin' ? 'View All' : 'Filter'}
                     </button>
                     <button class="btn-action-edit" onclick="openEditUserModal('${u.user_id}', '${escapeHtml(u.username)}', '${escapeHtml(u.role)}', '${escapeHtml(u.tenant_id)}')" style="padding: 4px 8px; font-size: 11.5px; background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE;">
                       Edit
                     </button>
                     ${u.username !== 'admin' ? `
                     <button class="btn-action-edit" onclick="deleteUserAccount('${u.user_id}', '${escapeHtml(u.username)}')" style="padding: 4px 8px; font-size: 11.5px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">
-                      Hapus
+                      Delete
                     </button>` : ''}
                   </div>
                 </td>
@@ -2421,7 +4180,7 @@
           renderItemsTable();
         }
       } catch (err) {
-        usersTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 20px;">Gagal memuat database pengguna.</td></tr>`;
+        usersTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 20px;">Failed to load user database.</td></tr>`;
       }
     }
 
@@ -2498,7 +4257,7 @@
       }
 
       if (!html) {
-        html = `<div style="text-align: center; color: var(--text-muted); padding: 32px;">Tidak ada data yang cocok dengan kriteria pencarian.</div>`;
+        html = `<div style="text-align: center; color: var(--text-muted); padding: 32px;">No records match the current search query.</div>`;
       }
 
       container.innerHTML = html;
@@ -2507,16 +4266,16 @@
     function renderInventoryDomainSection(items, isStacked) {
       let rows = '';
       if (items.length === 0) {
-        rows = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Tidak ada data material yang cocok.</td></tr>`;
+        rows = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">No material records found.</td></tr>`;
       } else {
         rows = items.map(it => {
           let statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">Normal</span>`;
           if (it.current_stock === 0) {
-            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">Habis</span>`;
+            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">Out of Stock</span>`;
           } else if (it.current_stock <= it.min_threshold * 0.5) {
-            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">Kritis</span>`;
+            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">Critical</span>`;
           } else if (it.current_stock <= it.min_threshold) {
-            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A;">Menipis</span>`;
+            statusBadge = `<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A;">Low Stock</span>`;
           }
 
           const maxThresh = it.max_threshold || '-';
@@ -2532,14 +4291,14 @@
               <td style="text-align: center;">${statusBadge}</td>
               <td style="text-align: center;">
                 <div style="display: flex; gap: 4px; justify-content: center;">
-                  <button class="btn-action-edit" onclick="openAdminStockModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.unit || 'pcs')}', ${Number(it.min_threshold || 0)})" style="padding: 3px 8px; font-size: 11px; background: #2563EB; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Sesuaikan Stok Gudang">
-                    Stok
+                  <button class="btn-action-edit" onclick="openAdminStockModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.unit || 'pcs')}', ${Number(it.min_threshold || 0)})" style="padding: 3px 8px; font-size: 11px; background: #2563EB; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Adjust Stock">
+                    Stock
                   </button>
-                  <button class="btn-action-edit" onclick="openEditMaterialModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.category || '')}', '${escapeHtml(it.unit || '')}', ${Number(it.unit_price || 0)}, ${Number(it.min_threshold || 0)})" style="padding: 3px 8px; font-size: 11px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Edit Data Material">
+                  <button class="btn-action-edit" onclick="openEditMaterialModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.category || '')}', '${escapeHtml(it.unit || '')}', ${Number(it.unit_price || 0)}, ${Number(it.min_threshold || 0)})" style="padding: 3px 8px; font-size: 11px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Edit Material">
                     Edit
                   </button>
-                  <button class="btn-action-edit" onclick="deleteInventoryItem('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Hapus Material">
-                    Hapus
+                  <button class="btn-action-edit" onclick="deleteInventoryItem('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Delete Material">
+                    Delete
                   </button>
                 </div>
               </td>
@@ -2555,19 +4314,19 @@
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
               </svg>
-              <span>Database Material & Inventaris Menara</span>
+              <span>Tower Materials & Inventory Database</span>
               <span class="badge-tenant tenant-a">usera (Inventory)</span>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <button onclick="openCreateMaterialModal()" class="btn btn-primary" style="font-size: 11.5px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 4px;">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span>Tambah Material</span>
+                <span>Add Material</span>
               </button>
-              <button onclick="clearAllPrAndPoModal()" style="border: 1px solid #EF4444; color: #DC2626; background: #FEF2F2; font-weight: 700; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;" title="Kosongkan seluruh draf PR dan data PO di sistem">
+              <button onclick="clearAllPrAndPoModal()" style="border: 1px solid #EF4444; color: #DC2626; background: #FEF2F2; font-weight: 700; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;" title="Clear pending PR queue and PO records">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                <span>Bersihkan Semua PR & PO</span>
+                <span>Clear All PR & PO</span>
               </button>
-              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Material Terdaftar</span>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Items Registered</span>
             </div>
           </div>
 
@@ -2575,15 +4334,15 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>SKU / KODE</th>
-                  <th>NAMA MATERIAL</th>
-                  <th>KATEGORI</th>
-                  <th>SUPPLIER REKANAN</th>
-                  <th style="text-align: right;">STOK FISIK</th>
-                  <th style="text-align: right;">BATAS MIN/MAX</th>
-                  <th style="text-align: right;">HARGA SATUAN (IDR)</th>
-                  <th style="text-align: center;">STATUS STOK</th>
-                  <th style="text-align: center;">AKSI</th>
+                  <th>SKU / CODE</th>
+                  <th>MATERIAL NAME</th>
+                  <th>CATEGORY</th>
+                  <th>SUPPLIER VENDOR</th>
+                  <th style="text-align: right;">PHYSICAL STOCK</th>
+                  <th style="text-align: right;">MIN/MAX THRESHOLD</th>
+                  <th style="text-align: right;">UNIT PRICE (IDR)</th>
+                  <th style="text-align: center;">STOCK STATUS</th>
+                  <th style="text-align: center;">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
@@ -2598,7 +4357,7 @@
     function renderHrDomainSection(items, isStacked) {
       let rows = '';
       if (items.length === 0) {
-        rows = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Tidak ada data karyawan yang cocok.</td></tr>`;
+        rows = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">No employee records found.</td></tr>`;
       } else {
         rows = items.map(it => {
           let certBadge = `<span class="badge-pending">NON_CERTIFIED</span>`;
@@ -2619,15 +4378,15 @@
               <td><span style="font-weight: 600; color: #334155;">${escapeHtml(it.job_title || '-')}</span></td>
               <td style="text-align: center;">${empStatusBadge}</td>
               <td style="text-align: center;">${certBadge}</td>
-              <td style="text-align: right; font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${it.leave_balance || 0} hari</td>
-              <td style="text-align: center;"><span class="badge-stock-safe">${escapeHtml(it.status || 'Aktif')}</span></td>
+              <td style="text-align: right; font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${it.leave_balance || 0} days</td>
+              <td style="text-align: center;"><span class="badge-stock-safe">${escapeHtml(it.status || 'Active')}</span></td>
               <td style="text-align: center;">
                 <div style="display: flex; gap: 4px; justify-content: center;">
                   <button class="btn-action-edit" onclick="openEditEmployeeModal('${escapeHtml(it.employee_id || it.item_id)}', '${escapeHtml(it.full_name || it.name)}', '${escapeHtml(it.department || '')}', '${escapeHtml(it.job_title || '')}', '${escapeHtml(it.employment_status || 'PERMANENT')}', '${escapeHtml(it.k3_certification || 'NON_CERTIFIED')}', ${Number(it.leave_balance || 0)})" style="padding: 3px 8px; font-size: 11px; background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; border-radius: 4px; font-weight: 600; cursor: pointer;">
                     Edit
                   </button>
                   <button class="btn-action-edit" onclick="deleteEmployeeRecord('${escapeHtml(it.employee_id || it.item_id)}', '${escapeHtml(it.full_name || it.name)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
-                    Hapus
+                    Delete
                   </button>
                 </div>
               </td>
@@ -2643,15 +4402,15 @@
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#047857">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
-              <span>Database Ketenagakerjaan & Personel Lapangan</span>
+              <span>Workforce & Field Operations Database</span>
               <span class="badge-tenant tenant-b">userb (HR & Field)</span>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <button onclick="openCreateEmployeeModal()" class="btn btn-primary" style="font-size: 11.5px; padding: 5px 12px; background: #047857; border-color: #047857; display: inline-flex; align-items: center; gap: 4px;">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span>Tambah Personel</span>
+                <span>Add Employee</span>
               </button>
-              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Personel Terdaftar</span>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Employees Registered</span>
             </div>
           </div>
 
@@ -2659,15 +4418,15 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID KARYAWAN</th>
-                  <th>NAMA LENGKAP</th>
-                  <th>DEPARTEMEN</th>
-                  <th>POSISI JABATAN</th>
-                  <th style="text-align: center;">STATUS KERJA</th>
-                  <th style="text-align: center;">SERTIFIKASI K3</th>
-                  <th style="text-align: right;">SISA CUTI</th>
+                  <th>EMPLOYEE ID</th>
+                  <th>FULL NAME</th>
+                  <th>DEPARTMENT</th>
+                  <th>POSITION</th>
+                  <th style="text-align: center;">WORK STATUS</th>
+                  <th style="text-align: center;">SAFETY CERTIFICATION</th>
+                  <th style="text-align: right;">LEAVE BALANCE</th>
                   <th style="text-align: center;">STATUS</th>
-                  <th style="text-align: center;">AKSI</th>
+                  <th style="text-align: center;">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
@@ -2682,7 +4441,7 @@
     function renderFinanceDomainSection(items, isStacked) {
       let rows = '';
       if (items.length === 0) {
-        rows = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Tidak ada data invoice yang cocok.</td></tr>`;
+        rows = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">No invoice records found.</td></tr>`;
       } else {
         rows = items.map(it => {
           let payBadge = `<span class="badge-paid">PAID</span>`;
@@ -2706,7 +4465,7 @@
                     Edit
                   </button>
                   <button class="btn-action-edit" onclick="deleteInvoiceRecord('${escapeHtml(it.invoice_id || it.item_id)}', '${escapeHtml(it.invoice_number || it.item_id)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
-                    Hapus
+                    Delete
                   </button>
                 </div>
               </td>
@@ -2722,15 +4481,15 @@
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#C2410C">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <span>Database Penagihan & Invoice Sewa Menara Operator</span>
+              <span>Operator Tower Lease & Billing Database</span>
               <span class="badge-tenant tenant-c">userc (Finance & Billing)</span>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <button onclick="openCreateInvoiceModal()" class="btn btn-primary" style="font-size: 11.5px; padding: 5px 12px; background: #C2410C; border-color: #C2410C; display: inline-flex; align-items: center; gap: 4px;">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span>Tambah Invoice</span>
+                <span>Add Invoice</span>
               </button>
-              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Invoice Terdaftar</span>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${items.length} Invoices Registered</span>
             </div>
           </div>
 
@@ -2738,13 +4497,13 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>NO. INVOICE</th>
-                  <th>OPERATOR KLIEN</th>
-                  <th>PERIODE SEWA</th>
-                  <th style="text-align: center;">JATUH TEMPO</th>
-                  <th style="text-align: right;">TOTAL TAGIHAN (IDR)</th>
-                  <th style="text-align: center;">STATUS PEMBAYARAN</th>
-                  <th style="text-align: center;">AKSI</th>
+                  <th>INVOICE NO.</th>
+                  <th>CLIENT OPERATOR</th>
+                  <th>BILLING PERIOD</th>
+                  <th style="text-align: center;">DUE DATE</th>
+                  <th style="text-align: right;">TOTAL BILLED (IDR)</th>
+                  <th style="text-align: center;">PAYMENT STATUS</th>
+                  <th style="text-align: center;">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
@@ -3392,316 +5151,8 @@
       );
     }
 
-    // ==========================================
-    // DUCKDB TABLE EXPLORER LOGIC (FULL CRUD)
-    // ==========================================
-    let currentDbTable = '';
-    let currentDbRows = [];
-    let currentDbColumns = [];
-    let currentDbPk = null;
-    let editingDbRowIndex = -1;
-
-    async function initDbTableExplorer() {
-      const select = document.getElementById('dbTableSelect');
-      select.innerHTML = '<option value="">Memuat daftar tabel...</option>';
-
-      try {
-        const res = await fetch('/api/auth/admin/db/tables', {
-          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const rawTables = data.table_names || data.tables || [];
-          const tables = rawTables.map(t => typeof t === 'string' ? t : (t.table_name || ''));
-          if (tables.length === 0) {
-            select.innerHTML = '<option value="">Tidak ada tabel di database</option>';
-            return;
-          }
-
-          select.innerHTML = tables.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
-
-          if (!currentDbTable || !tables.includes(currentDbTable)) {
-            currentDbTable = tables[0];
-          }
-          select.value = currentDbTable;
-          loadSelectedDbTable();
-        } else {
-          select.innerHTML = '<option value="">Gagal memuat tabel</option>';
-        }
-      } catch (e) {
-        select.innerHTML = '<option value="">Kesalahan koneksi</option>';
-      }
-    }
-
-    function onDbTableSelectChange() {
-      currentDbTable = document.getElementById('dbTableSelect').value;
-      loadSelectedDbTable();
-    }
-
-    async function loadSelectedDbTable() {
-      const container = document.getElementById('dbDynamicTableContainer');
-      const infoBadge = document.getElementById('dbTableInfoBadge');
-      if (!currentDbTable) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 32px;">Pilih tabel untuk melihat data.</p>';
-        infoBadge.textContent = '0 Baris';
-        return;
-      }
-
-      container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 32px;">Memuat data tabel ' + escapeHtml(currentDbTable) + '...</p>';
-
-      try {
-        const res = await fetch(`/api/auth/admin/db/table/${encodeURIComponent(currentDbTable)}?limit=100`, {
-          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          currentDbRows = data.rows || [];
-          currentDbColumns = data.columns || [];
-          currentDbPk = data.primary_key || null;
-
-          infoBadge.textContent = `${currentDbRows.length} Baris (${currentDbColumns.length} Kolom)`;
-          renderDynamicDbTable(currentDbRows);
-        } else {
-          container.innerHTML = '<p style="text-align: center; color: var(--danger); padding: 32px;">Gagal memuat data tabel.</p>';
-        }
-      } catch (e) {
-        container.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 32px;">Kesalahan: ${escapeHtml(e.message)}</p>`;
-      }
-    }
-
-    function onDbTableSearch() {
-      const q = (document.getElementById('dbTableSearchInput').value || '').toLowerCase().trim();
-      if (!q) {
-        renderDynamicDbTable(currentDbRows);
-        return;
-      }
-
-      const filtered = currentDbRows.filter(row => {
-        return Object.values(row).some(v => String(v !== null && v !== undefined ? v : '').toLowerCase().includes(q));
-      });
-      renderDynamicDbTable(filtered);
-    }
-
-    function renderDynamicDbTable(rows) {
-      const container = document.getElementById('dbDynamicTableContainer');
-      if (currentDbColumns.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 32px;">Tabel tidak memiliki kolom.</p>';
-        return;
-      }
-
-      if (rows.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-            <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Tabel kosong atau tidak ada data yang cocok.</p>
-            <button class="btn btn-primary" onclick="openInsertDbRowModal()" style="font-size: 12px;">+ Tambah Baris Pertama</button>
-          </div>
-        `;
-        return;
-      }
-
-      let ths = currentDbColumns.map(col => `
-        <th style="font-size: 11px; white-space: nowrap; ${col === currentDbPk ? 'color: #1E40AF;' : ''}">
-          ${escapeHtml(col)} ${col === currentDbPk ? '<span style="font-size: 9px; background: #DBEAFE; color: #1E40AF; padding: 1px 4px; border-radius: 3px;">PK</span>' : ''}
-        </th>
-      `).join('');
-
-      ths += '<th style="text-align: center; font-size: 11px; width: 120px;">AKSI</th>';
-
-      let trs = rows.map((row, idx) => {
-        let tds = currentDbColumns.map(col => {
-          let val = row[col];
-          let displayVal = val === null || val === undefined ? '<span style="color: #94A3B8; font-style: italic;">NULL</span>' : escapeHtml(String(val));
-          if (String(val).length > 60) {
-            displayVal = `<span title="${escapeHtml(String(val))}">${escapeHtml(String(val).substring(0, 57))}...</span>`;
-          }
-          return `<td style="font-size: 12px; font-family: var(--font-mono); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis;">${displayVal}</td>`;
-        }).join('');
-
-        tds += `
-          <td style="text-align: center; white-space: nowrap;">
-            <div style="display: flex; gap: 4px; justify-content: center;">
-              <button class="btn-action-edit" onclick="openEditDbRowModal(${idx})" style="padding: 3px 8px; font-size: 11px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 4px; font-weight: 600; cursor: pointer;">
-                Edit
-              </button>
-              <button class="btn-action-edit" onclick="deleteDbTableRow(${idx})" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
-                Hapus
-              </button>
-            </div>
-          </td>
-        `;
-
-        return `<tr>${tds}</tr>`;
-      }).join('');
-
-      container.innerHTML = `
-        <table class="data-table" style="min-width: 100%;">
-          <thead>
-            <tr>${ths}</tr>
-          </thead>
-          <tbody>
-            ${trs}
-          </tbody>
-        </table>
-      `;
-    }
-
-    function openInsertDbRowModal() {
-      if (!currentDbTable || currentDbColumns.length === 0) {
-        alert('Pilih tabel terlebih dahulu.');
-        return;
-      }
-      editingDbRowIndex = -1;
-      document.getElementById('modalDbRowTitle').textContent = `Tambah Baris Baru ke [${currentDbTable}]`;
-      
-      const container = document.getElementById('modalDbRowFieldsContainer');
-      let fieldsHtml = '';
-
-      currentDbColumns.forEach(col => {
-        fieldsHtml += `
-          <div style="margin-bottom: 12px;">
-            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
-              ${escapeHtml(col)} ${col === currentDbPk ? '<span style="color: #2563EB;">(Primary Key)</span>' : ''}
-            </label>
-            <input type="text" id="dbField_${escapeHtml(col)}" class="form-input" style="width: 100%; font-family: var(--font-mono); font-size: 12.5px;" placeholder="Nilai ${escapeHtml(col)}">
-          </div>
-        `;
-      });
-
-      container.innerHTML = fieldsHtml;
-      document.getElementById('modalDbRowCrud').style.display = 'flex';
-    }
-
-    function openEditDbRowModal(rowIdx) {
-      editingDbRowIndex = rowIdx;
-      const row = currentDbRows[rowIdx];
-      if (!row) return;
-
-      document.getElementById('modalDbRowTitle').textContent = `Edit Baris [${currentDbTable}]`;
-      const container = document.getElementById('modalDbRowFieldsContainer');
-      let fieldsHtml = '';
-
-      currentDbColumns.forEach(col => {
-        const val = row[col] !== null && row[col] !== undefined ? row[col] : '';
-        const isPk = col === currentDbPk;
-        fieldsHtml += `
-          <div style="margin-bottom: 12px;">
-            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
-              ${escapeHtml(col)} ${isPk ? '<span style="color: #2563EB;">(Primary Key - Pengidentifikasi)</span>' : ''}
-            </label>
-            <input type="text" id="dbField_${escapeHtml(col)}" class="form-input" style="width: 100%; font-family: var(--font-mono); font-size: 12.5px; ${isPk ? 'background: #F8FAFC; color: #64748B;' : ''}" value="${escapeHtml(String(val))}" ${isPk ? 'readonly' : ''}>
-          </div>
-        `;
-      });
-
-      container.innerHTML = fieldsHtml;
-      document.getElementById('modalDbRowCrud').style.display = 'flex';
-    }
-
-    async function submitDbRowModal() {
-      const rowData = {};
-      currentDbColumns.forEach(col => {
-        const input = document.getElementById(`dbField_${col}`);
-        if (input) {
-          let v = input.value;
-          if (v === '') {
-            rowData[col] = null;
-          } else if (!isNaN(v) && v.trim() !== '') {
-            rowData[col] = Number(v);
-          } else {
-            rowData[col] = v;
-          }
-        }
-      });
-
-      try {
-        let res;
-        if (editingDbRowIndex >= 0) {
-          const originalRow = currentDbRows[editingDbRowIndex];
-          const pkCol = currentDbPk || currentDbColumns[0];
-          const pkVal = originalRow[pkCol];
-
-          res = await fetch(`/api/auth/admin/db/table/${encodeURIComponent(currentDbTable)}/update`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
-            },
-            body: JSON.stringify({
-              row_data: rowData,
-              pk_column: pkCol,
-              pk_value: pkVal
-            })
-          });
-        } else {
-          res = await fetch(`/api/auth/admin/db/table/${encodeURIComponent(currentDbTable)}/insert`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
-            },
-            body: JSON.stringify({
-              row_data: rowData
-            })
-          });
-        }
-
-        if (res.ok) {
-          const data = await res.json();
-          document.getElementById('modalDbRowCrud').style.display = 'none';
-          showToast(data.message || 'Operasi berhasil!');
-          loadSelectedDbTable();
-        } else {
-          const err = await res.json().catch(() => ({}));
-          alert('Gagal menyimpan baris: ' + (err.detail || 'Terjadi kesalahan'));
-        }
-      } catch (e) {
-        alert('Kesalahan jaringan: ' + e.message);
-      }
-    }
-
-    function deleteDbTableRow(rowIdx) {
-      const row = currentDbRows[rowIdx];
-      if (!row) return;
-
-      const pkCol = currentDbPk || currentDbColumns[0];
-      const pkVal = row[pkCol];
-
-      triggerUniversalDelete(
-        `Hapus Baris dari ${currentDbTable}`,
-        'Baris ini akan dihapus secara permanen dari tabel',
-        `Apakah Anda yakin ingin menghapus baris dengan <strong>${escapeHtml(pkCol)} = ${escapeHtml(String(pkVal))}</strong>?`,
-        async () => {
-          try {
-            const res = await fetch(`/api/auth/admin/db/table/${encodeURIComponent(currentDbTable)}/delete`, {
-              method: 'DELETE',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
-              },
-              body: JSON.stringify({
-                pk_column: pkCol,
-                pk_value: pkVal,
-                row_data: row
-              })
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              showToast(data.message || 'Baris berhasil dihapus!');
-              loadSelectedDbTable();
-            } else {
-              const err = await res.json().catch(() => ({}));
-              alert('Gagal menghapus baris: ' + (err.detail || 'Terjadi kesalahan'));
-            }
-          } catch (e) {
-            alert('Kesalahan jaringan: ' + e.message);
-          }
-        }
-      );
-    }
-
-    // Default Load: Directly open Master Database
-    loadUsersDatabase();
+    // Default Load: Directly open Workflow Orchestrator as requested
+    switchAdminTab('workflows');
   </script>
 </body>
 </html>

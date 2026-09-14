@@ -63,6 +63,12 @@ app.include_router(auth_router)
 # Mount MCP Server SSE Endpoint
 app.mount("/mcp", mcp.sse_app())
 
+@app.get("/api/workflows/help-catalog", tags=["Workflows"])
+async def workflows_help_catalog_alias(tenant: str | None = None):
+    from api.routers.auth_routes import get_help_catalog
+    return await get_help_catalog(tenant)
+
+
 @app.on_event("startup")
 async def startup_event():
     """

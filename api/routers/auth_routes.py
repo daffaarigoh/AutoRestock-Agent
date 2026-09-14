@@ -63,7 +63,7 @@ async def get_me(current_user: TokenData = Depends(get_current_user)):
 def _sync_workflows_to_json(conn):
     """Export current workflows table to data/balitower/workflows.json so it is tracked in Git."""
     try:
-        rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id FROM workflows ORDER BY id ASC").fetchall()
+        rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
         columns = [desc[0] for desc in conn.description]
         workflows = []
         for r in rows:
@@ -72,6 +72,13 @@ def _sync_workflows_to_json(conn):
                 wf["compiled_json"] = json.loads(wf["compiled_json"])
             except:
                 pass
+            if isinstance(wf.get("example_prompts"), str):
+                try:
+                    wf["example_prompts"] = json.loads(wf["example_prompts"])
+                except:
+                    wf["example_prompts"] = []
+            elif not wf.get("example_prompts"):
+                wf["example_prompts"] = []
             workflows.append(wf)
         WORKFLOWS_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(WORKFLOWS_JSON_PATH, "w", encoding="utf-8") as f:
@@ -89,21 +96,39 @@ def _sync_workflows_from_json_if_empty(conn):
                 workflows = json.load(f)
             for wf in workflows:
                 compiled_str = json.dumps(wf["compiled_json"]) if isinstance(wf.get("compiled_json"), dict) else str(wf.get("compiled_json", "{}"))
+                ex_prompts_str = json.dumps(wf.get("example_prompts", []), ensure_ascii=False)
                 conn.execute(
-                    "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id) VALUES (?, ?, ?, ?, ?, ?)",
-                    [wf["id"], wf["name"], wf.get("description", ""), wf.get("business_instruction", ""), compiled_str, wf.get("tenant_id", "ALL")]
+                    "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [wf["id"], wf["name"], wf.get("description", ""), wf.get("business_instruction", ""), compiled_str, wf.get("tenant_id", "ALL"), ex_prompts_str]
                 )
     except Exception as e:
         pass
 
 
 def _ensure_workflow_tenant_column(conn):
-    """Ensure the workflows table has the tenant_id column and seeds from workflows.json if empty."""
+    """Ensure the workflows table has the tenant_id and example_prompts columns, and seeds from workflows.json."""
     try:
         cols = [r[0] for r in conn.execute("DESCRIBE workflows;").fetchall()]
         if "tenant_id" not in cols:
             conn.execute("ALTER TABLE workflows ADD COLUMN tenant_id VARCHAR DEFAULT 'ALL';")
+        if "example_prompts" not in cols:
+            conn.execute("ALTER TABLE workflows ADD COLUMN example_prompts TEXT DEFAULT '[]';")
+            
         _sync_workflows_from_json_if_empty(conn)
+
+        # Migrate and populate example_prompts from workflows.json if rows have empty example_prompts
+        if WORKFLOWS_JSON_PATH.exists():
+            with open(WORKFLOWS_JSON_PATH, "r", encoding="utf-8") as f:
+                seed_wfs = json.load(f)
+            for wf in seed_wfs:
+                ex_list = wf.get("example_prompts", [])
+                if ex_list:
+                    ex_str = json.dumps(ex_list, ensure_ascii=False)
+                    conn.execute("""
+                        UPDATE workflows 
+                        SET example_prompts = ? 
+                        WHERE id = ? AND (example_prompts IS NULL OR example_prompts = '[]' OR example_prompts = '')
+                    """, [ex_str, wf["id"]])
     except Exception as e:
         pass
 
@@ -138,6 +163,7 @@ class CreateWorkflowRequest(BaseModel):
     description: str
     business_instruction: str
     tenant_id: str = "ALL"  # ALL, INVENTORY, HR, FINANCE
+    example_prompts: list[str] | None = None
 
 @router.post("/admin/workflows")
 async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends(get_current_admin)):
@@ -145,6 +171,8 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
     import uuid
     
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
+    ex_prompts = req.example_prompts or compiled_json.get("example_prompts") or WorkflowCompiler.generate_heuristic_examples(req.name, req.business_instruction)
+    ex_prompts_json = json.dumps(ex_prompts, ensure_ascii=False)
     
     wf_id = f"WF-{uuid.uuid4().hex[:6].upper()}"
     tenant_val = _normalize_tenant_id(req.tenant_id)
@@ -152,21 +180,28 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
     conn = get_db_connection(read_only=False)
     _ensure_workflow_tenant_column(conn)
     conn.execute(
-        "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id) VALUES (?, ?, ?, ?, ?, ?)", 
-        [wf_id, req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val]
+        "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+        [wf_id, req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val, ex_prompts_json]
     )
     _sync_workflows_to_json(conn)
     conn.close()
     
-    return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json, "tenant_id": tenant_val}
+    return {
+        "status": "success", 
+        "workflow_id": wf_id, 
+        "compiled_json": compiled_json, 
+        "tenant_id": tenant_val,
+        "example_prompts": ex_prompts
+    }
 
 @router.get("/admin/workflows")
 async def get_workflows(response: Response, admin: TokenData = Depends(get_current_admin)):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    conn = get_db_connection(read_only=True)
-    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id FROM workflows ORDER BY id ASC").fetchall()
+    conn = get_db_connection(read_only=False)
+    _ensure_workflow_tenant_column(conn)
+    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
     columns = [desc[0] for desc in conn.description]
     conn.close()
     
@@ -179,6 +214,16 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
             wf["compiled_json"] = json.loads(wf["compiled_json"])
         except:
             pass
+        if isinstance(wf.get("example_prompts"), str):
+            try:
+                wf["example_prompts"] = json.loads(wf["example_prompts"])
+            except:
+                wf["example_prompts"] = []
+        elif not wf.get("example_prompts"):
+            wf["example_prompts"] = []
+        if not wf["example_prompts"]:
+            from agents.workflow_compiler import WorkflowCompiler
+            wf["example_prompts"] = WorkflowCompiler.generate_heuristic_examples(wf.get("name", ""), wf.get("business_instruction", "") or wf.get("description", ""))
         workflows.append(wf)
         
     return workflows
@@ -196,18 +241,60 @@ async def edit_workflow(wf_id: str, req: CreateWorkflowRequest, admin: TokenData
     from agents.workflow_compiler import WorkflowCompiler
     
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
+    ex_prompts = req.example_prompts or compiled_json.get("example_prompts") or WorkflowCompiler.generate_heuristic_examples(req.name, req.business_instruction)
+    ex_prompts_json = json.dumps(ex_prompts, ensure_ascii=False)
     tenant_val = _normalize_tenant_id(req.tenant_id)
     
     conn = get_db_connection(read_only=False)
     _ensure_workflow_tenant_column(conn)
     conn.execute(
-        "UPDATE workflows SET name = ?, description = ?, business_instruction = ?, compiled_json = ?, tenant_id = ? WHERE id = ?", 
-        [req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val, wf_id]
+        "UPDATE workflows SET name = ?, description = ?, business_instruction = ?, compiled_json = ?, tenant_id = ?, example_prompts = ? WHERE id = ?", 
+        [req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val, ex_prompts_json, wf_id]
     )
     _sync_workflows_to_json(conn)
     conn.close()
     
-    return {"status": "success", "workflow_id": wf_id, "compiled_json": compiled_json, "tenant_id": tenant_val}
+    return {
+        "status": "success", 
+        "workflow_id": wf_id, 
+        "compiled_json": compiled_json, 
+        "tenant_id": tenant_val,
+        "example_prompts": ex_prompts
+    }
+
+@router.get("/workflows/help-catalog")
+async def get_help_catalog(tenant: str | None = None):
+    """Endpoint to fetch active workflows with generated example prompts."""
+    conn = get_db_connection(read_only=False)
+    _ensure_workflow_tenant_column(conn)
+    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
+    columns = [desc[0] for desc in conn.description]
+    conn.close()
+    
+    workflows = []
+    for r in rows:
+        wf = dict(zip(columns, r))
+        t = wf.get("tenant_id") or "ALL"
+        wf["tenant_id"] = t
+        if isinstance(wf.get("example_prompts"), str):
+            try:
+                wf["example_prompts"] = json.loads(wf["example_prompts"])
+            except:
+                wf["example_prompts"] = []
+        elif not wf.get("example_prompts"):
+            wf["example_prompts"] = []
+        if not wf["example_prompts"]:
+            from agents.workflow_compiler import WorkflowCompiler
+            wf["example_prompts"] = WorkflowCompiler.generate_heuristic_examples(wf.get("name", ""), wf.get("business_instruction", "") or wf.get("description", ""))
+        
+        if tenant:
+            norm_t = _normalize_tenant_id(tenant)
+            if norm_t != "ALL" and wf["tenant_id"] not in [norm_t, "ALL"]:
+                continue
+        workflows.append(wf)
+        
+    return {"status": "success", "workflows": workflows}
+
 
 
 @router.get("/admin/users")
@@ -554,12 +641,19 @@ async def get_table_data(
     conn.close()
 
     data_rows = [dict(zip(columns, r)) for r in rows]
+    pk_col = next((r[0] for r in desc_rows if len(r) > 3 and r[3] == "PRI"), None)
+    if not pk_col:
+        # Fallback to id column if exists, otherwise first column
+        pk_col = next((c for c in columns if c.lower() in ["id", f"{table_name}_id", f"{table_name[:-1]}_id"] or c.lower().endswith("_id")), (columns[0] if columns else None))
+
     return {
         "table_name": table_name,
         "total_count": total_cnt,
         "limit": limit,
         "offset": offset,
         "columns": col_defs,
+        "column_names": columns,
+        "primary_key": pk_col,
         "rows": data_rows
     }
 

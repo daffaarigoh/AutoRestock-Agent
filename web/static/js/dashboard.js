@@ -247,7 +247,7 @@ function clearCopilotFeed() {
   if (container) {
     container.classList.add('is-empty-state');
   }
-  showToast("Riwayat aktivitas telah dibersihkan", "info");
+  showToast("Activity history cleared", "info");
 }
 
 // --- Left Sidebar Controls ---
@@ -255,7 +255,7 @@ function toggleDataSidebar() {
   const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
   const btnText = document.getElementById('toggleSidebarText');
   if (btnText) {
-    btnText.textContent = isCollapsed ? 'Katalog & Data' : 'Tutup Sidebar';
+    btnText.textContent = isCollapsed ? 'Data & Modules' : 'Collapse Panel';
   }
 }
 
@@ -370,6 +370,9 @@ function applyTenantSecurityAndPersonalization() {
 
     switchCanvasTab('canvas-inventory');
   }
+
+  // Render tenant-specific example questions
+  renderTenantHelpExamples();
 }
 
 // --- Tab Switching ---
@@ -469,9 +472,9 @@ async function triggerVisualRefresh(btnId, callback) {
 
   try {
     await callback();
-    showToast("Data berhasil diperbarui", "success");
+    showToast("Data refreshed successfully", "success");
   } catch (e) {
-    showToast("Gagal memperbarui data", "error");
+    showToast("Failed to refresh data", "error");
   } finally {
     if (icon) icon.classList.remove('spin-icon');
     if (btn) btn.disabled = false;
@@ -714,7 +717,7 @@ async function loadPurchaseOrders() {
       const data = await res.json();
       if (badgeTop) badgeTop.textContent = `${data ? data.length : 0} PO`;
       if (!data || data.length === 0) {
-        tbodyTop.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Belum ada Purchase Order terbit.</td></tr>`;
+        tbodyTop.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">No Purchase Orders issued yet.</td></tr>`;
         return;
       }
       const rowsHtml = data.map(po => {
@@ -735,7 +738,7 @@ async function loadPurchaseOrders() {
               ${po.po_status === 'ORDERED' ? `
               <button class="btn btn-primary btn-xs" style="padding: 3px 8px; font-size: 11px; background: #16A34A; border-color: #15803D; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;" onclick="confirmGoodsReceiptQuick('${escapeHtml(po.po_id)}', '${escapeHtml(po.po_number)}')">
                 <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                <span>Terima Barang</span>
+                <span>Receive Goods</span>
               </button>
               ` : ''}
               <button class="btn btn-secondary btn-xs" style="padding: 3px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openPoPdfModal('${escapeHtml(po.po_id)}', '${escapeHtml(po.po_number)}', '${escapeHtml(po.supplier_name)}', ${po.total_amount}, '${escapeHtml(po.po_status)}')">
@@ -925,7 +928,7 @@ async function loadHrData() {
       tbodyCand.innerHTML = cands.map(c => `
         <tr>
           <td><strong>${escapeHtml(c.full_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(c.current_city)}</span></td>
-          <td>${escapeHtml(c.job_title)}<br><span style="font-size: 11px; color: var(--text-muted);">${c.years_of_experience} th pengalaman</span></td>
+          <td>${escapeHtml(c.job_title)}<br><span style="font-size: 11px; color: var(--text-muted);">${c.years_of_experience} yrs experience</span></td>
           <td class="text-center"><span class="badge badge-tkpk">${escapeHtml(c.k3_cert_held)}</span></td>
           <td class="text-center"><span class="badge ${c.medical_checkup_status.includes('FIT_FOR_HEIGHT') ? 'badge-paid' : 'badge-unpaid'}">${escapeHtml(c.medical_checkup_status)}</span></td>
           <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #2563EB;">${c.technical_score}</td>
@@ -945,11 +948,11 @@ async function loadHrData() {
           <td><strong>${escapeHtml(l.applicant_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(l.job_title)}</span></td>
           <td>${escapeHtml(l.leave_type)}</td>
           <td class="text-center" style="font-weight: 700;">${l.days_requested}</td>
-          <td style="font-size: 11.5px;">${escapeHtml(l.reason)}<br><span style="color: var(--text-muted); font-size: 10.5px;">Mulai: ${l.start_date}</span></td>
+          <td style="font-size: 11.5px;">${escapeHtml(l.reason)}<br><span style="color: var(--text-muted); font-size: 10.5px;">Start: ${l.start_date}</span></td>
           <td>${escapeHtml(l.substitute_name)}</td>
           <td class="text-center"><span class="badge ${l.approval_status === 'APPROVED' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(l.approval_status)}</span></td>
           <td class="text-center" style="white-space: nowrap;">
-            <button class="btn btn-secondary btn-sm" onclick="openLeavePdfModal('${l.leave_id}', '${escapeHtml(l.applicant_name)}', '${escapeHtml(l.leave_type)}', ${l.days_requested}, '${escapeHtml(l.approval_status)}')" style="padding: 3px 10px; font-size: 11.5px;" title="Lihat Berkas PDF">
+            <button class="btn btn-secondary btn-sm" onclick="openLeavePdfModal('${l.leave_id}', '${escapeHtml(l.applicant_name)}', '${escapeHtml(l.leave_type)}', ${l.days_requested}, '${escapeHtml(l.approval_status)}')" style="padding: 3px 10px; font-size: 11.5px;" title="View PDF Document">
               PDF
             </button>
           </td>
@@ -971,12 +974,12 @@ async function approveLeaveQuick(leaveId) {
       body: JSON.stringify({ action: 'APPROVE' })
     });
     if (res.ok) {
-      showToast("Pengajuan cuti berhasil disetujui", "success");
+      showToast("Leave request approved successfully", "success");
       loadHrData();
       loadEmployees();
     }
   } catch (e) {
-    showToast("Gagal menyetujui cuti", "error");
+    showToast("Failed to approve leave request", "error");
   }
 }
 
@@ -1359,7 +1362,7 @@ function renderPrsTable(prs) {
   if (!tbody) return;
 
   if (!prs || prs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada Purchase Requisition terbit.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">No Purchase Requisitions issued yet.</td></tr>`;
     return;
   }
 
@@ -1383,10 +1386,10 @@ function renderPrsTable(prs) {
     let statusLabel = 'PENDING';
     if (isApproved) {
       badgeClass = 'badge-approved';
-      statusLabel = 'DISETUJUI';
+      statusLabel = 'APPROVED';
     } else if (isRejected) {
       badgeClass = 'badge-rejected';
-      statusLabel = 'DITOLAK';
+      statusLabel = 'REJECTED';
     }
 
     const isAdmin = sessionStorage.getItem('role') === 'ADMIN';
@@ -1399,7 +1402,7 @@ function renderPrsTable(prs) {
         <td style="font-weight: 600; color: #0F172A; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(supplierName)}">
           ${escapeHtml(supplierName)}
         </td>
-        <td class="text-center" style="color: var(--text-secondary); white-space: nowrap;">${pr.items?.length || 0} item</td>
+        <td class="text-center" style="color: var(--text-secondary); white-space: nowrap;">${pr.items?.length || 0} items</td>
         <td class="text-right" style="font-weight: 700; color: #0F172A; white-space: nowrap;">${formatCurrency(grandTotal)}</td>
         <td class="text-center" id="badge-container-${pr.pr_number}" style="white-space: nowrap;">
           <span class="badge ${badgeClass}">${statusLabel}</span>
@@ -1407,11 +1410,11 @@ function renderPrsTable(prs) {
         <td class="text-center" style="white-space: nowrap;">
           <div style="display: inline-flex; gap: 4px;" id="actions-container-${pr.pr_number}">
             <button class="btn btn-secondary btn-sm" onclick="openPdfModal('${pr.pr_number}', '${escapedSupplier}', ${grandTotal}, '${rawStatus}')">
-              Lihat PDF
+              View PDF
             </button>
             ${!isApproved && !isRejected && isAdmin ? `
               <button class="btn btn-success btn-sm btn-approve-action" data-pr="${pr.pr_number}" onclick="approvePrQuick('${pr.pr_number}')">
-                Setujui
+                Approve
               </button>
             ` : ''}
           </div>
@@ -1674,7 +1677,7 @@ async function approvePrQuick(prNumber) {
   const allActionButtons = document.querySelectorAll(`[data-pr="${prNumber}"]`);
   allActionButtons.forEach(btn => {
     btn.disabled = true;
-    btn.textContent = "Menyetujui...";
+    btn.textContent = "Approving...";
   });
 
   try {
@@ -1689,7 +1692,7 @@ async function approvePrQuick(prNumber) {
     });
 
     if (res.ok) {
-      showToast(`Purchase Requisition ${prNumber} berhasil disetujui`, 'success');
+      showToast(`Purchase Requisition ${prNumber} approved successfully`, 'success');
 
       // Update PR status in local state
       if (state.prs) {
@@ -1700,13 +1703,13 @@ async function approvePrQuick(prNumber) {
       allActionButtons.forEach(btn => {
         const approvedBadge = document.createElement('span');
         approvedBadge.className = 'badge badge-approved';
-        approvedBadge.textContent = 'DISETUJUI';
+        approvedBadge.textContent = 'APPROVED';
         btn.replaceWith(approvedBadge);
       });
 
       const tableBadgeContainer = document.getElementById(`badge-container-${prNumber}`);
       if (tableBadgeContainer) {
-        tableBadgeContainer.innerHTML = `<span class="badge badge-approved">DISETUJUI</span>`;
+        tableBadgeContainer.innerHTML = `<span class="badge badge-approved">APPROVED</span>`;
       }
 
       // If the modal is currently open for this PR, update modal header & refresh iframe
@@ -1714,7 +1717,7 @@ async function approvePrQuick(prNumber) {
         const statusBadge = document.getElementById('modalPrStatusBadge');
         if (statusBadge) {
           statusBadge.className = 'badge badge-approved';
-          statusBadge.textContent = 'DISETUJUI';
+          statusBadge.textContent = 'APPROVED';
         }
         const modalApproveBtn = document.getElementById('modalApproveBtn');
         if (modalApproveBtn) {
@@ -1729,13 +1732,13 @@ async function approvePrQuick(prNumber) {
       await loadAllData();
       saveCopilotFeed();
     } else {
-      throw new Error("Gagal menyetujui dokumen.");
+      throw new Error("Failed to approve document.");
     }
   } catch (e) {
-    showToast(e.message || "Gagal menyetujui PR", "error");
+    showToast(e.message || "Failed to approve PR", "error");
     allActionButtons.forEach(btn => {
       btn.disabled = false;
-      btn.textContent = "Setujui";
+      btn.textContent = "Approve";
     });
   }
 }
@@ -2939,6 +2942,299 @@ function useCopilotSuggestion(promptText) {
 }
 
 // ==============================================================================
+// MINIMALIST FLOW HELP & EXAMPLE PROMPTS REGISTRY (PER TENANT)
+// ==============================================================================
+
+const FLOW_HELP_REGISTRY = {
+  INVENTORY: {
+    title: 'Divisi Logistik & Inventaris (Schema A)',
+    description: 'Manajemen persediaan material menara telekomunikasi, kabel fiber optic, draf pengadaan PR/PO, dan penerimaan fisik gudang.',
+    flows: [
+      {
+        id: 'WF-A01',
+        name: 'Pipeline Pengadaan Material PR-to-PO',
+        desc: 'Inspeksi stok di bawah batas aman, kalkulasi reorder otomatis, dan kompilasi PR PDF.',
+        examples: [
+          'Periksa seluruh stok material menara yang kritis dan buat draft PR pengadaan barang',
+          'Cek material fiber optic di bawah safety stock lalu kirim email persetujuan ke manajer'
+        ]
+      },
+      {
+        id: 'WF-A02',
+        name: 'Penerimaan Barang Fisik PO & Update Saldo',
+        desc: 'Verifikasi kedatangan barang PO di gudang regional dan sinkronisasi penambahan stok fisik.',
+        examples: [
+          'PO-2026-006 sudah sampai di gudang Bandung, tolong catat penerimaan barang',
+          'Konfirmasi kedatangan material PO-2026-001 di gudang Jakarta dan tambahkan ke saldo fisik'
+        ]
+      },
+      {
+        id: 'WF-A03',
+        name: 'Pelacakan Pengiriman PO & Unduh Dokumen PDF',
+        desc: 'Audit pesanan pembelian aktif (IN_TRANSIT) dan penerbitan berkas resmi format PDF Typst.',
+        examples: [
+          'Lacak status pengiriman PO yang sedang aktif dalam perjalanan',
+          'Tampilkan daftar purchase order berstatus in transit dan unduh dokumen resminya'
+        ]
+      },
+      {
+        id: 'GENERAL',
+        name: 'Informasi Persediaan Gudang',
+        desc: 'Pengecekan sisa stok SKU spesifik atau rekapitulasi status kesehatan barang regional.',
+        examples: [
+          'Berapa sisa stok ODC 48 Port di Gudang Surabaya?',
+          'Tampilkan daftar item dengan status kesehatan persediaan menipis'
+        ]
+      }
+    ]
+  },
+  HR: {
+    title: 'Divisi Human Resources & Operasional Lapangan (Schema B)',
+    description: 'Manajemen ketenagakerjaan teknisi lapangan, kualifikasi sertifikasi K3 TKPK rigger, presensi GPS, dan pengajuan cuti.',
+    flows: [
+      {
+        id: 'WF-08BEBD',
+        name: 'Pengajuan Cuti Teknisi & Cetak Dokumen PDF',
+        desc: 'Pencatatan permohonan cuti teknisi, kalkulasi saldo kuota, dan distribusi formulir resmi PDF ke HR.',
+        examples: [
+          'Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok',
+          'Buat formulir permohonan cuti rigger dan terbitkan dokumen PDF resmi'
+        ]
+      },
+      {
+        id: 'WF-847DA5',
+        name: 'Audit Cuti Pending & Email Otorisasi HR',
+        desc: 'Pemeriksaan antrean permohonan cuti pending dan pengiriman rekapitulasi otorisasi ke email manajer.',
+        examples: [
+          'Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR',
+          'Tampilkan seluruh permohonan cuti karyawan yang belum disetujui'
+        ]
+      },
+      {
+        id: 'WF-002',
+        name: 'Audit Absensi GPS & Jam Lembur Teknisi',
+        desc: 'Audit absensi kunjungan site menara dengan validasi geofencing dan rekapitulasi lembur.',
+        examples: [
+          'Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi bulan ini',
+          'Cek validasi geofencing presensi teknisi lapangan minggu ini'
+        ]
+      },
+      {
+        id: 'WF-003',
+        name: 'Filter Pelamar Rigger K3 Ketinggian',
+        desc: 'Penyaringan kandidat rigger tower dengan sertifikasi TKPK 1/2 dan tes medis layak ketinggian.',
+        examples: [
+          'Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 1',
+          'Tampilkan pelamar rigger yang lolos uji medis kelayakan bekerja di ketinggian'
+        ]
+      }
+    ]
+  },
+  FINANCE: {
+    title: 'Divisi Keuangan & Commercial Billing (Schema C)',
+    description: 'Manajemen kontrak sewa menara MLA dengan operator telekomunikasi, penagihan invoice, audit beban operasional, dan arus kas.',
+    flows: [
+      {
+        id: 'WF-3959D6',
+        name: 'Pendaftaran Klien Operator & Kontrak Sewa MLA',
+        desc: 'Draf pendaftaran operator telekomunikasi baru, kontrak sewa menara, dan otorisasi email manajer keuangan.',
+        examples: [
+          'Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan',
+          'Susun draft Master Lease Agreement operator Indosat dan kirim otorisasi ke email finance manager'
+        ]
+      },
+      {
+        id: 'WF-004',
+        name: 'Laporan Pendapatan & Invoice Sewa Menara',
+        desc: 'Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, Indosat, XL, Smartfren).',
+        examples: [
+          'Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya',
+          'Berapa total tagihan invoice operator yang jatuh tempo bulan ini?'
+        ]
+      },
+      {
+        id: 'WF-005',
+        name: 'Audit Beban Listrik PLN & Sewa Lahan',
+        desc: 'Laporan pengeluaran operasional utilitas listrik PLN, BBM genset cadangan, dan sewa lahan site.',
+        examples: [
+          'Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat',
+          'Tampilkan beban utilitas genset dan tagihan listrik site tertinggi'
+        ]
+      },
+      {
+        id: 'WF-006',
+        name: 'Ringkasan Arus Kas (Cash Flow)',
+        desc: 'Laporan transaksi arus kas masuk vs keluar operasional dan posisi saldo kas bersih.',
+        examples: [
+          'Tampilkan ringkasan arus kas masuk dan keluar beserta posisi saldo bersih terkini',
+          'Berapa saldo kas operasional saat ini?'
+        ]
+      }
+    ]
+  },
+  ALL: {
+    title: 'Superadministrator Enterprise',
+    description: 'Akses komprehensif ke seluruh alur kerja operasional, orkestrasi alur dinamis, dan tata kelola basis data multi-tenant.',
+    flows: [
+      {
+        id: 'ORCHESTRATOR',
+        name: 'Kompilasi Alur Kerja Dinamis',
+        desc: 'Penyusunan alur kerja baru secara otomatis berbasis bahasa alami.',
+        examples: [
+          'Buat alur kerja baru untuk audit berkala genset dan kirim laporan ke email operasional',
+          'Tampilkan daftar seluruh alur kerja aktif lintas divisi dan status integrasinya'
+        ]
+      },
+      {
+        id: 'DATABASE',
+        name: 'Tata Kelola 18 Basis Data DuckDB',
+        desc: 'Pemeriksaan integritas skema data operasional DuckDB dan batasan hak akses tenant.',
+        examples: [
+          'Tampilkan statistik integritas data pada 18 tabel basis data operasional DuckDB',
+          'Audit profil akun pengguna dan batasan wewenang divisi'
+        ]
+      },
+      {
+        id: 'CROSS_DOMAIN',
+        name: 'Akses Komprehensif Lintas Divisi',
+        desc: 'Eksekusi operasional terintegrasi lintas logistik gudang, HR, dan penagihan keuangan.',
+        examples: [
+          'Periksa stok menara yang kritis dan buat draft PR pengadaan barang',
+          'Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi',
+          'Tampilkan rekapitulasi invoice sewa menara per operator',
+          'Cek status kesehatan seluruh modul sistem, server API, dan koneksi AI gateway'
+        ]
+      }
+    ]
+  }
+};
+
+function renderTenantHelpExamples() {
+  const container = document.getElementById('examplesGrid');
+  if (!container) return;
+
+  const tenant = getEffectiveTenant();
+  const registry = FLOW_HELP_REGISTRY[tenant] || FLOW_HELP_REGISTRY.ALL;
+
+  let cardsHtml = '';
+  registry.flows.forEach(flow => {
+    if (flow.examples && flow.examples.length > 0) {
+      const exampleText = flow.examples[0];
+      const safeEx = escapeHtml(exampleText).replace(/'/g, "\\'");
+      cardsHtml += `
+        <div class="example-card" onclick="selectExamplePrompt('${safeEx}')" title="Klik untuk memasukkan ke chat">
+          <div class="example-card-top">
+            <span class="example-card-badge">${escapeHtml(flow.id)}</span>
+            <span class="example-card-flow-name">${escapeHtml(flow.name)}</span>
+          </div>
+          <div class="example-card-text">"${escapeHtml(exampleText)}"</div>
+        </div>
+      `;
+    }
+  });
+
+  container.innerHTML = cardsHtml;
+}
+
+function selectExamplePrompt(promptText) {
+  useCopilotSuggestion(promptText);
+}
+
+async function openFlowHelpModal() {
+  const modal = document.getElementById('flowHelpModal');
+  const titleEl = document.getElementById('helpModalTenantTitle');
+  const bodyEl = document.getElementById('flowHelpModalBody');
+  if (!modal || !bodyEl) return;
+
+  const tenant = getEffectiveTenant();
+  const fallbackRegistry = FLOW_HELP_REGISTRY[tenant] || FLOW_HELP_REGISTRY.ALL;
+
+  if (titleEl) {
+    titleEl.textContent = `Workflow Guide: ${fallbackRegistry.title}`;
+  }
+
+  modal.style.display = 'flex';
+
+  // Fetch dynamic workflows from backend
+  let flowsToRender = [];
+  try {
+    const res = await fetch(`/api/workflows/help-catalog?tenant=${encodeURIComponent(tenant)}&t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.workflows && data.workflows.length > 0) {
+        flowsToRender = data.workflows.map(wf => ({
+          id: wf.id,
+          name: wf.name,
+          desc: wf.description || wf.business_instruction,
+          examples: wf.example_prompts || []
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn("[HELP MODAL] Could not fetch dynamic workflows, falling back to local registry", e);
+  }
+
+  // Fallback to local registry if empty or error
+  if (!flowsToRender || flowsToRender.length === 0) {
+    flowsToRender = fallbackRegistry.flows;
+  }
+
+  let html = `
+    <div class="flow-help-intro-box">
+      <div class="flow-help-intro-title">Integrated Operational Workflow Guide</div>
+      <div>${escapeHtml(fallbackRegistry.description)}</div>
+    </div>
+  `;
+
+  flowsToRender.forEach(flow => {
+    html += `
+      <div class="flow-help-card">
+        <div class="flow-help-card-header">
+          <span class="flow-badge">${escapeHtml(flow.id)}</span>
+          <span class="flow-title">${escapeHtml(flow.name)}</span>
+        </div>
+        <div class="flow-desc">${escapeHtml(flow.desc)}</div>
+        <div class="flow-examples-label">
+          Example Prompts (Click to insert into chat):
+        </div>
+        <div class="flow-prompts-list">
+    `;
+
+    (flow.examples || []).forEach(ex => {
+      const safeEx = escapeHtml(ex).replace(/'/g, "\\'");
+      html += `
+        <button type="button" class="flow-prompt-item" onclick="selectExamplePromptAndClose('${safeEx}')" title="Click to insert prompt into chat">
+          <span class="prompt-text">"${escapeHtml(ex)}"</span>
+          <span class="prompt-action-tag">
+            <span>Use</span>
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </span>
+        </button>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  bodyEl.innerHTML = html;
+}
+
+function selectExamplePromptAndClose(promptText) {
+  selectExamplePrompt(promptText);
+  closeFlowHelpModal();
+}
+
+function closeFlowHelpModal() {
+  const modal = document.getElementById('flowHelpModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// ==============================================================================
 // DOMAIN 2 (HR & WORKFORCE): INTERACTIVE CHAT LEAVE APPLICATION FORM
 // ==============================================================================
 
@@ -3047,7 +3343,7 @@ async function renderLeaveRequestChatForm(targetContainer = null) {
       <div class="leave-form-footer">
         <span id="${formId}_error" style="color: #DC2626; font-size: 12px; display: none;"></span>
         <button class="btn btn-primary btn-sm" id="${formId}_btn" onclick="submitLeaveRequestForm('${formId}')">
-          <span>Kirim Pengajuan Cuti</span>
+          <span>Submit Leave Application</span>
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
           </svg>
@@ -3105,7 +3401,7 @@ async function submitLeaveRequestForm(formId) {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<span>Menyimpan ke DB & Mengirim PDF...</span>`;
+    btn.innerHTML = `<span>Saving to DB & Generating PDF...</span>`;
   }
 
   try {
@@ -3190,20 +3486,20 @@ async function submitLeaveRequestForm(formId) {
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              <span>Lihat Dokumen PDF</span>
+              <span>View PDF Document</span>
             </button>
             <a href="/api/documents/leave/${leaveId}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
-              <span>Unduh PDF</span>
+              <span>Download PDF</span>
             </a>
           </div>
         </div>
       `;
     }
 
-    showToast(`Pengajuan cuti ${leaveId} berhasil disimpan dan dikirim ke HR`, 'success');
+    showToast(`Leave request ${leaveId} submitted successfully to HR`, 'success');
     loadHrData();
     loadEmployees();
     saveCopilotFeed();
@@ -3214,9 +3510,9 @@ async function submitLeaveRequestForm(formId) {
     }
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = `<span>Kirim Pengajuan Cuti</span>`;
+      btn.innerHTML = `<span>Submit Leave Application</span>`;
     }
-    showToast(err.message || "Gagal memproses pengajuan cuti", 'error');
+    showToast(err.message || "Failed to submit leave request", 'error');
   }
 }
 

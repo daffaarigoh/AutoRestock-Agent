@@ -1,21 +1,5 @@
 [
   {
-    "id": "WF-002",
-    "name": "Cek Absensi & Lembur Teknisi",
-    "description": "Audit absensi kunjungan site menara dan rekap jam lembur teknisi.",
-    "business_instruction": "Tarik data absensi teknisi lapangan dengan validasi geofencing GPS dan kalkulasi biaya lembur.",
-    "compiled_json": {
-      "workflow": "hr_attendance_audit",
-      "steps": [
-        {
-          "type": "tool",
-          "tool": "hr.audit_attendance"
-        }
-      ]
-    },
-    "tenant_id": "HR"
-  },
-  {
     "id": "WF-003",
     "name": "Filter Pelamar Rigger K3",
     "description": "Menyaring kandidat rigger tower dengan sertifikasi TKPK dan tes medis layak ketinggian.",
@@ -29,7 +13,11 @@
         }
       ]
     },
-    "tenant_id": "HR"
+    "tenant_id": "HR",
+    "example_prompts": [
+      "Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 1",
+      "Tampilkan pelamar rigger yang lolos uji medis kelayakan bekerja di ketinggian"
+    ]
   },
   {
     "id": "WF-004",
@@ -45,7 +33,11 @@
         }
       ]
     },
-    "tenant_id": "FINANCE"
+    "tenant_id": "FINANCE",
+    "example_prompts": [
+      "Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya",
+      "Berapa total tagihan invoice operator yang jatuh tempo bulan ini?"
+    ]
   },
   {
     "id": "WF-005",
@@ -61,23 +53,11 @@
         }
       ]
     },
-    "tenant_id": "FINANCE"
-  },
-  {
-    "id": "WF-006",
-    "name": "Ringkasan Arus Kas (Cash Flow)",
-    "description": "Laporan arus kas masuk vs keluar harian dan posisi saldo bersih.",
-    "business_instruction": "Hitung net cash flow dari transaksi inflow dan outflow.",
-    "compiled_json": {
-      "workflow": "finance_cashflow",
-      "steps": [
-        {
-          "type": "tool",
-          "tool": "finance.cashflow_summary"
-        }
-      ]
-    },
-    "tenant_id": "FINANCE"
+    "tenant_id": "FINANCE",
+    "example_prompts": [
+      "Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat",
+      "Tampilkan beban utilitas genset dan tagihan listrik site tertinggi"
+    ]
   },
   {
     "id": "WF-08BEBD",
@@ -102,7 +82,11 @@
         }
       ]
     },
-    "tenant_id": "HR"
+    "tenant_id": "HR",
+    "example_prompts": [
+      "Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok",
+      "Buat formulir permohonan cuti rigger dan terbitkan dokumen PDF resmi"
+    ]
   },
   {
     "id": "WF-3959D6",
@@ -127,7 +111,11 @@
         }
       ]
     },
-    "tenant_id": "FINANCE"
+    "tenant_id": "FINANCE",
+    "example_prompts": [
+      "Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan",
+      "Susun draft Master Lease Agreement operator Indosat dan kirim otorisasi ke email finance manager"
+    ]
   },
   {
     "id": "WF-847DA5",
@@ -148,7 +136,11 @@
         }
       ]
     },
-    "tenant_id": "HR"
+    "tenant_id": "HR",
+    "example_prompts": [
+      "Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR",
+      "Tampilkan seluruh permohonan cuti karyawan yang belum disetujui"
+    ]
   },
   {
     "id": "WF-A01",
@@ -176,7 +168,11 @@
         }
       ]
     },
-    "tenant_id": "INVENTORY"
+    "tenant_id": "INVENTORY",
+    "example_prompts": [
+      "Periksa seluruh stok material menara yang kritis dan buat draft PR pengadaan barang",
+      "Cek material fiber optic di bawah safety stock lalu kirim email persetujuan ke manajer"
+    ]
   },
   {
     "id": "WF-A02",
@@ -200,7 +196,11 @@
         }
       ]
     },
-    "tenant_id": "INVENTORY"
+    "tenant_id": "INVENTORY",
+    "example_prompts": [
+      "PO-2026-006 sudah sampai di gudang Bandung, tolong catat penerimaan barang",
+      "Konfirmasi kedatangan material PO-2026-001 di gudang Jakarta dan tambahkan ke saldo fisik"
+    ]
   },
   {
     "id": "WF-A03",
@@ -220,7 +220,11 @@
         }
       ]
     },
-    "tenant_id": "INVENTORY"
+    "tenant_id": "INVENTORY",
+    "example_prompts": [
+      "Lacak status pengiriman PO yang sedang aktif dalam perjalanan",
+      "Tampilkan daftar purchase order berstatus in transit dan unduh dokumen resminya"
+    ]
   },
   {
     "id": "WF-ALL-01",
@@ -236,7 +240,11 @@
         }
       ]
     },
-    "tenant_id": "ALL"
+    "tenant_id": "ALL",
+    "example_prompts": [
+      "Tampilkan informasi profil akun dan batasan hak akses divisi",
+      "Audit wewenang pengguna usera, userb, dan userc"
+    ]
   },
   {
     "id": "WF-ALL-02",
@@ -252,7 +260,11 @@
         }
       ]
     },
-    "tenant_id": "ALL"
+    "tenant_id": "ALL",
+    "example_prompts": [
+      "Cek status kesehatan seluruh modul sistem, server API, dan koneksi AI gateway",
+      "Tampilkan status server dan koneksi database"
+    ]
   },
   {
     "id": "WF-ALL-03",
@@ -268,6 +280,69 @@
         }
       ]
     },
-    "tenant_id": "ALL"
+    "tenant_id": "ALL",
+    "example_prompts": [
+      "Tampilkan panduan operasional perusahaan dan kontak darurat helpdesk",
+      "Buka kontak bantuan teknis NOC dan tower support"
+    ]
+  },
+  {
+    "id": "WF-C53592",
+    "name": "Pengajuan & Otorisasi Cuti Karyawan (Email Approval & Pemotongan Kuota Cuti)",
+    "description": "Alur pengajuan cuti teknisi lapangan yang mengirimkan email otorisasi ke HR dengan lampiran PDF resmi, serta otomatis mengurangi sisa saldo cuti karyawan setelah disetujui.",
+    "business_instruction": "Proses permohonan cuti teknisi lapangan dan karyawan ke dalam basis data dengan status PENDING_APPROVAL. Kompilasi dokumen formulir permohonan cuti resmi format PDF dengan kop surat PT Bali Towerindo Sentra Tbk. Kirimkan rekapitulasi data permohonan cuti beserta berkas PDF dan tombol otorisasi persetujuan ke email HR Manager. Ketika otorisasi disetujui, ubah status pengajuan menjadi APPROVED dan mutasikan jatah kuota cuti tahunan karyawan (leave_balance) di database agar otomatis terpotong sesuai durasi hari cuti yang diambil.",
+    "compiled_json": {
+      "workflow": "pengajuan_otorisasi_cuti_karyawan_email_approval_pemotongan_kuota_cuti",
+      "version": 1,
+      "steps": [
+        {
+          "type": "tool",
+          "tool": "po.query_orders"
+        },
+        {
+          "type": "tool",
+          "tool": "po.approve"
+        },
+        {
+          "type": "tool",
+          "tool": "docgen.compile_po"
+        },
+        {
+          "type": "tool",
+          "tool": "notification.dispatch"
+        }
+      ]
+    },
+    "tenant_id": "HR",
+    "example_prompts": []
+  },
+  {
+    "id": "WF-DBFB7F",
+    "name": "Registrasi Material & SKU Baru Gudang Logistik",
+    "description": "Mendaftarkan SKU material baru ke dalam tabel inventory_items dan menginisialisasi saldo stok fisik di gudang.",
+    "business_instruction": "Catat item material baru ke dalam basis data inventaris dengan detail nama barang, kategori, satuan, dan batas minimum stok yang ditentukan, lalu konfirmasikan penambahan item tersebut di chat.",
+    "compiled_json": {
+      "workflow": "registrasi_material_sku_baru_gudang_logistik",
+      "version": 1,
+      "steps": [
+        {
+          "type": "agent",
+          "task": "agent.reason_and_validate"
+        },
+        {
+          "type": "tool",
+          "tool": "inventory.register_product"
+        }
+      ],
+      "example_prompts": [
+        "PO-2026-006 sudah sampai di gudang Bandung, tolong catat penerimaan barang",
+        "Konfirmasi kedatangan material pesanan PO di gudang dan tambahkan ke saldo fisik"
+      ]
+    },
+    "tenant_id": "INVENTORY",
+    "example_prompts": [
+      "PO-2026-006 sudah sampai di gudang Bandung, tolong catat penerimaan barang",
+      "Konfirmasi kedatangan material pesanan PO di gudang dan tambahkan ke saldo fisik"
+    ]
   }
 ]

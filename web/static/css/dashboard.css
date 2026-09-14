@@ -18,12 +18,17 @@
   --bg-input: #FFFFFF;
   --bg-subtle: #F1F5F9;
 
-  /* Professional Accent Colors */
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
-  --primary-active: #1E40AF;
-  --primary-light: #EFF6FF;
-  --primary-border: #BFDBFE;
+  /* Bali Tower Telecom Palette */
+  --primary: #0A4D9C;
+  --primary-hover: #083D7C;
+  --primary-active: #062E5E;
+  --primary-light: #EBF3FC;
+  --primary-border: #BAD6F7;
+
+  --accent-orange: #F37021;
+  --accent-orange-hover: #D95D10;
+  --accent-orange-light: #FFF3EB;
+  --accent-orange-border: #FFD6BF;
 
   /* High-Legibility Dark Text */
   --text-main: #0F172A;
@@ -34,7 +39,7 @@
   /* Borders & Dividers */
   --border-color: #E2E8F0;
   --border-subtle: #F1F5F9;
-  --border-focus: #2563EB;
+  --border-focus: #0A4D9C;
 
   /* Status Colors */
   --success: #16A34A;
@@ -1910,5 +1915,348 @@ body.sidebar-collapsed .sidebar-resizer {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* ==========================================================================
+   Professional Flow Help Modal & Examples UI System
+   ========================================================================== */
+
+/* Hero Section Quick Examples Grid */
+.hero-examples-container {
+  width: 100%;
+  max-width: 820px;
+  margin-top: 24px;
+  text-align: left;
+}
+
+.examples-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.examples-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.examples-help-link {
+  font-size: 12px;
+  color: #2563EB;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.examples-help-link:hover {
+  color: #1D4ED8;
+  text-decoration: underline;
+}
+
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.example-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.example-card:hover {
+  border-color: #93C5FD;
+  background: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+  transform: translateY(-2px);
+}
+
+.example-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.example-card-badge {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #1D4ED8;
+  background: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.example-card-flow-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.example-card-text {
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+/* Modal Styling Overrides for Help Modal (Fixing PDF Viewer dark collisions) */
+.flow-help-modal-container {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  width: 100% !important;
+  max-width: 860px !important;
+  height: auto !important;
+  max-height: 88vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1) !important;
+  overflow: hidden !important;
+}
+
+.flow-help-modal-body {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  max-height: calc(88vh - 130px) !important;
+  min-height: auto !important;
+  background: #F8FAFC !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  padding: 20px 24px !important;
+  box-sizing: border-box !important;
+}
+
+/* Tenant Introduction Box */
+.flow-help-intro-box {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  color: #1E40AF;
+  line-height: 1.5;
+}
+
+.flow-help-intro-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 3px;
+  color: #1D4ED8;
+}
+
+/* Flow Card inside Modal */
+.flow-help-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.flow-help-card:hover {
+  border-color: #CBD5E1;
+}
+
+.flow-help-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flow-badge {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #1D4ED8;
+  background: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.flow-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.flow-desc {
+  font-size: 12.5px;
+  color: #64748B;
+  line-height: 1.5;
+}
+
+.flow-examples-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94A3B8;
+  margin-top: 2px;
+}
+
+.flow-prompts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flow-prompt-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: #1E293B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.45;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.flow-prompt-item:hover {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  color: #1D4ED8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.06);
+}
+
+.flow-prompt-item .prompt-text {
+  flex: 1;
+}
+
+.flow-prompt-item .prompt-action-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #2563EB;
+  background: #FFFFFF;
+  border: 1px solid #BFDBFE;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.flow-prompt-item:hover .prompt-action-tag {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+}
+
+/* Circular Floating Help Button (FAB) */
+.fab-help-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #2563EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+  cursor: pointer;
+  z-index: 120;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.fab-help-btn:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.fab-help-tooltip {
+  position: absolute;
+  right: 56px;
+  background: #0F172A;
+  color: #FFFFFF;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.fab-help-btn:hover .fab-help-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Header Circular Help Button */
+.header-circle-help-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  color: #64748B;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.header-circle-help-btn:hover {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  color: #2563EB;
+  transform: scale(1.05);
+}
+
+
+
+
 
 

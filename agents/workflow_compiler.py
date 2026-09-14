@@ -57,8 +57,13 @@ Output format MUST be strictly valid JSON:
   "version": 1,
   "steps": [
     ... // Array of step objects
+  ],
+  "example_prompts": [
+    "Contoh kalimat pertanyaan atau instruksi chat bahasa Indonesia 1",
+    "Contoh kalimat pertanyaan atau instruksi chat bahasa Indonesia 2"
   ]
 }
+Generate 2 realistic natural language question prompts in Indonesian that an operator or manager would type in chat to trigger this workflow.
 Do not output any markdown formatting or extra commentary outside the JSON.
 """
         gateway = ModelGateway()
@@ -74,6 +79,8 @@ Do not output any markdown formatting or extra commentary outside the JSON.
                 response_str = json_match.group(0)
             parsed = json.loads(response_str)
             if parsed.get("steps") and len(parsed["steps"]) > 0:
+                if not parsed.get("example_prompts") or not isinstance(parsed.get("example_prompts"), list) or len(parsed["example_prompts"]) == 0:
+                    parsed["example_prompts"] = cls.generate_heuristic_examples(name, instruction)
                 return parsed
         except Exception as e:
             print(f"[WORKFLOW COMPILER] LLM compilation exception: {e}. Utilizing deterministic heuristic compiler.")
@@ -168,5 +175,65 @@ Do not output any markdown formatting or extra commentary outside the JSON.
         return {
             "workflow": slug or "custom_workflow",
             "version": 1,
-            "steps": steps
+            "steps": steps,
+            "example_prompts": cls.generate_heuristic_examples(name, instruction)
         }
+
+    @classmethod
+    def generate_heuristic_examples(cls, name: str, instruction: str) -> list[str]:
+        """Generates 2 clean natural language prompt examples based on name and instruction."""
+        clean_name = re.sub(r'^(?:alur|workflow|pipeline|proses)\s+', '', name, flags=re.IGNORECASE).strip()
+        text_lower = f"{name} {instruction}".lower()
+        
+        # Domain specific prompt templates
+        if any(k in text_lower for k in ["cuti", "leave"]):
+            return [
+                "Ajukan permohonan cuti tahunan karyawan untuk teknisi lapangan",
+                "Audit daftar pengajuan cuti yang masih berstatus pending approval"
+            ]
+        elif any(k in text_lower for k in ["absensi", "presensi", "lembur"]):
+            return [
+                "Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi",
+                "Cek validasi presensi geofencing teknisi lapangan minggu ini"
+            ]
+        elif any(k in text_lower for k in ["rigger", "pelamar", "kandidat", "rekrutmen"]):
+            return [
+                "Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 1",
+                "Tampilkan pelamar yang lolos uji medis kelayakan bekerja di ketinggian"
+            ]
+        elif any(k in text_lower for k in ["invoice", "tagihan", "sewa menara", "mla"]):
+            return [
+                "Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya",
+                "Daftarkan kontrak sewa menara baru untuk operator telekomunikasi"
+            ]
+        elif any(k in text_lower for k in ["listrik", "pln", "genset", "lahan", "sewa tanah"]):
+            return [
+                "Audit pengeluaran operasional listrik PLN dan sewa lahan menara",
+                "Tampilkan beban utilitas genset dan tagihan listrik site tertinggi"
+            ]
+        elif any(k in text_lower for k in ["arus kas", "cash flow", "kas"]):
+            return [
+                "Tampilkan ringkasan arus kas masuk dan keluar beserta posisi saldo bersih terkini",
+                "Berapa saldo kas operasional saat ini?"
+            ]
+        elif any(k in text_lower for k in ["penerimaan", "kedatangan", "tiba", "gudang", "po-"]):
+            return [
+                "PO-2026-006 sudah sampai di gudang Bandung, tolong catat penerimaan barang",
+                "Konfirmasi kedatangan material pesanan PO di gudang dan tambahkan ke saldo fisik"
+            ]
+        elif any(k in text_lower for k in ["lacak", "tracking", "status po", "in transit"]):
+            return [
+                "Lacak status pengiriman PO yang sedang aktif dalam perjalanan",
+                "Tampilkan daftar purchase order berstatus in transit dan unduh dokumen resminya"
+            ]
+        elif any(k in text_lower for k in ["restock", "pengadaan", "pr-to-po", "kritis", "menipis"]):
+            return [
+                f"Periksa kondisi stok untuk {clean_name} dan buat draft pengadaan barang",
+                f"Jalankan evaluasi alur kerja {clean_name}"
+            ]
+        else:
+            return [
+                f"Jalankan alur kerja {clean_name}",
+                f"Periksa status operasional untuk {clean_name}"
+            ]
+
