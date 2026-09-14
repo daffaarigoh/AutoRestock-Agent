@@ -12,14 +12,11 @@ if sys.platform == "win32":
         pass
 
 # Base path resolution
-WORKSPACE_DIR = Path(__file__).resolve().parent.parent
-STORAGE_DIR = WORKSPACE_DIR / "storage"
-DATA_DIR = WORKSPACE_DIR / "data"
-DB_PATH = STORAGE_DIR / "inventory.db"
+from database.db import DB_PATH, STORAGE_DIR, get_db_connection
 
 
 def init_db(db_path: Path = DB_PATH):
-    """Initialize DuckDB database and create relational tables with Multi-Tenant RLS & 3 Heterogeneous Schemas."""
+    """Initialize DuckDB database and create relational tables with Multi-Tenant RLS."""
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
     db_path_str = db_path.as_posix() if isinstance(db_path, Path) else str(db_path).replace("\\", "/")
@@ -110,32 +107,6 @@ def init_db(db_path: Path = DB_PATH):
         conn.execute("ALTER TABLE workflows ADD COLUMN tenant_id VARCHAR DEFAULT 'ALL';")
         print("[MIGRATION] Added 'tenant_id' column to workflows table.")
 
-    # -------------------------------------------------------------
-    # 7. INGEST 3 HETEROGENEOUS REAL-WORLD SCHEMAS
-    # -------------------------------------------------------------
-    csv_electronics = (DATA_DIR / "raw_electronics_inventory.csv").as_posix()
-    csv_pharma = (DATA_DIR / "raw_pharma_inventory.csv").as_posix()
-    csv_fleet = (DATA_DIR / "raw_fleet_parts_inventory.csv").as_posix()
-
-    # Schema 1: User A (TENANT_A) - Electronics Manufacturing
-    conn.execute(f"""
-        CREATE TABLE IF NOT EXISTS mfg_electronics_inventory AS 
-        SELECT * FROM read_csv_auto('{csv_electronics}');
-    """)
-
-    # Schema 2: User B (TENANT_B) - Pharmaceutical & FMCG WMS
-    conn.execute(f"""
-        CREATE TABLE IF NOT EXISTS pharma_fmcg_inventory AS 
-        SELECT * FROM read_csv_auto('{csv_pharma}');
-    """)
-
-    # Schema 3: User C (TENANT_C) - Fleet Logistics & Heavy Equipment
-    conn.execute(f"""
-        CREATE TABLE IF NOT EXISTS fleet_maintenance_parts AS 
-        SELECT * FROM read_csv_auto('{csv_fleet}');
-    """)
-
-    print("[OK] Initialized 3 Heterogeneous Real Datasets in DuckDB.")
     return conn
 
 

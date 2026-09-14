@@ -117,6 +117,20 @@ def scan_node(state: AgentState) -> dict[str, Any]:
     }
 
 
+def _run_sync(coro):
+    """Safely executes an async coroutine from synchronous graph nodes without loop conflicts."""
+    import concurrent.futures
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(asyncio.run, coro).result()
+    return asyncio.run(coro)
+
+
 def planner_node(state: AgentState) -> dict[str, Any]:
     """
     Node 2: Planner Node (nemotron-35 Planner & Vendor Matcher)
@@ -175,13 +189,9 @@ Output format must be a JSON object with a key 'items' containing a list of obje
     
     llm_items = {}
     try:
-        # We use a new event loop because this runs in a FastAPI threadpool
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        response_str = loop.run_until_complete(
+        response_str = _run_sync(
             gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
         )
-        loop.close()
         
         if response_str.startswith("```json"):
             response_str = response_str.strip("`").removeprefix("json").strip()
@@ -264,12 +274,9 @@ Output format must be a JSON object with:
     ]
     
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        response_str = loop.run_until_complete(
+        response_str = _run_sync(
             gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
         )
-        loop.close()
         
         if response_str.startswith("```json"):
             response_str = response_str.strip("`").removeprefix("json").strip()

@@ -28,6 +28,7 @@ WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
+import unittest
 from fastapi.testclient import TestClient
 from api.main import app
 from database.db import get_db_connection
@@ -284,10 +285,16 @@ def run_cross_tenant_security_verification():
     print("  [OK] 5. userb blocked from Inventory goods receipt prompt (Access Denied / Out of Scope).")
 
 
+class TestTahap4E2E(unittest.TestCase):
+    def test_usera_e2e_workflow(self):
+        run_usera_e2e_workflow()
+
+    def test_userb_e2e_workflow(self):
+        run_userb_e2e_workflow()
+
+    def test_cross_tenant_security(self):
+        run_cross_tenant_security_verification()
+
+
 if __name__ == "__main__":
-    run_usera_e2e_workflow()
-    run_userb_e2e_workflow()
-    run_cross_tenant_security_verification()
-    print("\n=======================================================")
-    print("=== ALL TAHAP 4 E2E INTEGRATION TESTS PASSED 100%! ===")
-    print("=======================================================\n")
+    unittest.main()

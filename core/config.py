@@ -50,7 +50,6 @@ class Settings(_BaseSettings):
     APPROVED_DIR: Path = BASE_DIR / "storage" / "approved"
     REJECTED_DIR: Path = BASE_DIR / "storage" / "rejected"
     DATA_DIR: Path = BASE_DIR / "data"
-    SAMPLES_DIR: Path = BASE_DIR / "data" / "samples"
 
     def model_post_init(self, __context: Any) -> None:
         def _clean(val: Any) -> Any:
@@ -69,8 +68,8 @@ class Settings(_BaseSettings):
         self.SMTP_EMAIL = _clean(self.SMTP_EMAIL)
         self.SMTP_PASSWORD = _clean(self.SMTP_PASSWORD)
         self.SMTP_USERNAME = _clean(self.SMTP_USERNAME) or self.SMTP_EMAIL
-        self.DEFAULT_RECIPIENT_EMAIL = _clean(self.DEFAULT_RECIPIENT_EMAIL) or self.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
-        self.PUBLIC_URL = _clean(self.PUBLIC_URL) or "http://10.17.101.232:8050"
+        self.DEFAULT_RECIPIENT_EMAIL = _clean(self.DEFAULT_RECIPIENT_EMAIL) or self.SMTP_EMAIL or ""
+        self.PUBLIC_URL = _clean(self.PUBLIC_URL)
 
         # If LLM_KEY is provided, sync with MODEL_API_KEY
         if self.LLM_KEY and (self.MODEL_API_KEY in ["dummy-key", "dummy-key-for-local", "", None]):
@@ -101,7 +100,6 @@ settings.PENDING_DIR.mkdir(parents=True, exist_ok=True)
 settings.APPROVED_DIR.mkdir(parents=True, exist_ok=True)
 settings.REJECTED_DIR.mkdir(parents=True, exist_ok=True)
 settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
-settings.SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_base_url(request: Any = None) -> str:
@@ -136,5 +134,6 @@ def get_base_url(request: Any = None) -> str:
     if settings.PUBLIC_URL and settings.PUBLIC_URL.strip():
         return settings.PUBLIC_URL.rstrip("/")
 
-    return f"http://10.17.101.232:{settings.API_PORT}"
+    return f"http://{settings.API_HOST or '127.0.0.1'}:{settings.API_PORT}"
+
 

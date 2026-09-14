@@ -1893,6 +1893,15 @@ function handleStreamAborted(streamBubble, accumulatedText = '') {
   scrollChatToBottom();
 }
 
+window.quickFillPrompt = function(promptText) {
+  const input = document.getElementById('promptInput');
+  if (input) {
+    input.value = promptText;
+    if (typeof autoResizePromptInput === 'function') autoResizePromptInput();
+    submitPrompt();
+  }
+};
+
 async function submitPrompt() {
   // If agent is currently running and user clicks the Stop button:
   if (isAgentPromptRunning) {
@@ -2032,16 +2041,15 @@ function getAgentBubbleHeaderHtml(badgeText = 'Agent Aktif', isError = false) {
   return `
     <div class="agent-bubble-header">
       <div class="agent-avatar ${isError ? 'error-avatar' : ''}">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
-          <rect x="3" y="8" width="18" height="12" rx="3"/>
-          <circle cx="8" cy="14" r="1.5" fill="currentColor"/>
-          <circle cx="16" cy="14" r="1.5" fill="currentColor"/>
-          <line x1="12" y1="13" x2="12" y2="15"/>
+        <svg width="15" height="15" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
         </svg>
       </div>
       <div class="agent-header-info">
-        <span class="agent-name">Bali Tower Copilot</span>
+        <span class="agent-name">BaliTower AI Agent</span>
         <span class="agent-status-badge ${isError ? 'error-badge' : ''}">
           ${!isError ? '<span class="agent-online-dot"></span>' : ''}${escapeHtml(badgeText)}
         </span>

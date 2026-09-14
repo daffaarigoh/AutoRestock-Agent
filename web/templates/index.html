@@ -20,14 +20,21 @@
   <header class="app-header">
     <div class="brand-section">
       <button class="brand-logo-btn" onclick="toggleDataSidebar()" title="Toggle Data Catalog & Modules" aria-label="Toggle Sidebar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        <!-- Official Bali Tower Signal Wave Logo -->
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+          <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
         </svg>
       </button>
       <div class="brand-info" onclick="toggleDataSidebar()" style="cursor: pointer;" title="Toggle Data Panel">
-        <div class="brand-name"><span style="color: var(--primary);">Bali</span><span style="color: var(--accent-orange); margin-left: 3px;">Tower</span> <span class="brand-badge">Enterprise</span></div>
+        <div class="brand-name">
+          <span class="bt-brand-wordmark">
+            <span class="bt-word-bali">bali</span><span class="bt-word-tower-box"><span class="bt-word-waves"><svg viewBox="0 0 16 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 8C4 3.5 12 3.5 14.5 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M4 8C5.5 5 10.5 5 12 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M6.5 8C7.2 6.5 8.8 6.5 9.5 8" stroke="#004B93" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="bt-word-tower">tower</span></span>
+          </span>
+          <span class="brand-badge">Ops</span>
+        </div>
         <span class="brand-subtitle" id="brandSubtitle">PT Bali Towerindo Sentra Tbk — Operations</span>
       </div>
     </div>
@@ -674,16 +681,22 @@
         </button>
       </div>
 
-      <!-- HERO EMPTY STATE (Clean, Minimalist, No Clutter) -->
+      <!-- HERO EMPTY STATE (Clean, Modern SaaS Landing Page Feel) -->
       <div class="gemini-hero-empty" id="geminiHeroEmpty">
-        <div class="hero-sparkle-icon">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="4 7 4 4 20 4 20 7"></polyline>
-            <line x1="9" y1="20" x2="15" y2="20"></line>
-            <line x1="12" y1="4" x2="12" y2="20"></line>
+        <div class="hero-live-pill">
+          <span class="pulse-dot"></span>
+          <span>PT BALI TOWERINDO SENTRA TBK &bull; ENTERPRISE OPERATIONS</span>
+        </div>
+        <div class="hero-sparkle-icon" title="PT Bali Towerindo Sentra Tbk">
+          <!-- Official Bali Tower Signal Wave & Antenna Vector Mark -->
+          <svg class="hero-balitower-svg" width="46" height="46" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path class="wave-arc arc-outer" d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+            <path class="wave-arc arc-mid" d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+            <path class="wave-arc arc-inner" d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+            <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
           </svg>
         </div>
-        <h1 class="hero-title" id="heroTitle">Bali Tower Operations Command Center</h1>
+        <h1 class="hero-title" id="heroTitle"><span style="color: #004B93;">Bali</span><span style="color: #F26F21;">Tower</span> Operations Center</h1>
         <p class="hero-subtitle" id="heroSubtitle">Pusat komando terpadu PT Bali Towerindo Sentra Tbk. Analisis persediaan material tower/FO, monitoring absensi GPS & jam lembur teknisi, atau rekapitulasi laporan keuangan & invoice operator.</p>
       </div>
 

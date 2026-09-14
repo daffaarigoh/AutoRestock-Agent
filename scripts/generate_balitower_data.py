@@ -264,6 +264,8 @@ po_records = [
 df_po = pd.DataFrame(po_records, columns=[
     "po_id", "po_number", "supplier_id", "item_id", "order_quantity", "unit_price", "total_amount", "status", "order_date", "expected_delivery", "actual_delivery", "warehouse_id"
 ])
+df_po["pr_number"] = None
+df_po["pr_number"] = df_po["pr_number"].astype("string")
 df_po.to_csv(INV_DIR / "purchase_orders.csv", index=False)
 
 

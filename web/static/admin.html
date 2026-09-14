@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - AutoRestock V2</title>
+  <title>BaliTower Ops - Admin Console</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -281,14 +281,15 @@
     }
 
     .sidebar-nav-item.active, .tab-btn.active {
-      background: #EFF6FF;
-      color: #2563EB;
+      background: var(--primary-light);
+      color: var(--primary);
       font-weight: 700;
       box-shadow: none;
+      border-left: 3px solid var(--primary);
     }
 
     .sidebar-nav-item.active .nav-icon, .tab-btn.active .nav-icon {
-      color: #2563EB;
+      color: var(--primary);
     }
 
     .nav-icon {
@@ -399,14 +400,15 @@
     .topbar-brand .brand-logo {
       width: 34px;
       height: 34px;
-      background: linear-gradient(135deg, #0A4D9C 0%, #083D7C 100%);
-      border-radius: 8px;
+      background: #FFFFFF;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #FFFFFF;
-      box-shadow: 0 2px 6px rgba(10, 77, 156, 0.28);
+      box-shadow: 0 2px 6px rgba(0, 75, 147, 0.08);
       flex-shrink: 0;
+      transition: all 0.2s ease;
     }
 
     .topbar-brand .brand-info {
@@ -414,12 +416,45 @@
       flex-direction: column;
     }
 
-    .topbar-brand .brand-title {
-      font-size: 15px;
+    /* Official Bali Tower Wordmark */
+    .bt-brand-wordmark {
+      display: inline-flex;
+      align-items: baseline;
+      font-family: var(--font-main);
       font-weight: 800;
-      color: var(--text-main);
+      font-size: 16px;
       letter-spacing: -0.02em;
-      line-height: 1.15;
+      line-height: 1;
+    }
+
+    .bt-word-bali {
+      color: #004B93;
+    }
+
+    .bt-word-tower-box {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .bt-word-waves {
+      position: absolute;
+      top: -8px;
+      left: 0.5px;
+      width: 13.5px;
+      height: 8px;
+      pointer-events: none;
+    }
+
+    .bt-word-waves svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .bt-word-tower {
+      color: #F26F21;
     }
 
     .topbar-brand .brand-subtitle {
@@ -428,7 +463,7 @@
       color: var(--text-muted);
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-top: 1px;
+      margin-top: 2px;
     }
 
     .topbar-breadcrumb-wrap {
@@ -1657,14 +1692,21 @@
 
         <div class="topbar-brand">
           <div class="brand-logo">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
+            <!-- Official Bali Tower Signal Wave Logo -->
+            <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+              <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
             </svg>
           </div>
           <div class="brand-info">
-            <div class="brand-title"><span style="color: var(--primary);">Auto</span><span style="color: var(--accent-orange);">Restock</span></div>
+            <div class="brand-title">
+              <span class="bt-brand-wordmark">
+                <span class="bt-word-bali">bali</span><span class="bt-word-tower-box"><span class="bt-word-waves"><svg viewBox="0 0 16 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 8C4 3.5 12 3.5 14.5 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M4 8C5.5 5 10.5 5 12 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M6.5 8C7.2 6.5 8.8 6.5 9.5 8" stroke="#004B93" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="bt-word-tower">tower</span></span>
+              </span>
+              <span style="font-weight: 800; color: #004B93; font-size: 10px; background: #EFF6FF; border: 1px solid #BFDBFE; padding: 1px 6px; border-radius: 4px; margin-left: 6px;">Ops</span>
+            </div>
             <div class="brand-subtitle">ADMIN CONSOLE</div>
           </div>
         </div>
@@ -1929,7 +1971,7 @@
               </svg>
               <span>User Accounts & Access Control</span>
             </h2>
-            <p class="card-subtitle" style="margin-bottom: 0;">All registered tenant accounts with access to the AutoRestock enterprise system.</p>
+            <p class="card-subtitle" style="margin-bottom: 0;">All registered tenant accounts with access to the BaliTower Ops enterprise system.</p>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-secondary" onclick="loadUsersDatabase()">
@@ -2098,7 +2140,7 @@
               <span>Help Center & Operations Documentation</span>
             </h2>
             <p class="card-subtitle" style="margin-top: 8px; line-height: 1.6; color: #475569; max-width: 960px;">
-              Technical and operational documentation for AutoRestock-Agent: multi-tenant architecture, autonomous workflow authoring, agent tools catalog, and prompt repository.
+              Technical and operational documentation for BaliTower Ops: multi-tenant architecture, autonomous workflow authoring, agent tools catalog, and prompt repository.
             </p>
           </div>
         </div>
@@ -2121,14 +2163,31 @@
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            <span>3. AI Agent Tools Architecture</span>
+              Technical and operational documentation for BaliTower Ops: multi-tenant architecture, autonomous workflow authoring, agent tools catalog, and prompt repository.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="badge-admin" style="background: #EBF3FC; color: #0A4D9C; border-color: #BAD6F7;">LIVE DOCS</span>
+          </div>
+        </div>
+
+        <!-- Help Sub-Navigation Tabs (Clean Scrollable Pills) -->
+        <div class="help-subnav-container">
+          <button class="help-subnav-pill active" onclick="switchAdminHelpTab('database', this)">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+            <span>1. Multi-Tenant Database</span>
           </button>
-          <button class="help-subnav-btn" id="helpNavBtnFlows" onclick="switchAdminHelpSection('flows')">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
-            </svg>
-            <span>4. Workflow Catalog & Prompt Examples</span>
+          <button class="help-subnav-pill" onclick="switchAdminHelpTab('workflows', this)">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            <span>2. Authoring Workflows</span>
+          </button>
+          <button class="help-subnav-pill" onclick="switchAdminHelpTab('tools', this)">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span>3. Agent Tools Ecosystem</span>
+          </button>
+          <button class="help-subnav-pill" onclick="switchAdminHelpTab('prompts', this)">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+            <span>4. Prompt Architecture</span>
           </button>
         </div>
       </div>
@@ -2145,7 +2204,7 @@
               <span>Multi-Tenant Database Architecture & Analytics Storage</span>
             </div>
             <div class="doc-hero-desc">
-              Sistem AutoRestock-Agent menggunakan basis data tertanam DuckDB (lokasi: <code style="font-family: var(--font-mono); font-weight: 600; color: #1E40AF;">data/balitower/inventory.duckdb</code>) untuk memproses mutasi inventaris, SDM, dan keuangan secara cepat. Seluruh data dipartisi secara logis sesuai hak akses divisi (*tenant isolation*).
+              Sistem BaliTower Ops menggunakan basis data tertanam DuckDB (lokasi: <code style="font-family: var(--font-mono); font-weight: 600; color: #1E40AF;">data/balitower/inventory.duckdb</code>) untuk memproses mutasi inventaris, SDM, dan keuangan secara cepat. Seluruh data dipartisi secara logis sesuai hak akses divisi (*tenant isolation*).
             </div>
           </div>
           <button class="doc-shortcut-btn" onclick="switchAdminTab('users')">
@@ -3044,7 +3103,7 @@
             id: 'WF-ALL-02',
             name: 'Informasi Sistem & Status Layanan',
             desc: 'Ringkasan status operasional server, versi aplikasi, DuckDB, dan koneksi AI gateway.',
-            instruction: 'Cek status operasional seluruh modul sistem AutoRestock-Agent.',
+            instruction: 'Cek status operasional seluruh modul sistem BaliTower Ops.',
             examples: [
               'Cek status kesehatan seluruh modul sistem, server API, dan koneksi AI gateway',
               'Tampilkan status server dan koneksi database'

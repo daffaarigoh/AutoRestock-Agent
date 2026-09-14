@@ -88,19 +88,20 @@ def _sync_workflows_to_json(conn):
 
 
 def _sync_workflows_from_json_if_empty(conn):
-    """If workflows table is empty on startup, populate from data/balitower/workflows.json."""
+    """Populate workflows from data/balitower/workflows.json if table is empty or missing specific workflows."""
     try:
-        cnt = conn.execute("SELECT COUNT(*) FROM workflows;").fetchone()[0]
-        if cnt == 0 and WORKFLOWS_JSON_PATH.exists():
+        if WORKFLOWS_JSON_PATH.exists():
             with open(WORKFLOWS_JSON_PATH, "r", encoding="utf-8") as f:
                 workflows = json.load(f)
+            existing_ids = set(r[0] for r in conn.execute("SELECT id FROM workflows;").fetchall())
             for wf in workflows:
-                compiled_str = json.dumps(wf["compiled_json"]) if isinstance(wf.get("compiled_json"), dict) else str(wf.get("compiled_json", "{}"))
-                ex_prompts_str = json.dumps(wf.get("example_prompts", []), ensure_ascii=False)
-                conn.execute(
-                    "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [wf["id"], wf["name"], wf.get("description", ""), wf.get("business_instruction", ""), compiled_str, wf.get("tenant_id", "ALL"), ex_prompts_str]
-                )
+                if wf["id"] not in existing_ids:
+                    compiled_str = json.dumps(wf["compiled_json"]) if isinstance(wf.get("compiled_json"), dict) else str(wf.get("compiled_json", "{}"))
+                    ex_prompts_str = json.dumps(wf.get("example_prompts", []), ensure_ascii=False)
+                    conn.execute(
+                        "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        [wf["id"], wf["name"], wf.get("description", ""), wf.get("business_instruction", ""), compiled_str, wf.get("tenant_id", "ALL"), ex_prompts_str]
+                    )
     except Exception as e:
         pass
 

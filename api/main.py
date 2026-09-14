@@ -18,7 +18,7 @@ from api.routers.auth_routes import router as auth_router
 from api.routers.balitower_routes import router as balitower_router
 from api.routers.stream_routes import router as stream_router
 from core.config import settings
-from docgen.pdf_generator import pdf_generator
+from docgen.compiler import generate_pr_pdf
 from mcp_server.server import mcp
 
 app = FastAPI(
@@ -48,10 +48,6 @@ STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
 
 
-SAMPLES_DIR = WORKSPACE_DIR / "data" / "samples"
-SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/samples", StaticFiles(directory=str(SAMPLES_DIR)), name="samples")
-
 
 # Include API routers
 app.include_router(balitower_router)
@@ -79,7 +75,7 @@ async def startup_event():
     sample_pr = PR_STORE.get("PR-2026-0819-001")
     if sample_pr:
         try:
-            pdf_generator.generate_purchase_requisition_pdf(sample_pr, output_filename="PR_2026_0819_001.pdf")
+            generate_pr_pdf(sample_pr, output_path=DOCS_DIR / "PR_2026_0819_001.pdf")
         except Exception:
             pass
 

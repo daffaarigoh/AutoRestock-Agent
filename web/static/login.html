@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In - AutoRestock | Bali Tower</title>
+  <title>Sign In - BaliTower Ops | PT Bali Towerindo Sentra Tbk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -144,40 +144,68 @@
     }
 
     .brand-logo {
-      width: 52px;
-      height: 52px;
-      background: linear-gradient(135deg, #0A4D9C 0%, #083D7C 100%);
-      border-radius: 12px;
+      width: 48px;
+      height: 48px;
+      background: #FFFFFF;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #FFFFFF;
-      box-shadow: 0 6px 14px rgba(10, 77, 156, 0.32);
+      box-shadow: 0 4px 14px rgba(0, 75, 147, 0.1);
       position: relative;
     }
 
     .brand-logo-signal {
       position: absolute;
-      top: -4px;
-      right: -4px;
-      width: 12px;
-      height: 12px;
-      background: var(--accent-orange);
+      top: -3px;
+      right: -3px;
+      width: 10px;
+      height: 10px;
+      background: #10B981;
       border: 2px solid #FFFFFF;
       border-radius: 50%;
     }
 
-    .brand-title {
-      font-size: 22px;
+    /* Official Bali Tower Wordmark */
+    .bt-brand-wordmark {
+      display: inline-flex;
+      align-items: baseline;
+      font-family: var(--font-main);
       font-weight: 800;
-      color: var(--text-main);
+      font-size: 22px;
       letter-spacing: -0.02em;
+      line-height: 1;
     }
-    .brand-title .brand-blue {
-      color: var(--primary);
+
+    .bt-word-bali {
+      color: #004B93;
     }
-    .brand-title .brand-orange {
-      color: var(--accent-orange);
+
+    .bt-word-tower-box {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .bt-word-waves {
+      position: absolute;
+      top: -9.5px;
+      left: 0.5px;
+      width: 16px;
+      height: 9px;
+      pointer-events: none;
+    }
+
+    .bt-word-waves svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .bt-word-tower {
+      color: #F26F21;
     }
 
     .brand-subtitle {
@@ -289,37 +317,6 @@
       text-align: center;
     }
 
-    /* Clean Card Footer with Quick Hints */
-    .login-footer-info {
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid #F1F5F9;
-      text-align: center;
-    }
-
-    .tenant-hints {
-      font-size: 11px;
-      color: #64748B;
-      font-weight: 500;
-      line-height: 1.5;
-    }
-    .tenant-hints code {
-      font-family: var(--font-mono);
-      background: #F1F5F9;
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: #1E293B;
-      font-weight: 600;
-      font-size: 10.5px;
-    }
-
-    .security-notice {
-      margin-top: 8px;
-      font-size: 10px;
-      color: #94A3B8;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
   </style>
 </head>
 <body>
@@ -341,15 +338,23 @@
     <div class="brand-header">
       <div class="brand-logo-wrap">
         <div class="brand-logo">
-          <!-- Telecom Tower / Network Mast SVG -->
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v20M7 7l10 10M17 7L7 17M4 12h16M2 20h20"/>
+          <!-- Official Bali Tower Signal Wave Logo -->
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+            <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
           </svg>
         </div>
         <div class="brand-logo-signal"></div>
       </div>
-      <h1 class="brand-title"><span class="brand-blue">Auto</span><span class="brand-orange">Restock</span></h1>
-      <p class="brand-subtitle">PT Bali Towerindo Sentra Tbk &mdash; Operations Console</p>
+      <h1 class="brand-title">
+        <span class="bt-brand-wordmark">
+          <span class="bt-word-bali">bali</span><span class="bt-word-tower-box"><span class="bt-word-waves"><svg viewBox="0 0 16 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 8C4 3.5 12 3.5 14.5 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M4 8C5.5 5 10.5 5 12 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M6.5 8C7.2 6.5 8.8 6.5 9.5 8" stroke="#004B93" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="bt-word-tower">tower</span></span>
+        </span>
+        <span style="font-weight: 800; color: #004B93; font-size: 11px; background: #EFF6FF; border: 1px solid #BFDBFE; padding: 2px 7px; border-radius: 6px; margin-left: 6px; vertical-align: middle;">Ops</span>
+      </h1>
+      <p class="brand-subtitle">PT Bali Towerindo Sentra Tbk &mdash; Enterprise Operations</p>
     </div>
     
     <form id="loginForm">
@@ -386,15 +391,6 @@
 
       <div class="error-box" id="errorMsg"></div>
     </form>
-
-    <div class="login-footer-info">
-      <div class="tenant-hints">
-        Access: <code>userA</code> (Logistics) &middot; <code>userB</code> (Field/HR) &middot; <code>userC</code> (Finance) &middot; <code>admin</code>
-      </div>
-      <div class="security-notice">
-        Authorized Personnel Only &bull; Bali Tower Infrastructure
-      </div>
-    </div>
   </div>
 
   <script>
