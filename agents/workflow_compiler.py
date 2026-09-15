@@ -219,8 +219,7 @@ Do not output any markdown formatting or extra commentary outside the JSON.
             ]
         elif any(k in text_lower for k in ["penerimaan", "kedatangan", "tiba", "gudang", "po-"]):
             return [
-                "PO-2026-006 sudah sampai di gudang Bandung, tolong catat penerimaan barang",
-                "Konfirmasi kedatangan material pesanan PO di gudang dan tambahkan ke saldo fisik"
+                "PO-2026-001 sudah sampai di gudang, tolong catat penerimaan barangnya"
             ]
         elif any(k in text_lower for k in ["lacak", "tracking", "status po", "in transit"]):
             return [

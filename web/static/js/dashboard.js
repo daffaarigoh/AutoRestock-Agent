@@ -3242,8 +3242,7 @@ const FLOW_HELP_REGISTRY = {
         name: 'Penerimaan Barang Fisik PO & Update Saldo',
         desc: 'Verifikasi kedatangan barang PO di gudang regional dan sinkronisasi penambahan stok fisik.',
         examples: [
-          'PO-2026-006 sudah sampai di gudang Bandung, tolong catat penerimaan barang',
-          'Konfirmasi kedatangan material PO-2026-001 di gudang Jakarta dan tambahkan ke saldo fisik'
+          'PO-2026-001 sudah sampai di gudang, tolong catat penerimaan barangnya'
         ]
       },
       {
