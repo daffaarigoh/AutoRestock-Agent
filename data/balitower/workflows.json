@@ -210,8 +210,7 @@
     },
     "tenant_id": "INVENTORY",
     "example_prompts": [
-      "Periksa seluruh stok material menara yang kritis dan buat draft PR pengadaan barang",
-      "Cek material fiber optic di bawah safety stock lalu kirim email persetujuan ke manajer"
+      "Periksa seluruh stok material yang menipis/kritis dan buat draft PR pengadaan barang dan kirimkan ke email .....@gmail.com"
     ]
   },
   {

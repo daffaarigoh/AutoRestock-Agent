@@ -3234,8 +3234,7 @@ const FLOW_HELP_REGISTRY = {
         name: 'Pipeline Pengadaan Material PR-to-PO',
         desc: 'Inspeksi stok di bawah batas aman, kalkulasi reorder otomatis, dan kompilasi PR PDF.',
         examples: [
-          'Periksa seluruh stok material menara yang kritis dan buat draft PR pengadaan barang',
-          'Cek material fiber optic di bawah safety stock lalu kirim email persetujuan ke manajer'
+          'Periksa seluruh stok material yang menipis/kritis dan buat draft PR pengadaan barang dan kirimkan ke email .....@gmail.com'
         ]
       },
       {
