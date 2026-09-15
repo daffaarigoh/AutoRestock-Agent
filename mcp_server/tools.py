@@ -28,11 +28,14 @@ def get_low_stock_items(tenant_id: str = "ALL") -> list[dict[str, Any]]:
     """
     from database.schema_adapters import TenantSchemaAdapter
     items = TenantSchemaAdapter.get_low_stock_items(tenant_id=tenant_id)
-    if items:
+    if items is not None:
         return items
         
     conn = get_db_connection(read_only=True)
     try:
+        existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        if "items" not in existing_tables:
+            return []
         query = """
             SELECT 
                 item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit
@@ -68,11 +71,14 @@ def get_specific_item_stock(item_name: str, tenant_id: str = "ALL") -> list[dict
     """
     from database.schema_adapters import TenantSchemaAdapter
     matched = TenantSchemaAdapter.get_specific_item_stock(item_name, tenant_id=tenant_id)
-    if matched:
+    if matched is not None:
         return matched
 
     conn = get_db_connection(read_only=True)
     try:
+        existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        if "items" not in existing_tables:
+            return []
         query = """
             SELECT 
                 item_id, name, category, current_stock, min_threshold, max_threshold, avg_daily_usage, lead_time_days, unit
@@ -171,15 +177,28 @@ def get_all_vendors_for_item(item_id: str, tenant_id: str = "ALL") -> list[dict[
     """Get all available vendors offering a specific item."""
     conn = get_db_connection(read_only=True)
     try:
-        query = """
-            SELECT vendor_id, name, item_id, unit_price, lead_time_days, rating
-            FROM vendors
-            WHERE item_id = ? AND (tenant_id = ? OR ? = 'ALL')
-            ORDER BY unit_price ASC, lead_time_days ASC;
-        """
-        rows = conn.execute(query, [item_id, tenant_id, tenant_id]).fetchall()
-        columns = [desc[0] for desc in conn.description]
-        return [dict(zip(columns, r)) for r in rows]
+        existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        if "vendors" in existing_tables:
+            query = """
+                SELECT vendor_id, name, item_id, unit_price, lead_time_days, rating
+                FROM vendors
+                WHERE item_id = ? AND (tenant_id = ? OR ? = 'ALL')
+                ORDER BY unit_price ASC, lead_time_days ASC;
+            """
+            rows = conn.execute(query, [item_id, tenant_id, tenant_id]).fetchall()
+            columns = [desc[0] for desc in conn.description]
+            return [dict(zip(columns, r)) for r in rows]
+        elif "suppliers" in existing_tables and "inventory_items" in existing_tables:
+            query = """
+                SELECT s.supplier_id AS vendor_id, s.supplier_name AS name, i.item_id, i.unit_price, i.lead_time_days, s.rating
+                FROM suppliers s
+                JOIN inventory_items i ON s.supplier_id = i.supplier_id
+                WHERE i.item_id = ?;
+            """
+            rows = conn.execute(query, [item_id]).fetchall()
+            columns = [desc[0] for desc in conn.description]
+            return [dict(zip(columns, r)) for r in rows]
+        return []
     finally:
         conn.close()
 
@@ -188,18 +207,25 @@ def get_all_inventory_items(tenant_id: str = "ALL") -> list[dict[str, Any]]:
     """Retrieve all inventory items from DuckDB, filtered by tenant_id via TenantSchemaAdapter."""
     from database.schema_adapters import TenantSchemaAdapter
     items = TenantSchemaAdapter.get_all_inventory_items(tenant_id=tenant_id)
-    if items:
+    if items is not None:
         return items
 
     conn = get_db_connection(read_only=True)
     try:
-        query = """
+        existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        if "items" not in existing_tables:
+            return []
+            
+        join_clause = "LEFT JOIN vendors v ON i.item_id = v.item_id" if "vendors" in existing_tables else ""
+        price_col = "COALESCE(MIN(v.unit_price), 0.0) AS unit_price" if "vendors" in existing_tables else "0.0 AS unit_price"
+        
+        query = f"""
             SELECT 
                 i.item_id, i.name, i.category, i.current_stock, i.min_threshold, i.max_threshold,
                 i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id,
-                COALESCE(MIN(v.unit_price), 0.0) AS unit_price
+                {price_col}
             FROM items i
-            LEFT JOIN vendors v ON i.item_id = v.item_id
+            {join_clause}
             WHERE i.tenant_id = ? OR ? = 'ALL'
             GROUP BY i.item_id, i.name, i.category, i.current_stock, i.min_threshold, i.max_threshold,
                      i.avg_daily_usage, i.lead_time_days, i.unit, i.tenant_id

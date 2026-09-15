@@ -342,11 +342,20 @@ def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
             vendor_join = ""
             vendor_col = "'Vendor Terdaftar' as vendor_name"
 
+        item_join = "LEFT JOIN items i ON o.item_id = i.item_id"
+        if "inventory_items" in existing_tables:
+            item_join += " LEFT JOIN inventory_items bt ON o.item_id = bt.item_id"
+            item_name_col = "COALESCE(i.name, bt.item_name, 'Material ' || o.item_id) as item_name"
+            item_unit_col = "COALESCE(i.unit, bt.unit, 'pcs') as unit"
+        else:
+            item_name_col = "COALESCE(i.name, 'Material ' || o.item_id) as item_name"
+            item_unit_col = "COALESCE(i.unit, 'pcs') as unit"
+
         order_rows = conn.execute(f"""
             SELECT o.pr_number, o.item_id, o.vendor_id, o.quantity, o.unit_price, o.total_price, o.status, o.tenant_id,
-                   i.name as item_name, i.unit, {vendor_col}
+                   {item_name_col}, {item_unit_col}, {vendor_col}
             FROM orders o
-            LEFT JOIN items i ON o.item_id = i.item_id
+            {item_join}
             {vendor_join}
             WHERE o.pr_number = ?;
         """, [pr_number]).fetchall()

@@ -1,3 +1,7 @@
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
 /* ==========================================================================
    AutoRestock-V2 Enterprise Minimalist Design System
    Clean, Elegant Business SaaS with Left-Sided Resizable Catalog & Polished UI
@@ -171,7 +175,7 @@ body {
   letter-spacing: -0.02em;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
 }
 
 /* Official Bali Tower Wordmark */
@@ -215,15 +219,18 @@ body {
   color: #F26F21;
 }
 
-.brand-badge {
-  font-size: 10px;
-  background: #EFF6FF;
-  color: #004B93;
-  border: 1px solid #BFDBFE;
-  padding: 1px 7px;
-  border-radius: 6px;
+.bt-word-ops, .brand-badge {
+  font-family: var(--font-main);
+  font-size: 17px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  color: #0F172A;
+  margin-left: 4.5px;
+  letter-spacing: -0.02em;
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: inline-block;
+  line-height: 1;
 }
 
 .brand-subtitle {
@@ -727,10 +734,56 @@ body.sidebar-collapsed .sidebar-resizer {
   height: 100%;
   position: relative;
   overflow: hidden;
-  background-color: #F6F9FD;
+  background-color: #F8FAFC;
   background-image: 
-    radial-gradient(at 50% 0%, rgba(0, 75, 147, 0.045) 0px, transparent 65%),
-    radial-gradient(at 100% 100%, rgba(242, 111, 33, 0.02) 0px, transparent 50%);
+    /* Telco Micro Dot Grid Texture */
+    radial-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    /* Fluid Breathing Aurora Glow: Top-Left (Deep Corporate Blue) */
+    radial-gradient(circle at 14% 16%, rgba(0, 75, 147, 0.075) 0%, transparent 48%),
+    /* Fluid Breathing Aurora Glow: Bottom-Right (Warm Amber-Orange) */
+    radial-gradient(circle at 86% 84%, rgba(242, 111, 33, 0.065) 0%, transparent 46%),
+    /* Subtle Cyan/Sky Soft Core */
+    radial-gradient(circle at 50% 12%, rgba(2, 132, 199, 0.04) 0%, transparent 40%);
+  background-size: 28px 28px, 115% 115%, 115% 115%, 100% 100%;
+  animation: auroraBreathing 22s ease-in-out infinite alternate;
+}
+
+@keyframes auroraBreathing {
+  0% {
+    background-position: 0 0, 0% 0%, 100% 100%, 50% 12%;
+  }
+  50% {
+    background-position: 0 0, 6% 8%, 94% 92%, 52% 16%;
+  }
+  100% {
+    background-position: 0 0, -4% 10%, 104% 90%, 48% 10%;
+  }
+}
+
+/* Ambient Cursor Spotlight Layer (Raycast / Linear Smooth Spring Lag) */
+.ambient-spotlight-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.95;
+  background: radial-gradient(
+    620px circle at var(--spot-x, 50%) var(--spot-y, 45%),
+    rgba(0, 75, 147, 0.08) 0%,
+    rgba(242, 111, 33, 0.045) 36%,
+    rgba(2, 132, 199, 0.02) 58%,
+    transparent 78%
+  );
+  transition: opacity 0.4s ease;
+}
+
+/* Elevate foreground interactive components above spotlight */
+.gemini-hero-empty,
+.chat-feed-wrapper,
+.chat-input-deck,
+.chat-top-bar {
+  position: relative;
+  z-index: 2;
 }
 
 /* Chat Top Bar */
@@ -810,17 +863,76 @@ body.sidebar-collapsed .sidebar-resizer {
   50% { transform: scale(1.2); opacity: 0.7; }
 }
 
+.hero-logo-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+/* Telco Micro Signal Waves emanating from the center logo */
+.signal-wave-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.signal-wave-pulse.wave-1 {
+  width: 110px;
+  height: 110px;
+  border: 1.5px solid rgba(0, 75, 147, 0.16);
+  animation: telcoWavePulse 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.signal-wave-pulse.wave-2 {
+  width: 155px;
+  height: 155px;
+  border: 1.5px dashed rgba(242, 111, 33, 0.14);
+  animation: telcoWavePulse 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite 1.4s;
+}
+
+.signal-wave-pulse.wave-3 {
+  width: 205px;
+  height: 205px;
+  border: 1px solid rgba(0, 75, 147, 0.08);
+  animation: telcoWavePulse 4.5s cubic-bezier(0.16, 1, 0.3, 1) infinite 2.8s;
+}
+
+@keyframes telcoWavePulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0;
+  }
+}
+
 .hero-sparkle-icon {
-  margin-bottom: 16px;
-  animation: heroFloat 3.5s infinite ease-in-out;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 0;
+  animation: heroFloat 4s infinite ease-in-out;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: #FFFFFF;
-  padding: 14px;
-  border-radius: 20px;
-  border: 1.5px solid #E2E8F0;
-  box-shadow: 0 10px 25px -5px rgba(0, 75, 147, 0.10), 0 4px 12px -2px rgba(242, 111, 33, 0.08);
+  padding: 15px;
+  border-radius: 22px;
+  border: 1.5px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 
+    0 12px 30px -6px rgba(0, 75, 147, 0.12),
+    0 4px 14px -2px rgba(242, 111, 33, 0.09);
+  backdrop-filter: blur(8px);
 }
 
 .hero-balitower-svg {
@@ -846,7 +958,7 @@ body.sidebar-collapsed .sidebar-resizer {
 
 @keyframes heroFloat {
   0%, 100% { transform: translateY(0px) scale(1); }
-  50% { transform: translateY(-5px) scale(1.02); box-shadow: 0 14px 28px -5px rgba(0, 75, 147, 0.16); }
+  50% { transform: translateY(-5px) scale(1.02); box-shadow: 0 16px 32px -6px rgba(0, 75, 147, 0.18); }
 }
 
 .hero-title {
@@ -882,11 +994,12 @@ body.sidebar-collapsed .sidebar-resizer {
 
 .gemini-chat-container.is-empty-state .chat-input-deck {
   position: relative;
-  max-width: min(94%, 1040px);
+  max-width: 900px;
   width: 100%;
   padding: 16px 20px 0 20px;
   background: transparent;
   border-top: none;
+  margin: 0 auto;
 }
 
 .gemini-chat-container.is-empty-state .chat-top-bar {
@@ -902,37 +1015,50 @@ body.sidebar-collapsed .sidebar-resizer {
   padding: 12px 0 20px 0;
   display: flex;
   justify-content: center;
+  width: 100%;
 }
 
 .chat-feed {
   width: 100%;
-  max-width: 880px;
-  padding: 8px 24px 28px 24px;
+  max-width: 900px;
+  padding: 8px 20px 28px 20px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  box-sizing: border-box;
 }
 
-/* User Message Bubble - Right Aligned */
+/* User Message Bubble - Right Aligned with Motion */
 .user-query-bubble {
   align-self: flex-end;
   margin-left: auto;
   margin-right: 0;
-  max-width: 72%;
+  max-width: 74%;
   width: fit-content;
   background: linear-gradient(135deg, #004B93 0%, #00366D 100%);
   color: #FFFFFF !important;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.55;
+  line-height: 1.6;
   padding: 12px 18px;
   border-radius: 18px 18px 4px 18px;
   box-shadow: 0 4px 14px -2px rgba(0, 75, 147, 0.28), 0 2px 6px -1px rgba(0, 75, 147, 0.16);
   word-break: break-word;
-  animation: chatSlideRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: userBubblePop 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+@keyframes userBubblePop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .user-query-bubble .bubble-meta {
@@ -1185,26 +1311,29 @@ body.sidebar-collapsed .sidebar-resizer {
   border: 1px solid var(--danger-border);
 }
 
-/* Bottom Chat Input Deck */
+/* Bottom Chat Input Deck - Aligned Perfectly with Chat Feed */
 .chat-input-deck {
   width: 100%;
   display: flex;
   justify-content: center;
   background: #F8FAFC;
-  padding: 8px 20px 14px 20px;
+  padding: 8px 0 16px 0;
   z-index: 40;
   flex-shrink: 0;
 }
 
 .chat-input-inner {
   width: 100%;
-  max-width: min(94%, 1160px);
+  max-width: 900px;
+  padding: 0 20px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .input-bar-container {
+  position: relative;
   display: flex;
   align-items: center;
   background: var(--bg-surface);
@@ -1224,6 +1353,66 @@ body.sidebar-collapsed .sidebar-resizer {
   align-items: flex-end;
   border-radius: 18px;
   padding: 10px 10px 10px 18px;
+}
+
+/* Claude-style Dynamic Animated Prompt Typewriter Overlay */
+.prompt-typewriter-overlay {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 88px; /* space for send/stop button */
+  pointer-events: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  color: #94A3B8;
+  font-family: var(--font-main);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s ease;
+  z-index: 1;
+}
+
+.input-bar-container.is-multiline .prompt-typewriter-overlay {
+  top: 14px;
+  transform: none;
+}
+
+.prompt-typewriter-overlay.is-hidden,
+.input-bar-container.has-value .prompt-typewriter-overlay {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.typewriter-text {
+  color: #94A3B8;
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.typewriter-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.15em;
+  background: #F26F21;
+  margin-left: 3px;
+  vertical-align: -2px;
+  border-radius: 1px;
+  box-shadow: 0 0 6px rgba(242, 111, 33, 0.5);
+  animation: promptCursorBlink 0.75s ease-in-out infinite;
+}
+
+@keyframes promptCursorBlink {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0; transform: scaleY(0.85); }
 }
 
 .prompt-textarea {
@@ -1273,56 +1462,44 @@ body.sidebar-collapsed .sidebar-resizer {
   margin-bottom: 2px;
 }
 
-/* Stop/Cancel State (Gemini Style) */
+/* Stop/Cancel State - Clean Modern Chat Style (No text, Icon only) */
 .btn-send.btn-stop-state {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 !important;
+  border-radius: 50% !important;
   background: #0F172A !important;
-  color: #F8FAFC !important;
+  color: #FFFFFF !important;
   border: 1.5px solid #334155 !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25) !important;
   cursor: pointer !important;
   opacity: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .btn-send.btn-stop-state:hover {
   background: #1E293B !important;
   border-color: #64748B !important;
-  color: #FFFFFF !important;
+  transform: scale(1.06);
 }
 
 .btn-send.btn-stop-state:active {
-  transform: scale(0.96);
+  transform: scale(0.92);
 }
 
 .btn-send.btn-stop-state .stop-icon {
   flex-shrink: 0;
-  animation: pulseStopIcon 1.6s infinite ease-in-out;
-}
-
-@keyframes pulseStopIcon {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.88); opacity: 0.75; }
+  width: 12px;
+  height: 12px;
+  fill: #FFFFFF;
 }
 
 .btn-cancel-inline {
-  background: #FFFFFF;
-  border: 1px solid #CBD5E1;
-  border-radius: 12px;
-  color: #64748B;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-  margin-left: auto;
-}
-
-.btn-cancel-inline:hover {
-  background: #F1F5F9;
-  color: #0F172A;
-  border-color: #94A3B8;
+  display: none !important;
 }
 
 .stage-chip.stopped {
@@ -1756,19 +1933,51 @@ body.sidebar-collapsed .sidebar-resizer {
   50% { transform: scale(1.3); opacity: 1; }
 }
 
+/* Claude-style Stream Typing Cursor */
 .stream-cursor {
   display: inline-block;
-  width: 7px;
-  height: 14px;
-  background: #2563EB;
-  margin-left: 2px;
-  vertical-align: middle;
-  animation: blinkCursor 0.8s infinite;
+  width: 3px;
+  height: 1.15em;
+  background: #F26F21;
+  margin-left: 3px;
+  vertical-align: -2px;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(242, 111, 33, 0.6);
+  animation: claudeBlinkCursor 0.75s ease-in-out infinite;
 }
 
-@keyframes blinkCursor {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+@keyframes claudeBlinkCursor {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0.15; transform: scaleY(0.85); }
+}
+
+/* Claude-style smooth typography and token fade motion */
+.stream-text-slot {
+  font-family: var(--font-main);
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: #1E293B;
+  letter-spacing: -0.012em;
+}
+
+.stream-text-slot p {
+  margin-bottom: 12px;
+  animation: claudeTextFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stream-text-slot p:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes claudeTextFade {
+  from {
+    opacity: 0.4;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Clarification Prompt Box */

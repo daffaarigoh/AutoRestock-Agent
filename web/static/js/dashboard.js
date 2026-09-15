@@ -56,8 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initSidebarResizer();
   restoreUiCustomizations();
   restoreCopilotFeed();
-  applyTenantSecurityAndPersonalization();
   initPromptInputAutoResize();
+  initAmbientSpotlight();
+  applyTenantSecurityAndPersonalization();
   loadAllData();
   
   // Real-time synchronization (10s interval + instant refresh on window focus)
@@ -250,6 +251,50 @@ function clearCopilotFeed() {
   showToast("Activity history cleared", "info");
 }
 
+// --- Interactive Ambient Spotlight Controller (Linear / Raycast Style) ---
+function initAmbientSpotlight() {
+  const container = document.getElementById('geminiChatContainer');
+  const layer = document.getElementById('ambientSpotlightLayer');
+  if (!container || !layer) return;
+
+  let targetX = container.clientWidth * 0.5 || window.innerWidth * 0.5;
+  let targetY = container.clientHeight * 0.45 || window.innerHeight * 0.45;
+  let currentX = targetX;
+  let currentY = targetY;
+  let isMouseInside = false;
+
+  function onMouseMove(e) {
+    const rect = container.getBoundingClientRect();
+    targetX = e.clientX - rect.left;
+    targetY = e.clientY - rect.top;
+    isMouseInside = true;
+  }
+
+  function onMouseLeave() {
+    isMouseInside = false;
+    const rect = container.getBoundingClientRect();
+    targetX = rect.width * 0.5;
+    targetY = rect.height * 0.45;
+  }
+
+  function renderSpotlight() {
+    // Smooth spring lerp (linear interpolation) physics
+    const lerpSpeed = isMouseInside ? 0.085 : 0.035;
+    currentX += (targetX - currentX) * lerpSpeed;
+    currentY += (targetY - currentY) * lerpSpeed;
+
+    layer.style.setProperty('--spot-x', `${currentX.toFixed(1)}px`);
+    layer.style.setProperty('--spot-y', `${currentY.toFixed(1)}px`);
+
+    requestAnimationFrame(renderSpotlight);
+  }
+
+  container.addEventListener('mousemove', onMouseMove, { passive: true });
+  container.addEventListener('mouseleave', onMouseLeave, { passive: true });
+
+  requestAnimationFrame(renderSpotlight);
+}
+
 // --- Left Sidebar Controls ---
 function toggleDataSidebar() {
   const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
@@ -308,7 +353,7 @@ function applyTenantSecurityAndPersonalization() {
 
     if (heroTitle) heroTitle.textContent = 'Inventory & Logistics Command Center';
     if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel operasional terisolasi material menara telekomunikasi, kabel fiber optic, monitoring saldo gudang regional, serta alur pengadaan barang PT Bali Towerindo Sentra Tbk.`;
-    if (promptInput) promptInput.placeholder = 'Tanyakan stok material menara, catat penerimaan PO tiba (contoh: PO-2026-006 sudah sampai di Bandung), atau buat PR...';
+    if (promptInput) promptInput.placeholder = '';
     if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Inventory & Logistik Material Menara/FO (DuckDB Live Sync)';
 
     switchCanvasTab('canvas-inventory');
@@ -327,7 +372,7 @@ function applyTenantSecurityAndPersonalization() {
 
     if (heroTitle) heroTitle.textContent = 'HR & Field Workforce Command Center';
     if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel manajemen ketenagakerjaan teknisi lapangan, kualifikasi sertifikat K3 TKPK rigger, rekap jam lembur, dan pengajuan cuti PT Bali Towerindo Sentra Tbk.`;
-    if (promptInput) promptInput.placeholder = 'Ajukan cuti teknisi, cari personil bersertifikat K3 TKPK, atau cek lowongan kerja...';
+    if (promptInput) promptInput.placeholder = '';
     if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Human Resources & Field Operations';
 
     switchCanvasTab('canvas-hr');
@@ -346,7 +391,7 @@ function applyTenantSecurityAndPersonalization() {
 
     if (heroTitle) heroTitle.textContent = 'Finance & Telecom Billing Command Center';
     if (heroSubtitle) heroSubtitle.textContent = `Selamat datang, ${username}. Panel rekonsiliasi keuangan, penagihan invoice sewa menara ke operator telekomunikasi, kontrak MLA, sewa lahan site, dan utilitas listrik PT Bali Towerindo Sentra Tbk.`;
-    if (promptInput) promptInput.placeholder = 'Cek invoice jatuh tempo operator, rincian biaya PLN site, atau mutasi kas...';
+    if (promptInput) promptInput.placeholder = '';
     if (inputHint) inputHint.textContent = 'Akses Terisolasi: Divisi Finance, Billing & Accounting';
 
     switchCanvasTab('canvas-finance');
@@ -365,10 +410,15 @@ function applyTenantSecurityAndPersonalization() {
 
     if (heroTitle) heroTitle.textContent = 'Bali Tower Operations Command Center';
     if (heroSubtitle) heroSubtitle.textContent = 'Pusat komando terpadu PT Bali Towerindo Sentra Tbk. Akses komprehensif ke seluruh 18 basis data operasional: Inventaris Menara & FO, Ketenagakerjaan & K3 Lapangan, serta Keuangan & Billing Operator.';
-    if (promptInput) promptInput.placeholder = 'Ketik instruksi atau pertanyaan analisis operasional enterprise...';
+    if (promptInput) promptInput.placeholder = '';
     if (inputHint) inputHint.textContent = 'Hak Akses Administrator Enterprise: Terhubung ke seluruh 18 basis data operasional DuckDB';
 
     switchCanvasTab('canvas-inventory');
+  }
+
+  // Update Claude-style dynamic typewriter prompts
+  if (window.claudePromptTypewriter) {
+    window.claudePromptTypewriter.setTenant(tenant);
   }
 
   // Render tenant-specific example questions
@@ -1758,6 +1808,15 @@ function autoResizePromptInput() {
     } else {
       container.classList.remove('is-multiline');
     }
+    if (textarea.value && textarea.value.trim().length > 0) {
+      container.classList.add('has-value');
+    } else {
+      container.classList.remove('has-value');
+    }
+  }
+
+  if (window.claudePromptTypewriter) {
+    window.claudePromptTypewriter.updateVisibility();
   }
 }
 
@@ -1767,7 +1826,170 @@ function initPromptInputAutoResize() {
   textarea.addEventListener('input', autoResizePromptInput);
   textarea.addEventListener('paste', () => setTimeout(autoResizePromptInput, 0));
   textarea.addEventListener('focus', autoResizePromptInput);
+  textarea.addEventListener('blur', autoResizePromptInput);
   autoResizePromptInput();
+
+  // Initialize Claude-style typewriter controller
+  if (!window.claudePromptTypewriter) {
+    window.claudePromptTypewriter = new ClaudePromptTypewriter();
+  }
+}
+
+function handlePromptInputChange() {
+  autoResizePromptInput();
+  if (window.claudePromptTypewriter) {
+    window.claudePromptTypewriter.updateVisibility();
+  }
+}
+
+function handlePromptInputFocus() {
+  autoResizePromptInput();
+  if (window.claudePromptTypewriter) {
+    window.claudePromptTypewriter.updateVisibility();
+  }
+}
+
+function handlePromptInputBlur() {
+  autoResizePromptInput();
+  if (window.claudePromptTypewriter) {
+    window.claudePromptTypewriter.updateVisibility();
+  }
+}
+
+// --- Claude-Style Dynamic Rotating Prompt Typewriter ---
+function getTenantTypewriterPrompts(tenant) {
+  if (tenant === 'INVENTORY') {
+    return [
+      "What's on your mind? Tanyakan kebutuhan operasional...",
+      "Tanyakan stok material menara & kabel fiber optic...",
+      "Catat penerimaan PO tiba (contoh: PO-2026-006 sampai di Bandung)...",
+      "Buat draf Purchase Requisition (PR) untuk restock material menara...",
+      "Periksa safety stock material yang berada di bawah ambang batas...",
+      "Kirim dokumen resmi PR & PO format PDF ke email manajer logistik..."
+    ];
+  } else if (tenant === 'HR') {
+    return [
+      "What's on your mind? Tanyakan manajemen SDM & teknisi...",
+      "Ajukan permohonan cuti teknisi lapangan (cuti tahunan / sakit)...",
+      "Cari teknisi rigger bersertifikat K3 TKPK aktif...",
+      "Audit daftar pengajuan cuti yang masih pending persetujuan...",
+      "Cek absensi kehadiran dan jadwal lembur personil lapangan..."
+    ];
+  } else if (tenant === 'FINANCE') {
+    return [
+      "What's on your mind? Tanyakan billing & keuangan menara...",
+      "Cek daftar invoice sewa menara operator yang jatuh tempo...",
+      "Tampilkan rincian kontrak Master Lease Agreement (MLA) Indosat...",
+      "Audit biaya utilitas listrik PLN & sewa lahan site menara...",
+      "Kirim draf tagihan invoice perdana dan mutasi kas ke email finance..."
+    ];
+  } else {
+    return [
+      "What's on your mind? Tanyakan kebutuhan operasional...",
+      "Tanyakan stok material menara telekomunikasi & kabel fiber optic...",
+      "Catat penerimaan PO tiba di gudang regional...",
+      "Buat draf Purchase Requisition (PR) restock material menara...",
+      "Ajukan permohonan cuti teknisi atau cek invoice jatuh tempo..."
+    ];
+  }
+}
+
+class ClaudePromptTypewriter {
+  constructor() {
+    this.overlayEl = document.getElementById('promptTypewriterOverlay');
+    this.textEl = document.getElementById('typewriterText');
+    this.inputEl = document.getElementById('promptInput');
+    this.containerEl = document.getElementById('inputBarContainer');
+    this.prompts = [];
+    this.currentPromptIndex = 0;
+    this.charIndex = 0;
+    this.isDeleting = false;
+    this.timer = null;
+    this.typingSpeed = 38;
+    this.deletingSpeed = 20;
+    this.pauseDuration = 3200;
+    this.pauseAfterDelete = 400;
+
+    this.init();
+  }
+
+  init() {
+    if (!this.inputEl) return;
+
+    this.inputEl.addEventListener('input', () => this.updateVisibility());
+    this.inputEl.addEventListener('focus', () => this.updateVisibility());
+    this.inputEl.addEventListener('blur', () => this.updateVisibility());
+
+    const initialTenant = getEffectiveTenant();
+    window.activeTenant = initialTenant;
+    this.setTenant(initialTenant);
+  }
+
+  setTenant(tenant) {
+    const newPrompts = getTenantTypewriterPrompts(tenant);
+    this.prompts = newPrompts;
+    this.currentPromptIndex = 0;
+    this.charIndex = 0;
+    this.isDeleting = false;
+    if (this.timer) clearTimeout(this.timer);
+    this.tick();
+  }
+
+  updateVisibility() {
+    if (!this.inputEl) return;
+    const hasValue = Boolean(this.inputEl.value && this.inputEl.value.trim().length > 0);
+    if (this.containerEl) {
+      if (hasValue) {
+        this.containerEl.classList.add('has-value');
+      } else {
+        this.containerEl.classList.remove('has-value');
+      }
+    }
+    if (this.overlayEl) {
+      if (hasValue) {
+        this.overlayEl.classList.add('is-hidden');
+      } else {
+        this.overlayEl.classList.remove('is-hidden');
+      }
+    }
+  }
+
+  tick() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    if (!this.prompts || this.prompts.length === 0 || !this.textEl) return;
+
+    const currentString = this.prompts[this.currentPromptIndex];
+
+    if (!this.isDeleting) {
+      this.charIndex++;
+      this.textEl.textContent = currentString.substring(0, this.charIndex);
+
+      if (this.charIndex >= currentString.length) {
+        this.isDeleting = true;
+        this.timer = setTimeout(() => this.tick(), this.pauseDuration);
+        return;
+      }
+
+      const variance = Math.floor(Math.random() * 15);
+      this.timer = setTimeout(() => this.tick(), this.typingSpeed + variance);
+    } else {
+      this.charIndex--;
+      this.textEl.textContent = currentString.substring(0, this.charIndex);
+
+      if (this.charIndex <= 0) {
+        this.isDeleting = false;
+        this.currentPromptIndex = (this.currentPromptIndex + 1) % this.prompts.length;
+        this.timer = setTimeout(() => this.tick(), this.pauseAfterDelete);
+        return;
+      }
+
+      this.timer = setTimeout(() => this.tick(), this.deletingSpeed);
+    }
+  }
 }
 
 // --- Quick Action Chip Handler ---
@@ -1776,6 +1998,9 @@ function quickFillPrompt(promptText) {
   if (input) {
     input.value = promptText;
     autoResizePromptInput();
+    if (window.claudePromptTypewriter) {
+      window.claudePromptTypewriter.updateVisibility();
+    }
     input.focus();
     submitPrompt();
   }
@@ -1793,10 +2018,9 @@ function setAgentPromptRunning(isRunning) {
   if (isRunning) {
     btn.classList.add('btn-stop-state');
     btn.disabled = false;
-    btn.setAttribute('title', 'Hentikan respon (Stop)');
-    btn.setAttribute('aria-label', 'Hentikan respon');
+    btn.setAttribute('title', 'Stop response');
+    btn.setAttribute('aria-label', 'Stop response');
     btn.innerHTML = `
-      <span>Stop</span>
       <svg class="stop-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
         <rect x="5" y="5" width="14" height="14" rx="2" />
       </svg>
@@ -1804,10 +2028,10 @@ function setAgentPromptRunning(isRunning) {
   } else {
     btn.classList.remove('btn-stop-state');
     btn.disabled = false;
-    btn.setAttribute('title', 'Kirim instruksi');
-    btn.setAttribute('aria-label', 'Kirim instruksi');
+    btn.setAttribute('title', 'Send instruction');
+    btn.setAttribute('aria-label', 'Send instruction');
     btn.innerHTML = `
-      <span>Kirim</span>
+      <span>Send</span>
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
       </svg>
@@ -1918,7 +2142,13 @@ async function submitPrompt() {
   input.value = '';
   input.style.height = 'auto';
   const barContainer = input.closest('.input-bar-container');
-  if (barContainer) barContainer.classList.remove('is-multiline');
+  if (barContainer) {
+    barContainer.classList.remove('is-multiline');
+    barContainer.classList.remove('has-value');
+  }
+  if (window.claudePromptTypewriter) {
+    window.claudePromptTypewriter.updateVisibility();
+  }
 
   appendUserMessage(promptText);
 
@@ -1962,6 +2192,38 @@ async function submitPrompt() {
     let accumulatedText = '';
     let completedPayload = null;
 
+    // Claude-style smooth typewriter streamer
+    let displayedText = '';
+    let typewriterInterval = null;
+
+    const flushTypewriter = () => {
+      if (typewriterInterval) {
+        clearInterval(typewriterInterval);
+        typewriterInterval = null;
+      }
+      if (displayedText !== accumulatedText) {
+        displayedText = accumulatedText;
+        updateStreamText(streamBubble, displayedText);
+      }
+    };
+
+    const pumpTypewriter = () => {
+      if (!streamBubble || activePromptAbortController?.signal?.aborted) {
+        if (typewriterInterval) clearInterval(typewriterInterval);
+        typewriterInterval = null;
+        return;
+      }
+      const diff = accumulatedText.length - displayedText.length;
+      if (diff > 0) {
+        // Natural adaptive typing pace: smooth & responsive
+        const step = diff > 80 ? Math.ceil(diff / 4) : (diff > 30 ? 4 : (diff > 10 ? 2 : 1));
+        displayedText = accumulatedText.substring(0, displayedText.length + step);
+        updateStreamText(streamBubble, displayedText);
+      }
+    };
+
+    typewriterInterval = setInterval(pumpTypewriter, 18);
+
     while (true) {
       if (activePromptAbortController?.signal?.aborted) break;
 
@@ -1988,7 +2250,9 @@ async function submitPrompt() {
             renderClarificationBox(streamBubble, evt.clarification);
           } else if (evt.type === 'token') {
             accumulatedText += evt.content;
-            updateStreamText(streamBubble, accumulatedText);
+            if (!typewriterInterval) {
+              typewriterInterval = setInterval(pumpTypewriter, 18);
+            }
           } else if (evt.type === 'complete') {
             completedPayload = evt.payload;
           } else if (evt.type === 'error') {
@@ -1999,6 +2263,16 @@ async function submitPrompt() {
         }
       }
     }
+
+    // Smoothly drain any remaining backlog
+    if (accumulatedText.length > displayedText.length && !activePromptAbortController?.signal?.aborted) {
+      const startDrain = Date.now();
+      while (displayedText.length < accumulatedText.length && (Date.now() - startDrain) < 180) {
+        await new Promise(r => setTimeout(r, 18));
+        pumpTypewriter();
+      }
+    }
+    flushTypewriter();
 
     // Check if aborted right after loop
     if (activePromptAbortController?.signal?.aborted) {
@@ -2013,6 +2287,7 @@ async function submitPrompt() {
     saveCopilotFeed();
 
   } catch (e) {
+    flushTypewriter();
     const isAborted = e.name === 'AbortError' || activePromptAbortController?.signal?.aborted;
     if (isAborted) {
       handleStreamAborted(streamBubble);
@@ -2042,19 +2317,19 @@ function getAgentBubbleHeaderHtml(badgeText = 'Agent Aktif', isError = false) {
     <div class="agent-bubble-header">
       <div class="agent-avatar ${isError ? 'error-avatar' : ''}">
         <svg width="15" height="15" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.6" stroke-linecap="round"/>
-          <path d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.6" stroke-linecap="round"/>
-          <path d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2.4" stroke-linecap="round"/>
-          <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
+          <path d="M6 5C10 1.2 22 1.2 26 5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M9.5 8C12.5 5 19.5 5 22.5 8" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="16" cy="11" r="2.2" fill="#004B93"/>
+          <path d="M12.5 13H19.5V17C19.5 18.9 17.9 20.5 16 20.5C14.1 20.5 12.5 18.9 12.5 17V13Z" fill="#F26F21"/>
+          <path d="M16 20.5V27M13 27H19" stroke="#F26F21" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </div>
-      <div class="agent-header-info">
-        <span class="agent-name">BaliTower AI Agent</span>
-        <span class="agent-status-badge ${isError ? 'error-badge' : ''}">
-          ${!isError ? '<span class="agent-online-dot"></span>' : ''}${escapeHtml(badgeText)}
-        </span>
+      <div class="agent-name">BaliTower AI Agent</div>
+      <div class="agent-status-badge">
+        <span class="live-dot"></span>
+        ${escapeHtml(badgeText)}
       </div>
-      <span class="bubble-time">${timeStr}</span>
+      <div class="agent-time">${timeStr}</div>
     </div>
   `;
 }
@@ -2071,7 +2346,7 @@ function appendUserMessage(text) {
   userBox.className = 'user-query-bubble';
   userBox.innerHTML = `
     <div class="bubble-meta">
-      <span class="bubble-sender">Anda</span>
+      <span class="bubble-sender">YOU</span>
       <span class="bubble-time">${timeStr}</span>
     </div>
     <div class="bubble-text">${escapeHtml(text)}</div>
@@ -2096,10 +2371,6 @@ function appendAgentStreamBubble() {
           <span class="stage-pulse-dot"></span>
           <span>Menganalisis instruksi dan wewenang...</span>
         </div>
-        <button type="button" class="btn-cancel-inline" onclick="stopPromptExecution()" title="Hentikan respon (Stop)">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-          <span>Stop</span>
-        </button>
       </div>
       <div class="clarification-slot"></div>
       <div class="stream-text-slot" style="font-size: 13.5px; color: #0F172A; line-height: 1.65;">

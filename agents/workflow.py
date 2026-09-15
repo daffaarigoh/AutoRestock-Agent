@@ -37,33 +37,23 @@ def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
 
     conn = get_db_connection()
     try:
-        update_params = []
-        insert_params = []
         tenant_val = getattr(pr, "tenant_id", None) or "TENANT_A"
-
-        for item in pr.items:
-            order_id = f"ORD-{pr.pr_number}-{item.item_id}"
-            existing = conn.execute("SELECT order_id FROM orders WHERE order_id = ?", [order_id]).fetchone()
-            if existing:
-                update_params.append((status, order_id))
-            else:
+        existing = conn.execute("SELECT order_id FROM orders WHERE pr_number = ?", [pr.pr_number]).fetchall()
+        if existing:
+            conn.execute("UPDATE orders SET status = ? WHERE pr_number = ?", [status, pr.pr_number])
+        else:
+            insert_params = []
+            for idx, item in enumerate(pr.items, start=1):
+                order_id = f"ORD-{pr.pr_number}-{item.item_id}-{idx:02d}"
                 insert_params.append((
                     order_id, pr.pr_number, item.item_id, item.vendor_id,
                     item.reorder_qty, item.unit_price, item.total_price, status, tenant_val
                 ))
-        
-        if update_params:
-            conn.executemany("""
-                UPDATE orders 
-                SET status = ?
-                WHERE order_id = ?;
-            """, update_params)
-            
-        if insert_params:
-            conn.executemany("""
-                INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
-            """, insert_params)
+            if insert_params:
+                conn.executemany("""
+                    INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+                """, insert_params)
     finally:
         conn.commit()
         conn.close()
@@ -154,31 +144,29 @@ def planner_node(state: AgentState) -> dict[str, Any]:
             "unit_price": 10000.0, "lead_time_days": 7, "rating": 4.0
         }
         items_data.append({
-            "item_id": item["item_id"],
+            "id": item["item_id"],
             "name": item["name"],
-            "current_stock": item["current_stock"],
-            "min_threshold": item["min_threshold"],
-            "reorder_qty": item["reorder_qty"],
-            "unit": item["unit"],
-            "vendor": vendor
+            "qty": item["reorder_qty"],
+            "vendor_id": vendor.get("vendor_id", "VND-DEFAULT"),
+            "vendor": vendor.get("name", "Standard Supplier"),
+            "price": float(vendor.get("unit_price", 10000.0)),
         })
 
     prompt = f"""
 You are an expert Procurement Planner AI.
-Analyze the following low stock items and their available vendors.
-Calculate the 'line_total' (reorder_qty * vendor.unit_price) for each item.
-Write a clear, professional 'reason' in Indonesian explaining why this restock is necessary and why this vendor was chosen.
+For each item, calculate line_total (qty * price).
+Keep 'reason' short, concise and professional in Indonesian (max 10 words per item).
 
 Data:
-{json.dumps(items_data, indent=2)}
+{json.dumps(items_data)}
 
-Output format must be a JSON object with a key 'items' containing a list of objects. Each object must have:
+Output format must be a JSON object with a key 'items' containing a list of objects:
 - item_id (string)
 - vendor_id (string)
 - vendor_name (string)
 - unit_price (float)
 - line_total (float)
-- reason (string, professional Indonesian)
+- reason (string, short Indonesian max 10 words)
 """
     
     gateway = ModelGateway()
@@ -188,6 +176,7 @@ Output format must be a JSON object with a key 'items' containing a list of obje
     ]
     
     llm_items = {}
+    is_llm_success = False
     try:
         response_str = _run_sync(
             gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
@@ -198,8 +187,9 @@ Output format must be a JSON object with a key 'items' containing a list of obje
             
         llm_output = json.loads(response_str)
         llm_items = {i["item_id"]: i for i in llm_output.get("items", [])}
+        is_llm_success = bool(llm_items)
     except Exception as e:
-        print(f"[AGENT] LLM Planner failed: {e}. Falling back to default.")
+        print(f"[AGENT] LLM Planner unavailable ({e}). Utilizing deterministic heuristic fallback.")
 
     # Reconstruct items safely
     for item in low_stock_items:
@@ -229,19 +219,20 @@ Output format must be a JSON object with a key 'items' containing a list of obje
             reason=reason
         ))
         
-    print(f"[AGENT] Planned {len(planned_items)} line items via LLM. Subtotal budget: Rp {total_budget:,.0f}")
+    mode_str = "via LLM" if is_llm_success else "via Heuristic Fallback"
+    print(f"[AGENT] Planned {len(planned_items)} line items {mode_str}. Subtotal budget: Rp {total_budget:,.0f}")
     
     return {
         "planned_items": planned_items,
         "total_budget": total_budget,
-        "logs": state.get("logs", []) + [f"Planner (LLM): Matched {len(planned_items)} vendors with subtotal Rp {total_budget:,.0f}."]
+        "logs": state.get("logs", []) + [f"Planner ({mode_str}): Matched {len(planned_items)} items. Total={total_budget}"]
     }
 
 
 def audit_node(state: AgentState) -> dict[str, Any]:
     """
-    Node 3: Audit Node (nemotron-35 Auditor & Compliance Guardrail)
-    Validates budget ceilings, pricing sanity, and vendor procurement compliance.
+    Node 3: Audit Node (nemotron-35 Compliance & Policy Enforcer)
+    Validates budget threshold and vendor compliance.
     """
     print("[AGENT] [STEP 3: AUDIT] Running Audit Node (nemotron-35) - Compliance & budget guardrail via LLM...")
     total_budget = state.get("total_budget", 0.0)
@@ -249,30 +240,40 @@ def audit_node(state: AgentState) -> dict[str, Any]:
     
     BUDGET_CEILING = 100_000_000.0
     
+    items_summary = [
+        {"name": i.name, "vendor": i.vendor_name, "qty": i.reorder_qty, "total": i.total_price}
+        for i in planned_items
+    ]
+    
     prompt = f"""
-You are a strict Compliance Auditor AI.
-Evaluate the following procurement plan.
-Rules:
-1. The total_budget MUST NOT exceed Rp {BUDGET_CEILING:,.0f}.
-2. If total_budget <= {BUDGET_CEILING:,.0f}, status is 'PASSED'.
-3. If total_budget > {BUDGET_CEILING:,.0f}, status is 'REVISED'.
-4. Write a professional auditor_notes in Indonesian explaining the decision.
+You are a Compliance & Budget Auditor AI for enterprise procurement at PT Bali Towerindo Sentra Tbk.
+Evaluate this restock requisition:
+- Maximum approved budget ceiling: Rp {BUDGET_CEILING:,.0f}
+- Requested total budget: Rp {total_budget:,.0f}
+- Line items: {len(planned_items)}
 
-Data:
-total_budget: {total_budget}
-num_items: {len(planned_items)}
+Items:
+{json.dumps(items_summary[:10], indent=2)}
+
+Rules:
+- If total_budget <= {BUDGET_CEILING} and len(planned_items) > 0: status is 'PASSED'.
+- If total_budget > {BUDGET_CEILING}: status is 'REVISED'.
+- If items list is empty: status is 'REJECTED'.
+
+Provide a professional 'auditor_notes' in Indonesian explaining your evaluation.
 
 Output format must be a JSON object with:
-- auditor_status (string: 'PASSED' or 'REVISED')
-- auditor_notes (string, professional Indonesian)
+- "auditor_status": "PASSED" | "REVISED" | "REJECTED"
+- "auditor_notes": string (Indonesian)
 """
-
+    
     gateway = ModelGateway()
     messages = [
         {"role": "system", "content": "You are an Auditor AI. Always output valid JSON."},
         {"role": "user", "content": prompt}
     ]
     
+    is_llm_audit = False
     try:
         response_str = _run_sync(
             gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
@@ -284,21 +285,23 @@ Output format must be a JSON object with:
         llm_output = json.loads(response_str)
         auditor_status = llm_output.get("auditor_status", "REVISED")
         auditor_notes = llm_output.get("auditor_notes", "Audit failed to parse response.")
+        is_llm_audit = True
     except Exception as e:
-        print(f"[AGENT] LLM Audit failed: {e}. Falling back to default.")
+        print(f"[AGENT] LLM Audit unavailable ({e}). Utilizing deterministic heuristic fallback.")
         if total_budget <= BUDGET_CEILING and len(planned_items) > 0:
             auditor_status = "PASSED"
-            auditor_notes = f"Evaluasi lolos (Fallback). Anggaran Rp {total_budget:,.0f} aman."
+            auditor_notes = f"Evaluasi lolos (Heuristic Fallback). Anggaran Rp {total_budget:,.0f} dalam batas pagu."
         else:
             auditor_status = "REVISED"
-            auditor_notes = "Peringatan Anggaran (Fallback). Melebihi batas atau tidak ada item."
+            auditor_notes = "Peringatan Anggaran (Heuristic Fallback). Melebihi batas pagu Rp 100 Juta atau tidak ada item."
         
-    print(f"[AGENT] Audit Result (LLM): {auditor_status} - {auditor_notes}")
+    mode_label = "LLM" if is_llm_audit else "Heuristic Fallback"
+    print(f"[AGENT] Audit Result ({mode_label}): {auditor_status} - {auditor_notes}")
     
     return {
         "auditor_status": auditor_status,
         "auditor_notes": auditor_notes,
-        "logs": state.get("logs", []) + [f"Auditor (LLM): Status={auditor_status}."]
+        "logs": state.get("logs", []) + [f"Auditor ({mode_label}): Status={auditor_status}."]
     }
 
 

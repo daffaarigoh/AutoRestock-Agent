@@ -1,6 +1,7 @@
 import json
 import re
 
+from core.config import settings
 from core.llm_client import ModelGateway
 from database.db import get_db_connection
 
@@ -130,7 +131,7 @@ def extract_recipient_email(prompt: str) -> str | None:
     return None
 
 
-def check_clarification_needs(prompt: str, tenant_id: str = "ALL") -> dict | None:
+def check_clarification_needs(prompt: str, tenant_id: str = "ALL", recipient_email: str | None = None) -> dict | None:
     """
     Evaluates whether the user's natural language request lacks critical parameters.
     If so, returns structured clarification payload so agent can query the user back.
@@ -141,14 +142,20 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL") -> dict | Non
     
     # 1. Email clarification: User requested email dispatch/approval, but provided no email address
     has_email_intent = ("email" in p_lower or "surel" in p_lower) and any(w in p_lower for w in ["kirim", "send", "notif", "teruskan", "approve", "persetujuan", "surat"])
-    extracted_email = extract_recipient_email(prompt)
+    extracted_email = extract_recipient_email(prompt) or recipient_email
     if has_email_intent and not extracted_email:
+        clean_prompt = prompt.strip()
+        if re.search(r'ke\s+email\s*$', clean_prompt, re.IGNORECASE):
+            hint_str = re.sub(r'ke\s+email\s*$', 'ke manager@balitower.co.id', clean_prompt, flags=re.IGNORECASE)
+        else:
+            hint_str = f"{clean_prompt} ke manager@balitower.co.id"
+
         return {
             "needs_clarification": True,
             "field": "recipient_email",
             "title": "Alamat Email Diperlukan",
-            "message": "Anda meminta pengiriman notifikasi/persetujuan via email, namun alamat email penerima belum disebutkan. Mohon tentukan alamat email tujuan (contoh: *manager@balitower.co.id*).",
-            "hint": "Kirimkan dokumen PR ini ke manager@balitower.co.id"
+            "message": "Anda meminta pengiriman notifikasi/persetujuan via email, namun alamat email penerima belum disebutkan. Mohon tentukan alamat email tujuan (contoh: *manager@balitower.co.id* atau nama rekan/pejabat).",
+            "hint": hint_str
         }
         
     # 2. Threshold update clarification: wants to update threshold but neither item nor value given
@@ -183,27 +190,41 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL") -> dict | Non
 
 class SemanticRouter:
     @classmethod
-    async def route_prompt(cls, prompt: str, tenant_id: str = "ALL") -> dict:
+    async def route_prompt(
+        cls, 
+        prompt: str, 
+        tenant_id: str = "ALL", 
+        history: list[dict[str, str]] | None = None
+    ) -> dict:
         """
         Matches user prompt strictly to a predefined workflow ID allowed for this tenant.
         Does NOT hallucinate or pick an arbitrary workflow if intent is out-of-scope.
         Returns workflow_id: None and is_unrelated: True if the prompt is out of scope.
+        Supports multi-turn context history.
         """
         conn = get_db_connection(read_only=True)
-        tenant_variants = [tenant_id, "ALL"]
-        if tenant_id in ["INVENTORY", "TENANT_A", "usera"]:
-            tenant_variants.extend(["INVENTORY", "TENANT_A", "usera"])
-        elif tenant_id in ["HR", "TENANT_B", "userb"]:
-            tenant_variants.extend(["HR", "TENANT_B", "userb"])
-        elif tenant_id in ["FINANCE", "TENANT_C", "userc"]:
-            tenant_variants.extend(["FINANCE", "TENANT_C", "userc"])
-        placeholders = ", ".join(["?"] * len(tenant_variants))
-        workflows = conn.execute(f"""
-            SELECT id, name, description, tenant_id 
-            FROM workflows 
-            WHERE tenant_id IN ({placeholders})
-            ORDER BY id ASC
-        """, tenant_variants).fetchall()
+        query_cols = "id, name, description, business_instruction, example_prompts, tenant_id"
+        if tenant_id in ["ALL", "admin", "ADMIN", "SUPERADMIN"]:
+            workflows = conn.execute(f"""
+                SELECT {query_cols} 
+                FROM workflows 
+                ORDER BY id ASC
+            """).fetchall()
+        else:
+            tenant_variants = [tenant_id, "ALL"]
+            if tenant_id in ["INVENTORY", "TENANT_A", "usera"]:
+                tenant_variants.extend(["INVENTORY", "TENANT_A", "usera"])
+            elif tenant_id in ["HR", "TENANT_B", "userb"]:
+                tenant_variants.extend(["HR", "TENANT_B", "userb"])
+            elif tenant_id in ["FINANCE", "TENANT_C", "userc"]:
+                tenant_variants.extend(["FINANCE", "TENANT_C", "userc"])
+            placeholders = ", ".join(["?"] * len(tenant_variants))
+            workflows = conn.execute(f"""
+                SELECT {query_cols} 
+                FROM workflows 
+                WHERE tenant_id IN ({placeholders})
+                ORDER BY id ASC
+            """, tenant_variants).fetchall()
         conn.close()
         
         if not workflows:
@@ -211,7 +232,8 @@ class SemanticRouter:
                 "workflow_id": None,
                 "send_email": False,
                 "threshold_updates": [],
-                "target_item_name": None
+                "target_item_name": None,
+                "is_fallback": False
             }
 
         prompt_clean = prompt.strip().lower()
@@ -222,110 +244,75 @@ class SemanticRouter:
                 "is_unrelated": True,
                 "send_email": False,
                 "threshold_updates": [],
-                "target_item_name": None
+                "target_item_name": None,
+                "is_fallback": False
             }
 
-        workflows_str = "\n".join([f"- ID: {row[0]}, Name: {row[1]}, Desc: {row[2]}" for row in workflows])
+        # Build enriched workflows context including business instructions and example prompts
+        workflow_entries = []
+        for row in workflows:
+            wf_id, wf_name, wf_desc, wf_inst, wf_ex, wf_tenant = row
+            entry = f"- ID: {wf_id}\n  Nama: {wf_name}\n  Deskripsi: {wf_desc or '-'}"
+            if wf_inst:
+                entry += f"\n  Instruksi Bisnis: {wf_inst}"
+            if wf_ex:
+                try:
+                    examples = json.loads(wf_ex) if isinstance(wf_ex, str) else wf_ex
+                    if isinstance(examples, list) and examples:
+                        entry += f"\n  Contoh Prompt: {'; '.join(str(x) for x in examples)}"
+                except Exception:
+                    entry += f"\n  Contoh Prompt: {wf_ex}"
+            workflow_entries.append(entry)
+        workflows_str = "\n\n".join(workflow_entries)
         
-        system_prompt = f"""You are a Strict Semantic Router for an Enterprise Inventory & Restock system.
-Match the user's prompt ONLY to one of the following permitted workflows:
+        system_prompt = f"""You are a Strict Semantic Router for an Enterprise Management System (PT Bali Towerindo Sentra Tbk).
+Match the user's operational command to EXACTLY ONE of the following permitted workflows:
 
 {workflows_str}
 
 CRITICAL RULES:
-1. If the user's prompt is UNRELATED, vague, ambiguous, or lacks a clear operational command (e.g. single words like "pr", "po", "stok", general greetings, chit-chat, weather, programming questions), you MUST return:
+1. Prioritize matching based on the workflow's Description, Business Instruction, and Example Prompts.
+2. If the user's prompt is UNRELATED, vague, ambiguous, programming questions, chit-chat, or general greetings without clear command, return:
    {{"workflow_id": null, "is_unrelated": true}}
-2. DO NOT force or default any prompt to a workflow unless it clearly matches the intent of that workflow.
-3. DO NOT match to a restock/procurement pipeline (like WF-A01) unless the user EXPLICITLY commands to create/draft/issue a PR or restock depleted material (e.g., "buatkan PR", "terbitkan PR untuk stok menipis", "restock material"). Mere queries about stock or single keywords do NOT match procurement pipelines.
-4. If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "max_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}} (extract whatever fields the user provided, leaving unmentioned fields out).
-5. If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}]. Include only the thresholds the user specified.
-6. If the user specifies an item name to check, extract it as "target_item_name".
+3. DO NOT match to a restock/procurement pipeline (like WF-A01) unless the user EXPLICITLY commands to restock, draft/issue a PR, or order depleted material.
+4. If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "max_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}}.
+5. If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}].
+6. If the user specifies an item name to inspect, extract "target_item_name".
 7. If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
 
-Output strictly valid JSON with exact keys: "workflow_id" (string or null), "is_unrelated" (boolean), "new_item_data" (optional object), "threshold_updates" (optional array), "target_item_name" (optional string), "send_email" (boolean).
-If no workflow matches or the request is unrelated, return "workflow_id": null, "is_unrelated": true.
+Output strictly valid JSON with exact keys:
+- "workflow_id" (string or null)
+- "is_unrelated" (boolean)
+- "new_item_data" (optional object)
+- "threshold_updates" (optional array)
+- "target_item_name" (optional string)
+- "send_email" (boolean)
 """
         gateway = ModelGateway()
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
-        ]
-        
+        messages = [{"role": "system", "content": system_prompt}]
+        if history and isinstance(history, list):
+            for turn in history[-6:]:
+                if isinstance(turn, dict) and turn.get("role") and turn.get("content"):
+                    messages.append({"role": turn["role"], "content": str(turn["content"])})
+        messages.append({"role": "user", "content": prompt})
+
         prompt_lower = prompt.lower()
         extracted_email = extract_recipient_email(prompt)
 
-        # Check for direct workflow ID or title mention
+        # Check for direct workflow ID mention (e.g. user explicitly writes "WF-A01")
         for row in workflows:
             wf_id_term = row[0].lower()
-            wf_name_term = row[1].lower()
-            if wf_id_term in prompt_lower or (len(wf_name_term) > 6 and wf_name_term in prompt_lower):
+            if wf_id_term in prompt_lower:
                 return {
                     "workflow_id": row[0],
                     "send_email": bool(extracted_email) or ("email" in prompt_lower),
-                    "recipient_email": extracted_email
+                    "recipient_email": extracted_email,
+                    "is_fallback": False
                 }
 
-        # Check for HR leave audit & pending review intent (User B)
-        is_leave_audit_intent = (
-            any(k in prompt_lower for k in ["periksa", "audit", "cek", "tinjau", "lihat", "daftar", "rekap", "laporan", "status", "otorisasi"])
-            and any(k in prompt_lower for k in ["cuti", "pending", "pending_approval", "permohonan cuti", "pengajuan cuti", "izin"])
-        )
-        if is_leave_audit_intent:
-            for row in workflows:
-                w_name = row[1].lower()
-                w_desc = (row[2] or "").lower()
-                if any(w in w_name for w in ["audit cuti", "cuti pending", "periksa cuti", "otorisasi hr"]) or (
-                    "cuti" in w_name and ("pending" in w_name or "audit" in w_name or "email" in w_name)
-                ):
-                    return {
-                        "workflow_id": row[0],
-                        "send_email": True,
-                        "recipient_email": extracted_email
-                    }
-
-        # Check for client operator onboarding intent first (User C)
-        is_onboarding_intent = any(k in prompt_lower for k in ["klien", "operator", "sewa", "onboarding", "mla", "menara", "kontrak"]) and any(k in prompt_lower for k in ["daftar", "daftarkan", "baru", "onboard", "tambah", "ajukan"])
-        if is_onboarding_intent:
-            for row in workflows:
-                if any(w in row[1].lower() for w in ["onboard", "klien", "kontrak", "mla"]) or ("daftar" in row[1].lower() and "operator" in row[1].lower()):
-                    return {
-                        "workflow_id": row[0],
-                        "send_email": True,
-                        "recipient_email": extracted_email
-                    }
-
-        # Check for Restock / PR creation pipeline intent (User A)
-        is_pr_pipeline = (
-            any(k in prompt_lower for k in ["buat pr", "buatkan pr", "draf pr", "draft pr", "terbitkan pr", "kirim pr", "kirimkan pr", "restock", "order barang"])
-            or ("pr" in prompt_lower and any(k in prompt_lower for k in ["kirim", "email", "ajukan", "buat", "terbit", "menipis"]))
-        )
-        if is_pr_pipeline:
-            for row in workflows:
-                if row[0] == "WF-A01" or "pipeline_pengadaan" in row[1].lower() or "pengadaan" in row[1].lower():
-                    res = {
-                        "workflow_id": row[0],
-                        "send_email": bool(extracted_email),
-                        "threshold_updates": [],
-                        "target_item_name": None
-                    }
-                    if extracted_email:
-                        res["recipient_email"] = extracted_email
-                    return res
-
-        # Check for product registration intent (only if user workflow has registration and not onboarding)
-        if not is_onboarding_intent and any(k in prompt_lower for k in ["tambah", "tambahkan", "daftar", "daftarkan", "registrasi", "masukkan produk", "tambah produk", "tambah barang", "tambahkan nama produk", "buat barang"]):
-            for row in workflows:
-                if any(w in row[1].lower() for w in ["daftar", "pendaftaran", "tambah", "registrasi", "register"]) and not any(w in row[1].lower() for w in ["klien", "operator", "sewa", "kontrak"]):
-                    extracted_item = _extract_item_attributes_from_text(prompt)
-                    res = {
-                        "workflow_id": row[0],
-                        "new_item_data": extracted_item,
-                        "send_email": bool(extracted_email)
-                    }
-                    if extracted_email:
-                        res["recipient_email"] = extracted_email
-                    return res
-
+        # ----------------------------------------------------
+        # LAYER 1: LLM-FIRST ROUTING (Primary Decision Maker)
+        # ----------------------------------------------------
         try:
             response_str = await gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
             json_match = re.search(r'\{.*\}', response_str, re.DOTALL)
@@ -337,6 +324,7 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                 if extracted_email:
                     parsed["send_email"] = True
                     parsed["recipient_email"] = extracted_email
+                parsed["is_fallback"] = False
                 return parsed
             if parsed.get("is_unrelated") or parsed.get("workflow_id") is None:
                 return {
@@ -344,42 +332,49 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                     "is_unrelated": True,
                     "send_email": False,
                     "threshold_updates": [],
-                    "target_item_name": None
+                    "target_item_name": None,
+                    "is_fallback": False
                 }
         except Exception as e:
-            print(f"[SEMANTIC ROUTER] LLM unavailable ({e}). Using intelligent heuristic matcher.")
-            
-        # 0. Check for Schema ALL Utility Workflows
-        # A. User Profile & Access Rights (WF-ALL-01)
+            print(f"[SEMANTIC ROUTER] LLM offline or timed out ({e}). Activating fail-safe heuristic matcher.")
+
+        # ----------------------------------------------------
+        # LAYER 2: FAIL-SAFE HEURISTIC MATCHER (Only on LLM Error)
+        # ----------------------------------------------------
+        # Schema ALL Workflows
         if any(k in prompt_lower for k in ["profil", "siapa saya", "info akun", "hak akses", "wewenang", "role saya", "user info"]):
             for row in workflows:
                 if row[0] == "WF-ALL-01" or any(w in row[1].lower() for w in ["profil", "hak akses", "user"]):
-                    return {"workflow_id": row[0], "send_email": False}
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        # B. System Info & Health Status (WF-ALL-02)
         if any(k in prompt_lower for k in ["info sistem", "status sistem", "status server", "health check", "spesifikasi sistem", "informasi sistem", "versi sistem"]):
             for row in workflows:
                 if row[0] == "WF-ALL-02" or any(w in row[1].lower() for w in ["informasi sistem", "status layanan", "health"]):
-                    return {"workflow_id": row[0], "send_email": False}
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        # C. Company Guidelines & Emergency Contacts (WF-ALL-03)
         if any(k in prompt_lower for k in ["panduan operasional", "sop perusahaan", "kontak darurat", "helpdesk", "aturan kerja", "panduan", "sop"]):
             for row in workflows:
                 if row[0] == "WF-ALL-03" or any(w in row[1].lower() for w in ["panduan", "darurat", "sop", "guideline"]):
-                    return {"workflow_id": row[0], "send_email": False}
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        # Check for New Client Operator Onboarding & Lease Contract (Approval Workflow)
-        if is_onboarding_intent or any(k in prompt_lower for k in ["klien baru", "operator baru", "daftar operator", "sewa baru", "kontrak baru", "onboarding", "daftarkan operator", "sewa menara baru", "tambah operator"]):
+        # Client Onboarding (Finance / Schema C)
+        is_onboarding_intent = any(k in prompt_lower for k in ["klien", "operator", "sewa", "onboarding", "mla", "menara", "kontrak"]) and any(k in prompt_lower for k in ["daftar", "daftarkan", "baru", "onboard", "tambah", "ajukan"])
+        if is_onboarding_intent or any(k in prompt_lower for k in ["klien baru", "operator baru", "daftar operator", "sewa baru", "kontrak baru", "daftarkan operator", "sewa menara baru"]):
             for row in workflows:
                 if any(w in row[1].lower() for w in ["onboard", "klien", "kontrak", "mla"]) or ("daftar" in row[1].lower() and "operator" in row[1].lower()):
                     return {
                         "workflow_id": row[0],
                         "send_email": True,
-                        "recipient_email": extracted_email
+                        "recipient_email": extracted_email,
+                        "is_fallback": True
                     }
 
-        # Check for HR Leave Audit / Review (Schema B)
-        if is_leave_audit_intent or any(k in prompt_lower for k in ["audit cuti", "cuti pending", "periksa cuti", "pending_approval", "permohonan cuti"]):
+        # HR Leave Audit & Approval (Schema B)
+        is_leave_audit_intent = (
+            any(k in prompt_lower for k in ["periksa", "audit", "cek", "tinjau", "lihat", "rekap", "laporan", "status", "otorisasi"])
+            and any(k in prompt_lower for k in ["cuti", "pending", "pending_approval", "permohonan cuti", "pengajuan cuti", "izin"])
+        ) or any(k in prompt_lower for k in ["audit cuti", "cuti pending", "periksa cuti", "permohonan cuti"])
+        if is_leave_audit_intent:
             for row in workflows:
                 w_name = row[1].lower()
                 if any(w in w_name for w in ["audit cuti", "cuti pending", "periksa cuti", "otorisasi hr"]) or (
@@ -388,87 +383,89 @@ If no workflow matches or the request is unrelated, return "workflow_id": null, 
                     return {
                         "workflow_id": row[0],
                         "send_email": True,
-                        "recipient_email": extracted_email
+                        "recipient_email": extracted_email,
+                        "is_fallback": True
                     }
 
-        # 1. Check for Finance Workflows (Schema C) - If permitted for this tenant
+        # Finance Workflows (Schema C)
         if not is_onboarding_intent and (
-            any(k in prompt_lower for k in ["pendapatan sewa", "pendapatan menara", "pendapatan operator", "revenue", "invoice operator", "tagihan operator", "invoice sewa", "tagihan sewa", "laporan pendapatan", "status pembayaran"])
+            any(k in prompt_lower for k in ["pendapatan sewa", "pendapatan menara", "pendapatan operator", "revenue", "invoice operator", "tagihan operator", "invoice sewa", "tagihan sewa", "laporan pendapatan"])
             or ("invoice" in prompt_lower and any(w in prompt_lower for w in ["sewa", "operator", "menara", "status"]))
-            or ("tagihan" in prompt_lower and any(w in prompt_lower for w in ["sewa", "operator", "menara"]))
         ):
             for row in workflows:
                 if row[0] == "WF-004" or any(w in row[1].lower() for w in ["pendapatan", "revenue", "invoice"]):
-                    return {"workflow_id": row[0], "send_email": False}
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
+        # Finance OPEX & Utilities (WF-005 strictly for OPEX/Listrik, NOT stock!)
         if any(k in prompt_lower for k in ["beban operasional", "opex", "listrik pln", "beban listrik", "sewa lahan", "biaya genset", "beban site"]):
             for row in workflows:
                 if row[0] == "WF-005" or any(w in row[1].lower() for w in ["beban listrik", "opex", "sewa lahan"]):
-                    return {"workflow_id": row[0], "send_email": False}
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
         if any(k in prompt_lower for k in ["arus kas", "cash flow", "cashflow", "kas masuk", "kas keluar", "saldo kas", "net cash flow"]):
             for row in workflows:
                 if row[0] == "WF-006" or any(w in row[1].lower() for w in ["arus kas", "cash flow", "cashflow"]):
-                    return {"workflow_id": row[0], "send_email": False}
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        # 2. Check for specific item stock query (only if explicitly asking stock check)
-        is_stock_query = (
-            any(k in prompt_lower for k in ["cek stok", "lihat stok", "status stok", "cek ketersediaan", "stok barang"])
-            or ("berapa" in prompt_lower and any(w in prompt_lower for w in ["stok", "sisa", "unit", "persediaan", "tersedia", "ada barang", "part", "item", "produk"]))
-        ) and not any(k in prompt_lower for k in ["pdf", "dokumen", "pr", "restock", "buatkan"])
-
-        if is_stock_query:
+        # Inventory - Product Registration
+        if not is_onboarding_intent and any(k in prompt_lower for k in ["tambah barang", "tambah material", "registrasi produk", "tambah produk", "material baru", "item baru", "sku baru"]):
             for row in workflows:
-                if row[0] == "WF-005" or "spesifik" in row[1].lower() or "cek" in row[1].lower():
-                    clean_target = prompt.lower().replace("berapa", "").replace("cek stok", "").replace("stok", "").strip()
-                    return {"workflow_id": row[0], "target_item_name": clean_target, "send_email": False}
-        
-        # 3. Check for threshold update
-        if any(k in prompt_lower for k in ["threshold", "ambang", "ubah batas"]):
+                if any(w in row[1].lower() for w in ["daftar", "pendaftaran", "tambah", "registrasi", "register"]) and not any(w in row[1].lower() for w in ["klien", "operator", "sewa", "kontrak"]):
+                    extracted_item = _extract_item_attributes_from_text(prompt)
+                    res = {
+                        "workflow_id": row[0],
+                        "new_item_data": extracted_item,
+                        "send_email": bool(extracted_email),
+                        "is_fallback": True
+                    }
+                    if extracted_email:
+                        res["recipient_email"] = extracted_email
+                    return res
+
+        # Inventory - Threshold Update
+        if any(k in prompt_lower for k in ["threshold", "ambang", "ubah batas", "update batas"]):
             for row in workflows:
                 if row[0] == "WF-002" or "threshold" in row[1].lower():
-                    return {"workflow_id": row[0], "threshold_updates": [], "send_email": False}
-        
-        # 4. Check for warehouse audit
-        if any(k in prompt_lower for k in ["seluruh gudang", "audit gudang", "audit", "rekap seluruh", "rekap seluruh inventaris"]):
+                    return {"workflow_id": row[0], "threshold_updates": [], "send_email": False, "is_fallback": True}
+
+        # Inventory - Warehouse Audit
+        if any(k in prompt_lower for k in ["seluruh gudang", "audit gudang", "rekap seluruh inventaris"]):
             for row in workflows:
-                if row[3] == tenant_id and "audit" in row[1].lower():
-                    return {"workflow_id": row[0], "send_email": False}
+                if row[5] == tenant_id and "audit" in row[1].lower():
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
             for row in workflows:
                 if row[0] in ["WF-004", "WF-B01"] or "audit" in row[1].lower():
-                    return {"workflow_id": row[0], "send_email": False}
-                    
-        # 5. Check for restock / pengadaan / menipis / kritis / PR
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
+
+        # Restock / PR Creation Pipeline (Requiring clear action verbs, no loose single 'pr')
         is_restock_intent = any(k in prompt_lower for k in [
             "buatkan pr", "bikin pr", "terbitkan pr", "buat draft pr", "buatkan draf pr", "draf pr", "draft pr",
             "proses pengadaan", "pipeline pengadaan", "restock material", "pesan material", "order material",
-            "restock", "menipis", "kritis", "pengadaan", "pesan barang", "beli barang", "order barang", "purchase requisition", "kehabisan"
-        ]) or bool(re.search(r'\bpr\b', prompt_lower))
+            "pengadaan barang", "pesan barang", "beli barang", "order barang", "purchase requisition"
+        ])
 
         if is_restock_intent:
             send_mail = bool(extracted_email) or ("email" in prompt_lower or "notifikasi" in prompt_lower)
-            # Check tenant-specific restock workflow first
             for row in workflows:
-                if len(row) > 3 and row[3] == tenant_id and any(w in row[1].lower() for w in ["restock", "pengadaan"]):
-                    res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None}
+                if len(row) > 5 and row[5] == tenant_id and any(w in row[1].lower() for w in ["restock", "pengadaan"]):
+                    res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None, "is_fallback": True}
                     if extracted_email:
                         res["recipient_email"] = extracted_email
                     return res
 
-            # Fallback to global restock if allowed
             for row in workflows:
-                if any(w in row[1].lower() for w in ["restock", "pengadaan"]) or bool(re.search(r'\bpr\b', row[1].lower())):
-                    res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None}
+                if any(w in row[1].lower() for w in ["restock", "pengadaan", "pipeline"]):
+                    res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None, "is_fallback": True}
                     if extracted_email:
                         res["recipient_email"] = extracted_email
                     return res
 
-        # 6. ANTI-HALUSINASI GUARDRAIL:
-        # If no recognized intent matched, return workflow_id: None! Do NOT pick a default workflow!
+        # Anti-Hallucination Guardrail:
         return {
             "workflow_id": None,
             "is_unrelated": True,
             "send_email": False,
             "threshold_updates": [],
-            "target_item_name": None
+            "target_item_name": None,
+            "is_fallback": True
         }

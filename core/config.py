@@ -24,10 +24,13 @@ class Settings(_BaseSettings):
     API_PORT: int = 8050
     DEBUG: bool = True
     PUBLIC_URL: str | None = None
+    SECRET_KEY: str = "super-secret-enterprise-key-for-autorestock-agent"
 
     # Corporate LLM Gateway & standard env keys
     LLM_KEY: str | None = None
     LLM_URL: str | None = None
+    API_LLM: str | None = None
+    API_KEY_LLM: str | None = None
 
     # Active AI Model Configuration (Single Model: Nemotron-35)
     MODEL_NAME: str = "nemotron-35"
@@ -57,10 +60,27 @@ class Settings(_BaseSettings):
                 return val.strip().strip('"').strip("'")
             return val
 
+        def _normalize_llm_url(url: str | None) -> str | None:
+            if not url:
+                return None
+            u = _clean(url)
+            if not u:
+                return None
+            if not (u.startswith("http://") or u.startswith("https://")):
+                u = f"http://{u}"
+            u = u.rstrip("/")
+            if u.endswith("/models"):
+                u = u[:-7].rstrip("/")
+            if "/v1" not in u:
+                u = f"{u}/v1"
+            return u
+
         self.APP_NAME = _clean(self.APP_NAME)
         self.API_HOST = _clean(self.API_HOST)
         self.LLM_KEY = _clean(self.LLM_KEY)
         self.LLM_URL = _clean(self.LLM_URL)
+        self.API_LLM = _clean(self.API_LLM)
+        self.API_KEY_LLM = _clean(self.API_KEY_LLM)
         self.MODEL_NAME = _clean(self.MODEL_NAME)
         self.MODEL_API_KEY = _clean(self.MODEL_API_KEY)
         self.MODEL_URL = _clean(self.MODEL_URL)
@@ -70,25 +90,24 @@ class Settings(_BaseSettings):
         self.SMTP_USERNAME = _clean(self.SMTP_USERNAME) or self.SMTP_EMAIL
         self.DEFAULT_RECIPIENT_EMAIL = _clean(self.DEFAULT_RECIPIENT_EMAIL) or self.SMTP_EMAIL or ""
         self.PUBLIC_URL = _clean(self.PUBLIC_URL)
+        self.SECRET_KEY = _clean(self.SECRET_KEY) or "super-secret-enterprise-key-for-autorestock-agent"
+
+        # Fallback for API_LLM / API_KEY_LLM alias
+        if not self.LLM_URL and self.API_LLM:
+            self.LLM_URL = self.API_LLM
+        if not self.LLM_KEY and self.API_KEY_LLM:
+            self.LLM_KEY = self.API_KEY_LLM
 
         # If LLM_KEY is provided, sync with MODEL_API_KEY
         if self.LLM_KEY and (self.MODEL_API_KEY in ["dummy-key", "dummy-key-for-local", "", None]):
             self.MODEL_API_KEY = self.LLM_KEY
-        
-        # Normalize MODEL_URL if provided
-        if self.MODEL_URL:
-            self.MODEL_URL = self.MODEL_URL.rstrip("/")
-            if self.MODEL_URL.endswith("/models"):
-                self.MODEL_URL = self.MODEL_URL[:-7]
 
-        # If LLM_URL is provided, sync with MODEL_URL
+        # Normalize and sync URLs
         if self.LLM_URL:
-            base_url = self.LLM_URL.rstrip("/")
-            if base_url.endswith("/models"):
-                base_url = base_url[:-7]
-            if "/v1" not in base_url:
-                base_url = f"{base_url}/v1"
-            self.MODEL_URL = base_url
+            self.LLM_URL = _normalize_llm_url(self.LLM_URL)
+            self.MODEL_URL = self.LLM_URL
+        elif self.MODEL_URL:
+            self.MODEL_URL = _normalize_llm_url(self.MODEL_URL)
 
 
 settings = Settings()

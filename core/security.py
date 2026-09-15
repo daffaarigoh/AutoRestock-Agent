@@ -6,7 +6,15 @@ from fastapi import HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-SECRET_KEY = "super-secret-enterprise-key-for-autorestock-agent"
+import logging
+from core.config import settings
+
+logger = logging.getLogger(__name__)
+
+SECRET_KEY = settings.SECRET_KEY
+if SECRET_KEY == "super-secret-enterprise-key-for-autorestock-agent" and settings.APP_ENV != "development":
+    logger.warning("SECURITY WARNING: Using default hardcoded SECRET_KEY in non-development environment! Set SECRET_KEY in .env.")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 

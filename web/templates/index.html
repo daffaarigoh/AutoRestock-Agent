@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bali Tower - Enterprise Operations Center</title>
+  <title>BaliTower Ops — Operations Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -22,18 +22,15 @@
       <button class="brand-logo-btn" onclick="toggleDataSidebar()" title="Toggle Data Catalog & Modules" aria-label="Toggle Sidebar">
         <!-- Official Bali Tower Signal Wave Logo -->
         <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
-          <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
+          <path d="M6 5C10 1.2 22 1.2 26 5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M9.5 8C12.5 5 19.5 5 22.5 8" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+            <path d="M13 11C14.5 9.5 17.5 9.5 19 11" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M14.2 14.5H17.8V17.5H21V20.2H17.8V24.5C17.8 25.2 18.2 25.6 19 25.6C19.7 25.6 20.4 25.4 21 25V27.5C20.1 27.8 19.1 28 18 28C15.2 28 14.2 26.5 14.2 24.2V20.2H11.5V17.5H14.2V14.5Z" fill="#F26F21"/>
         </svg>
       </button>
       <div class="brand-info" onclick="toggleDataSidebar()" style="cursor: pointer;" title="Toggle Data Panel">
         <div class="brand-name">
-          <span class="bt-brand-wordmark">
-            <span class="bt-word-bali">bali</span><span class="bt-word-tower-box"><span class="bt-word-waves"><svg viewBox="0 0 16 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 8C4 3.5 12 3.5 14.5 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M4 8C5.5 5 10.5 5 12 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M6.5 8C7.2 6.5 8.8 6.5 9.5 8" stroke="#004B93" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="bt-word-tower">tower</span></span>
-          </span>
-          <span class="brand-badge">Ops</span>
+          <span class="bt-brand-wordmark"><span class="bt-word-bali">bali</span><span class="bt-word-tower-box"><span class="bt-word-waves"><svg viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 4.5C3.5 1.5 12.5 1.5 14.5 4.5" stroke="#004B93" stroke-width="1.5" stroke-linecap="round"/><path d="M3.8 6.8C5.2 4.6 10.8 4.6 12.2 6.8" stroke="#004B93" stroke-width="1.5" stroke-linecap="round"/><path d="M6.2 9C7.1 7.8 8.9 7.8 9.8 9" stroke="#004B93" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="bt-word-tower">tower</span></span><span class="bt-word-ops">Ops</span></span>
         </div>
         <span class="brand-subtitle" id="brandSubtitle">PT Bali Towerindo Sentra Tbk — Operations</span>
       </div>
@@ -670,6 +667,8 @@
 
     <!-- 3. CENTER / RIGHT CHAT-FIRST OPERATIONS INTERFACE -->
     <section class="gemini-chat-container is-empty-state" id="geminiChatContainer">
+      <!-- Ambient Spotlight Lighting Layer (Linear / Raycast Style) -->
+      <div class="ambient-spotlight-layer" id="ambientSpotlightLayer" aria-hidden="true"></div>
       
       <!-- Top Chat Action Bar (Inside Chat Area) -->
       <div class="chat-top-bar" id="chatTopBar" style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -683,18 +682,20 @@
 
       <!-- HERO EMPTY STATE (Clean, Modern SaaS Landing Page Feel) -->
       <div class="gemini-hero-empty" id="geminiHeroEmpty">
-        <div class="hero-live-pill">
-          <span class="pulse-dot"></span>
-          <span>PT BALI TOWERINDO SENTRA TBK &bull; ENTERPRISE OPERATIONS</span>
-        </div>
-        <div class="hero-sparkle-icon" title="PT Bali Towerindo Sentra Tbk">
-          <!-- Official Bali Tower Signal Wave & Antenna Vector Mark -->
-          <svg class="hero-balitower-svg" width="46" height="46" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path class="wave-arc arc-outer" d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
-            <path class="wave-arc arc-mid" d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
-            <path class="wave-arc arc-inner" d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
-            <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
-          </svg>
+        <!-- Center Logo with Animated Telco Signal Wave Pulse Rings -->
+        <div class="hero-logo-container">
+          <div class="signal-wave-pulse wave-1"></div>
+          <div class="signal-wave-pulse wave-2"></div>
+          <div class="signal-wave-pulse wave-3"></div>
+          <div class="hero-sparkle-icon" title="PT Bali Towerindo Sentra Tbk">
+            <!-- Official Bali Tower Signal Wave & Antenna Vector Mark -->
+            <svg class="hero-balitower-svg" width="46" height="46" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path class="wave-arc arc-outer" d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+              <path class="wave-arc arc-mid" d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+              <path class="wave-arc arc-inner" d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+              <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
+            </svg>
+          </div>
         </div>
         <h1 class="hero-title" id="heroTitle"><span style="color: #004B93;">Bali</span><span style="color: #F26F21;">Tower</span> Operations Center</h1>
         <p class="hero-subtitle" id="heroSubtitle">Pusat komando terpadu PT Bali Towerindo Sentra Tbk. Analisis persediaan material tower/FO, monitoring absensi GPS & jam lembur teknisi, atau rekapitulasi laporan keuangan & invoice operator.</p>
@@ -712,8 +713,11 @@
         <div class="chat-input-inner">
           
           <!-- Main Input Bar -->
-          <div class="input-bar-container">
-            <textarea id="promptInput" class="prompt-textarea" placeholder="Type operational instruction or prompt..." rows="1" onkeydown="handleKey(event)" oninput="autoResizePromptInput()"></textarea>
+          <div class="input-bar-container" id="inputBarContainer">
+            <div class="prompt-typewriter-overlay" id="promptTypewriterOverlay" aria-hidden="true">
+              <span class="typewriter-text" id="typewriterText">What's on your mind? Tanyakan kebutuhan operasional...</span><span class="typewriter-cursor"></span>
+            </div>
+            <textarea id="promptInput" class="prompt-textarea" placeholder="" rows="1" onkeydown="handleKey(event)" oninput="autoResizePromptInput(); handlePromptInputChange();" onfocus="handlePromptInputFocus();" onblur="handlePromptInputBlur();"></textarea>
 
             <button class="btn btn-primary btn-send" id="btnSendPrompt" onclick="submitPrompt()">
               <span>Send</span>
@@ -807,16 +811,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Floating Circular Help Button (Professional Web SaaS Pattern) -->
-  <button class="fab-help-btn" id="fabHelpBtn" onclick="openFlowHelpModal()" title="Workflow Guide & Prompt Examples" aria-label="Workflow Guide">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"></circle>
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-    </svg>
-    <span class="fab-help-tooltip">Workflow Guide</span>
-  </button>
 
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container"></div>

@@ -165,12 +165,13 @@ Do not output any markdown formatting or extra commentary outside the JSON.
         elif any(k in text_lower for k in ["spesifik", "cek stok"]):
             steps.append({"type": "tool", "tool": "inventory.check_specific_stock"})
 
-        # Fallback default: End-to-End Restock / Procurement
+        # Fallback default: Safe general informational agent task (never default to Restock PR)
         else:
-            steps.append({"type": "tool", "tool": "inventory.get_low_stock_products"})
-            steps.append({"type": "agent", "task": "calculate_reorder_quantity"})
-            steps.append({"type": "tool", "tool": "docgen.compile"})
-            steps.append({"type": "tool", "tool": "notification.dispatch"})
+            steps.append({
+                "type": "agent",
+                "task": "agent.reason_and_validate",
+                "params": {"instruction": instruction}
+            })
             
         return {
             "workflow": slug or "custom_workflow",

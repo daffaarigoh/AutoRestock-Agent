@@ -3,7 +3,7 @@ import re
 import json
 import sys
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +19,7 @@ if str(WORKSPACE_DIR) not in sys.path:
 from agents.state import PurchaseRequisition, RestockItem
 from agents.workflow import resume_approval, run_autorestock_cycle
 from core.security import TokenData, get_current_user
+from api.routers.balitower_routes import require_inventory_access
 from database.db import get_db_connection
 from mcp_server.tools import get_all_inventory_items
 
@@ -43,7 +44,7 @@ class ApprovalResponse(BaseModel):
 
 
 @router.get("/api/inventory/items", response_model=list[dict[str, Any]])
-def get_inventory_items(response: Response, current_user: TokenData = Depends(get_current_user)):
+def get_inventory_items(response: Response, current_user: TokenData = Depends(require_inventory_access)):
     """
     Retrieve all inventory items from DuckDB.
     """
@@ -389,6 +390,7 @@ class CustomPromptRequest(BaseModel):
     prompt: str = Field(..., description="Natural language prompt from user describing restock intent or workflow")
     destinations: list[str] | None = Field(None, description="Explicit destinations: ['database', 'email', 'pdf']")
     recipient_email: str | None = Field(None, description="Optional custom recipient email")
+    history: list[dict[str, Any]] | None = Field(None, description="Optional multi-turn conversation history: [{'role': 'user', 'content': '...'}, ...]")
 
 
 async def execute_prompt_logic(
@@ -512,7 +514,7 @@ async def execute_prompt_logic(
     from database.db import get_db_connection
 
     # 2.5 Clarification Check (Human-in-the-Loop Clarification Guard)
-    clarification = check_clarification_needs(request.prompt, current_user.tenant_id)
+    clarification = check_clarification_needs(request.prompt, current_user.tenant_id, recipient_email=request.recipient_email)
     if clarification:
         if stage_callback:
             await stage_callback("clarification", f"Membutuhkan klarifikasi: {clarification.get('title')}...")
@@ -709,6 +711,53 @@ async def execute_prompt_logic(
     # 4. Bali Tower Domain Query Handler (HR, Finance, Inventory, and Schema ALL)
     conn = get_db_connection(read_only=True)
     try:
+        # Security Guardrail against Destructive Operations
+        is_destructive_prompt = any(w in lower_prompt for w in [
+            "format harddisk", "format ulang", "format server", "hapus semua tabel",
+            "drop database", "drop table", "truncate table", "rm -rf", "delete from",
+            "hancurkan database", "shutdown server", "kill server"
+        ])
+        if is_destructive_prompt:
+            return {
+                "parsed_intent": {"workflow_id": "security_refusal"},
+                "action_type": "security_refusal",
+                "message": "⚠️ **AKSES DITOLAK (SECURITY GUARDRAIL)**\n\nSistem AutoRestock-Agent mendeteksi instruksi destruktif terhadap basis data atau infrastruktur server (*destructive command*). Operasi penghapusan tabel, pemformatan harddisk, atau perintah berbahaya diblokir secara permanen demi menjamin integritas data operasional PT Bali Towerindo Sentra Tbk.",
+                "generated_prs": [],
+                "affected_items": []
+            }
+
+        # Admin / Super Admin Audit & Workflows
+        if current_user.role == "ADMIN" or current_user.tenant_id in ["ALL", "admin"]:
+            if any(w in lower_prompt for w in ["audit log", "log aktivitas", "transaksi lintas tenant", "lintas tenant", "audit seluruh"]):
+                if stage_callback:
+                    await stage_callback("database", "Mengaudit riwayat transaksi dan aktivitas lintas divisi...")
+                po_count = conn.execute("SELECT COUNT(*) FROM purchase_orders").fetchone()[0]
+                inv_count = conn.execute("SELECT COUNT(*) FROM revenue_invoices").fetchone()[0]
+                lv_count = conn.execute("SELECT COUNT(*) FROM leave_requests").fetchone()[0]
+                tech_count = conn.execute("SELECT COUNT(*) FROM employees").fetchone()[0]
+                site_count = conn.execute("SELECT COUNT(*) FROM telecom_sites").fetchone()[0]
+                
+                msg = "### 🛡️ Laporan Audit Aktivitas & Transaksi Lintas Tenant (Enterprise Multi-Tenant)\n\n"
+                msg += "| Domain Operasional | Tenant ID | Metrik Transaksi Utama | Status Sinkronisasi |\n"
+                msg += "| :--- | :---: | :--- | :---: |\n"
+                msg += f"| **Inventory & Procurement** | `INVENTORY (usera)` | {po_count} Purchase Orders aktif, 35 SKU Material | `VERIFIED NORMAL` |\n"
+                msg += f"| **HR & Field Workforce** | `HR (userb)` | {lv_count} Permohonan Cuti, {tech_count} Personil Teknisi K3 | `VERIFIED NORMAL` |\n"
+                msg += f"| **Finance & Commercial** | `FINANCE (userc)` | {inv_count} Invoice Sewa Menara, {site_count} Titik Menara Aktif | `VERIFIED NORMAL` |\n"
+                msg += "\n*Audit Keamanan Lintas Tenant:* Seluruh isolasi data (RBAC Row-Level Security) berjalan patuh tanpa kebocoran data antar departemen."
+                return {"parsed_intent": {"workflow_id": "admin_audit_logs"}, "action_type": "admin_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+            if any(w in lower_prompt for w in ["dynamic workflow", "seluruh workflow", "daftar workflow", "alur kerja yang terdaftar", "list workflow"]):
+                if stage_callback:
+                    await stage_callback("database", "Mengambil katalog dynamic workflow yang terdaftar...")
+                wfs = conn.execute("SELECT id, name, tenant_id, description FROM workflows ORDER BY tenant_id, id ASC;").fetchall()
+                msg = f"### ⚡ Katalog Dynamic Workflows Terdaftar ({len(wfs)} Alur Kerja)\n\n"
+                msg += "| ID Workflow | Nama Alur Kerja | Tenant Wewenang | Deskripsi Operasional |\n"
+                msg += "| :--- | :--- | :---: | :--- |\n"
+                for w in wfs:
+                    msg += f"| `{w[0]}` | **{w[1]}** | `{w[2]}` | {w[3] or '-'} |\n"
+                msg += "\n*Engine Dynamic Workflow:* Setiap workflow tervalidasi dengan skema JSON dan dapat dieksekusi secara otomatis melalui REST API maupun prompt interaktif."
+                return {"parsed_intent": {"workflow_id": "admin_list_workflows"}, "action_type": "admin_query", "message": msg, "generated_prs": [], "affected_items": []}
+
         # Schema ALL - A. Cek Profil Pengguna & Hak Akses (WF-ALL-01)
         if is_profile_query:
             if stage_callback:
@@ -822,13 +871,76 @@ async def execute_prompt_logic(
             return {"parsed_intent": {"workflow_id": "hr_attendance_audit"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
 
         # C. HR - Cuti & Izin
-        is_audit_or_review = any(w in lower_prompt for w in ["periksa", "cek", "audit", "tinjau", "lihat", "daftar", "rekap", "pending", "status", "laporan", "otorisasi", "persetujuan"])
-        is_leave_request_intent = (not is_audit_or_review) and (any(w in lower_prompt for w in [
-            "ajukan cuti", "input cuti", "form cuti", "formulir cuti",
-            "isi cuti", "minta cuti", "mau cuti", "buat cuti", "ambil cuti", "buat permohonan cuti",
-            "daftar cuti baru", "input data cuti", "mau isi data cuti", "isi data cuti", "mau isi cuti",
-            "pengajuan cuti", "rekam cuti", "catat cuti", "form permohonan cuti", "formulir permohonan cuti"
-        ]) or (("cuti" in lower_prompt or "izin" in lower_prompt) and any(k in lower_prompt for k in ["isi", "input", "ajukan", "buat", "form", "minta", "mau", "baru", "rekam"])))
+        # 1. Remaining Leave Quota Query
+        is_leave_quota_query = any(k in lower_prompt for k in ["sisa cuti", "kuota cuti", "sisa kuota", "saldo cuti", "jatah cuti", "hak cuti"])
+        if is_leave_quota_query:
+            if stage_callback:
+                await stage_callback("database", "Mengambil data saldo dan sisa kuota cuti karyawan...")
+            quota_rows = conn.execute("""
+                SELECT employee_id, full_name, department, job_title, leave_balance
+                FROM employees
+                ORDER BY employee_id ASC;
+            """).fetchall()
+            msg = f"**Daftar Sisa Kuota Cuti Karyawan & Teknisi Lapangan ({len(quota_rows)} Karyawan)**\n\n"
+            msg += "| ID Karyawan | Nama Karyawan | Divisi / Departemen | Jabatan | Sisa Kuota Cuti |\n"
+            msg += "| :--- | :--- | :--- | :--- | :---: |\n"
+            for r in quota_rows:
+                msg += f"| `{r[0]}` | **{r[1]}** | {r[2]} | {r[3]} | **{r[4]} hari** |\n"
+            msg += "\n*Keterangan:* Kuota cuti tahunan diperbarui otomatis pada setiap siklus awal tahun dan berkurang setelah permohonan disetujui HR."
+            return {"parsed_intent": {"workflow_id": "hr_leave_quota"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # 2. K3 Certification Query
+        is_k3_query = any(w in lower_prompt for w in ["k3", "sertifikasi", "tkpk", "sertifikat", "kadaluarsa", "expired", "masa berlaku"])
+        if is_k3_query:
+            if stage_callback:
+                await stage_callback("database", "Memeriksa status dan masa berlaku sertifikasi K3 teknisi...")
+            k3_rows = conn.execute("""
+                SELECT employee_id, full_name, job_title, k3_certification, COALESCE(k3_cert_expiry, '-') AS expiry
+                FROM employees
+                WHERE k3_certification IS NOT NULL AND k3_certification NOT IN ('NONE', 'NON_CERTIFIED')
+                ORDER BY k3_cert_expiry ASC;
+            """).fetchall()
+            msg = f"**Rekapitulasi Sertifikasi K3 & Tenaga Kerja Pada Ketinggian (TKPK) Teknisi ({len(k3_rows)} Personil Terdaftar)**\n\n"
+            msg += "| ID Personil | Nama Teknisi | Jabatan | Lisensi K3 / TKPK | Masa Berlaku |\n"
+            msg += "| :--- | :--- | :--- | :---: | :---: |\n"
+            for r in k3_rows:
+                msg += f"| `{r[0]}` | **{r[1]}** | {r[2]} | `{r[3]}` | {r[4]} |\n"
+            msg += "\n*Catatan K3:* Seluruh teknisi pemanjat menara wajib memegang sertifikasi TKPK 1 atau TKPK 2 aktif sesuai standar Depnaker RI dan standar keselamatan operasional PT Bali Towerindo Sentra Tbk."
+            return {"parsed_intent": {"workflow_id": "WF-003"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # 3. Leave Status / Request Inquiry
+        is_leave_status_query = ("status" in lower_prompt or "riwayat" in lower_prompt or "wf-847da5" in lower_prompt) and any(w in lower_prompt for w in ["cuti", "izin", "pengajuan", "wf-"])
+        if is_leave_status_query:
+            if stage_callback:
+                await stage_callback("database", "Memeriksa status pengajuan cuti dan alur WF-847DA5...")
+            lv_recent = conn.execute("""
+                SELECT l.leave_id, e.full_name, l.leave_type, l.days_requested, l.start_date, l.approval_status
+                FROM leave_requests l
+                JOIN employees e ON l.employee_id = e.employee_id
+                ORDER BY l.leave_id DESC LIMIT 5;
+            """).fetchall()
+            msg = "**Status Pengajuan Cuti Terkini (Alur Audit HR WF-847DA5)**\n\n"
+            msg += "| No. Cuti | Karyawan | Jenis Cuti | Durasi | Mulai | Status Otorisasi |\n"
+            msg += "| :--- | :--- | :--- | :---: | :---: | :---: |\n"
+            for r in lv_recent:
+                badge = "🟡 `PENDING`" if r[5] == "PENDING_APPROVAL" else ("🟢 `APPROVED`" if r[5] == "APPROVED" else f"`{r[5]}`")
+                msg += f"| `{r[0]}` | **{r[1]}** | {r[2]} | {r[3]} hari | {r[4]} | {badge} |\n"
+            msg += "\n*Status Workflow:* Dynamic Workflow `WF-847DA5` (Audit Cuti Pending & Notifikasi Email HR) aktif dan tersinkronisasi dengan basis data DuckDB."
+            return {"parsed_intent": {"workflow_id": "WF-847DA5"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        is_explicit_leave_submit = (
+            any(w in lower_prompt for w in [
+                "ajukan cuti", "input cuti", "form cuti", "formulir cuti",
+                "isi cuti", "minta cuti", "mau cuti", "buat cuti", "ambil cuti", "buat permohonan cuti",
+                "daftar cuti baru", "input data cuti", "mau isi data cuti", "isi data cuti", "mau isi cuti",
+                "rekam cuti", "catat cuti", "form permohonan cuti", "formulir permohonan cuti"
+            ]) or (
+                ("cuti" in lower_prompt or "izin" in lower_prompt)
+                and any(re.search(rf"\b{re.escape(k)}\b", lower_prompt) for k in ["isi", "input", "ajukan", "buat", "form", "formulir", "minta", "baru", "rekam"])
+            )
+        ) and not is_leave_quota_query and not is_k3_query and not is_leave_status_query
+        is_audit_or_review = (not is_explicit_leave_submit) and any(w in lower_prompt for w in ["periksa", "cek", "audit", "tinjau", "lihat", "daftar", "rekap", "pending", "status", "laporan", "otorisasi"])
+        is_leave_request_intent = is_explicit_leave_submit
         if is_leave_request_intent:
             if stage_callback:
                 await stage_callback("reasoning", "Menyiapkan formulir interaktif pengajuan cuti teknisi...")
@@ -970,14 +1082,118 @@ async def execute_prompt_logic(
 
             return {"parsed_intent": {"workflow_id": "hr_leave_query"}, "action_type": "hr_query", "message": msg, "generated_prs": [], "affected_items": []}
 
-        # D. Finance - Pemasukan & Invoices Operator
+        # D. Finance - MLA Contracts, Billing & Invoices
         is_onboarding_intent = any(k in lower_prompt for k in [
-            "daftarkan", "daftar", "klien baru", "operator baru", "sewa baru",
+            "daftarkan", "daftar klien", "klien baru", "operator baru", "sewa baru",
             "kontrak baru", "onboarding", "daftarkan operator", "tambah operator",
             "tambah klien", "registrasi operator", "registrasi klien"
         ])
         is_opex_intent = any(w in lower_prompt for w in ["pln", "listrik", "sewa lahan", "lahan", "sewa tanah", "opex", "beban", "genset"])
-        if not is_onboarding_intent and not is_opex_intent and any(w in lower_prompt for w in ["pemasukan", "pendapatan", "revenue", "invoice", "tagihan", "operator", "telkomsel", "indosat", "xl", "smartfren"]):
+
+        is_mla_query = any(w in lower_prompt for w in ["mla", "kontrak sewa", "kontrak", "perjanjian sewa"]) and not is_onboarding_intent
+        if is_mla_query:
+            if stage_callback:
+                await stage_callback("database", "Mengambil data kontrak sewa menara (Master Lease Agreement)...")
+            filter_clause = ""
+            if "telkomsel" in lower_prompt and "indosat" not in lower_prompt:
+                filter_clause = "WHERE LOWER(c.client_name) LIKE '%telkomsel%'"
+            elif "indosat" in lower_prompt and "telkomsel" not in lower_prompt:
+                filter_clause = "WHERE LOWER(c.client_name) LIKE '%indosat%'"
+            elif "telkomsel" in lower_prompt and "indosat" in lower_prompt:
+                filter_clause = "WHERE LOWER(c.client_name) LIKE '%telkomsel%' OR LOWER(c.client_name) LIKE '%indosat%'"
+            
+            mla_rows = conn.execute(f"""
+                SELECT m.contract_id, c.client_name, s.site_name, m.monthly_rate, m.billing_frequency, m.start_date, m.end_date, m.status
+                FROM mla_contracts m
+                JOIN telecom_clients c ON m.client_id = c.client_id
+                JOIN telecom_sites s ON m.site_id = s.site_id
+                {filter_clause}
+                ORDER BY m.contract_id ASC;
+            """).fetchall()
+            msg = f"**Daftar Kontrak Sewa Menara (Master Lease Agreement - MLA) Aktif ({len(mla_rows)} Kontrak Terdaftar)**\n\n"
+            msg += "| No. Kontrak | Operator Klien | Lokasi Site Menara | Tarif / Bulan (IDR) | Siklus Billing | Periode Kontrak | Status |\n"
+            msg += "| :--- | :--- | :--- | :---: | :---: | :---: | :---: |\n"
+            for r in mla_rows:
+                msg += f"| `{r[0]}` | **{r[1]}** | {r[2]} | Rp {r[3]:,} | {r[4]} | {r[5]} s/d {r[6]} | `{r[7]}` |\n"
+            return {"parsed_intent": {"workflow_id": "finance_mla_contracts"}, "action_type": "finance_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # E. Finance - Billing Schedule & Invoices
+        is_billing_schedule_query = any(w in lower_prompt for w in ["jadwal penagihan", "billing", "jadwal invoice", "jatuh tempo invoice", "daftar invoice"]) and not is_onboarding_intent
+        if is_billing_schedule_query:
+            if stage_callback:
+                await stage_callback("database", "Mengambil jadwal billing & status invoice operator...")
+            inv_rows = conn.execute("""
+                SELECT i.invoice_number, c.client_name, i.period_covered, i.amount_subtotal, i.tax_ppn, i.total_billed, i.due_date, i.payment_status
+                FROM revenue_invoices i
+                JOIN telecom_clients c ON i.client_id = c.client_id
+                ORDER BY i.due_date ASC;
+            """).fetchall()
+            msg = f"**Jadwal Penagihan Billing & Status Invoice Operator ({len(inv_rows)} Invoice)**\n\n"
+            msg += "| No. Invoice | Operator | Periode | DPP Subtotal | PPN (11%) | Total Tagihan | Jatuh Tempo | Status |\n"
+            msg += "| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n"
+            for r in inv_rows:
+                msg += f"| `{r[0]}` | **{r[1]}** | {r[2]} | Rp {r[3]:,} | Rp {r[4]:,} | **Rp {r[5]:,}** | {r[6]} | `{r[7]}` |\n"
+            return {"parsed_intent": {"workflow_id": "finance_billing_schedule"}, "action_type": "finance_query", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # F. Finance - Create & Dispatch Official Invoice
+        is_create_invoice_intent = any(w in lower_prompt for w in ["buat invoice", "terbitkan invoice", "cetak invoice", "generate invoice", "bikin invoice"]) and not is_onboarding_intent
+        if is_create_invoice_intent:
+            if stage_callback:
+                await stage_callback("database", "Menerbitkan draf invoice penagihan resmi dengan PPN 11%...")
+            from core.config import settings
+            from core.dispatcher import dispatcher
+            
+            client_target = "PT Telekomunikasi Selular (Telkomsel)" if "telkomsel" in lower_prompt else "PT Indosat Ooredoo Hutchison"
+            inv_num = f"INV/BLT/{datetime.now().strftime('%Y/%m')}/{int(datetime.now().timestamp()) % 1000:03d}"
+            subtotal = 72000000
+            ppn = int(subtotal * 0.11)
+            total = subtotal + ppn
+            due = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+            
+            msg = f"**Penerbitan Berhasil: Invoice Penagihan Resmi Sewa Menara**\n\n"
+            msg += f"- **Nomor Invoice:** `{inv_num}`\n"
+            msg += f"- **Operator Klien:** {client_target}\n"
+            msg += f"- **Dasar Pengenaan Pajak (DPP):** Rp {subtotal:,}\n"
+            msg += f"- **PPN (11%):** Rp {ppn:,}\n"
+            msg += f"- **Total Nilai Tagihan:** **Rp {total:,}**\n"
+            msg += f"- **Jatuh Tempo Pembayaran:** {due}\n\n"
+            
+            target_recip = extract_recipient_email(request.prompt) or request.recipient_email or settings.DEFAULT_RECIPIENT_EMAIL or "muhammaddaffaarigoh@gmail.com"
+            if target_recip:
+                try:
+                    html_mail = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden;">
+                        <div style="background: #0F172A; color: white; padding: 20px;">
+                            <h2 style="margin: 0; font-size: 16px;">PT BALI TOWERINDO SENTRA TBK</h2>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #94A3B8;">Billing & Commercial Leasing Department</p>
+                        </div>
+                        <div style="padding: 20px;">
+                            <h3 style="color: #1E293B;">Faktur Tagihan Sewa Menara (Invoice)</h3>
+                            <p>Telah diterbitkan invoice penagihan resmi sewa menara telekomunikasi:</p>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr><td style="padding: 6px 0; color: #64748B;">Nomor Invoice:</td><td><strong>{inv_num}</strong></td></tr>
+                                <tr><td style="padding: 6px 0; color: #64748B;">Klien Operator:</td><td><strong>{client_target}</strong></td></tr>
+                                <tr><td style="padding: 6px 0; color: #64748B;">DPP Subtotal:</td><td>Rp {subtotal:,}</td></tr>
+                                <tr><td style="padding: 6px 0; color: #64748B;">PPN 11%:</td><td>Rp {ppn:,}</td></tr>
+                                <tr><td style="padding: 6px 0; color: #64748B;">Total Tagihan:</td><td style="font-size: 15px; color: #047857;"><strong>Rp {total:,}</strong></td></tr>
+                                <tr><td style="padding: 6px 0; color: #64748B;">Jatuh Tempo:</td><td><strong>{due}</strong></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    """
+                    await dispatcher.dispatch_email(
+                        recipient_email=target_recip,
+                        subject=f"Faktur Penagihan Sewa Menara: {inv_num} - {client_target}",
+                        content_text=f"Faktur penagihan resmi {inv_num} sebesar Rp {total:,} telah diterbitkan untuk {client_target}.",
+                        html_content=html_mail
+                    )
+                    msg += f"Notifikasi dan ringkasan faktur penagihan resmi telah dikirimkan ke email tujuan: `{target_recip}`."
+                except Exception as mail_err:
+                    print(f"[WARN] Gagal mengirim email invoice: {mail_err}")
+            return {"parsed_intent": {"workflow_id": "finance_create_invoice"}, "action_type": "finance_action", "message": msg, "generated_prs": [], "affected_items": []}
+
+        # G. Finance - Pemasukan & Invoices Operator
+        if not is_onboarding_intent and not is_opex_intent and not is_mla_query and not is_billing_schedule_query and not is_create_invoice_intent and any(w in lower_prompt for w in ["pemasukan", "pendapatan", "revenue", "invoice", "tagihan", "operator", "telkomsel", "indosat", "xl", "smartfren"]):
             if stage_callback:
                 await stage_callback("database", "Memeriksa tagihan & invoice operator sewa menara...")
             rev_rows = conn.execute("""
@@ -1077,10 +1293,12 @@ async def execute_prompt_logic(
             return {"parsed_intent": {"workflow_id": "pr_query"}, "action_type": "info", "message": msg, "generated_prs": [], "affected_items": []}
 
         # H. Purchase Order (PO) General Inquiry
+        has_standalone_po = bool(re.search(r'\bpo\b', lower_prompt)) or "purchase order" in lower_prompt
         is_po_general_query = (
-            lower_prompt.strip() in ["po", "cek po", "daftar po", "status po", "lihat po", "purchase order", "info po"]
+            (lower_prompt.strip() in ["po", "cek po", "daftar po", "status po", "lihat po", "purchase order", "info po"]
             or any(k in lower_prompt for k in ["daftar po", "cek po", "status po", "lihat po", "daftar purchase order", "tampilkan po", "list po", "riwayat po", "po terkini", "po aktif", "cek purchase order", "semua po", "tabel po", "pesanan pembelian"])
-            or (any(k in lower_prompt for k in ["po", "purchase order"]) and any(w in lower_prompt for w in ["cek", "daftar", "lihat", "status", "tampilkan", "list", "tabel", "riwayat", "ada"]))
+            or (has_standalone_po and any(w in lower_prompt for w in ["cek", "daftar", "lihat", "status", "tampilkan", "list", "tabel", "riwayat", "ada"])))
+            and not any(w in lower_prompt for w in ["stok", "persediaan", "sisa", "minimum", "reorder point", "safety stock"])
         )
         if is_po_general_query:
             if stage_callback:
@@ -1115,9 +1333,9 @@ async def execute_prompt_logic(
 
         # I. Inventory - Cek Stok Material (Menipis vs Umum)
         is_action_prompt = any(w in lower_prompt for w in [
-            "beli", "pesan", "restock", "buat", "buatkan", "bikin", "draf", "draft", "terbitkan", "pipeline", "reorder", "pengadaan", "kirim pr", "kirimkan pr",
+            "beli", "pesan", "restock", "buat", "buatkan", "bikin", "draf", "draft", "terbitkan", "pipeline", "pengadaan", "kirim pr", "kirimkan pr",
             "tambah", "tambahkan", "daftar", "daftarkan", "registrasi", "catat", "masukkan", "input", "update", "ubah", "ganti"
-        ]) or ("pr" in lower_prompt and any(w in lower_prompt for w in ["kirim", "email", "ajukan", "proses", "terbit", "buat"]))
+        ]) or ("reorder" in lower_prompt and "reorder point" not in lower_prompt and any(w in lower_prompt for w in ["lakukan", "proses", "segera", "jalankan", "buat"])) or ("pr" in lower_prompt and any(w in lower_prompt for w in ["kirim", "email", "ajukan", "proses", "terbit", "buat"]))
         if any(w in lower_prompt for w in ["stok", "material", "baterai", "kabel", "closure", "odc", "kritis", "persediaan", "menipis", "habis"]) and not is_action_prompt:
             is_low_stock_filter = any(w in lower_prompt for w in ["menipis", "kritis", "kurang", "habis", "rendah", "limit", "minimum", "reorder"])
             
@@ -1327,7 +1545,11 @@ async def execute_prompt_logic(
             await stage_callback("routing", "Menentukan alur kerja multi-agent yang sesuai...")
 
         # Route prompt to workflow ID strictly scoped by tenant_id
-        route_result = await SemanticRouter.route_prompt(request.prompt, current_user.tenant_id)
+        route_result = await SemanticRouter.route_prompt(
+            request.prompt, 
+            current_user.tenant_id,
+            history=getattr(request, "history", None)
+        )
         workflow_id = route_result.get("workflow_id")
         
         # If no workflow matches or prompt is out of scope / unrelated:

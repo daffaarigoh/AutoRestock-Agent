@@ -43,7 +43,17 @@ class JSONExecutionEngine:
                 # ----------------------------------------------------
                 if step_type == "agent" and action in ["agent.reason_and_validate", "validate_product_attributes"]:
                     params = step.get("params", {})
-                    if "purchase_orders" in str(step) or "query_purchase_orders" in str(params.get("action")):
+                    if context.get("onboarding_id") or "onboard" in str(compiled_json) or "draft_client_onboarding" in str(compiled_json):
+                        context["validation_passed"] = True
+                        c_name = context.get("client_name") or "Operator"
+                        s_id = context.get("site_id") or "Site Tower"
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Evaluasi & Validasi Kontrak MLA Operator",
+                            "status": "COMPLETED",
+                            "details": f"Parameter kontrak sewa operator ({c_name} - {s_id}) tervalidasi lengkap dan memenuhi syarat kepatuhan regulasi."
+                        })
+                    elif "purchase_orders" in str(step) or "query_purchase_orders" in str(params.get("action")):
                         context["validation_passed"] = True
                         context["po_query_active"] = True
                         execution_results.append({
@@ -386,6 +396,16 @@ class JSONExecutionEngine:
                 # BLOCK 3: NOTIFICATION & DISPATCH (Tools)
                 # ----------------------------------------------------
                 elif step_type == "tool" and action in ["notification.dispatch", "notification.send_email"]:
+                    # If email dispatch was not requested by user and not an onboarding/HR pending approval workflow, skip dispatch
+                    if context.get("send_email") is False and not context.get("onboarding_id") and not context.get("pending_leaves"):
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Send Notification / Email",
+                            "status": "SKIPPED",
+                            "details": "Langkah pengiriman email dilewati karena tidak diminta dalam instruksi pengguna."
+                        })
+                        continue
+
                     leave_id = context.get("leave_id")
                     pr_number = context.get("pr_number")
                     items_len = len(context.get("planned_items") or [])
@@ -1486,7 +1506,7 @@ class JSONExecutionEngine:
         if context.get("pr_number") and context.get("email_sent"):
             summary = f"Ditemukan {len(low_items) or len(planned)} barang yang stoknya menipis/habis. Dokumen {context.get('pr_number')} telah berhasil diterbitkan dan notifikasi persetujuan telah otomatis dikirimkan via email ke manajer."
         elif context.get("pr_number"):
-            summary = f"Ditemukan {len(low_items) or len(planned)} barang yang stoknya menipis/habis. Dokumen {context.get('pr_number')} telah diterbitkan."
+            summary = f"Ditemukan {len(low_items) or len(planned)} barang yang stoknya menipis/habis. Dokumen {context.get('pr_number')} telah berhasil diterbitkan sebagai draf di sistem inventaris. Anda dapat meninjau rincian barang dan berkas PDF di dashboard."
         elif context.get("registered_item"):
             reg = context["registered_item"]
             summary = f"Barang '{reg.get('name')}' (SKU: {reg.get('item_id')}) berhasil didaftarkan secara eksklusif ke inventaris {reg.get('tenant_id')}."

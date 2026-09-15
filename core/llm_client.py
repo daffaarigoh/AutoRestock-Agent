@@ -34,9 +34,10 @@ class ModelGateway:
             endpoint = endpoint[:-7]
 
         headers = {
-            "Authorization": f"Bearer {settings.MODEL_API_KEY}",
             "Content-Type": "application/json",
         }
+        if settings.MODEL_API_KEY and settings.MODEL_API_KEY.strip():
+            headers["Authorization"] = f"Bearer {settings.MODEL_API_KEY.strip()}"
 
         payload: dict[str, Any] = {
             "model": actual_model,
@@ -46,14 +47,14 @@ class ModelGateway:
         if response_format_json:
             payload["response_format"] = {"type": "json_object"}
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=3.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=10.0)) as client:
             try:
                 res = await client.post(f"{endpoint}/chat/completions", json=payload, headers=headers)
                 res.raise_for_status()
                 data = res.json()
                 return data["choices"][0]["message"]["content"]
             except Exception as e:
-                logger.error(f"Failed to connect to model {actual_model} at {endpoint}: {e}")
+                logger.error(f"Failed to connect to model {actual_model} at {endpoint}: {e!r}")
                 raise e
 
     async def chat_completion_stream(
@@ -72,9 +73,10 @@ class ModelGateway:
             endpoint = endpoint[:-7]
 
         headers = {
-            "Authorization": f"Bearer {settings.MODEL_API_KEY}",
             "Content-Type": "application/json",
         }
+        if settings.MODEL_API_KEY and settings.MODEL_API_KEY.strip():
+            headers["Authorization"] = f"Bearer {settings.MODEL_API_KEY.strip()}"
 
         payload: dict[str, Any] = {
             "model": actual_model,
@@ -83,7 +85,7 @@ class ModelGateway:
             "stream": True,
         }
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=3.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=10.0)) as client:
             try:
                 async with client.stream("POST", f"{endpoint}/chat/completions", json=payload, headers=headers) as response:
                     response.raise_for_status()
@@ -102,7 +104,7 @@ class ModelGateway:
                             except Exception:
                                 pass
             except Exception as e:
-                logger.error(f"Streaming failed for model {actual_model} at {endpoint}: {e}")
+                logger.error(f"Streaming failed for model {actual_model} at {endpoint}: {e!r}")
                 raise e
 
 

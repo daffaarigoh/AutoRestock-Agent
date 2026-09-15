@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BaliTower Ops - Admin Console</title>
+  <title>BaliTower Ops — Admin Console</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -60,21 +60,47 @@
       padding: 0;
     }
 
-    body {
+    html, body {
       font-family: var(--font-main);
       background-color: var(--bg-app);
       color: var(--text-main);
       line-height: 1.5;
-      min-height: 100vh;
+      height: 100vh;
+      max-height: 100vh;
+      width: 100%;
+      max-width: 100vw;
+      overflow: hidden;
       -webkit-font-smoothing: antialiased;
+    }
+
+    /* Custom Sleek Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #CBD5E1 transparent;
     }
 
     /* App Layout (Fixed Topbar + Dynamic Body) */
     .admin-app-layout {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      height: 100vh;
+      max-height: 100vh;
       width: 100%;
+      overflow: hidden;
       background-color: var(--bg-app);
     }
 
@@ -82,7 +108,10 @@
       display: flex;
       flex: 1;
       width: 100%;
-      min-height: calc(100vh - var(--header-height));
+      height: calc(100vh - var(--header-height));
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
     }
 
     /* Left Sidebar */
@@ -94,9 +123,8 @@
       border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
-      position: sticky;
-      top: var(--header-height);
-      height: calc(100vh - var(--header-height));
+      height: 100%;
+      flex-shrink: 0;
       z-index: 100;
       transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
       overflow-y: auto;
@@ -394,21 +422,46 @@
     .topbar-brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
-    .topbar-brand .brand-logo {
-      width: 34px;
-      height: 34px;
+    .topbar-brand .brand-logo,
+    .topbar-brand .brand-logo-btn {
+      width: 36px;
+      height: 36px;
       background: #FFFFFF;
       border: 1.5px solid #E2E8F0;
-      border-radius: 9px;
-      display: flex;
+      border-radius: 10px;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
+      cursor: pointer;
       box-shadow: 0 2px 6px rgba(0, 75, 147, 0.08);
       flex-shrink: 0;
-      transition: all 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 0;
+    }
+
+    .topbar-brand .brand-logo-btn:hover {
+      transform: translateY(-1px);
+      border-color: #94A3B8;
+      box-shadow: 0 4px 12px rgba(0, 75, 147, 0.14);
+      background: #F8FAFC;
+    }
+
+    .topbar-brand .brand-logo-btn:active {
+      transform: scale(0.95);
+    }
+
+    .bt-word-ops {
+      font-family: var(--font-main);
+      font-weight: 800;
+      color: #0F172A;
+      font-size: 17px;
+      margin-left: 4.5px;
+      letter-spacing: -0.02em;
+      display: inline-block;
+      line-height: 1;
     }
 
     .topbar-brand .brand-info {
@@ -422,7 +475,7 @@
       align-items: baseline;
       font-family: var(--font-main);
       font-weight: 800;
-      font-size: 16px;
+      font-size: 17px;
       letter-spacing: -0.02em;
       line-height: 1;
     }
@@ -440,10 +493,10 @@
 
     .bt-word-waves {
       position: absolute;
-      top: -8px;
+      top: -9px;
       left: 0.5px;
-      width: 13.5px;
-      height: 8px;
+      width: 14px;
+      height: 9px;
       pointer-events: none;
     }
 
@@ -539,27 +592,96 @@
       border-color: var(--danger-border);
     }
 
-    /* Admin Content Body */
-    .admin-content-body, .container {
+    /* Admin Content Body - Clean Viewport-docked Scroll Container with Ambient Spotlight & Aurora */
+    .admin-content-body {
       flex: 1;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
       padding: 28px 32px 64px 32px;
-      max-width: 1400px;
-      width: 100%;
-      margin: 0 auto;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 24px;
+      position: relative;
+      background-color: #F8FAFC;
+      background-image: 
+        /* Telco Micro Dot Grid Texture */
+        radial-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+        /* Fluid Breathing Aurora Glow: Top-Left (Deep Corporate Blue) */
+        radial-gradient(circle at 14% 16%, rgba(0, 75, 147, 0.075) 0%, transparent 48%),
+        /* Fluid Breathing Aurora Glow: Bottom-Right (Warm Amber-Orange) */
+        radial-gradient(circle at 86% 84%, rgba(242, 111, 33, 0.065) 0%, transparent 46%),
+        /* Subtle Cyan/Sky Soft Core */
+        radial-gradient(circle at 50% 12%, rgba(2, 132, 199, 0.04) 0%, transparent 40%);
+      background-size: 28px 28px, 115% 115%, 115% 115%, 100% 100%;
+      animation: auroraBreathing 22s ease-in-out infinite alternate;
+    }
+
+    @keyframes auroraBreathing {
+      0% {
+        background-position: 0 0, 0% 0%, 100% 100%, 50% 12%;
+      }
+      50% {
+        background-position: 0 0, 6% 8%, 94% 92%, 52% 16%;
+      }
+      100% {
+        background-position: 0 0, -4% 10%, 104% 90%, 48% 10%;
+      }
+    }
+
+    /* Ambient Cursor Spotlight Layer (Raycast / Linear Smooth Spring Lag) */
+    .ambient-spotlight-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.95;
+      background: radial-gradient(
+        620px circle at var(--spot-x, 50%) var(--spot-y, 45%),
+        rgba(0, 75, 147, 0.08) 0%,
+        rgba(242, 111, 33, 0.045) 36%,
+        rgba(2, 132, 199, 0.02) 58%,
+        transparent 78%
+      );
+      transition: opacity 0.4s ease;
+    }
+
+    #sectionWorkflows,
+    #sectionUsers,
+    #sectionTools,
+    #sectionHelp {
+      width: 100%;
+      max-width: 1400px;
+      position: relative;
+      z-index: 2;
     }
 
     @media (max-width: 900px) {
-      .admin-app-layout {
+      html, body, .admin-app-layout {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+      .admin-body-layout {
         flex-direction: column;
+        height: auto;
+        overflow: visible;
       }
       .admin-sidebar {
         width: 100%;
+        min-width: 100%;
+        max-width: 100%;
         height: auto;
         position: relative;
+      }
+      .admin-content-body {
+        height: auto;
+        overflow: visible;
+        padding: 20px 16px 48px 16px;
       }
     }
 
@@ -1195,9 +1317,19 @@
     /* KPI Summary Stats Grid */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 14px;
       margin-bottom: 20px;
+    }
+    @media (max-width: 1100px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 600px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .kpi-card {
@@ -1676,6 +1808,78 @@
       color: #FFFFFF;
       border-color: #2563EB;
     }
+  
+    /* Modern Help Sub-Navigation Tabs */
+    .help-subnav-container {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-color);
+      margin-top: 16px;
+    }
+    .help-subnav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: #FFFFFF;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-main);
+    }
+    .help-subnav-btn:hover {
+      background: #F1F5F9;
+      color: var(--primary);
+      border-color: var(--primary-border);
+    }
+    .help-subnav-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      border-color: var(--primary);
+      box-shadow: 0 2px 4px rgba(10, 77, 156, 0.2);
+    }
+    .help-subnav-btn.active svg {
+      stroke: #FFFFFF;
+    }
+    
+  
+    /* Multi-Window & Mobile Responsiveness */
+    @media (max-width: 900px) {
+      .admin-topbar {
+        padding: 0 16px;
+      }
+      .topbar-breadcrumb-wrap, .topbar-divider {
+        display: none !important;
+      }
+      .topbar-right .user-name-display {
+        display: none !important;
+      }
+      .admin-content-body, .container {
+        padding: 20px 16px 48px 16px;
+      }
+    }
+    @media (max-width: 640px) {
+      .card-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 14px !important;
+      }
+      .workflow-stats-banner {
+        grid-template-columns: 1fr;
+      }
+      .help-subnav-btn {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+    
   </style>
 </head>
 <body>
@@ -1684,30 +1888,21 @@
     <!-- Fixed Executive Topbar across full screen width -->
     <header class="admin-topbar">
       <div class="topbar-left">
-        <button class="topbar-sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleAdminSidebar()" title="Toggle Navigation Sidebar (Ctrl+B)">
-          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-        </button>
-
         <div class="topbar-brand">
-          <div class="brand-logo">
+          <button class="brand-logo-btn" id="sidebarToggleBtn" onclick="toggleAdminSidebar()" title="Toggle Navigation Sidebar (Ctrl+B)" aria-label="Toggle Sidebar">
             <!-- Official Bali Tower Signal Wave Logo -->
             <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 6.5C11.5 2.5 20.5 2.5 25 6.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
-              <path d="M10 9.5C13.2 6.8 18.8 6.8 22 9.5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
-              <path d="M13 12.5C14.8 11 17.2 11 19 12.5" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
-              <path d="M13 16.5L19 13.5V19H23.5V22.5H19V26C19 27.2 19.6 27.8 21 27.8H23V30.5C21.8 30.8 20.5 31 19 31C15.5 31 13 29.2 13 25.8V22.5H10V19H13V16.5Z" fill="#F26F21"/>
+              <path d="M6 5C10 1.2 22 1.2 26 5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M9.5 8C12.5 5 19.5 5 22.5 8" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+              <path d="M13 11C14.5 9.5 17.5 9.5 19 11" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M14.2 14.5H17.8V17.5H21V20.2H17.8V24.5C17.8 25.2 18.2 25.6 19 25.6C19.7 25.6 20.4 25.4 21 25V27.5C20.1 27.8 19.1 28 18 28C15.2 28 14.2 26.5 14.2 24.2V20.2H11.5V17.5H14.2V14.5Z" fill="#F26F21"/>
             </svg>
-          </div>
+          </button>
           <div class="brand-info">
             <div class="brand-title">
-              <span class="bt-brand-wordmark">
-                <span class="bt-word-bali">bali</span><span class="bt-word-tower-box"><span class="bt-word-waves"><svg viewBox="0 0 16 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 8C4 3.5 12 3.5 14.5 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M4 8C5.5 5 10.5 5 12 8" stroke="#004B93" stroke-width="1.8" stroke-linecap="round"/><path d="M6.5 8C7.2 6.5 8.8 6.5 9.5 8" stroke="#004B93" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="bt-word-tower">tower</span></span>
-              </span>
-              <span style="font-weight: 800; color: #004B93; font-size: 10px; background: #EFF6FF; border: 1px solid #BFDBFE; padding: 1px 6px; border-radius: 4px; margin-left: 6px;">Ops</span>
+              <span class="bt-brand-wordmark"><span class="bt-word-bali">bali</span><span class="bt-word-tower-box"><span class="bt-word-waves"><svg viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 4.5C3.5 1.5 12.5 1.5 14.5 4.5" stroke="#004B93" stroke-width="1.5" stroke-linecap="round"/><path d="M3.8 6.8C5.2 4.6 10.8 4.6 12.2 6.8" stroke="#004B93" stroke-width="1.5" stroke-linecap="round"/><path d="M6.2 9C7.1 7.8 8.9 7.8 9.8 9" stroke="#004B93" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="bt-word-tower">tower</span></span><span class="bt-word-ops">Ops</span></span>
             </div>
-            <div class="brand-subtitle">ADMIN CONSOLE</div>
+            <div class="brand-subtitle">PT Bali Towerindo Sentra Tbk — Admin Console</div>
           </div>
         </div>
 
@@ -1800,6 +1995,8 @@
       </aside>
 
       <main class="admin-content-body">
+        <!-- Ambient Spotlight Lighting Layer (Linear / Raycast Style) -->
+        <div class="ambient-spotlight-layer" id="ambientSpotlightLayer" aria-hidden="true"></div>
 
         <!-- ========================================== -->
         <!-- TAB 1: WORKFLOW ORCHESTRATOR               -->
@@ -2145,48 +2342,31 @@
           </div>
         </div>
 
-        <!-- Sub-Navigation Pills -->
+        <!-- Sub-Navigation Pills (Unified, Clean & Fully Operational) -->
         <div class="help-subnav-container" id="helpSubNavContainer">
           <button class="help-subnav-btn active" id="helpNavBtnDb" onclick="switchAdminHelpSection('db')">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
             </svg>
-            <span>1. Database Architecture & Multi-Tenant</span>
+            <span>1. Multi-Tenant Database</span>
           </button>
           <button class="help-subnav-btn" id="helpNavBtnWorkflow" onclick="switchAdminHelpSection('workflow')">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
-            <span>2. Workflow Orchestrator Guide</span>
+            <span>2. Authoring Workflows</span>
           </button>
           <button class="help-subnav-btn" id="helpNavBtnTools" onclick="switchAdminHelpSection('tools')">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-              Technical and operational documentation for BaliTower Ops: multi-tenant architecture, autonomous workflow authoring, agent tools catalog, and prompt repository.
-            </p>
-          </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <span class="badge-admin" style="background: #EBF3FC; color: #0A4D9C; border-color: #BAD6F7;">LIVE DOCS</span>
-          </div>
-        </div>
-
-        <!-- Help Sub-Navigation Tabs (Clean Scrollable Pills) -->
-        <div class="help-subnav-container">
-          <button class="help-subnav-pill active" onclick="switchAdminHelpTab('database', this)">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
-            <span>1. Multi-Tenant Database</span>
-          </button>
-          <button class="help-subnav-pill" onclick="switchAdminHelpTab('workflows', this)">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-            <span>2. Authoring Workflows</span>
-          </button>
-          <button class="help-subnav-pill" onclick="switchAdminHelpTab('tools', this)">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </svg>
             <span>3. Agent Tools Ecosystem</span>
           </button>
-          <button class="help-subnav-pill" onclick="switchAdminHelpTab('prompts', this)">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+          <button class="help-subnav-btn" id="helpNavBtnFlows" onclick="switchAdminHelpSection('flows')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+            </svg>
             <span>4. Prompt Architecture</span>
           </button>
         </div>
@@ -2461,28 +2641,106 @@
         </div>
 
         <!-- Mekanisme Kerja Engine -->
-        <div class="doc-card" style="margin-bottom: 20px;">
+        <div class="doc-card" style="margin-bottom: 24px;">
           <div class="doc-card-title">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             <span>Alur Eksekusi Agen Cerdas (Execution Lifecycle)</span>
           </div>
-          <div style="background: #0F172A; color: #E2E8F0; padding: 16px 20px; border-radius: 8px; font-family: var(--font-mono); font-size: 12px; line-height: 1.7; overflow-x: auto;">
-[Input Chat Pengguna] 
-       │
-       ▼
-[Semantic Router] ──► Deteksi Intent & Batasan Tenant (usera / userb / userc / admin)
-       │
-       ▼
-[Workflow / Plan Resolver] ──► Menentukan Sequence Langkah & Tools yang Dibutuhkan
-       │
-       ▼
-[JSON Execution Engine] ──► Validasi Skema Parameter & Hak Akses Data
-       │
-       ▼
-[Tool Invocation] ──► Query/Update DuckDB ──► Generate Typst PDF ──► Dispatch Email SMTP
-       │
-       ▼
-[Sintesis Balasan AI] ──► Mengembalikan Respons Terstruktur & Tautan Unduhan Dokumen
+          <p style="font-size: 12.5px; color: #64748B; margin: 0 0 16px 0;">
+            Alur berurutan bagaimana sistem memproses setiap instruksi pengguna dari input awal hingga dokumen dan balasan selesai:
+          </p>
+
+          <div class="lifecycle-timeline-container" style="display: flex; flex-direction: column; gap: 0;">
+
+            <!-- Step 1 -->
+            <div style="display: flex; gap: 14px; position: relative;">
+              <div style="display: flex; flex-direction: column; align-items: center; width: 32px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; border: 2px solid #2563EB; color: #2563EB; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 2;">1</div>
+                <div style="width: 2px; flex: 1; background: #CBD5E1; min-height: 24px;"></div>
+              </div>
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #E2E8F0; color: #1E293B; padding: 2px 8px; border-radius: 4px;">Input Chat Pengguna</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Penerimaan Permintaan / Trigger</span>
+                </div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Pengguna mengirim instruksi melalui chat antarmuka atau trigger otomatis multi-tenant.</div>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div style="display: flex; gap: 14px; position: relative;">
+              <div style="display: flex; flex-direction: column; align-items: center; width: 32px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; border: 2px solid #2563EB; color: #2563EB; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 2;">2</div>
+                <div style="width: 2px; flex: 1; background: #CBD5E1; min-height: 24px;"></div>
+              </div>
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #DBEAFE; color: #1E40AF; padding: 2px 8px; border-radius: 4px;">Semantic Router</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Klasifikasi Intent & Pembatasan Tenant</span>
+                </div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Mendeteksi tujuan instruksi dan memvalidasi batasan cakupan tenant (<code style="font-size: 11px; color: #0A4D9C;">usera</code> / <code style="font-size: 11px; color: #0A4D9C;">userb</code> / <code style="font-size: 11px; color: #0A4D9C;">userc</code> / <code style="font-size: 11px; color: #0A4D9C;">admin</code>).</div>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div style="display: flex; gap: 14px; position: relative;">
+              <div style="display: flex; flex-direction: column; align-items: center; width: 32px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; border: 2px solid #2563EB; color: #2563EB; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 2;">3</div>
+                <div style="width: 2px; flex: 1; background: #CBD5E1; min-height: 24px;"></div>
+              </div>
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #FEF3C7; color: #92400E; padding: 2px 8px; border-radius: 4px;">Workflow / Plan Resolver</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Penyusunan Sequence Langkah & Tools</span>
+                </div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Menentukan urutan langkah kerja otomatis dan memilih tools spesifik yang harus dieksekusi oleh Agen.</div>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div style="display: flex; gap: 14px; position: relative;">
+              <div style="display: flex; flex-direction: column; align-items: center; width: 32px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; border: 2px solid #2563EB; color: #2563EB; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 2;">4</div>
+                <div style="width: 2px; flex: 1; background: #CBD5E1; min-height: 24px;"></div>
+              </div>
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #EDE9FE; color: #6D28D9; padding: 2px 8px; border-radius: 4px;">JSON Execution Engine</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Validasi Skema & Hak Akses Data</span>
+                </div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Memvalidasi skema parameter input dan memeriksa izin akses data operasional untuk menjamin keamanan transaksi.</div>
+              </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div style="display: flex; gap: 14px; position: relative;">
+              <div style="display: flex; flex-direction: column; align-items: center; width: 32px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; border: 2px solid #2563EB; color: #2563EB; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 2;">5</div>
+                <div style="width: 2px; flex: 1; background: #CBD5E1; min-height: 24px;"></div>
+              </div>
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 4px;">Tool Invocation</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Eksekusi Pipeline Operasional Terpadu</span>
+                </div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Menjalankan aksi: Query/Update DuckDB ➔ Render berkas PDF Typst ➔ Dispatch Email SMTP notifikasi.</div>
+              </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div style="display: flex; gap: 14px; position: relative;">
+              <div style="display: flex; flex-direction: column; align-items: center; width: 32px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #16A34A; border: 2px solid #16A34A; color: #FFFFFF; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 2;">✓</div>
+              </div>
+              <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 12px 16px; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 4px;">Sintesis Balasan AI</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #15803D;">Respons Terstruktur & Tautan Unduh</span>
+                </div>
+                <div style="font-size: 12px; color: #166534; line-height: 1.5;">Menyusun respons akhir terstruktur lengkap dengan tautan unduhan dokumen resmi yang siap di-review.</div>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -2929,6 +3187,9 @@
       if (secUsers) secUsers.style.display = 'none';
       if (secTools) secTools.style.display = 'none';
       if (secHelp) secHelp.style.display = 'none';
+
+      const contentBody = document.querySelector('.admin-content-body');
+      if (contentBody) contentBody.scrollTop = 0;
 
       if (tabName === 'workflows') {
         if (btnWf) btnWf.classList.add('active');
@@ -5210,8 +5471,52 @@
       );
     }
 
+    // Interactive Ambient Spotlight Controller (Linear / Raycast Style)
+    function initAmbientSpotlight() {
+      const container = document.querySelector('.admin-content-body');
+      const layer = document.getElementById('ambientSpotlightLayer');
+      if (!container || !layer) return;
+
+      let targetX = container.clientWidth * 0.5 || window.innerWidth * 0.5;
+      let targetY = container.clientHeight * 0.45 || window.innerHeight * 0.45;
+      let currentX = targetX;
+      let currentY = targetY;
+      let isMouseInside = false;
+
+      function onMouseMove(e) {
+        const rect = container.getBoundingClientRect();
+        targetX = e.clientX - rect.left;
+        targetY = e.clientY - rect.top;
+        isMouseInside = true;
+      }
+
+      function onMouseLeave() {
+        isMouseInside = false;
+        const rect = container.getBoundingClientRect();
+        targetX = rect.width * 0.5;
+        targetY = rect.height * 0.45;
+      }
+
+      function renderSpotlight() {
+        const lerpSpeed = isMouseInside ? 0.085 : 0.035;
+        currentX += (targetX - currentX) * lerpSpeed;
+        currentY += (targetY - currentY) * lerpSpeed;
+
+        layer.style.setProperty('--spot-x', `${currentX.toFixed(1)}px`);
+        layer.style.setProperty('--spot-y', `${currentY.toFixed(1)}px`);
+
+        requestAnimationFrame(renderSpotlight);
+      }
+
+      container.addEventListener('mousemove', onMouseMove, { passive: true });
+      container.addEventListener('mouseleave', onMouseLeave, { passive: true });
+
+      requestAnimationFrame(renderSpotlight);
+    }
+
     // Default Load: Directly open Workflow Orchestrator as requested
     switchAdminTab('workflows');
+    initAmbientSpotlight();
   </script>
 </body>
 </html>

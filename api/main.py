@@ -80,6 +80,14 @@ async def startup_event():
             pass
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    icon_path = WORKSPACE_DIR / "web" / "static" / "images" / "balitower_mark.svg"
+    if icon_path.exists():
+        return FileResponse(icon_path, media_type="image/svg+xml")
+    return Response(status_code=204)
+
+
 @app.get("/", tags=["Dashboard UI & Health"])
 def root(request: Request):
     accept = request.headers.get("accept", "")
@@ -123,7 +131,9 @@ async def health_check():
         models_endpoint = base_url if base_url.endswith("/models") else f"{base_url}/models"
 
         async with httpx.AsyncClient(timeout=5.0) as client:
-            headers = {"Authorization": f"Bearer {settings.MODEL_API_KEY}"}
+            headers = {}
+            if settings.MODEL_API_KEY and settings.MODEL_API_KEY.strip():
+                headers["Authorization"] = f"Bearer {settings.MODEL_API_KEY.strip()}"
             res = await client.get(models_endpoint, headers=headers)
             res.raise_for_status()
         return {"status": "healthy", "llm_connected": True, "llm_url": settings.MODEL_URL}

@@ -14,10 +14,74 @@ class TenantSchemaAdapter:
         conn = get_db_connection(read_only=True)
         try:
             existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+            t_clean = (tenant_id or "ALL").upper()
+            if t_clean in ["HR", "TENANT_B", "USERB", "FINANCE", "TENANT_C", "USERC"]:
+                return []
+
+            if "stock_balances" in existing_tables and "warehouses" in existing_tables and "inventory_items" in existing_tables:
+                rows = conn.execute("""
+                    SELECT 
+                        sb.balance_id,
+                        sb.item_id,
+                        i.item_code,
+                        i.item_name,
+                        w.warehouse_id,
+                        w.warehouse_name,
+                        i.category,
+                        sb.quantity_on_hand,
+                        sb.reorder_point,
+                        sb.reorder_point * 3 AS max_thresh,
+                        i.lead_time_days,
+                        i.unit,
+                        COALESCE(i.unit_price, 10000.0) AS unit_price,
+                        COALESCE(s.supplier_id, 'SUP-001') AS supplier_id,
+                        COALESCE(s.supplier_name, 'PT Bali Vendor Utama') AS supplier_name
+                    FROM stock_balances sb
+                    JOIN inventory_items i ON sb.item_id = i.item_id
+                    JOIN warehouses w ON sb.warehouse_id = w.warehouse_id
+                    LEFT JOIN suppliers s ON i.supplier_id = s.supplier_id
+                    WHERE sb.quantity_on_hand <= sb.reorder_point 
+                       OR sb.stock_status IN ('CRITICAL', 'LOW_STOCK', 'OUT_OF_STOCK')
+                    ORDER BY 
+                        CASE WHEN sb.stock_status = 'OUT_OF_STOCK' THEN 1
+                             WHEN sb.stock_status = 'CRITICAL' THEN 2
+                             WHEN sb.stock_status = 'LOW_STOCK' THEN 3
+                             ELSE 4 END ASC,
+                        (sb.reorder_point - sb.quantity_on_hand) DESC,
+                        sb.balance_id ASC;
+                """).fetchall()
+                results = []
+                for r in rows:
+                    bal_id, item_id, item_code, name, wh_id, wh_name, cat, stock, min_thresh, max_thresh, lt_days, unit, price, sup_id, sup_name = r
+                    stock_val = int(stock)
+                    min_val = int(min_thresh)
+                    reorder_qty = max(min_val * 2 - stock_val, 1)
+                    results.append({
+                        "balance_id": bal_id,
+                        "item_id": item_id,
+                        "item_code": item_code,
+                        "name": f"{name} ({wh_name})",
+                        "base_name": name,
+                        "warehouse_id": wh_id,
+                        "warehouse_name": wh_name,
+                        "category": cat,
+                        "current_stock": stock_val,
+                        "min_threshold": min_val,
+                        "max_threshold": int(max_thresh),
+                        "avg_daily_usage": 5.0,
+                        "lead_time_days": int(lt_days),
+                        "unit": unit,
+                        "unit_price": float(price),
+                        "safety_stock": min_val,
+                        "reorder_qty": int(reorder_qty),
+                        "vendor_id": sup_id,
+                        "vendor_name": sup_name,
+                        "tenant_id": "usera",
+                        "raw_source_table": "stock_balances"
+                    })
+                return results
+
             if "inventory_items" in existing_tables:
-                t_clean = (tenant_id or "ALL").upper()
-                if t_clean in ["HR", "TENANT_B", "USERB", "FINANCE", "TENANT_C", "USERC"]:
-                    return []
                 rows = conn.execute("""
                     SELECT 
                         i.item_id,
