@@ -5,73 +5,6 @@ from core.config import settings
 from core.llm_client import ModelGateway
 from database.db import get_db_connection
 
-def _extract_item_attributes_from_text(prompt: str) -> dict:
-    """Helper to extract product attributes from natural language prompt."""
-    item = {}
-    
-    # 1. Extract Name
-    name_match = re.search(r'(?:nama\s+material|nama\s+produk|nama\s+barang|nama\s+item|material\s+baru|produk\s+baru|barang\s+baru|item\s+baru|material|produk|barang|item)\s*[:=]?\s*([A-Za-z0-9\s\-]+?)(?=,\s*|\s+kategori|\s+stok|\s+batas|\s+min|\s+harga|\s+dam|$)', prompt, re.IGNORECASE)
-    if name_match:
-        name_val = name_match.group(1).strip()
-        name_val = re.sub(r'^(?:baru\s+|tambah\s+|tambahkan\s+|bernama\s+)+', '', name_val, flags=re.IGNORECASE).strip()
-        name_val = name_val.lstrip(":= ").strip()
-        if name_val and name_val.lower() not in ["baru", "produk", "barang", "material", "item"]:
-            item["name"] = name_val
-            
-    # 2. Extract Category
-    cat_match = re.search(r'kategori\s*[:=]?\s*([A-Za-z0-9\s]+?)(?=,\s*|\s+stok|\s+batas|\s+min|\s+harga|\s+dam|$)', prompt, re.IGNORECASE)
-    if cat_match:
-        item["category"] = cat_match.group(1).strip().capitalize()
-    else:
-        if any(w in prompt.lower() for w in ["hp", "samsung", "sensor", "module", "esp", "stm", "elektronik", "electronics", "phone"]):
-            item["category"] = "Electronics"
-        else:
-            item["category"] = "General"
-            
-    # 3. Extract Current Stock
-    stock_match = re.search(r'stok\s*(?:awal|fisik)?\s*[:=]?\s*(\d+)', prompt, re.IGNORECASE)
-    if stock_match:
-        item["current_stock"] = int(stock_match.group(1))
-        
-    # 4. Extract Min/Max Threshold
-    min_match = re.search(r'(?:batas\s+min(?:imum)?|min(?:imum)?\s+threshold|threshold\s+min(?:imal)?|min)\s*[:=]?\s*(\d+)', prompt, re.IGNORECASE)
-    if min_match:
-        item["min_threshold"] = int(min_match.group(1))
-        
-    max_match = re.search(r'(?:batas\s+mak(?:simal)?|mak(?:simal)?\s+threshold|threshold\s+mak(?:simal)?|max)\s*[:=]?\s*(\d+)', prompt, re.IGNORECASE)
-    if max_match:
-        item["max_threshold"] = int(max_match.group(1))
-        
-    # 5. Extract Burn Rate / Daily Usage
-    usage_match = re.search(r'(?:konsumsi|burn\s+rate|daily\s+usage|pakai)\s*[:=]?\s*([\d\.]+)', prompt, re.IGNORECASE)
-    if usage_match:
-        item["avg_daily_usage"] = float(usage_match.group(1))
-    else:
-        item["avg_daily_usage"] = 1.0
-        
-    # 6. Extract Lead Time Days
-    lt_match = re.search(r'lead\s*time\s*[:=]?\s*(\d+)', prompt, re.IGNORECASE)
-    if lt_match:
-        item["lead_time_days"] = int(lt_match.group(1))
-    else:
-        item["lead_time_days"] = 3
-        
-    # 7. Extract Unit
-    unit_match = re.search(r'satuan\s*(?:unit)?\s*[:=]?\s*([a-zA-Z]+)', prompt, re.IGNORECASE)
-    if unit_match:
-        item["unit"] = unit_match.group(1).strip()
-    else:
-        item["unit"] = "pcs"
-        
-    # 8. Extract Unit Price
-    price_match = re.search(r'harga\s*[:=]?\s*(?:rp|rp\.|idr)?\s*(\d+(?:\.\d+)*)', prompt, re.IGNORECASE)
-    if price_match:
-        price_str = price_match.group(1).replace('.', '') # remove dots if any
-        item["unit_price"] = int(price_str)
-        
-    return item
-
-
 def extract_recipient_email(prompt: str) -> str | None:
     """Helper to detect any email address or named person/role mentioned in the prompt text."""
     if not prompt:
@@ -80,8 +13,7 @@ def extract_recipient_email(prompt: str) -> str | None:
     # 1. Direct standard email regex pattern
     match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', prompt)
     if match:
-        email = match.group(0).strip()
-        email = email.rstrip(".,;:!?")
+        email = match.group(0).strip().rstrip(".,;:!?")
         return email
 
     # 2. Named recipient resolution (colleagues, roles, and corporate staff)
@@ -118,15 +50,10 @@ def extract_recipient_email(prompt: str) -> str | None:
         "hendra": "hendra.gunawan@balitower.co.id",
         "yusuf maulana": "yusuf.maulana@balitower.co.id",
         "yusuf": "yusuf.maulana@balitower.co.id",
-        "agus setiawan": "agus.setiawan@balitower.co.id",
-        "agus": "agus.setiawan@balitower.co.id",
     }
-
-    # Match directional phrases: "ke <nama>", "kirim ke <nama>", "email ke <nama>", "kepada <nama>"
-    for key, target_email in named_map.items():
-        pat = r'(?:ke|kepada|untuk|email(?:kan)?|kirim(?:kan)?|tujukan)\s+(?:rekan\s+)?(?:sdr\s+|bapak\s+|ibu\s+|pak\s+|bu\s+)?' + re.escape(key) + r'\b'
-        if re.search(pat, p_lower):
-            return target_email
+    for name_key, resolved_email in named_map.items():
+        if re.search(r'\b' + re.escape(name_key) + r'\b', p_lower):
+            return resolved_email
 
     return None
 
@@ -172,11 +99,8 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL", recipient_ema
         
     # 3. Product registration clarification: wants to register/add new product but no details provided
     wants_register = any(w in p_lower for w in ["tambah produk", "tambah barang", "daftarkan barang", "daftarkan produk", "registrasi produk", "registrasi barang"])
-    extracted_item = _extract_item_attributes_from_text(prompt)
-    raw_name = extracted_item.get("name", "")
-    filler_words = {'dong', 'ya', 'baru', 'gan', 'min', 'tolong', 'pls', 'please', 'deh', 'sih', 'lah', 'ini', 'itu', 'dulu'}
-    valid_name_tokens = [w for w in raw_name.lower().split() if w not in filler_words]
-    if wants_register and (not valid_name_tokens and "current_stock" not in extracted_item):
+    has_spec = bool(re.search(r'(stok|batas|min|harga|satuan|\d+)', p_lower))
+    if wants_register and not has_spec:
         return {
             "needs_clarification": True,
             "field": "product_details",
@@ -341,27 +265,52 @@ Output strictly valid JSON with exact keys:
         # ----------------------------------------------------
         # LAYER 2: FAIL-SAFE HEURISTIC MATCHER (Only on LLM Error)
         # ----------------------------------------------------
-        # Schema ALL Workflows
-        if any(k in prompt_lower for k in ["profil", "siapa saya", "info akun", "hak akses", "wewenang", "role saya", "user info"]):
+        # 1. Match example_prompts & titles of all registered workflows (including Admin-created workflows)
+        for row in workflows:
+            wf_id, wf_name, wf_desc, wf_inst, wf_ex, wf_tenant = row
+            if wf_ex:
+                try:
+                    ex_list = json.loads(wf_ex) if isinstance(wf_ex, str) else wf_ex
+                    if isinstance(ex_list, list):
+                        for ex_p in ex_list:
+                            ex_clean = str(ex_p).lower().strip()
+                            if ex_clean and (ex_clean in prompt_lower or prompt_lower in ex_clean):
+                                return {
+                                    "workflow_id": wf_id,
+                                    "send_email": bool(extracted_email) or ("email" in prompt_lower),
+                                    "recipient_email": extracted_email,
+                                    "is_fallback": True
+                                }
+                except Exception:
+                    pass
+            if wf_name and len(wf_name) > 6 and wf_name.lower() in prompt_lower:
+                return {
+                    "workflow_id": wf_id,
+                    "send_email": bool(extracted_email) or ("email" in prompt_lower),
+                    "recipient_email": extracted_email,
+                    "is_fallback": True
+                }
+
+        # 2. Schema ALL Workflows
+        if any(k in prompt_lower for k in ["profil", "siapa saya", "info akun", "hak akses", "wewenang"]):
             for row in workflows:
                 if row[0] == "WF-ALL-01" or any(w in row[1].lower() for w in ["profil", "hak akses", "user"]):
                     return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        if any(k in prompt_lower for k in ["info sistem", "status sistem", "status server", "health check", "spesifikasi sistem", "informasi sistem", "versi sistem"]):
+        if any(k in prompt_lower for k in ["info sistem", "status sistem", "status server", "health check", "kesehatan sistem", "status kesehatan", "kesehatan"]):
             for row in workflows:
                 if row[0] == "WF-ALL-02" or any(w in row[1].lower() for w in ["informasi sistem", "status layanan", "health"]):
                     return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        if any(k in prompt_lower for k in ["panduan operasional", "sop perusahaan", "kontak darurat", "helpdesk", "aturan kerja", "panduan", "sop"]):
+        if any(k in prompt_lower for k in ["panduan operasional", "sop", "helpdesk"]):
             for row in workflows:
-                if row[0] == "WF-ALL-03" or any(w in row[1].lower() for w in ["panduan", "darurat", "sop", "guideline"]):
+                if row[0] == "WF-ALL-03" or any(w in row[1].lower() for w in ["panduan", "darurat", "sop"]):
                     return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        # Client Onboarding (Finance / Schema C)
-        is_onboarding_intent = any(k in prompt_lower for k in ["klien", "operator", "sewa", "onboarding", "mla", "menara", "kontrak"]) and any(k in prompt_lower for k in ["daftar", "daftarkan", "baru", "onboard", "tambah", "ajukan"])
-        if is_onboarding_intent or any(k in prompt_lower for k in ["klien baru", "operator baru", "daftar operator", "sewa baru", "kontrak baru", "daftarkan operator", "sewa menara baru"]):
+        # 3. Client Onboarding (Finance / Schema C)
+        if any(k in prompt_lower for k in ["onboarding", "mla", "kontrak baru", "sewa baru", "daftarkan operator"]):
             for row in workflows:
-                if any(w in row[1].lower() for w in ["onboard", "klien", "kontrak", "mla"]) or ("daftar" in row[1].lower() and "operator" in row[1].lower()):
+                if any(w in row[1].lower() for w in ["onboard", "klien", "kontrak", "mla"]):
                     return {
                         "workflow_id": row[0],
                         "send_email": True,
@@ -369,17 +318,22 @@ Output strictly valid JSON with exact keys:
                         "is_fallback": True
                     }
 
-        # HR Leave Audit & Approval (Schema B)
-        is_leave_audit_intent = (
-            any(k in prompt_lower for k in ["periksa", "audit", "cek", "tinjau", "lihat", "rekap", "laporan", "status", "otorisasi"])
-            and any(k in prompt_lower for k in ["cuti", "pending", "pending_approval", "permohonan cuti", "pengajuan cuti", "izin"])
-        ) or any(k in prompt_lower for k in ["audit cuti", "cuti pending", "periksa cuti", "permohonan cuti"])
-        if is_leave_audit_intent:
+        # 4. HR Candidates / Recruitment Screening (Schema B)
+        if any(k in prompt_lower for k in ["kandidat", "pelamar", "rigger", "tkpk", "rekrutmen", "screening"]):
             for row in workflows:
-                w_name = row[1].lower()
-                if any(w in w_name for w in ["audit cuti", "cuti pending", "periksa cuti", "otorisasi hr"]) or (
-                    "cuti" in w_name and ("pending" in w_name or "audit" in w_name or "email" in w_name)
-                ):
+                if row[0] == "WF-003" or any(w in row[1].lower() for w in ["pelamar", "kandidat", "rigger"]):
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
+
+        # 5. HR Attendance & Overtime (Schema B)
+        if any(k in prompt_lower for k in ["absensi", "absen", "lembur", "overtime", "geofencing", "kunjungan site"]):
+            for row in workflows:
+                if row[0] == "WF-002" or any(w in row[1].lower() for w in ["absensi", "lembur", "kehadiran"]):
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
+
+        # 6. HR Leave Audit & Approval (Schema B)
+        if "cuti" in prompt_lower and any(k in prompt_lower for k in ["audit", "pending", "periksa", "daftar", "status"]):
+            for row in workflows:
+                if "cuti" in row[1].lower() and ("pending" in row[1].lower() or "audit" in row[1].lower() or "otorisasi" in row[1].lower()):
                     return {
                         "workflow_id": row[0],
                         "send_email": True,
@@ -387,78 +341,59 @@ Output strictly valid JSON with exact keys:
                         "is_fallback": True
                     }
 
-        # Finance Workflows (Schema C)
-        if not is_onboarding_intent and (
-            any(k in prompt_lower for k in ["pendapatan sewa", "pendapatan menara", "pendapatan operator", "revenue", "invoice operator", "tagihan operator", "invoice sewa", "tagihan sewa", "laporan pendapatan"])
-            or ("invoice" in prompt_lower and any(w in prompt_lower for w in ["sewa", "operator", "menara", "status"]))
-        ):
+        # 7. HR Leave Quota (Schema B)
+        if any(k in prompt_lower for k in ["sisa cuti", "kuota cuti", "saldo cuti", "jatah cuti"]):
+            for row in workflows:
+                if any(w in row[1].lower() for w in ["kuota", "saldo", "sisa cuti"]):
+                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
+
+        # 8. Finance Workflows (Schema C)
+        if any(k in prompt_lower for k in ["pendapatan", "revenue", "invoice operator", "tagihan operator", "sewa menara"]):
             for row in workflows:
                 if row[0] == "WF-004" or any(w in row[1].lower() for w in ["pendapatan", "revenue", "invoice"]):
                     return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        # Finance OPEX & Utilities (WF-005 strictly for OPEX/Listrik, NOT stock!)
-        if any(k in prompt_lower for k in ["beban operasional", "opex", "listrik pln", "beban listrik", "sewa lahan", "biaya genset", "beban site"]):
+        if any(k in prompt_lower for k in ["beban operasional", "opex", "listrik pln", "beban listrik", "sewa lahan", "listrik dan sewa"]):
             for row in workflows:
-                if row[0] == "WF-005" or any(w in row[1].lower() for w in ["beban listrik", "opex", "sewa lahan"]):
+                if row[0] == "WF-005" or any(w in row[1].lower() for w in ["beban listrik", "opex", "sewa lahan", "beban operasional"]):
                     return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        if any(k in prompt_lower for k in ["arus kas", "cash flow", "cashflow", "kas masuk", "kas keluar", "saldo kas", "net cash flow"]):
+        if any(k in prompt_lower for k in ["arus kas", "cash flow", "cashflow", "kas masuk", "kas keluar"]):
             for row in workflows:
                 if row[0] == "WF-006" or any(w in row[1].lower() for w in ["arus kas", "cash flow", "cashflow"]):
                     return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
 
-        # Inventory - Product Registration
-        if not is_onboarding_intent and any(k in prompt_lower for k in ["tambah barang", "tambah material", "registrasi produk", "tambah produk", "material baru", "item baru", "sku baru"]):
+        # 9. Inventory - Product Registration
+        if any(k in prompt_lower for k in ["tambah barang", "tambah produk", "registrasi produk", "tambah material"]):
             for row in workflows:
-                if any(w in row[1].lower() for w in ["daftar", "pendaftaran", "tambah", "registrasi", "register"]) and not any(w in row[1].lower() for w in ["klien", "operator", "sewa", "kontrak"]):
-                    extracted_item = _extract_item_attributes_from_text(prompt)
-                    res = {
+                if any(w in row[1].lower() for w in ["daftar", "tambah", "registrasi"]):
+                    return {
                         "workflow_id": row[0],
-                        "new_item_data": extracted_item,
+                        "new_item_data": {},
                         "send_email": bool(extracted_email),
+                        "recipient_email": extracted_email,
                         "is_fallback": True
                     }
-                    if extracted_email:
-                        res["recipient_email"] = extracted_email
-                    return res
 
-        # Inventory - Threshold Update
-        if any(k in prompt_lower for k in ["threshold", "ambang", "ubah batas", "update batas"]):
+        # 10. Inventory - Threshold Update
+        if any(k in prompt_lower for k in ["threshold", "ambang", "ubah batas"]):
             for row in workflows:
                 if row[0] == "WF-002" or "threshold" in row[1].lower():
                     return {"workflow_id": row[0], "threshold_updates": [], "send_email": False, "is_fallback": True}
 
-        # Inventory - Warehouse Audit
-        if any(k in prompt_lower for k in ["seluruh gudang", "audit gudang", "rekap seluruh inventaris"]):
+        # 11. Restock / PR Creation Pipeline
+        if any(k in prompt_lower for k in ["buatkan pr", "bikin pr", "terbitkan pr", "draf pr", "draft pr", "restock material", "pesan material"]):
+            send_mail = bool(extracted_email) or ("email" in prompt_lower)
             for row in workflows:
-                if row[5] == tenant_id and "audit" in row[1].lower():
-                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
-            for row in workflows:
-                if row[0] in ["WF-004", "WF-B01"] or "audit" in row[1].lower():
-                    return {"workflow_id": row[0], "send_email": False, "is_fallback": True}
-
-        # Restock / PR Creation Pipeline (Requiring clear action verbs, no loose single 'pr')
-        is_restock_intent = any(k in prompt_lower for k in [
-            "buatkan pr", "bikin pr", "terbitkan pr", "buat draft pr", "buatkan draf pr", "draf pr", "draft pr",
-            "proses pengadaan", "pipeline pengadaan", "restock material", "pesan material", "order material",
-            "pengadaan barang", "pesan barang", "beli barang", "order barang", "purchase requisition"
-        ])
-
-        if is_restock_intent:
-            send_mail = bool(extracted_email) or ("email" in prompt_lower or "notifikasi" in prompt_lower)
-            for row in workflows:
-                if len(row) > 5 and row[5] == tenant_id and any(w in row[1].lower() for w in ["restock", "pengadaan"]):
-                    res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None, "is_fallback": True}
-                    if extracted_email:
-                        res["recipient_email"] = extracted_email
-                    return res
-
-            for row in workflows:
-                if any(w in row[1].lower() for w in ["restock", "pengadaan", "pipeline"]):
-                    res = {"workflow_id": row[0], "send_email": send_mail, "threshold_updates": [], "target_item_name": None, "is_fallback": True}
-                    if extracted_email:
-                        res["recipient_email"] = extracted_email
-                    return res
+                if any(w in row[1].lower() for w in ["restock", "pengadaan"]):
+                    return {
+                        "workflow_id": row[0],
+                        "send_email": send_mail,
+                        "recipient_email": extracted_email,
+                        "threshold_updates": [],
+                        "target_item_name": None,
+                        "is_fallback": True
+                    }
 
         # Anti-Hallucination Guardrail:
         return {

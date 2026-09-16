@@ -809,7 +809,8 @@ async function loadPurchaseOrders() {
 function confirmGoodsReceiptQuick(poId, poNumber) {
   const input = document.getElementById('promptInput');
   if (input) {
-    input.value = `Barang untuk ${poId} sudah sampai di gudang, tolong catat penerimaannya`;
+    const targetPo = (poNumber && poNumber.trim()) ? poNumber : poId;
+    input.value = `Barang untuk ${targetPo} sudah sampai di gudang, tolong catat penerimaannya`;
     input.focus();
     submitPrompt();
   }
@@ -3243,15 +3244,6 @@ const FLOW_HELP_REGISTRY = {
         desc: 'Verifikasi kedatangan barang PO di gudang regional dan sinkronisasi penambahan stok fisik.',
         examples: [
           'PO-2026-001 sudah sampai di gudang, tolong catat penerimaan barangnya'
-        ]
-      },
-      {
-        id: 'WF-A03',
-        name: 'Pelacakan Pengiriman PO & Unduh Dokumen PDF',
-        desc: 'Audit pesanan pembelian aktif (IN_TRANSIT) dan penerbitan berkas resmi format PDF Typst.',
-        examples: [
-          'Lacak status pengiriman PO yang sedang aktif dalam perjalanan',
-          'Tampilkan daftar purchase order berstatus in transit dan unduh dokumen resminya'
         ]
       },
       {

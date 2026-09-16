@@ -1,0 +1,1270 @@
+# -*- coding: utf-8 -*-
+"""
+Script to build high-polish web/static/flowchart.html and docs/flowchart.html
+Detailed End-to-End Enterprise Flowchart:
+- Optimal Default Scale (Fit to Screen, never over-zoomed)
+- Centered Horizontally and Vertically
+- Compact Balanced Multi-Domain Tools Architecture (all 9 tools cleanly mapped)
+- ZERO TEXT CLIPPING on titles and node text (post-render width expansion & overflow: visible)
+- 5 Operational Tabs (Alur Query & Tools AI, Logistik, HR, Finance, Orchestrator)
+- Zero emojis (STRICT)
+"""
+import os
+import re
+
+html_content = '''<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoRestock-Agent — Diagram Alur Kerja Operasional &amp; Pemrosesan Tools AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      securityLevel: 'loose',
+      themeVariables: {
+        darkMode: true,
+        background: '#080D1A',
+        primaryColor: '#004B93',
+        primaryTextColor: '#F8FAFC',
+        primaryBorderColor: '#38BDF8',
+        lineColor: '#64748B',
+        secondaryColor: '#1E293B',
+        tertiaryColor: '#111827',
+        fontSize: '12px',
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+      },
+      flowchart: {
+        htmlLabels: true,
+        curve: 'basis',
+        nodeSpacing: 38,
+        rankSpacing: 42,
+        padding: 24,
+        useMaxWidth: false
+      }
+    });
+  </script>
+  <style>
+    :root {
+      --bt-navy: #004B93;
+      --bt-navy-dark: #002D59;
+      --bt-navy-light: #0284C7;
+      --bt-orange: #F26F21;
+      
+      --bg-canvas: #070B14;
+      --bg-card: #0F172A;
+      --bg-card-hover: #1E293B;
+      --bg-surface: #1E2E4E;
+      
+      --border-subtle: #1E2D4A;
+      --border-card: #26385C;
+      --border-accent: #38BDF8;
+      
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+      
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      
+      --shadow-canvas: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      line-height: 1.55;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Topbar */
+    header.topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 20, 36, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--bt-navy) 0%, #0369A1 100%);
+      border: 1px solid #38BDF8;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title-wrap h1 {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-title-wrap h1 .logo-blue {
+      color: #38BDF8;
+    }
+
+    .brand-title-wrap h1 .logo-orange {
+      color: var(--bt-orange);
+    }
+
+    .brand-title-wrap p {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-nav-return {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-nav-return:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-accent);
+      color: #38BDF8;
+    }
+
+    /* Main Container */
+    main.content-area {
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 16px 24px 36px;
+    }
+
+    /* Single-Row Navigation Tabs */
+    .tab-nav-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      background: var(--bg-card);
+      padding: 6px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-card);
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: thin;
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: #0284C7;
+      color: #FFFFFF;
+      border-color: #38BDF8;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.35);
+    }
+
+    .tab-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.3);
+      color: inherit;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+    }
+
+    /* Diagram Section Cards */
+    .flow-section {
+      display: none;
+    }
+
+    .flow-section.active {
+      display: block;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .diagram-display-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-canvas);
+      position: relative;
+    }
+
+    .diagram-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 10px;
+    }
+
+    .diagram-tag {
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .diagram-tag-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #38BDF8;
+      box-shadow: 0 0 8px #38BDF8;
+    }
+
+    /* Interactive Zoom & Pan Controls Toolbar */
+    .diagram-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-md);
+      padding: 4px 8px;
+    }
+
+    .zoom-hint-text {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: 'Inter', sans-serif;
+      margin-right: 6px;
+    }
+
+    .zoom-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-card);
+      color: var(--text-main);
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .zoom-btn:hover {
+      background: #0284C7;
+      border-color: #38BDF8;
+      color: #FFFFFF;
+    }
+
+    .zoom-btn:active {
+      transform: scale(0.95);
+    }
+
+    .zoom-btn-primary {
+      background: rgba(2, 132, 199, 0.22);
+      border-color: #0284C7;
+      color: #38BDF8;
+    }
+
+    .zoom-btn-primary:hover {
+      background: #0284C7;
+      color: #FFFFFF;
+    }
+
+    .zoom-level-badge {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #38BDF8;
+      min-width: 44px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    /* Diagram Viewport & Canvas Stage */
+    .diagram-viewport {
+      width: 100%;
+      height: 720px;
+      overflow: hidden;
+      position: relative;
+      background: #080D1A;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      cursor: grab;
+      user-select: none;
+    }
+
+    .diagram-viewport.is-dragging {
+      cursor: grabbing !important;
+    }
+
+    .diagram-stage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: 0 0;
+      will-change: transform;
+      transition: transform 0.05s ease-out;
+    }
+
+    .diagram-output {
+      display: block;
+    }
+
+    /* Mermaid SVG Styling */
+    .diagram-output svg {
+      display: block;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      overflow: visible;
+    }
+
+    /* Node & Text Styling: ZERO OVERFLOW & CLEAN TYPOGRAPHY */
+    .diagram-output .node text,
+    .diagram-output .node .label text,
+    .diagram-output .node span,
+    .diagram-output .node div {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      font-size: 11.5px !important;
+      font-weight: 500 !important;
+      line-height: 1.4 !important;
+    }
+
+    /* CRITICAL: PREVENT CLIPPING ON ALL SUBGRAPH TITLES AND LABELS */
+    .diagram-output foreignObject,
+    .diagram-output .node foreignObject,
+    .diagram-output .cluster foreignObject,
+    .diagram-output .cluster-label foreignObject {
+      overflow: visible !important;
+    }
+
+    .diagram-output .node foreignObject div {
+      text-align: center !important;
+      word-wrap: break-word !important;
+      white-space: normal !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* Subgraph Cluster Titles — NEVER CLIPPED */
+    .diagram-output .cluster-label,
+    .diagram-output .cluster-label text,
+    .diagram-output .cluster-label span,
+    .diagram-output .cluster-label div,
+    .diagram-output .cluster text {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+      fill: #38BDF8 !important;
+      color: #38BDF8 !important;
+      overflow: visible !important;
+      white-space: nowrap !important;
+    }
+
+    /* Edge labels */
+    .diagram-output .edgeLabel text,
+    .diagram-output .edgeLabel span {
+      font-size: 11px !important;
+      fill: #94A3B8 !important;
+      color: #94A3B8 !important;
+      overflow: visible !important;
+    }
+
+    .diagram-output .node {
+      cursor: default;
+    }
+
+    .diagram-output .node rect,
+    .diagram-output .node polygon,
+    .diagram-output .node circle {
+      rx: 8px !important;
+      ry: 8px !important;
+    }
+
+    /* Footer */
+    footer.app-footer {
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar Header -->
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="brand-logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+      </div>
+      <div class="brand-title-wrap">
+        <h1>
+          <span>BALITOWER</span>
+          <span class="logo-blue">AutoRestock</span>
+          <span class="logo-orange">Enterprise</span>
+        </h1>
+        <p>Diagram Alur Kerja Operasional Multi-Tenant &amp; Autonomous Agent Core</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <a href="/" class="btn-nav-return" title="Menuju ke Halaman Web Copilot">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Buka Dashboard</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="content-area">
+
+    <!-- Navigation Tabs — 5 SINGLE-ROW TABS -->
+    <nav class="tab-nav-container" aria-label="Navigasi Diagram Alur Operasional">
+      <button class="tab-btn active" onclick="switchDiagramTab('coreAgentFlow')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>1. Alur Query &amp; Tools AI</span>
+        <span class="tab-badge">react</span>
+      </button>
+
+      <button class="tab-btn" onclick="switchDiagramTab('pipelineA')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span>2. Pipeline Logistik</span>
+        <span class="tab-badge">usera</span>
+      </button>
+
+      <button class="tab-btn" onclick="switchDiagramTab('pipelineB')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>3. Pipeline HR &amp; Cuti</span>
+        <span class="tab-badge">userb</span>
+      </button>
+
+      <button class="tab-btn" onclick="switchDiagramTab('pipelineC')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>4. Pipeline Finance</span>
+        <span class="tab-badge">userc</span>
+      </button>
+
+      <button class="tab-btn" onclick="switchDiagramTab('adminOrch')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span>5. Dynamic Orchestrator</span>
+        <span class="tab-badge">admin</span>
+      </button>
+    </nav>
+
+    <!-- SECTION 1: CORE AGENT FLOW — DEFAULT ACTIVE -->
+    <section id="tab-coreAgentFlow" class="flow-section active">
+      <div class="diagram-display-card">
+        <div class="diagram-top-bar">
+          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 1. Alur Pemrosesan Pertanyaan Pengguna, Penentuan Tools, dan Eksekusi (Autonomous ReAct Core)</div>
+          <div class="diagram-controls">
+            <span class="zoom-hint-text">Klik &amp; Geser untuk memindahkan | Scroll untuk Zoom</span>
+            <button class="zoom-btn" onclick="zoomDiagram('coreAgentFlow', 0.15)" title="Perbesar (+)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <span class="zoom-level-badge" id="zoom-badge-coreAgentFlow" title="Tingkat Zoom Saat Ini">Fit</span>
+            <button class="zoom-btn" onclick="zoomDiagram('coreAgentFlow', -0.15)" title="Perkecil (-)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button class="zoom-btn" onclick="zoomTo100('coreAgentFlow')" title="Tampilan Ukuran Penuh 100%">
+              <span>100%</span>
+            </button>
+            <button class="zoom-btn zoom-btn-primary" onclick="resetZoom('coreAgentFlow')" title="Sesuaikan Tampilan Layar (Fit)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>Fit Layar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="diagram-viewport" id="viewport-coreAgentFlow">
+          <div class="diagram-stage" id="stage-coreAgentFlow">
+            <div class="diagram-output" id="diagram-coreAgentFlow"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: PIPELINE A (LOGISTIK) -->
+    <section id="tab-pipelineA" class="flow-section">
+      <div class="diagram-display-card">
+        <div class="diagram-top-bar">
+          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 2. Pipeline Logistik &amp; Restock Menara (usera)</div>
+          <div class="diagram-controls">
+            <span class="zoom-hint-text">Klik &amp; Geser untuk memindahkan | Scroll untuk Zoom</span>
+            <button class="zoom-btn" onclick="zoomDiagram('pipelineA', 0.15)" title="Perbesar (+)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <span class="zoom-level-badge" id="zoom-badge-pipelineA" title="Tingkat Zoom Saat Ini">Fit</span>
+            <button class="zoom-btn" onclick="zoomDiagram('pipelineA', -0.15)" title="Perkecil (-)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button class="zoom-btn" onclick="zoomTo100('pipelineA')" title="Tampilan Ukuran Penuh 100%">
+              <span>100%</span>
+            </button>
+            <button class="zoom-btn zoom-btn-primary" onclick="resetZoom('pipelineA')" title="Sesuaikan Tampilan Layar (Fit)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>Fit Layar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="diagram-viewport" id="viewport-pipelineA">
+          <div class="diagram-stage" id="stage-pipelineA">
+            <div class="diagram-output" id="diagram-pipelineA"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: PIPELINE B (HR) -->
+    <section id="tab-pipelineB" class="flow-section">
+      <div class="diagram-display-card">
+        <div class="diagram-top-bar">
+          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 3. Pipeline HR, Cuti &amp; K3 Rigger Menara (userb)</div>
+          <div class="diagram-controls">
+            <span class="zoom-hint-text">Klik &amp; Geser untuk memindahkan | Scroll untuk Zoom</span>
+            <button class="zoom-btn" onclick="zoomDiagram('pipelineB', 0.15)" title="Perbesar (+)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <span class="zoom-level-badge" id="zoom-badge-pipelineB" title="Tingkat Zoom Saat Ini">Fit</span>
+            <button class="zoom-btn" onclick="zoomDiagram('pipelineB', -0.15)" title="Perkecil (-)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button class="zoom-btn" onclick="zoomTo100('pipelineB')" title="Tampilan Ukuran Penuh 100%">
+              <span>100%</span>
+            </button>
+            <button class="zoom-btn zoom-btn-primary" onclick="resetZoom('pipelineB')" title="Sesuaikan Tampilan Layar (Fit)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>Fit Layar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="diagram-viewport" id="viewport-pipelineB">
+          <div class="diagram-stage" id="stage-pipelineB">
+            <div class="diagram-output" id="diagram-pipelineB"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: PIPELINE C (FINANCE) -->
+    <section id="tab-pipelineC" class="flow-section">
+      <div class="diagram-display-card">
+        <div class="diagram-top-bar">
+          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 4. Pipeline Finance, Kontrak Sewa MLA &amp; Faktur (userc)</div>
+          <div class="diagram-controls">
+            <span class="zoom-hint-text">Klik &amp; Geser untuk memindahkan | Scroll untuk Zoom</span>
+            <button class="zoom-btn" onclick="zoomDiagram('pipelineC', 0.15)" title="Perbesar (+)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <span class="zoom-level-badge" id="zoom-badge-pipelineC" title="Tingkat Zoom Saat Ini">Fit</span>
+            <button class="zoom-btn" onclick="zoomDiagram('pipelineC', -0.15)" title="Perkecil (-)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button class="zoom-btn" onclick="zoomTo100('pipelineC')" title="Tampilan Ukuran Penuh 100%">
+              <span>100%</span>
+            </button>
+            <button class="zoom-btn zoom-btn-primary" onclick="resetZoom('pipelineC')" title="Sesuaikan Tampilan Layar (Fit)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>Fit Layar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="diagram-viewport" id="viewport-pipelineC">
+          <div class="diagram-stage" id="stage-pipelineC">
+            <div class="diagram-output" id="diagram-pipelineC"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: ADMIN ORCHESTRATOR -->
+    <section id="tab-adminOrch" class="flow-section">
+      <div class="diagram-display-card">
+        <div class="diagram-top-bar">
+          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 5. Dynamic Workflow Orchestrator (admin)</div>
+          <div class="diagram-controls">
+            <span class="zoom-hint-text">Klik &amp; Geser untuk memindahkan | Scroll untuk Zoom</span>
+            <button class="zoom-btn" onclick="zoomDiagram('adminOrch', 0.15)" title="Perbesar (+)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <span class="zoom-level-badge" id="zoom-badge-adminOrch" title="Tingkat Zoom Saat Ini">Fit</span>
+            <button class="zoom-btn" onclick="zoomDiagram('adminOrch', -0.15)" title="Perkecil (-)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button class="zoom-btn" onclick="zoomTo100('adminOrch')" title="Tampilan Ukuran Penuh 100%">
+              <span>100%</span>
+            </button>
+            <button class="zoom-btn zoom-btn-primary" onclick="resetZoom('adminOrch')" title="Sesuaikan Tampilan Layar (Fit)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>Fit Layar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="diagram-viewport" id="viewport-adminOrch">
+          <div class="diagram-stage" id="stage-adminOrch">
+            <div class="diagram-output" id="diagram-adminOrch"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    PT Bali Towerindo Sentra Tbk &bull; AutoRestock-Agent Architecture System &bull; Dokumen Arsitektur Resmi Operasional
+  </footer>
+
+  <!-- Script: Diagram Sources, Dynamic On-Demand Renderer, Pan & Zoom Engine -->
+  <script>
+    const DIAGRAM_SOURCES = {
+      coreAgentFlow: `flowchart TD
+    subgraph S1 ["Tahap 1: Ingress & Autentikasi"]
+        direction LR
+        U1["Input Pertanyaan Pengguna<br/>di Web Copilot Chat"] --> API1["POST /api/agent/stream-prompt<br/>(Koneksi Streaming SSE)"]
+        API1 --> JWT1["JWT Security Guard:<br/>Validasi Token, Role & Tenant"]
+    end
+
+    subgraph S2 ["Tahap 2: Filter Keamanan & Guardrail"]
+        direction TB
+        SEC1{"Pemeriksaan<br/>Keamanan &<br/>Intent"}
+        ERR_SEC["Security Refusal:<br/>Blokir Perintah Destruktif"]
+        CLARIF["Clarification Prompt:<br/>Minta Kelengkapan Data"]
+        REACT_IN["Lolos Filter Keamanan:<br/>Lanjut ke ReAct Loop"]
+        
+        SEC1 -->|Instruksi Terlarang| ERR_SEC
+        SEC1 -->|Data Kurang| CLARIF
+        SEC1 -->|Instruksi Valid| REACT_IN
+    end
+
+    subgraph S3 ["Tahap 3: Penalaran AI (ReAct Loop)"]
+        DYN_CTX["Injeksi Skema 18 Tabel DuckDB<br/>& Isolasi Data Tenant (RLS)"]
+        LLM_CORE["ModelGateway: Reasoning LLM<br/>Analisis Maksud & Rencana Thought"]
+        DECISION{"Perlu Tool<br/>atau Percakapan<br/>Langsung?"}
+        DIRECT_RESP["Respon Percakapan Langsung<br/>(tool = null / Tanya Jawab)"]
+        TOOL_ROUTER["Tool Determination Router:<br/>Ekstraksi Parameter JSON"]
+        
+        DYN_CTX --> LLM_CORE --> DECISION
+        DECISION -->|Tanya Jawab / SOP| DIRECT_RESP
+        DECISION -->|Tindakan Operasional| TOOL_ROUTER
+    end
+
+    subgraph S4 ["Tahap 4: Penentuan Tools Multi-Domain"]
+        T_DB["Domain 1: Basis Data & Query<br/>tool_query_database<br/>(SELECT Aman DuckDB & RLS)"]
+        T_INV["Domain 2: Logistik & Inventaris (Schema A)<br/>tool_procurement_cycle &bull; tool_manage_po<br/>tool_view_po &bull; tool_update_threshold<br/>tool_register_product"]
+        T_HR["Domain 3: HR & Lapangan (Schema B)<br/>tool_process_leave_request<br/>tool_query_pending_leaves"]
+        T_FIN["Domain 4: Finance & Komersial (Schema C)<br/>tool_manage_telecom_invoice<br/>tool_finance_audit"]
+    end
+
+    subgraph S5 ["Tahap 5: Eksekusi Layanan & Database"]
+        EXEC_DUCK[("DuckDB OLAP Engine:<br/>Eksekusi Transaksi SQL & RLS")]
+        EXEC_TYPST["DocGen Typst Compiler:<br/>Penerbitan Dokumen PDF"]
+        EXEC_SMTP["SMTP Dispatcher:<br/>Notifikasi Email Otorisasi HITL"]
+    end
+
+    subgraph S6 ["Tahap 6: Sintesis & Egress SSE"]
+        direction LR
+        SYNTH["Sintesis AI (nemotron-35):<br/>Formatting Tabel Markdown"] --> SSE_OUT["SSE Event Stream:<br/>Kirim Status Badge Real-Time"]
+        SSE_OUT --> UI_CARD["Web Copilot Dashboard:<br/>Tampilan Chat & Unduh PDF"]
+    end
+
+    %% Relasi Antar-Tahap di Luar Subgraph (Mencegah Tabrakan Garis & Judul)
+    JWT1 --> SEC1
+    REACT_IN --> DYN_CTX
+    
+    TOOL_ROUTER --> T_DB
+    TOOL_ROUTER --> T_INV
+    TOOL_ROUTER --> T_HR
+    TOOL_ROUTER --> T_FIN
+
+    T_DB --> EXEC_DUCK
+    T_INV --> EXEC_TYPST
+    T_INV --> EXEC_DUCK
+    T_HR --> EXEC_TYPST
+    T_HR --> EXEC_SMTP
+    T_FIN --> EXEC_TYPST
+    T_FIN --> EXEC_DUCK
+
+    EXEC_DUCK --> SYNTH
+    EXEC_TYPST --> SYNTH
+    EXEC_SMTP --> SYNTH
+    DIRECT_RESP --> SSE_OUT
+    CLARIF --> SSE_OUT
+    ERR_SEC --> SSE_OUT
+
+    classDef stageDef fill:#0B1120,stroke:#1E2D4A,stroke-width:1px,color:#F8FAFC;
+    classDef ingressDef fill:#003366,stroke:#38BDF8,stroke-width:1.5px,color:#F8FAFC;
+    classDef guardDef fill:#451A03,stroke:#FBBF24,stroke-width:1.5px,color:#F8FAFC;
+    classDef reactDef fill:#312E81,stroke:#818CF8,stroke-width:1.5px,color:#F8FAFC;
+    classDef toolDef fill:#0F172A,stroke:#38BDF8,stroke-width:1.5px,color:#F8FAFC;
+    classDef execDef fill:#064E3B,stroke:#34D399,stroke-width:1.5px,color:#F8FAFC;
+    classDef egressDef fill:#1E293B,stroke:#F26F21,stroke-width:1.5px,color:#F8FAFC;
+
+    class S1,S2,S3,S4,S5,S6 stageDef;
+    class U1,API1,JWT1 ingressDef;
+    class SEC1,ERR_SEC,CLARIF guardDef;
+    class REACT_IN,DYN_CTX,LLM_CORE,DECISION,DIRECT_RESP,TOOL_ROUTER reactDef;
+    class T_DB,T_INV,T_HR,T_FIN toolDef;
+    class EXEC_DUCK,EXEC_TYPST,EXEC_SMTP execDef;
+    class SYNTH,SSE_OUT,UI_CARD egressDef;`,
+
+      pipelineA: `flowchart TD
+    subgraph Tahap1 ["Tahap 1: Deteksi Stok & Perencanaan"]
+        A1[("DuckDB: stock_balances<br/>7 Gudang Regional")] --> A2["Deteksi Saldo Stok di Bawah<br/>Batas Reorder Point"]
+        A2 --> A3["Planner Agent: Hitung EOQ<br/>& Rekomendasi Vendor"]
+        A3 --> A4["Auditor Agent: Validasi Anggaran<br/>& Limit Plafon Pengadaan"]
+        A4 --> A5["DocGen Typst Compiler:<br/>Penerbitan Draf PR PDF"]
+    end
+
+    subgraph Tahap2 ["Tahap 2: Persetujuan Manajer (HITL)"]
+        A6["Email Notifikasi Otorisasi<br/>ke Manajer Operasional"] --> A7{"Keputusan<br/>Manajer"}
+        A7 -->|Tolak| A8["PR Ditolak & Anggaran<br/>Dilepas Kembali"]
+        A7 -->|Setuju| A9["PR Resmi Disetujui<br/>Manajer Operasional"]
+    end
+
+    subgraph Tahap3 ["Tahap 3: Penerbitan Purchase Order"]
+        A10["DocGen Typst Compiler:<br/>Cetak PO Resmi + PPN 11%"] --> A11["Status PO: ORDERED<br/>(Dalam Pengiriman Vendor)"]
+    end
+
+    subgraph Tahap4 ["Tahap 4: Penerimaan Barang Gudang"]
+        A12["Barang Fisik Tiba di<br/>Gudang Regional Tujuan"] --> A13["Klik Terima Barang<br/>(Workflow WF-A02)"]
+        A13 --> A14["Status PO Diperbarui:<br/>DELIVERED"]
+        A14 --> A15[("Saldo Stok DuckDB<br/>Bertambah Otomatis")]
+        A15 --> A16["Kesehatan Stok Pulih Normal<br/>& Transaksi Selesai"]
+    end
+
+    %% Relasi Antar-Tahap di Luar Subgraph (Mencegah Tabrakan Garis & Judul)
+    A5 --> A6
+    A9 --> A10
+    A11 --> A12
+
+    classDef stageDef fill:#0B1120,stroke:#1E2D4A,stroke-width:1px,color:#F8FAFC;
+    classDef actionDef fill:#0F172A,stroke:#38BDF8,stroke-width:1.5px,color:#F8FAFC;
+    classDef gateDef fill:#451A03,stroke:#FBBF24,stroke-width:1.5px,color:#F8FAFC;
+    classDef passDef fill:#064E3B,stroke:#34D399,stroke-width:1.5px,color:#F8FAFC;
+    classDef dbDef fill:#1E293B,stroke:#94A3B8,stroke-width:1.5px,color:#F8FAFC;
+
+    class Tahap1,Tahap2,Tahap3,Tahap4 stageDef;
+    class A2,A3,A4,A5,A10,A12,A13 actionDef;
+    class A6,A7 gateDef;
+    class A8,A9,A11,A14,A16 passDef;
+    class A1,A15 dbDef;`,
+
+      pipelineB: `flowchart TD
+    subgraph F1 ["Tahap 1: Pengajuan Formulir Cuti"]
+        B1["Teknisi Rigger Lapangan<br/>(Operasional Menara)"] --> B2["Input Percakapan Chat:<br/>Pengajuan Cuti 3 Hari"]
+        B2 --> B3["Validasi Saldo & Hak Cuti<br/>di DuckDB employees"]
+        B3 --> B4["Pencatatan Draf Pengajuan<br/>di DuckDB leave_requests"]
+        B4 --> B5["DocGen Typst Compiler:<br/>Susun Formulir Cuti PDF"]
+    end
+
+    subgraph F2 ["Tahap 2: Otorisasi & Audit HR (HITL)"]
+        B6["Kirim Email Otorisasi<br/>ke Manajer HR"] --> B8{"Keputusan<br/>Manajer HR"}
+        B7["Audit Antrean Pengajuan Cuti<br/>Pending WF-847DA5"] --> B8
+        B8 -->|Tolak| B9["Cuti Ditolak & Kuota Cuti<br/>Tetap Utuh"]
+        B8 -->|Setuju| B10["Pengajuan Cuti Resmi<br/>Disetujui Manajer HR"]
+    end
+
+    subgraph F3 ["Tahap 3: Pengesahan Stempel Digital"]
+        B11["DocGen Typst: Bubuhi Stempel<br/>Digital APPROVED pada PDF"] --> B12["Notifikasi Dashboard:<br/>Status Hijau APPROVED"]
+    end
+
+    subgraph F4 ["Tahap 4: Pemotongan Kuota & Roster Site"]
+        B13[("DuckDB: Sisa Saldo Cuti<br/>Terpotong Otomatis")] --> B14["Penugasan Teknisi Pengganti<br/>Bersertifikat K3 Menara"]
+        B14 --> B15["Jadwal Roster Site Menara Aman<br/>& Alur Kerja Selesai"]
+    end
+
+    %% Relasi Antar-Tahap di Luar Subgraph (Mencegah Tabrakan Garis & Judul)
+    B5 --> B6
+    B4 -.-> B7
+    B10 --> B11
+    B10 --> B13
+
+    classDef stageDef fill:#0B1120,stroke:#1E2D4A,stroke-width:1px,color:#F8FAFC;
+    classDef actionDef fill:#0F172A,stroke:#38BDF8,stroke-width:1.5px,color:#F8FAFC;
+    classDef gateDef fill:#451A03,stroke:#FBBF24,stroke-width:1.5px,color:#F8FAFC;
+    classDef passDef fill:#064E3B,stroke:#34D399,stroke-width:1.5px,color:#F8FAFC;
+    classDef dbDef fill:#1E293B,stroke:#94A3B8,stroke-width:1.5px,color:#F8FAFC;
+
+    class F1,F2,F3,F4 stageDef;
+    class B1,B2,B5,B7,B11,B14 actionDef;
+    class B6,B8 gateDef;
+    class B9,B10,B12,B15 passDef;
+    class B3,B4,B13 dbDef;`,
+
+      pipelineC: `flowchart TD
+    subgraph C1_Stage ["Tahap 1: Pendaftaran Klien & Kontrak MLA"]
+        C1["Account Manager Komersial<br/>(Divisi Kemitraan Menara)"] --> C2["Registrasi Operator Klien<br/>di DuckDB telecom_clients"]
+        C2 --> C3["Penyusunan Draf Kontrak MLA<br/>di DuckDB mla_contracts"]
+        C3 --> C4["Perhitungan Biaya Sewa Menara<br/>& Utilitas Daya Listrik PLN"]
+    end
+
+    subgraph C2_Stage ["Tahap 2: Otorisasi Finansial CFO (HITL)"]
+        C5["Kirim Ringkasan Kontrak ke<br/>Email Direktur Keuangan (CFO)"] --> C6{"Keputusan<br/>Direktur CFO"}
+        C6 -->|Tolak| C7["Kontrak Dibatalkan & Alokasi<br/>Slot Menara Dilepas"]
+        C6 -->|Setuju| C8["Kontrak Sewa Menara MLA<br/>Resmi Dinyatakan Aktif"]
+    end
+
+    subgraph C3_Stage ["Tahap 3: Aktivasi & Alokasi Slot Menara"]
+        C9[("DuckDB mla_contracts:<br/>Pembaruan Status ACTIVE")] --> C10["Alokasi Slot Antena & Ruang<br/>Daya Kabinet Site Menara"]
+    end
+
+    subgraph C4_Stage ["Tahap 4: Penerbitan Faktur Pajak"]
+        C11[("DuckDB revenue_invoices:<br/>Penerbitan Nomor Seri Faktur")] --> C12["DocGen Typst: Kompilasi Faktur<br/>Pajak Resmi (PPN 11%)"]
+        C12 --> C13["Kirim Faktur ke Operator Mitra<br/>& Pencatatan Piutang Kas"]
+    end
+
+    %% Relasi Antar-Tahap di Luar Subgraph (Mencegah Tabrakan Garis & Judul)
+    C4 --> C5
+    C8 --> C9
+    C8 --> C11
+
+    classDef stageDef fill:#0B1120,stroke:#1E2D4A,stroke-width:1px,color:#F8FAFC;
+    classDef actionDef fill:#0F172A,stroke:#38BDF8,stroke-width:1.5px,color:#F8FAFC;
+    classDef gateDef fill:#451A03,stroke:#FBBF24,stroke-width:1.5px,color:#F8FAFC;
+    classDef passDef fill:#064E3B,stroke:#34D399,stroke-width:1.5px,color:#F8FAFC;
+    classDef dbDef fill:#1E293B,stroke:#94A3B8,stroke-width:1.5px,color:#F8FAFC;
+
+    class C1_Stage,C2_Stage,C3_Stage,C4_Stage stageDef;
+    class C1,C2,C4,C10,C12 actionDef;
+    class C5,C6 gateDef;
+    class C7,C8,C13 passDef;
+    class C3,C9,C11 dbDef;`,
+
+      adminOrch: `flowchart TD
+    subgraph Tahap1 ["Tahap 1: Desain & Kompilasi Perintah"]
+        Admin["Administrator Sistem:<br/>Input Perintah Bahasa Alami"] --> Compiler["LLM Graph Compiler:<br/>agents/workflow_compiler.py"]
+        Compiler --> JSONGraph["Execution Graph JSON:<br/>Validasi Struktur & Dependensi"]
+    end
+
+    subgraph Tahap2 ["Tahap 2: Manajemen Katalog Alur"]
+        DB[("DuckDB: workflows<br/>Penyimpanan Katalog Alur")] --> Engine["JSONExecutionEngine:<br/>agents/json_executor.py"]
+    end
+
+    subgraph Tahap3 ["Tahap 3: Eksekusi Tools Multi-Domain"]
+        ToolRegistry["Tool Registry Multi-Domain:<br/>Inventory, HR, Finance, Typst"] --> LiveUI["Web Dashboard & Streaming<br/>Chat Copilot (SSE Output)"]
+    end
+
+    %% Relasi Antar-Tahap di Luar Subgraph (Mencegah Tabrakan Garis & Judul)
+    JSONGraph --> DB
+    Engine --> ToolRegistry
+
+    classDef stageDef fill:#0B1120,stroke:#1E2D4A,stroke-width:1px,color:#F8FAFC;
+    classDef adminDef fill:#0F172A,stroke:#A855F7,stroke-width:1.5px,color:#F8FAFC;
+    classDef compDef fill:#312E81,stroke:#818CF8,stroke-width:1.5px,color:#F8FAFC;
+    classDef jsonDef fill:#451A03,stroke:#FBBF24,stroke-width:1.5px,color:#F8FAFC;
+    classDef dbDef fill:#1E293B,stroke:#94A3B8,stroke-width:1.5px,color:#F8FAFC;
+    classDef execDef fill:#064E3B,stroke:#34D399,stroke-width:1.5px,color:#F8FAFC;
+    classDef regDef fill:#0F172A,stroke:#38BDF8,stroke-width:1.5px,color:#F8FAFC;
+
+    class Tahap1,Tahap2,Tahap3 stageDef;
+    class Admin adminDef;
+    class Compiler compDef;
+    class JSONGraph jsonDef;
+    class DB dbDef;
+    class Engine execDef;
+    class ToolRegistry,LiveUI regDef;`
+    };
+
+    // State management for Pan & Zoom per tab
+    const panZoomState = {};
+
+    function getOrCreateState(tabKey) {
+      if (!panZoomState[tabKey]) {
+        panZoomState[tabKey] = {
+          scale: 1.0,
+          x: 0,
+          y: 0,
+          isDragging: false,
+          startX: 0,
+          startY: 0
+        };
+      }
+      return panZoomState[tabKey];
+    }
+
+    // Reliable dimension extraction from Mermaid SVG
+    function getSvgMetrics(svg) {
+      let width = 0;
+      let height = 0;
+
+      const vb = svg.getAttribute('viewBox');
+      if (vb) {
+        const parts = vb.trim().split(/[\s,]+/).map(Number);
+        if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+          width = parts[2];
+          height = parts[3];
+        }
+      }
+
+      if (!width || !height) {
+        try {
+          const bb = svg.getBBox();
+          if (bb && bb.width > 0 && bb.height > 0) {
+            width = bb.width;
+            height = bb.height;
+          }
+        } catch (e) {}
+      }
+
+      if (!width || !height) {
+        const rect = svg.getBoundingClientRect();
+        width = svg.clientWidth || rect.width || 1000;
+        height = svg.clientHeight || rect.height || 800;
+      }
+
+      return { width, height };
+    }
+
+    function updateStageTransform(tabKey) {
+      const state = getOrCreateState(tabKey);
+      const stage = document.getElementById('stage-' + tabKey);
+      const badge = document.getElementById('zoom-badge-' + tabKey);
+      if (stage) {
+        stage.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+      }
+      if (badge) {
+        badge.textContent = Math.round(state.scale * 100) + '%';
+      }
+    }
+
+    // Auto Fit & Centering Engine (Fits entire diagram inside viewport, never over-zoomed)
+    function fitDiagram(tabKey) {
+      const viewport = document.getElementById('viewport-' + tabKey);
+      const stage = document.getElementById('stage-' + tabKey);
+      const container = document.getElementById('diagram-' + tabKey);
+      if (!viewport || !stage || !container) return;
+
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+
+      const metrics = getSvgMetrics(svg);
+      // Lock SVG size to intrinsic dimensions so scale transform behaves deterministically
+      svg.style.maxWidth = 'none';
+      svg.style.width = metrics.width + 'px';
+      svg.style.height = metrics.height + 'px';
+      svg.setAttribute('width', metrics.width);
+      svg.setAttribute('height', metrics.height);
+
+      const vpW = viewport.clientWidth || 1000;
+      const vpH = viewport.clientHeight || 720;
+
+      // Fit scale with 44px margins
+      const scaleX = (vpW - 44) / metrics.width;
+      const scaleY = (vpH - 44) / metrics.height;
+      let fitScale = Math.min(scaleX, scaleY);
+      
+      // Clamp fitScale so it fits comfortably within screen boundaries
+      fitScale = Math.max(0.35, Math.min(1.0, Math.round(fitScale * 100) / 100));
+
+      const state = getOrCreateState(tabKey);
+      state.scale = fitScale;
+
+      const renderW = metrics.width * fitScale;
+      const renderH = metrics.height * fitScale;
+
+      // Center horizontally in viewport
+      state.x = Math.round((vpW - renderW) / 2);
+      // Center vertically if diagram fits in viewport; otherwise start at 24px from top
+      state.y = renderH < (vpH - 36) ? Math.round((vpH - renderH) / 2) : 24;
+
+      updateStageTransform(tabKey);
+    }
+
+    // Explicit 100% Zoom: Centered horizontally, starts at top
+    function zoomTo100(tabKey) {
+      const viewport = document.getElementById('viewport-' + tabKey);
+      const container = document.getElementById('diagram-' + tabKey);
+      if (!viewport || !container) return;
+
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+
+      const metrics = getSvgMetrics(svg);
+      svg.style.maxWidth = 'none';
+      svg.style.width = metrics.width + 'px';
+      svg.style.height = metrics.height + 'px';
+
+      const vpW = viewport.clientWidth || 1000;
+      const state = getOrCreateState(tabKey);
+      state.scale = 1.0;
+      state.x = Math.round((vpW - metrics.width) / 2);
+      state.y = 24;
+
+      updateStageTransform(tabKey);
+    }
+
+    // Zoom Controls (Midpoint-centered zoom)
+    function zoomDiagram(tabKey, delta) {
+      const state = getOrCreateState(tabKey);
+      const viewport = document.getElementById('viewport-' + tabKey);
+      const vpW = viewport ? viewport.clientWidth : 1000;
+      const vpH = viewport ? viewport.clientHeight : 720;
+
+      const oldScale = state.scale;
+      const newScale = Math.max(0.3, Math.min(2.2, Math.round((oldScale + delta) * 100) / 100));
+      if (newScale === oldScale) return;
+
+      const centerX = vpW / 2;
+      const centerY = vpH / 2;
+
+      state.x = Math.round(centerX - (centerX - state.x) * (newScale / oldScale));
+      state.y = Math.round(centerY - (centerY - state.y) * (newScale / oldScale));
+      state.scale = newScale;
+
+      updateStageTransform(tabKey);
+    }
+
+    function resetZoom(tabKey) {
+      fitDiagram(tabKey);
+    }
+
+    // Initialize Pan/Drag Interaction on Viewport
+    function initPanZoom(tabKey) {
+      const viewport = document.getElementById('viewport-' + tabKey);
+      if (!viewport || viewport.dataset.panzoomInit === 'true') return;
+      viewport.dataset.panzoomInit = 'true';
+
+      const state = getOrCreateState(tabKey);
+
+      // Mouse drag handlers
+      viewport.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        state.isDragging = true;
+        state.startX = e.clientX - state.x;
+        state.startY = e.clientY - state.y;
+        viewport.classList.add('is-dragging');
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!state.isDragging) return;
+        state.x = e.clientX - state.startX;
+        state.y = e.clientY - state.startY;
+        updateStageTransform(tabKey);
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (state.isDragging) {
+          state.isDragging = false;
+          viewport.classList.remove('is-dragging');
+        }
+      });
+
+      // Mouse wheel zoom
+      viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.12 : -0.12;
+        zoomDiagram(tabKey, delta);
+      }, { passive: false });
+
+      // Touch drag handlers for touchscreen
+      let touchStartX = 0;
+      let touchStartY = 0;
+
+      viewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          state.isDragging = true;
+          touchStartX = e.touches[0].clientX - state.x;
+          touchStartY = e.touches[0].clientY - state.y;
+        }
+      }, { passive: true });
+
+      viewport.addEventListener('touchmove', (e) => {
+        if (state.isDragging && e.touches.length === 1) {
+          state.x = e.touches[0].clientX - touchStartX;
+          state.y = e.touches[0].clientY - touchStartY;
+          updateStageTransform(tabKey);
+        }
+      }, { passive: true });
+
+      viewport.addEventListener('touchend', () => {
+        state.isDragging = false;
+      });
+    }
+
+    // Ensure fonts are completely ready before measuring text in Mermaid
+    async function ensureFontsReady() {
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch(e) {}
+      }
+    }
+
+    // Dynamic Safe Renderer: Uses mermaid.render() ONLY when tab is visible
+    async function renderTabDiagram(tabKey) {
+      const container = document.getElementById('diagram-' + tabKey);
+      if (!container || container.dataset.rendered === 'true') return;
+
+      const sourceCode = DIAGRAM_SOURCES[tabKey];
+      if (!sourceCode) return;
+
+      try {
+        await ensureFontsReady();
+        const uniqueId = 'svg-render-' + tabKey + '-' + Math.floor(Math.random() * 100000);
+        const { svg } = await mermaid.render(uniqueId, sourceCode);
+        container.innerHTML = svg;
+        container.dataset.rendered = 'true';
+
+        // Post-render guarantee: expand foreignObject bounding widths so title endings NEVER get cut off
+        container.querySelectorAll('.cluster-label foreignObject, .cluster foreignObject').forEach(fo => {
+          fo.style.overflow = 'visible';
+          fo.setAttribute('overflow', 'visible');
+          const w = parseFloat(fo.getAttribute('width') || '0');
+          if (w > 0) {
+            fo.setAttribute('width', (w + 80) + 'px');
+            fo.style.width = (w + 80) + 'px';
+          }
+        });
+        container.querySelectorAll('foreignObject').forEach(fo => {
+          fo.style.overflow = 'visible';
+          fo.setAttribute('overflow', 'visible');
+        });
+
+        initPanZoom(tabKey);
+        fitDiagram(tabKey);
+      } catch (err) {
+        console.error('Error rendering diagram ' + tabKey + ':', err);
+        container.innerHTML = `<div style="color: #F87171; padding: 24px; text-align: center; font-size: 13px;">Gagal memuat diagram: ${err.message || 'Sintaks tidak valid'}</div>`;
+      }
+    }
+
+    // Tab Navigation Logic
+    function switchDiagramTab(tabKey) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', (btn.getAttribute('onclick') || '').includes(tabKey));
+      });
+
+      document.querySelectorAll('.flow-section').forEach(sec => {
+        sec.classList.remove('active');
+      });
+
+      const activeSec = document.getElementById('tab-' + tabKey);
+      if (activeSec) {
+        activeSec.classList.add('active');
+        setTimeout(() => {
+          renderTabDiagram(tabKey);
+          fitDiagram(tabKey);
+        }, 40);
+      }
+    }
+
+    // Responsive window resize listener
+    window.addEventListener('resize', () => {
+      const activeTab = document.querySelector('.flow-section.active');
+      if (activeTab) {
+        const tabKey = activeTab.id.replace('tab-', '');
+        fitDiagram(tabKey);
+      }
+    });
+
+    // Initial Load: Render first tab (Alur Pemrosesan Query & Tools AI)
+    document.addEventListener('DOMContentLoaded', () => {
+      renderTabDiagram('coreAgentFlow');
+    });
+  </script>
+</body>
+</html>
+'''
+
+# Verify zero emoji
+emoji_pattern = re.compile(r"[\U00010000-\U0010ffff]", flags=re.UNICODE)
+emojis_found = emoji_pattern.findall(html_content)
+if emojis_found:
+    print(f"WARNING: Found {len(emojis_found)} emojis: {emojis_found}")
+else:
+    print("Verification Passed: 0 emojis detected.")
+
+# Write to web/static/flowchart.html and docs/flowchart.html
+target_paths = [
+    "/home/jds2/AutoRestock-Agent/web/static/flowchart.html",
+    "/home/jds2/AutoRestock-Agent/docs/flowchart.html"
+]
+
+for p in target_paths:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print(f"Successfully written: {p} ({len(html_content)} bytes)")

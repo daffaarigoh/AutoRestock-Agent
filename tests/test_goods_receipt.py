@@ -25,8 +25,13 @@ class TestGoodsReceipt(unittest.TestCase):
     def test_goods_receipt_workflow(self):
         # Setup / Reset initial baseline for idempotent testing
         w_conn = get_db_connection(read_only=False)
-        w_conn.execute("UPDATE purchase_orders SET status = 'ORDERED', actual_delivery = NULL WHERE po_id = 'PO-2026-006';")
-        w_conn.execute("UPDATE stock_balances SET quantity_on_hand = 450, stock_status = 'CRITICAL' WHERE warehouse_id = 'WH-BDG-01' AND item_id = 'BLT-INV-002';")
+        existing_po = w_conn.execute("SELECT po_id FROM purchase_orders WHERE po_id = 'PO-2026-006';").fetchone()
+        if not existing_po:
+            w_conn.execute("INSERT INTO purchase_orders (po_id, po_number, supplier_id, item_id, order_quantity, unit_price, total_amount, status, order_date, expected_delivery, actual_delivery, warehouse_id, pr_number) VALUES ('PO-2026-006', 'PO/BLT/2026/09/036', 'SUP-001', 'BLT-INV-002', 10, 22000, 220000, 'ORDERED', '2026-09-16', '2026-09-26', NULL, 'WH-BDG-01', 'PR-2026-TEST');")
+        else:
+            w_conn.execute("UPDATE purchase_orders SET status = 'ORDERED', actual_delivery = NULL, warehouse_id = 'WH-BDG-01', item_id = 'BLT-INV-002', order_quantity = 10 WHERE po_id = 'PO-2026-006';")
+        w_conn.execute("UPDATE stock_balances SET quantity_on_hand = 450, reorder_point = 400, stock_status = 'CRITICAL' WHERE warehouse_id = 'WH-BDG-01' AND item_id = 'BLT-INV-002';")
+        w_conn.commit()
         w_conn.close()
 
         # 1. Login as Inventory User (usera)

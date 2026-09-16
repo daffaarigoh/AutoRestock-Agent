@@ -3238,16 +3238,6 @@
             examples: [
               'PO-2026-001 sudah sampai di gudang, tolong catat penerimaan barangnya'
             ]
-          },
-          {
-            id: 'WF-A03',
-            name: 'Tracking Pengiriman PO & Cetak Berkas PDF',
-            desc: 'Audit PO aktif (IN_TRANSIT) dan penerbitan berkas resmi format PDF Typst.',
-            instruction: 'Audit status PO yang sedang dikirim (IN_TRANSIT), tampilkan nomor PO dan total nilai, serta terbitkan berkas PDF surat pesanan resmi untuk diunduh.',
-            examples: [
-              'Lacak status pengiriman PO yang sedang aktif dalam perjalanan',
-              'Tampilkan daftar purchase order berstatus in transit dan unduh dokumen resminya'
-            ]
           }
         ]
       },
@@ -3753,9 +3743,16 @@
           `;
 
           (f.examples || []).forEach(ex => {
+            const safeEx = escapeHtml(ex).replace(/'/g, "\\'");
+            const safeWfName = escapeHtml(f.name).replace(/'/g, "\\'");
             html += `
-              <div class="admin-prompt-item">
-                <span style="font-weight: 700; color: #3B82F6; margin-right: 4px;">&ldquo;</span><span>${escapeHtml(ex)}</span><span style="font-weight: 700; color: #3B82F6; margin-left: 4px;">&rdquo;</span>
+              <div class="admin-prompt-item" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="flex: 1;">
+                  <span style="font-weight: 700; color: #3B82F6; margin-right: 4px;">&ldquo;</span><span>${escapeHtml(ex)}</span><span style="font-weight: 700; color: #3B82F6; margin-left: 4px;">&rdquo;</span>
+                </div>
+                <button type="button" class="btn-test-prompt" onclick="testWorkflowPrompt('${safeEx}', '${safeWfName}', '${f.id}')" style="background: rgba(59, 130, 246, 0.12); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3B82F6'; this.style.color='#fff';" onmouseout="this.style.background='rgba(59, 130, 246, 0.12)'; this.style.color='#3B82F6';" title="Uji eksekusi alur kerja prompt ini">
+                  Uji Prompt &rarr;
+                </button>
               </div>
             `;
           });
@@ -3790,6 +3787,107 @@
 
       const formTitle = document.getElementById('formTitle');
       if (formTitle) formTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function testWorkflowPrompt(promptText, wfName, wfId) {
+      let modal = document.getElementById('adminPromptTestModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'adminPromptTestModal';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.65); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 16px;';
+        modal.innerHTML = `
+          <div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; max-width: 680px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
+            <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-weight: 600; font-size: 15px; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                <span style="background: #3B82F6; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px;">TEST RUN</span>
+                <span id="testModalTitle">Pengujian Workflow</span>
+              </div>
+              <button onclick="document.getElementById('adminPromptTestModal').style.display='none'" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div id="testModalBody" style="padding: 20px; overflow-y: auto; color: #cbd5e1; font-size: 13px; line-height: 1.6; flex: 1;">
+              Loading...
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; background: rgba(15,23,42,0.6);">
+              <button onclick="document.getElementById('adminPromptTestModal').style.display='none'" style="background: #334155; color: #f1f5f9; border: none; border-radius: 6px; padding: 6px 16px; font-size: 12px; cursor: pointer;">Tutup</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+      modal.style.display = 'flex';
+      const titleEl = document.getElementById('testModalTitle');
+      const bodyEl = document.getElementById('testModalBody');
+      titleEl.textContent = `Uji Prompt: ${wfName} (${wfId})`;
+      bodyEl.innerHTML = `
+        <div style="margin-bottom: 12px; padding: 10px; background: rgba(15,23,42,0.8); border-radius: 6px; border-left: 3px solid #3B82F6;">
+          <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Prompt yang diuji:</div>
+          <div style="font-style: italic; color: #f8fafc;">&ldquo;${escapeHtml(promptText)}&rdquo;</div>
+        </div>
+        <div style="text-align: center; padding: 24px 0; color: #94a3b8;">
+          <svg style="animation: spin 1s linear infinite; display: inline-block; width: 24px; height: 24px; margin-bottom: 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="32" stroke-linecap="round"/>
+          </svg>
+          <div>Sedang mengeksekusi routing & alur kerja...</div>
+        </div>
+      `;
+
+      try {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch('/api/agent/custom-prompt', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ prompt: promptText })
+        });
+        const data = await res.json();
+
+        let stepsHtml = '';
+        if (Array.isArray(data.execution_steps) && data.execution_steps.length > 0) {
+          stepsHtml = `
+            <div style="margin-top: 14px; margin-bottom: 14px;">
+              <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 6px;">Tahapan Eksekusi:</div>
+              ${data.execution_steps.map(s => `
+                <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; padding: 6px 10px; background: rgba(30,41,59,0.7); border-radius: 4px;">
+                  <span style="background: ${s.status === 'COMPLETED' ? '#10B981' : '#F59E0B'}; color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 600;">Langkah ${s.step_number}</span>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 500; color: #f1f5f9;">${escapeHtml(s.title || '')}</div>
+                    <div style="font-size: 12px; color: #94a3b8;">${escapeHtml(s.details || '')}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        bodyEl.innerHTML = `
+          <div style="margin-bottom: 12px; padding: 10px; background: rgba(15,23,42,0.8); border-radius: 6px; border-left: 3px solid #3B82F6;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Prompt:</div>
+            <div style="font-style: italic; color: #f8fafc;">&ldquo;${escapeHtml(promptText)}&rdquo;</div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+            <span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px;">
+              Workflow: <strong>${escapeHtml((data.parsed_intent || {}).workflow_id || 'N/A')}</strong>
+            </span>
+            <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px;">
+              Action Type: <strong>${escapeHtml(data.action_type || 'general')}</strong>
+            </span>
+            ${data.email_sent ? '<span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px;">Email: Terkirim</span>' : ''}
+          </div>
+          ${stepsHtml}
+          <div style="margin-top: 10px;">
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Respons Sistem:</div>
+            <div style="background: rgba(15,23,42,0.9); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); white-space: pre-wrap; font-family: inherit;">${escapeHtml(data.message || '')}</div>
+          </div>
+        `;
+      } catch (err) {
+        bodyEl.innerHTML = `
+          <div style="padding: 16px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; color: #f87171;">
+            <strong>Gagal menguji prompt:</strong> ${escapeHtml(err.message || String(err))}
+          </div>
+        `;
+      }
     }
 
     let allWorkflowsList = [];

@@ -47,6 +47,39 @@ class TestAdminWorkflows(unittest.TestCase):
         self.assertEqual(wf_map["WF-ALL-02"]["tenant_id"], "ALL")
         self.assertEqual(wf_map["WF-ALL-03"]["tenant_id"], "ALL")
 
+    def test_admin_created_workflow_executed_via_user_prompt(self):
+        """Verify that when an Admin creates a workflow, user prompt selects and executes it."""
+        from core.security import create_access_token
+        # 1. Admin creates a custom workflow
+        create_payload = {
+            "name": "Audit Seluruh Saldo Gudang Regional",
+            "description": "Menarik seluruh saldo stok material gudang regional untuk inspeksi rutin.",
+            "business_instruction": "Tarik semua data barang yang ada di sistem gudang logistik untuk audit rutin.",
+            "tenant_id": "INVENTORY",
+            "example_prompts": ["Audit seluruh inventaris gudang regional hari ini"]
+        }
+        res_create = self.client.post("/api/auth/admin/workflows", json=create_payload)
+        self.assertEqual(res_create.status_code, 200)
+        created_data = res_create.json()
+        wf_id = created_data["workflow_id"]
+        self.assertTrue(wf_id.startswith("WF-"))
+
+        # 2. User submits prompt matching the admin workflow
+        user_token = create_access_token({"sub": "usera", "role": "USER", "tenant_id": "INVENTORY"})
+        headers = {"Authorization": f"Bearer {user_token}", "Content-Type": "application/json"}
+        res_prompt = self.client.post("/api/agent/custom-prompt", json={
+            "prompt": "Tolong audit seluruh inventaris gudang regional hari ini"
+        }, headers=headers)
+        self.assertEqual(res_prompt.status_code, 200)
+        data = res_prompt.json()
+        # Verify that the parsed intent matches the admin-created workflow!
+        self.assertEqual(data["parsed_intent"]["workflow_id"], wf_id)
+        self.assertEqual(data["action_type"], "workflow_execution")
+
+        # 3. Clean up by deleting the workflow
+        del_res = self.client.delete(f"/api/auth/admin/workflows/{wf_id}")
+        self.assertEqual(del_res.status_code, 200)
+
 
 if __name__ == "__main__":
     unittest.main()

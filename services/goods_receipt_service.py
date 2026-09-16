@@ -56,7 +56,7 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
         }
 
     # 3. Ekstraksi Identifier Purchase Order dari Prompt
-    m_po_num = re.search(r'PO/BLT/\d{4}/\d{2}/\d{3}', prompt, re.IGNORECASE)
+    m_po_num = re.search(r'PO/BLT/\d{4}/\d{1,2}/\d{1,4}', prompt, re.IGNORECASE)
     m_po_id = re.search(r'\bPO[-_\s]?(\d{4}[-_\s]?\d{1,4}|\d{1,4})\b', prompt, re.IGNORECASE)
 
     conn = get_db_connection(read_only=True)
@@ -191,13 +191,17 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
     # 4. Validasi jika seluruh item dalam PO sudah pernah berstatus DELIVERED
     all_delivered = all(r[11] == 'DELIVERED' for r in po_rows)
     if all_delivered:
+        display_po = canonical_po_number or canonical_po_id
+        ref_text = f" (Ref: `{canonical_po_id}`)" if canonical_po_number and canonical_po_number != canonical_po_id else ""
         msg = f"**Informasi Penerimaan: Barang Sudah Pernah Diterima**\n\n"
-        msg += f"Seluruh pesanan dalam **{canonical_po_id}** (`{canonical_po_number}`) telah tercatat **DELIVERED** sebelumnya pada tanggal **{po_rows[0][12] or '2026-01-22'}**.\n\n"
+        msg += f"Seluruh pesanan dalam **{display_po}**{ref_text} telah tercatat **DELIVERED** sebelumnya pada tanggal **{po_rows[0][12] or '2026-01-22'}**.\n\n"
         msg += f"- **Status Fisik**: Seluruh kuantitas barang telah masuk ke saldo gudang dan tidak dilakukan penambahan ganda demi integritas data persediaan."
         return {
-            "parsed_intent": {"workflow_id": "goods_receipt_already_delivered", "po_id": canonical_po_id},
+            "parsed_intent": {"workflow_id": "goods_receipt_already_delivered", "po_id": canonical_po_id, "po_number": canonical_po_number},
             "action_type": "goods_receipt",
             "message": msg,
+            "po_id": canonical_po_id,
+            "po_number": canonical_po_number,
             "generated_prs": [],
             "affected_items": []
         }
@@ -311,13 +315,16 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
         except Exception:
             pass
 
+        w_conn.commit()
     finally:
         w_conn.close()
 
     # 6. Format Respon Konfirmasi Korporat Bali Tower
+    display_po = canonical_po_number or canonical_po_id
+    ref_text = f" (Ref: `{canonical_po_id}`)" if canonical_po_number and canonical_po_number != canonical_po_id else ""
     msg = f"**Konfirmasi Penerimaan Barang Fisik Berhasil Dibukukan**\n\n"
-    msg += f"Penerimaan material pesanan **{canonical_po_id}** (`{canonical_po_number}`) telah diverifikasi tiba di gudang fisik dan berhasil dicatatkan ke dalam basis data inventaris PT Bali Towerindo Sentra Tbk.\n\n"
-    msg += f"- **No. Purchase Order**: `{canonical_po_id}` ({canonical_po_number})\n"
+    msg += f"Penerimaan material pesanan **{display_po}**{ref_text} telah diverifikasi tiba di gudang fisik dan berhasil dicatatkan ke dalam basis data inventaris PT Bali Towerindo Sentra Tbk.\n\n"
+    msg += f"- **No. Purchase Order**: `{display_po}`{ref_text}\n"
     msg += f"- **Supplier / Rekanan**: {supplier_name}\n"
     msg += f"- **Tanggal Penerimaan**: {today_str} (Tercatat Hari Ini)\n"
     msg += f"- **Status Pesanan**: Diperbarui menjadi **`DELIVERED`**\n"

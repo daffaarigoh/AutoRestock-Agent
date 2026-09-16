@@ -241,30 +241,6 @@
     ]
   },
   {
-    "id": "WF-A03",
-    "name": "Tracking Pengiriman PO & Cetak Dokumen PDF",
-    "description": "Monitoring status pengiriman Purchase Order (PO) aktif dan penerbitan surat pesanan resmi format PDF Typst.",
-    "business_instruction": "Audit status PO yang sedang dikirim (IN_TRANSIT), tampilkan nomor PO dan total nilai, serta terbitkan berkas PDF surat pesanan resmi untuk diunduh.",
-    "compiled_json": {
-      "workflow": "usera_po_tracking_pdf",
-      "steps": [
-        {
-          "type": "tool",
-          "tool": "po.query_orders"
-        },
-        {
-          "type": "tool",
-          "tool": "docgen.compile_po"
-        }
-      ]
-    },
-    "tenant_id": "INVENTORY",
-    "example_prompts": [
-      "Lacak status pengiriman PO yang sedang aktif dalam perjalanan",
-      "Tampilkan daftar purchase order berstatus in transit dan unduh dokumen resminya"
-    ]
-  },
-  {
     "id": "WF-ALL-01",
     "name": "Cek Profil Akun & Hak Akses",
     "description": "Melihat informasi profil pengguna yang sedang login, role, divisi tenant, dan modul yang dapat diakses.",
@@ -300,6 +276,7 @@
     },
     "tenant_id": "ALL",
     "example_prompts": [
+      "status kesehatan sistem saat ini",
       "Cek status kesehatan seluruh modul sistem, server API, dan koneksi AI gateway",
       "Tampilkan status server dan koneksi database"
     ]

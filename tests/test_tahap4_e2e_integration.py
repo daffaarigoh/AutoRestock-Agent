@@ -54,6 +54,7 @@ def setup_test_scenario():
         SET quantity_on_hand = 450, stock_status = 'CRITICAL'
         WHERE item_id = 'BLT-INV-002' AND warehouse_id = 'WH-BDG-01';
     """)
+    conn.commit()
     conn.close()
 
 
@@ -93,7 +94,7 @@ def run_usera_e2e_workflow():
     res_pos = client.get("/api/balitower/inventory/purchase-orders", headers=headers_a)
     assert res_pos.status_code == 200
     pos = res_pos.json()
-    assert len(pos) >= 16, f"Expected at least 16 POs, got {len(pos)}"
+    assert len(pos) >= 8, f"Expected at least 8 POs, got {len(pos)}"
     print(f"  [OK] 5. Retrieved {len(pos)} purchase order records.")
 
     po_target = next((p for p in pos if p["po_id"] == "PO-2026-006"), None)

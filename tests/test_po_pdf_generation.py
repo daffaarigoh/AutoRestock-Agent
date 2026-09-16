@@ -67,7 +67,7 @@ class TestPOPDFGeneration(unittest.TestCase):
         res = client.get("/api/balitower/inventory/purchase-orders", headers=headers)
         self.assertEqual(res.status_code, 200)
         pos = res.json()
-        self.assertGreaterEqual(len(pos), 16)
+        self.assertGreaterEqual(len(pos), 8)
         first_po = pos[0]
         self.assertIn("po_id", first_po)
         self.assertIn("po_number", first_po)

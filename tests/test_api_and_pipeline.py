@@ -34,6 +34,7 @@ class TestAutoRestockPipeline(unittest.TestCase):
         self.client.post("/api/approval/reset")
         conn = get_db_connection(read_only=False)
         conn.execute("UPDATE stock_balances SET quantity_on_hand = 450, stock_status = 'CRITICAL' WHERE item_id = 'BLT-INV-002' AND warehouse_id = 'WH-BDG-01';")
+        conn.commit()
         conn.close()
 
     def tearDown(self):

@@ -221,11 +221,6 @@ Do not output any markdown formatting or extra commentary outside the JSON.
             return [
                 "PO-2026-001 sudah sampai di gudang, tolong catat penerimaan barangnya"
             ]
-        elif any(k in text_lower for k in ["lacak", "tracking", "status po", "in transit"]):
-            return [
-                "Lacak status pengiriman PO yang sedang aktif dalam perjalanan",
-                "Tampilkan daftar purchase order berstatus in transit dan unduh dokumen resminya"
-            ]
         elif any(k in text_lower for k in ["restock", "pengadaan", "pr-to-po", "kritis", "menipis"]):
             return [
                 f"Periksa kondisi stok untuk {clean_name} dan buat draft pengadaan barang",

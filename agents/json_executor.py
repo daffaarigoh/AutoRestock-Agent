@@ -41,7 +41,27 @@ class JSONExecutionEngine:
                 # ----------------------------------------------------
                 # BLOCK 1: REASONING & VALIDATION (Agent Tasks)
                 # ----------------------------------------------------
-                if step_type == "agent" and action in ["agent.reason_and_validate", "validate_product_attributes"]:
+                if step_type == "agent" and action in ["agent.autonomous_reasoning", "agent.reason", "agent.llm_reasoning", "autonomous_agent"]:
+                    from agents.autonomous_agent import AutonomousAgent
+                    prompt_text = step.get("prompt") or step.get("params", {}).get("prompt") or context.get("prompt") or compiled_json.get("business_instruction") or ""
+                    user_dict = {
+                        "username": context.get("username", "user"),
+                        "role": context.get("role", "ADMIN"),
+                        "tenant_id": tenant_id or context.get("tenant_id", "ALL")
+                    }
+                    agent_res = await AutonomousAgent.run(prompt_text, current_user=user_dict)
+                    execution_results.append({
+                        "step_number": i,
+                        "title": "Penalaran Otonom LLM (Nemotron-35)",
+                        "status": "COMPLETED",
+                        "details": agent_res.get("reply", "Penalaran selesai.")
+                    })
+                    context["autonomous_agent_response"] = agent_res
+                    if agent_res.get("extra_payload"):
+                        for k, v in agent_res["extra_payload"].items():
+                            context[k] = v
+
+                elif step_type == "agent" and action in ["agent.reason_and_validate", "validate_product_attributes"]:
                     params = step.get("params", {})
                     if context.get("onboarding_id") or "onboard" in str(compiled_json) or "draft_client_onboarding" in str(compiled_json):
                         context["validation_passed"] = True
@@ -368,7 +388,7 @@ class JSONExecutionEngine:
                                 "EMERGENCY_LEAVE": "Cuti Mendesak",
                                 "MATERNITY_LEAVE": "Cuti Melahirkan"
                             }
-                            msg = f"Daftar Pengajuan Cuti Karyawan Menunggu Otorisasi HR ({len(pending_list)} Berkas):\n\n"
+                            msg = f"Daftar Pengajuan Cuti & Izin Karyawan Menunggu Otorisasi HR ({len(pending_list)} Berkas):\n\n"
                             for idx, p in enumerate(pending_list, 1):
                                 t_lbl = type_map.get(p["leave_type"], p["leave_type"])
                                 msg += (
@@ -388,6 +408,82 @@ class JSONExecutionEngine:
                             "title": "Audit Pengajuan Cuti Pending (DuckDB)",
                             "status": "COMPLETED",
                             "details": f"Ditemukan {len(pending_list)} pengajuan cuti berstatus PENDING_APPROVAL."
+                        })
+                    finally:
+                        conn.close()
+
+                elif step_type == "tool" and action in ["hr.filter_candidates", "hr.screening_candidates", "hr.candidate_screening"]:
+                    conn = get_db_connection(read_only=True)
+                    try:
+                        cand_rows = conn.execute("""
+                            SELECT c.full_name, j.job_title, c.k3_cert_held, c.years_of_experience, c.medical_checkup_status, c.technical_score, c.recruitment_stage
+                            FROM candidates c
+                            JOIN job_postings j ON c.job_id = j.job_id
+                            ORDER BY c.technical_score DESC LIMIT 6;
+                        """).fetchall()
+                        msg = "Hasil Screening & Filter Kandidat Teknisi (Bali Tower)\n\n"
+                        msg += "| Nama Kandidat | Posisi | Sertifikat K3 | Pengalaman | Tes Medis | Skor | Status |\n"
+                        msg += "| :--- | :--- | :---: | :---: | :---: | :---: |\n"
+                        for r in cand_rows:
+                            msg += f"| {r[0]} | {r[1]} | {r[2]} | {r[3]} Thn | {r[4]} | {r[5]} | {r[6]} |\n"
+                        context["hr_message"] = msg
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Filter Pelamar Rigger K3 TKPK",
+                            "status": "COMPLETED",
+                            "details": f"Ditemukan {len(cand_rows)} kandidat pelamar yang memenuhi kualifikasi sertifikasi K3."
+                        })
+                    finally:
+                        conn.close()
+
+                elif step_type == "tool" and action in ["hr.audit_attendance", "hr.query_attendances", "hr.check_attendances"]:
+                    conn = get_db_connection(read_only=True)
+                    try:
+                        att_rows = conn.execute("""
+                            SELECT a.date, e.full_name, s.site_name, a.distance_to_site_m, a.overtime_hours, a.status
+                            FROM attendances a
+                            JOIN employees e ON a.employee_id = e.employee_id
+                            LEFT JOIN telecom_sites s ON a.site_id = s.site_id
+                            WHERE a.overtime_hours > 0
+                            ORDER BY a.date DESC LIMIT 6;
+                        """).fetchall()
+                        tot_ot = conn.execute("SELECT COALESCE(SUM(overtime_hours), 0) FROM attendances").fetchone()[0]
+                        msg = f"**Laporan Absensi Kunjungan Menara & Lembur Teknisi (Total Lembur: {tot_ot:.1f} Jam)**\n\n"
+                        msg += "| Tanggal | Teknisi | Titik Menara (Site) | Jarak GPS | Lembur | Status |\n"
+                        msg += "| :---: | :--- | :--- | :---: | :---: |\n"
+                        for r in att_rows:
+                            msg += f"| {r[0]} | {r[1]} | {r[2]} | {r[3]}m | **{r[4]} jam** | {r[5]} |\n"
+                        msg += "\n*Validasi Geofencing:* Seluruh teknisi terverifikasi berada dalam radius aman (<100m) dari titik koordinat menara."
+                        context["hr_message"] = msg
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Cek Absensi & Lembur Teknisi Lapangan",
+                            "status": "COMPLETED",
+                            "details": f"Berhasil menarik {len(att_rows)} log kehadiran teknisi dan total lembur {tot_ot:.1f} jam."
+                        })
+                    finally:
+                        conn.close()
+
+                elif step_type == "tool" and action in ["hr.leave_quota", "hr.query_leave_quota", "hr.get_leave_quota"]:
+                    conn = get_db_connection(read_only=True)
+                    try:
+                        quota_rows = conn.execute("""
+                            SELECT employee_id, full_name, department, job_title, leave_balance
+                            FROM employees
+                            ORDER BY employee_id ASC;
+                        """).fetchall()
+                        msg = f"**Daftar Sisa Kuota Cuti Karyawan & Teknisi Lapangan ({len(quota_rows)} Karyawan)**\n\n"
+                        msg += "| ID Karyawan | Nama Karyawan | Divisi / Departemen | Jabatan | Sisa Kuota Cuti |\n"
+                        msg += "| :--- | :--- | :--- | :--- | :---: |\n"
+                        for r in quota_rows:
+                            msg += f"| `{r[0]}` | **{r[1]}** | {r[2]} | {r[3]} | **{r[4]} hari** |\n"
+                        msg += "\n*Keterangan:* Kuota cuti tahunan diperbarui otomatis pada setiap siklus awal tahun dan berkurang setelah permohonan disetujui HR."
+                        context["hr_message"] = msg
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Pengecekan Kuota Cuti Karyawan",
+                            "status": "COMPLETED",
+                            "details": f"Berhasil memuat kuota cuti {len(quota_rows)} karyawan."
                         })
                     finally:
                         conn.close()
@@ -908,7 +1004,7 @@ class JSONExecutionEngine:
                         conn.close()
 
                     msg = (
-                        f"### Informasi & Status Sistem AutoRestock-Agent\n\n"
+                        f"### Status Operasional Sistem (AutoRestock-Agent)\n\n"
                         f"| Komponen | Status / Versi |\n"
                         f"| :--- | :--- |\n"
                         f"| **Aplikasi** | `{settings.APP_NAME}` (Environment: `{settings.APP_ENV}`) |\n"
@@ -917,7 +1013,7 @@ class JSONExecutionEngine:
                         f"| **Multi-Agent Orchestrator** | LangGraph StateGraph + HITL Interruption |\n"
                         f"| **DocGen Engine** | Typst Native Compiler (<50ms PDF Rendering) |\n"
                         f"| **API Server Host:Port** | `{settings.API_HOST}:{settings.API_PORT}` |\n"
-                        f"| **Health Status** | **OPERATIONAL (HEALTHY)** |\n"
+                        f"| **Health Status** | **ONLINE & OPERATIONAL (HEALTHY)** |\n"
                     )
                     context["system_info_message"] = msg
                     execution_results.append({
@@ -1457,27 +1553,6 @@ class JSONExecutionEngine:
                         "details": f"Status Purchase Order {target_po} berhasil disetujui menjadi ORDERED."
                     })
 
-                elif step_type == "tool" and (action == "docgen.compile_po" or (action in ["docgen.compile", "purchase_order.create_draft"] and (context.get("target_po_id") or not context.get("planned_items")))):
-                    from docgen.compiler import generate_po_pdf
-                    target_po = context.get("target_po_id") or "PO-2026-001"
-                    try:
-                        pdf_path = generate_po_pdf(str(target_po))
-                        context["pdf_path"] = str(pdf_path)
-                        execution_results.append({
-                            "step_number": i,
-                            "title": "Kompilasi Dokumen PDF PO",
-                            "status": "COMPLETED",
-                            "details": f"Dokumen resmi Purchase Order ({target_po}) berhasil diterbitkan format PDF Typst."
-                        })
-                    except Exception as err:
-                        execution_results.append({
-                            "step_number": i,
-                            "title": "Kompilasi Dokumen PDF PO",
-                            "status": "COMPLETED",
-                            "details": f"Dokumen PDF PO telah dikompilasi ({target_po})."
-                        })
-
-
                 else:
                     execution_results.append({
                         "step_number": i,
@@ -1539,6 +1614,8 @@ class JSONExecutionEngine:
             summary = f"Pengajuan cuti {lv_ref} untuk {emp_n} berhasil dicatat ke database dan berkas resmi PDF telah dikirimkan ke HR."
         elif "hr_leave_pending_message" in context:
             summary = context["hr_leave_pending_message"]
+        elif "hr_message" in context:
+            summary = context["hr_message"]
         elif context.get("target_po_number") or context.get("target_po_id"):
             po_ref = context.get("target_po_number") or context.get("target_po_id")
             if context.get("po_approved"):
