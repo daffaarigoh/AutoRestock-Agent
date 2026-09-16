@@ -2,7 +2,7 @@ import json
 import re
 
 from core.config import settings
-from core.llm_client import ModelGateway
+from core.llm_client import gateway
 from database.db import get_db_connection
 
 def extract_recipient_email(prompt: str) -> str | None:
@@ -16,14 +16,9 @@ def extract_recipient_email(prompt: str) -> str | None:
         email = match.group(0).strip().rstrip(".,;:!?")
         return email
 
-    # 2. Named recipient resolution (colleagues, roles, and corporate staff)
+    # 2. Dynamic employee & corporate role recipient resolution
     p_lower = prompt.lower()
-    named_map = {
-        "zeiniah": "zeiniahalfiah@gmail.com",
-        "daffa": "muhammaddaffaarigoh@gmail.com",
-        "muhammad daffa": "muhammaddaffaarigoh@gmail.com",
-        "daffaarigoh": "muhammaddaffaarigoh@gmail.com",
-        "daffaarigoh02": "daffaarigoh02@gmail.com",
+    role_map = {
         "hr.operations": "hr.operations@balitower.co.id",
         "hrd": "hr.operations@balitower.co.id",
         "hr": "hr.operations@balitower.co.id",
@@ -34,26 +29,29 @@ def extract_recipient_email(prompt: str) -> str | None:
         "bos": "manager@balitower.co.id",
         "procurement": "procurement@balitower.co.id",
         "pengadaan": "procurement@balitower.co.id",
-        "budi santoso": "budi.santoso@balitower.co.id",
-        "budi": "budi.santoso@balitower.co.id",
-        "dedi kurniawan": "dedi.kurniawan@balitower.co.id",
-        "dedi": "dedi.kurniawan@balitower.co.id",
-        "rian hidayat": "rian.hidayat@balitower.co.id",
-        "rian": "rian.hidayat@balitower.co.id",
-        "siti rahmawati": "siti.rahmawati@balitower.co.id",
-        "siti": "siti.rahmawati@balitower.co.id",
-        "fajar nugraha": "fajar.nugraha@balitower.co.id",
-        "fajar": "fajar.nugraha@balitower.co.id",
-        "dewi lestari": "dewi.lestari@balitower.co.id",
-        "dewi": "dewi.lestari@balitower.co.id",
-        "hendra gunawan": "hendra.gunawan@balitower.co.id",
-        "hendra": "hendra.gunawan@balitower.co.id",
-        "yusuf maulana": "yusuf.maulana@balitower.co.id",
-        "yusuf": "yusuf.maulana@balitower.co.id",
     }
-    for name_key, resolved_email in named_map.items():
-        if re.search(r'\b' + re.escape(name_key) + r'\b', p_lower):
-            return resolved_email
+    for role_key, role_email in role_map.items():
+        if re.search(r'\b' + re.escape(role_key) + r'\b', p_lower):
+            return role_email
+
+    try:
+        conn = get_db_connection(read_only=True)
+        tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        if "employees" in tables:
+            emp_rows = conn.execute("SELECT full_name, email FROM employees WHERE email IS NOT NULL;").fetchall()
+            conn.close()
+            for full_name, email in emp_rows:
+                if not full_name or not email:
+                    continue
+                first_name = full_name.split()[0].lower()
+                if len(first_name) >= 3 and re.search(r'\b' + re.escape(first_name) + r'\b', p_lower):
+                    return email
+                if full_name.lower() in p_lower:
+                    return email
+        else:
+            conn.close()
+    except Exception:
+        pass
 
     return None
 
@@ -212,7 +210,6 @@ Output strictly valid JSON with exact keys:
 - "target_item_name" (optional string)
 - "send_email" (boolean)
 """
-        gateway = ModelGateway()
         messages = [{"role": "system", "content": system_prompt}]
         if history and isinstance(history, list):
             for turn in history[-6:]:

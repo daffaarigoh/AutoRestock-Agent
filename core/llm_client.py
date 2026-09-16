@@ -19,30 +19,43 @@ class ModelGateway:
     """
     Unified client gateway for:
     - 'nemotron-35': Single corporate model for Planning, Routing, and Compliance Auditing
-    Includes fast circuit breaker to protect against remote AI gateway outages.
+    Includes persistent class-level circuit breaker and shared HTTP client pool.
     """
+    _instance = None
+    _last_failure_time: float = 0.0
+    _consecutive_failures: int = 0
+    _cooldown_seconds: float = 20.0
+    _failure_threshold: int = 2
+    _client: httpx.AsyncClient | None = None
 
-    def __init__(self):
-        self._last_failure_time: float = 0.0
-        self._consecutive_failures: int = 0
-        self._cooldown_seconds: float = 20.0
-        self._failure_threshold: int = 2
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ModelGateway, cls).__new__(cls)
+        return cls._instance
+
+    @classmethod
+    def get_client(cls) -> httpx.AsyncClient:
+        if cls._client is None or cls._client.is_closed:
+            timeout = httpx.Timeout(timeout=25.0, connect=5.0, read=25.0)
+            limits = httpx.Limits(max_keepalive_connections=10, max_connections=20)
+            cls._client = httpx.AsyncClient(timeout=timeout, limits=limits)
+        return cls._client
 
     def _check_circuit(self):
-        if self._consecutive_failures >= self._failure_threshold:
-            elapsed = time.time() - self._last_failure_time
-            if elapsed < self._cooldown_seconds:
+        if ModelGateway._consecutive_failures >= ModelGateway._failure_threshold:
+            elapsed = time.time() - ModelGateway._last_failure_time
+            if elapsed < ModelGateway._cooldown_seconds:
                 raise CircuitBreakerOpenException(
-                    f"Circuit breaker OPEN: AI Gateway unreachable ({elapsed:.1f}s / {self._cooldown_seconds}s cooldown)"
+                    f"Circuit breaker OPEN: AI Gateway unreachable ({elapsed:.1f}s / {ModelGateway._cooldown_seconds}s cooldown)"
                 )
             logger.info("Circuit breaker entering HALF-OPEN state, attempting reconnection...")
 
     def _record_success(self):
-        self._consecutive_failures = 0
+        ModelGateway._consecutive_failures = 0
 
     def _record_failure(self):
-        self._consecutive_failures += 1
-        self._last_failure_time = time.time()
+        ModelGateway._consecutive_failures += 1
+        ModelGateway._last_failure_time = time.time()
 
     async def chat_completion(
         self,
@@ -75,18 +88,17 @@ class ModelGateway:
         if response_format_json:
             payload["response_format"] = {"type": "json_object"}
 
-        timeout = httpx.Timeout(timeout=20.0, connect=5.0, read=20.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            try:
-                res = await client.post(f"{endpoint}/chat/completions", json=payload, headers=headers)
-                res.raise_for_status()
-                data = res.json()
-                self._record_success()
-                return data["choices"][0]["message"]["content"]
-            except Exception as e:
-                self._record_failure()
-                logger.error(f"Failed to connect to model {actual_model} at {endpoint}: {e!r}")
-                raise e
+        client = self.get_client()
+        try:
+            res = await client.post(f"{endpoint}/chat/completions", json=payload, headers=headers)
+            res.raise_for_status()
+            data = res.json()
+            self._record_success()
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            self._record_failure()
+            logger.error(f"Failed to connect to model {actual_model} at {endpoint}: {e!r}")
+            raise e
 
     async def chat_completion_stream(
         self,
@@ -118,13 +130,12 @@ class ModelGateway:
             "stream": True,
         }
 
-        timeout = httpx.Timeout(timeout=20.0, connect=5.0, read=20.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            try:
-                async with client.stream("POST", f"{endpoint}/chat/completions", json=payload, headers=headers) as response:
-                    response.raise_for_status()
-                    self._record_success()
-                    async for line in response.aiter_lines():
+        client = self.get_client()
+        try:
+            async with client.stream("POST", f"{endpoint}/chat/completions", json=payload, headers=headers) as response:
+                response.raise_for_status()
+                self._record_success()
+                async for line in response.aiter_lines():
                         if not line:
                             continue
                         if line.startswith("data: "):
@@ -138,10 +149,10 @@ class ModelGateway:
                                     yield content
                             except Exception:
                                 pass
-            except Exception as e:
-                self._record_failure()
-                logger.error(f"Streaming failed for model {actual_model} at {endpoint}: {e!r}")
-                raise e
+        except Exception as e:
+            self._record_failure()
+            logger.error(f"Streaming failed for model {actual_model} at {endpoint}: {e!r}")
+            raise e
 
 
 gateway = ModelGateway()

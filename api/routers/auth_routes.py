@@ -1,3 +1,4 @@
+import asyncio
 import json
 import uuid
 from datetime import timedelta
@@ -16,7 +17,7 @@ from core.security import (
     get_password_hash,
     verify_password,
 )
-from database.db import get_db_connection
+from database.db import execute_db_write, get_db_connection
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -36,22 +37,26 @@ class Token(BaseModel):
 @router.post("/login", response_model=Token)
 async def login(req: LoginRequest):
     conn = get_db_connection(read_only=True)
-    df = conn.execute("SELECT username, password_hash, role, tenant_id FROM users WHERE username = ?", [req.username]).df()
+    row = conn.execute(
+        "SELECT username, password_hash, role, tenant_id FROM users WHERE username = ?",
+        [req.username]
+    ).fetchone()
     conn.close()
 
-    if df.empty:
+    if not row:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
-    
-    user = df.iloc[0]
-    if not verify_password(req.password, user['password_hash']):
+
+    username, password_hash, role, tenant_id = row
+    is_valid = await asyncio.to_thread(verify_password, req.password, password_hash)
+    if not is_valid:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user['username'], "role": user['role'], "tenant_id": user['tenant_id']},
+        data={"sub": username, "role": role, "tenant_id": tenant_id},
         expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer", "role": user['role'], "tenant_id": user['tenant_id']}
+    return {"access_token": access_token, "token_type": "bearer", "role": role, "tenant_id": tenant_id}
 
 
 @router.get("/me")
@@ -505,35 +510,33 @@ class AdminDbDeleteRequest(BaseModel):
 @router.post("/admin/users")
 async def create_user(req: AdminCreateUserRequest, admin: TokenData = Depends(get_current_admin)):
     """Create a new user account with hashed credentials in the users table."""
-    conn = get_db_connection(read_only=False)
+    conn = get_db_connection(read_only=True)
     existing = conn.execute("SELECT username FROM users WHERE username = ?", [req.username]).fetchone()
+    conn.close()
     if existing:
-        conn.close()
         raise HTTPException(status_code=400, detail=f"Username '{req.username}' sudah terdaftar.")
 
     user_id = f"USR-{uuid.uuid4().hex[:6].upper()}"
-    p_hash = get_password_hash(req.password)
+    p_hash = await asyncio.to_thread(get_password_hash, req.password)
     tenant_val = _normalize_tenant_id(req.tenant_id)
     role_val = req.role.strip().upper() if req.role else "USER"
     if role_val not in ["ADMIN", "USER"]:
         role_val = "USER"
 
-    conn.execute(
+    execute_db_write(
         "INSERT INTO users (user_id, username, password_hash, role, tenant_id) VALUES (?, ?, ?, ?, ?)",
         [user_id, req.username, p_hash, role_val, tenant_val]
     )
-    conn.commit()
-    conn.close()
     return {"status": "success", "message": f"Pengguna '{req.username}' berhasil ditambahkan.", "user_id": user_id}
 
 
 @router.put("/admin/users/{user_id}")
 async def update_user(user_id: str, req: AdminUpdateUserRequest, admin: TokenData = Depends(get_current_admin)):
     """Update role, tenant_id, or password for a user account."""
-    conn = get_db_connection(read_only=False)
+    conn = get_db_connection(read_only=True)
     row = conn.execute("SELECT user_id, username FROM users WHERE user_id = ?", [user_id]).fetchone()
+    conn.close()
     if not row:
-        conn.close()
         raise HTTPException(status_code=404, detail=f"Pengguna dengan ID '{user_id}' tidak ditemukan.")
 
     updates = []
@@ -547,14 +550,13 @@ async def update_user(user_id: str, req: AdminUpdateUserRequest, admin: TokenDat
         updates.append("tenant_id = ?")
         vals.append(_normalize_tenant_id(req.tenant_id))
     if req.password and req.password.strip():
+        new_hash = await asyncio.to_thread(get_password_hash, req.password.strip())
         updates.append("password_hash = ?")
-        vals.append(get_password_hash(req.password.strip()))
+        vals.append(new_hash)
 
     if updates:
         vals.append(user_id)
-        conn.execute(f"UPDATE users SET {', '.join(updates)} WHERE user_id = ?", vals)
-        conn.commit()
-    conn.close()
+        execute_db_write(f"UPDATE users SET {', '.join(updates)} WHERE user_id = ?", vals)
     return {"status": "success", "message": f"Data pengguna '{row[1]}' berhasil diperbarui."}
 
 

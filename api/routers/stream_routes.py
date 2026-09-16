@@ -132,12 +132,18 @@ async def agent_thought_generator(tenant_id: str = "ALL") -> AsyncGenerator[str,
 
 
 @router.get("/agent-run")
-async def stream_agent_execution(tenant_id: str = "ALL"):
+async def stream_agent_execution(
+    tenant_id: str = "ALL",
+    current_user: TokenData = Depends(get_current_user)
+):
     """
     Server-Sent Events endpoint streaming live agent reasoning traces to the frontend console.
+    Protected by JWT bearer authentication.
     """
+    # Enforce multi-tenant scoping
+    active_tenant = current_user.tenant_id if current_user.tenant_id != "ALL" else tenant_id
     return StreamingResponse(
-        agent_thought_generator(tenant_id=tenant_id),
+        agent_thought_generator(tenant_id=active_tenant),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

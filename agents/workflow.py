@@ -19,12 +19,13 @@ if str(WORKSPACE_DIR) not in sys.path:
 import asyncio
 import json
 
+import threading
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from agents.state import AgentState, PurchaseRequisition, RestockItem
-from core.llm_client import ModelGateway
-from database.db import get_db_connection
+from core.llm_client import gateway
+from database.db import execute_db_write, get_db_connection
 from docgen.compiler import generate_pr_pdf
 from mcp_server.tools import get_best_vendors, get_low_stock_items
 
@@ -33,10 +34,8 @@ memory_checkpointer = MemorySaver()
 
 
 def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
-    """Insert or update order records into DuckDB orders table."""
-
-    conn = get_db_connection()
-    try:
+    """Insert or update order records into DuckDB orders table with write serialization."""
+    def _write_orders(conn):
         tenant_val = getattr(pr, "tenant_id", None) or "TENANT_A"
         existing = conn.execute("SELECT order_id FROM orders WHERE pr_number = ?", [pr.pr_number]).fetchall()
         if existing:
@@ -54,15 +53,13 @@ def record_orders_to_db(pr: PurchaseRequisition, status: str = "PENDING"):
                     INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
                 """, insert_params)
-    finally:
-        conn.commit()
-        conn.close()
+
+    execute_db_write(_write_orders)
 
 
 def update_db_orders_status(pr_number: str, status: str):
     """Update all orders under a PR number to a new status (e.g. APPROVED, REJECTED) and create official POs on APPROVE."""
-    conn = get_db_connection()
-    try:
+    def _update_orders(conn):
         if status.upper() == "APPROVED":
             # ERP Standard: Physical stock increments upon physical Goods Receipt (DELIVERED)
             # when material arrives at the regional warehouse.
@@ -86,9 +83,8 @@ def update_db_orders_status(pr_number: str, status: str):
             SET status = ?
             WHERE pr_number = ?;
         """, [status, pr_number])
-    finally:
-        conn.commit()
-        conn.close()
+
+    execute_db_write(_update_orders)
 
 
 def scan_node(state: AgentState) -> dict[str, Any]:
@@ -107,17 +103,45 @@ def scan_node(state: AgentState) -> dict[str, Any]:
     }
 
 
+_worker_loop = None
+_worker_thread = None
+_worker_lock = threading.Lock()
+
+
+def _get_worker_loop():
+    """Returns a singleton background event loop for safely bridging sync nodes to async LLM calls."""
+    global _worker_loop, _worker_thread
+    with _worker_lock:
+        if _worker_loop is None or not _worker_thread or not _worker_thread.is_alive():
+            ready_event = threading.Event()
+
+            def _start_loop():
+                nonlocal ready_event
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                global _worker_loop
+                _worker_loop = loop
+                ready_event.set()
+                loop.run_forever()
+
+            _worker_thread = threading.Thread(target=_start_loop, daemon=True, name="WorkflowAsyncBridge")
+            _worker_thread.start()
+            ready_event.wait()
+        return _worker_loop
+
+
 def _run_sync(coro):
-    """Safely executes an async coroutine from synchronous graph nodes without loop conflicts."""
-    import concurrent.futures
+    """Safely executes an async coroutine from synchronous graph nodes without event loop conflicts."""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = None
 
     if loop and loop.is_running():
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            return executor.submit(asyncio.run, coro).result()
+        # Running inside an active event loop (e.g. FastAPI worker thread)
+        worker_loop = _get_worker_loop()
+        future = asyncio.run_coroutine_threadsafe(coro, worker_loop)
+        return future.result(timeout=120)
     return asyncio.run(coro)
 
 
@@ -168,8 +192,7 @@ Output format must be a JSON object with a key 'items' containing a list of obje
 - line_total (float)
 - reason (string, short Indonesian max 10 words)
 """
-    
-    gateway = ModelGateway()
+
     messages = [
         {"role": "system", "content": "You are a Procurement AI. Always output valid JSON."},
         {"role": "user", "content": prompt}
@@ -266,8 +289,7 @@ Output format must be a JSON object with:
 - "auditor_status": "PASSED" | "REVISED" | "REJECTED"
 - "auditor_notes": string (Indonesian)
 """
-    
-    gateway = ModelGateway()
+
     messages = [
         {"role": "system", "content": "You are an Auditor AI. Always output valid JSON."},
         {"role": "user", "content": prompt}

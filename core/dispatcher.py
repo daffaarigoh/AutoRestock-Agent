@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import smtplib
 from email.mime.application import MIMEApplication
@@ -109,7 +110,7 @@ class MultiChannelDispatcher:
         from core.config import get_base_url
         if not base_url:
             base_url = get_base_url()
-        recipient = recipient_email or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
+        recipient = recipient_email or settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "manager@balitower.co.id"
         is_smtp_configured = bool(settings.SMTP_EMAIL and settings.SMTP_PASSWORD)
 
         # Auto-detect PR number from subject, attachment_path, or content_text if not explicitly given
@@ -629,10 +630,13 @@ class MultiChannelDispatcher:
                 outer.attach(part_attach)
                 logger.info(f"Attached document '{file_p.name}' to email for {recipient}")
 
-            with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15) as server:
-                server.starttls()
-                server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
-                server.send_message(outer)
+            def _send_smtp_sync():
+                with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15) as server:
+                    server.starttls()
+                    server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
+                    server.send_message(outer)
+
+            await asyncio.to_thread(_send_smtp_sync)
 
             return {
                 "channel": "email",

@@ -29,10 +29,10 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Enable CORS for frontend dashboard
+# Enable CORS for frontend dashboard (restricted to configured origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=getattr(settings, "ALLOWED_ORIGINS", ["http://localhost:8050", "http://127.0.0.1:8050"]),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

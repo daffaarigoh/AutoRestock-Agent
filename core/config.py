@@ -25,6 +25,12 @@ class Settings(_BaseSettings):
     DEBUG: bool = True
     PUBLIC_URL: str | None = None
     SECRET_KEY: str = "super-secret-enterprise-key-for-autorestock-agent"
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:8050",
+        "http://127.0.0.1:8050",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
 
     # Corporate LLM Gateway & standard env keys
     LLM_KEY: str | None = None
@@ -91,6 +97,9 @@ class Settings(_BaseSettings):
         self.DEFAULT_RECIPIENT_EMAIL = _clean(self.DEFAULT_RECIPIENT_EMAIL) or self.SMTP_EMAIL or ""
         self.PUBLIC_URL = _clean(self.PUBLIC_URL)
         self.SECRET_KEY = _clean(self.SECRET_KEY) or "super-secret-enterprise-key-for-autorestock-agent"
+        if self.APP_ENV in ["production", "staging"] and self.SECRET_KEY == "super-secret-enterprise-key-for-autorestock-agent":
+            import logging
+            logging.getLogger(__name__).warning("INSECURE CONFIG: Running in production/staging with default SECRET_KEY! Please override via environment variable.")
 
         # Fallback for API_LLM / API_KEY_LLM alias
         if not self.LLM_URL and self.API_LLM:

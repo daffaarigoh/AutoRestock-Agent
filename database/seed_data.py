@@ -107,7 +107,28 @@ def init_db(db_path: Path = DB_PATH):
         conn.execute("ALTER TABLE workflows ADD COLUMN tenant_id VARCHAR DEFAULT 'ALL';")
         print("[MIGRATION] Added 'tenant_id' column to workflows table.")
 
+    # 7. Create purchase_requests table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS purchase_requests (
+            pr_number VARCHAR PRIMARY KEY,
+            created_at TIMESTAMP,
+            status VARCHAR,
+            total_amount BIGINT,
+            items_json TEXT,
+            tenant_id VARCHAR DEFAULT 'ALL'
+        );
+    """)
+
+    # Check and migrate purchase_orders table if pr_number column is missing
+    existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+    if "purchase_orders" in existing_tables:
+        po_cols = [c[0] for c in conn.execute("DESCRIBE purchase_orders;").fetchall()]
+        if "pr_number" not in po_cols:
+            conn.execute("ALTER TABLE purchase_orders ADD COLUMN pr_number VARCHAR;")
+            print("[MIGRATION] Added 'pr_number' column to purchase_orders table.")
+
     return conn
+
 
 
 def seed_data(conn: duckdb.DuckDBPyConnection):

@@ -3,10 +3,14 @@ from typing import Any
 from database.db import get_db_connection
 
 
-def calculate_safety_stock(min_threshold: int) -> int:
+def calculate_safety_stock(min_threshold: int, avg_daily_usage: float = 0.0, lead_time_days: int = 0) -> int:
     """
-    Legacy function, now just returns min_threshold.
+    Calculates inventory safety stock buffer.
+    If burn rate and lead time are provided, applies safety buffer formula with min_threshold floor.
     """
+    if avg_daily_usage > 0 and lead_time_days > 0:
+        buffer = round(avg_daily_usage * (lead_time_days * 0.5))
+        return max(buffer, min_threshold)
     return min_threshold
 
 
@@ -54,7 +58,11 @@ def get_low_stock_items(tenant_id: str = "ALL") -> list[dict[str, Any]]:
             min_threshold = int(item_dict["min_threshold"])
             max_threshold = int(item_dict["max_threshold"])
             
-            safety_stock = calculate_safety_stock(min_threshold)
+            safety_stock = calculate_safety_stock(
+                min_threshold,
+                float(item_dict.get("avg_daily_usage", 0.0) or 0.0),
+                int(item_dict.get("lead_time_days", 0) or 0)
+            )
             reorder_qty = calculate_reorder_quantity(stock, max_threshold)
             
             item_dict["safety_stock"] = safety_stock

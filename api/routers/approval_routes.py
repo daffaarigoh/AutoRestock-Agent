@@ -94,7 +94,10 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
 
     po_cols = [c[0] for c in conn.execute("DESCRIBE purchase_orders;").fetchall()]
     if "pr_number" not in po_cols:
-        conn.execute("ALTER TABLE purchase_orders ADD COLUMN pr_number VARCHAR;")
+        try:
+            conn.execute("ALTER TABLE purchase_orders ADD COLUMN pr_number VARCHAR;")
+        except Exception as alter_err:
+            print(f"[sync_approved_pr_to_purchase_orders] Column check note: {alter_err}")
 
     existing_pos = conn.execute("SELECT po_id FROM purchase_orders WHERE pr_number = ?;", [pr_number]).fetchall()
     created_po_ids = []
@@ -216,14 +219,14 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
 # --- Helper: Update DuckDB order status & optionally add stock ---
 
 def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | None = None) -> str:
-    """Updates DuckDB orders table and optionally increments stock on APPROVE, ensuring idempotency."""
+    """Updates DuckDB orders table and POs atomically, ensuring serialized write and idempotency."""
     try:
         import uuid
-        from database.db import get_db_connection
+        from database.db import execute_db_write
         is_approve = str(action).upper() in ["APPROVE", "APPROVED"]
         db_status = "APPROVED" if is_approve else "REJECTED"
-        conn = get_db_connection()
-        try:
+
+        def _transaction_ops(conn):
             existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
             if "orders" not in existing_tables:
                 conn.execute("""
@@ -242,11 +245,6 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
 
             # Check if order already exists and its current status
             existing_order = conn.execute("SELECT status FROM orders WHERE pr_number = ? LIMIT 1;", [pr_number]).fetchone()
-            already_approved = existing_order and existing_order[0] == "APPROVED"
-            
-            # ERP Standard: Stock is NOT incremented upon PR approval.
-            # Physical warehouse stock will increment upon Goods Receipt (DELIVERED)
-            # when material physically arrives at the destination warehouse.
 
             if existing_order:
                 conn.execute("UPDATE orders SET status = ? WHERE pr_number = ?;", [db_status, pr_number])
@@ -271,9 +269,8 @@ def _update_db_status(pr_number: str, action: str, pr: PurchaseRequisitionDoc | 
 
             if "purchase_requests" in existing_tables:
                 conn.execute("UPDATE purchase_requests SET status = ? WHERE pr_number = ?;", [db_status, pr_number])
-        finally:
-            conn.commit()
-            conn.close()
+
+        execute_db_write(_transaction_ops)
 
         if is_approve:
             return "<strong>Purchase Order Resmi Berhasil Diterbitkan (Status: ORDERED). Saldo fisik gudang akan bertambah otomatis saat barang tiba (Goods Receipt / DELIVERED).</strong>"
@@ -321,47 +318,78 @@ def _regenerate_pdf(pr: PurchaseRequisitionDoc):
         print(f"[REGENERATE PDF ERROR] {e}")
 
 
+def persist_pr_to_db(pr: PurchaseRequisitionDoc):
+    """Persists a PurchaseRequisitionDoc into DuckDB purchase_requests table with write serialization."""
+    try:
+        import json
+        from database.db import execute_db_write
+
+        def _write_pr(conn):
+            existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+            if "purchase_requests" in existing_tables:
+                items_data = [item.model_dump() if hasattr(item, "model_dump") else item.dict() for item in pr.items]
+                conn.execute("""
+                    INSERT OR REPLACE INTO purchase_requests (pr_number, created_at, status, total_amount, items_json, tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?);
+                """, [
+                    pr.pr_number,
+                    datetime.now(),
+                    pr.status,
+                    int(pr.total_budget),
+                    json.dumps(items_data),
+                    getattr(pr, "tenant_id", "ALL")
+                ])
+
+        execute_db_write(_write_pr)
+    except Exception as e:
+        print(f"[persist_pr_to_db] Error saving PR {pr.pr_number} to DB: {e}")
+
+
 def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
-    """Gets a PR from store, reconstructing from DuckDB if missing, or creating fallback."""
+    """Gets a PR from store, reconstructing from DuckDB orders or purchase_requests if missing."""
     pr = PR_STORE.get(pr_number)
     if pr:
         return pr
 
-    # Try reconstructing from DuckDB orders
+    # Try reconstructing from DuckDB orders or purchase_requests
     try:
         from database.db import get_db_connection
-        conn = get_db_connection()
+        conn = get_db_connection(read_only=True)
         existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
-        if "vendors" in existing_tables:
-            vendor_join = "LEFT JOIN vendors v ON o.vendor_id = v.vendor_id AND o.item_id = v.item_id"
-            vendor_col = "v.name as vendor_name"
-        elif "suppliers" in existing_tables:
-            vendor_join = "LEFT JOIN suppliers v ON o.vendor_id = v.supplier_id"
-            vendor_col = "v.supplier_name as vendor_name"
-        else:
-            vendor_join = ""
-            vendor_col = "'Vendor Terdaftar' as vendor_name"
 
-        item_join = "LEFT JOIN items i ON o.item_id = i.item_id"
-        if "inventory_items" in existing_tables:
-            item_join += " LEFT JOIN inventory_items bt ON o.item_id = bt.item_id"
-            item_name_col = "COALESCE(i.name, bt.item_name, 'Material ' || o.item_id) as item_name"
-            item_unit_col = "COALESCE(i.unit, bt.unit, 'pcs') as unit"
-        else:
-            item_name_col = "COALESCE(i.name, 'Material ' || o.item_id) as item_name"
-            item_unit_col = "COALESCE(i.unit, 'pcs') as unit"
+        # 1. Try orders table first
+        order_rows = []
+        if "orders" in existing_tables:
+            if "vendors" in existing_tables:
+                vendor_join = "LEFT JOIN vendors v ON o.vendor_id = v.vendor_id AND o.item_id = v.item_id"
+                vendor_col = "v.name as vendor_name"
+            elif "suppliers" in existing_tables:
+                vendor_join = "LEFT JOIN suppliers v ON o.vendor_id = v.supplier_id"
+                vendor_col = "v.supplier_name as vendor_name"
+            else:
+                vendor_join = ""
+                vendor_col = "'Vendor Terdaftar' as vendor_name"
 
-        order_rows = conn.execute(f"""
-            SELECT o.pr_number, o.item_id, o.vendor_id, o.quantity, o.unit_price, o.total_price, o.status, o.tenant_id,
-                   {item_name_col}, {item_unit_col}, {vendor_col}
-            FROM orders o
-            {item_join}
-            {vendor_join}
-            WHERE o.pr_number = ?;
-        """, [pr_number]).fetchall()
-        conn.close()
+            item_join = "LEFT JOIN items i ON o.item_id = i.item_id"
+            if "inventory_items" in existing_tables:
+                item_join += " LEFT JOIN inventory_items bt ON o.item_id = bt.item_id"
+                item_name_col = "COALESCE(i.name, bt.item_name, 'Material ' || o.item_id) as item_name"
+                item_unit_col = "COALESCE(i.unit, bt.unit, 'pcs') as unit"
+            else:
+                item_name_col = "COALESCE(i.name, 'Material ' || o.item_id) as item_name"
+                item_unit_col = "COALESCE(i.unit, 'pcs') as unit"
+
+            order_rows = conn.execute(f"""
+                SELECT o.pr_number, o.item_id, o.vendor_id, o.quantity, o.unit_price, o.total_price, o.status, o.tenant_id,
+                       {item_name_col}, {item_unit_col}, {vendor_col}
+                FROM orders o
+                {item_join}
+                {vendor_join}
+                WHERE o.pr_number = ?;
+            """, [pr_number]).fetchall()
 
         if order_rows:
+            conn.close()
             items = []
             total_budget = 0.0
             db_status = order_rows[0][6] or "PENDING"
@@ -398,6 +426,50 @@ def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
             )
             PR_STORE[pr_number] = pr_doc
             return pr_doc
+
+        # 2. Try purchase_requests table if not found in orders
+        if "purchase_requests" in existing_tables:
+            pr_row = conn.execute(
+                "SELECT pr_number, created_at, status, total_amount, items_json, tenant_id FROM purchase_requests WHERE pr_number = ?;",
+                [pr_number]
+            ).fetchone()
+            conn.close()
+            if pr_row:
+                import json
+                items = []
+                try:
+                    raw_items = json.loads(pr_row[4]) if pr_row[4] else []
+                    for it in raw_items:
+                        items.append(PurchaseItemRequest(
+                            item_id=it.get("item_id", "ITM-000"),
+                            name=it.get("item_name") or it.get("name", "Material Item"),
+                            reorder_qty=int(it.get("quantity") or it.get("reorder_qty", 1)),
+                            unit=it.get("unit", "pcs"),
+                            vendor_id=it.get("vendor_id", "VND-001"),
+                            vendor_name=it.get("vendor_name", "Vendor Terdaftar"),
+                            unit_price=float(it.get("unit_price", 0.0)),
+                            total_price=float(it.get("total_price", 0.0)),
+                            reason=it.get("reason", "Generated by AI Agent")
+                        ))
+                except Exception as parse_err:
+                    print(f"[_ensure_pr_in_store] Error parsing items_json: {parse_err}")
+
+                clean_filename = f"{pr_number.replace('-', '_')}.pdf"
+                pr_doc = PurchaseRequisitionDoc(
+                    pr_number=pr_number,
+                    created_at=str(pr_row[1]) if pr_row[1] else datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    items=items,
+                    total_budget=float(pr_row[3] or 0.0),
+                    auditor_status="PASSED",
+                    auditor_notes="Compliance check: Sesuai alokasi pengadaan inventaris.",
+                    pdf_path=f"/storage/documents/{clean_filename}",
+                    status=pr_row[2] or "PENDING",
+                    tenant_id=pr_row[5] or "ALL"
+                )
+                PR_STORE[pr_number] = pr_doc
+                return pr_doc
+        else:
+            conn.close()
     except Exception as e:
         print(f"[_ensure_pr_in_store] Error loading from DB: {e}")
 
@@ -415,16 +487,16 @@ async def get_all_requisitions(response: Response, current_user: TokenData = Dep
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    # Sync PRs from DuckDB orders
+    # Sync PRs from DuckDB orders and purchase_requests
     try:
         from database.db import get_db_connection
         conn = get_db_connection(read_only=True)
         existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
         pr_rows = []
         if "orders" in existing_tables:
-            pr_rows = conn.execute("SELECT DISTINCT pr_number, status FROM orders;").fetchall()
-        elif "purchase_requests" in existing_tables:
-            pr_rows = conn.execute("SELECT DISTINCT pr_number, status FROM purchase_requests;").fetchall()
+            pr_rows.extend(conn.execute("SELECT DISTINCT pr_number, status FROM orders;").fetchall())
+        if "purchase_requests" in existing_tables:
+            pr_rows.extend(conn.execute("SELECT DISTINCT pr_number, status FROM purchase_requests;").fetchall())
         conn.close()
         for pr_num, db_status in pr_rows:
             if pr_num:
@@ -436,7 +508,7 @@ async def get_all_requisitions(response: Response, current_user: TokenData = Dep
 
     if current_user.role == "ADMIN":
         return list(PR_STORE.values())
-    
+
     return [pr for pr in PR_STORE.values() if pr.tenant_id == current_user.tenant_id or pr.tenant_id == "ALL"]
 
 
@@ -1362,13 +1434,8 @@ async def reset_sample_data():
     and regenerates the clean initial PDF.
     """
     try:
-        from database.db import get_db_connection
-        b_conn = get_db_connection(read_only=False)
-        try:
-            b_conn.execute("DELETE FROM orders WHERE pr_number = 'PR-2026-0819-001';")
-            b_conn.commit()
-        finally:
-            b_conn.close()
+        from database.db import execute_db_write
+        execute_db_write("DELETE FROM orders WHERE pr_number = 'PR-2026-0819-001';")
     except Exception as e:
         print(f"[RESET] Warning cleaning balitower orders: {e}")
 
@@ -1382,23 +1449,24 @@ async def reset_sample_data():
 async def clear_all_prs_and_pos(current_user: TokenData = Depends(get_current_user)):
     """
     Membersihkan seluruh draf PR, mengosongkan PR_STORE, menghapus seluruh berkas PDF PR dan PO,
-    serta mengosongkan tabel purchase_orders dan orders di DuckDB.
+    serta mengosongkan tabel purchase_orders, purchase_requests, dan orders di DuckDB.
     """
     PR_STORE.clear()
 
-    # Clear orders and purchase_orders in balitower.db
+    # Clear orders, purchase_orders, and purchase_requests in balitower.db
     try:
-        from database.db import get_db_connection
-        conn = get_db_connection(read_only=False)
-        try:
+        from database.db import execute_db_write
+
+        def _clear_all_tables(conn):
             existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
             if "orders" in existing_tables:
                 conn.execute("DELETE FROM orders;")
             if "purchase_orders" in existing_tables:
                 conn.execute("DELETE FROM purchase_orders;")
-            conn.commit()
-        finally:
-            conn.close()
+            if "purchase_requests" in existing_tables:
+                conn.execute("DELETE FROM purchase_requests;")
+
+        execute_db_write(_clear_all_tables)
     except Exception as e:
         print(f"[CLEAR-ALL] Error clearing DuckDB orders: {e}")
 

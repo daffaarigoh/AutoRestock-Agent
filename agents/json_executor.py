@@ -1641,7 +1641,7 @@ class JSONExecutionEngine:
             elif pr_num:
                 msg = f"Dokumen PR #{pr_num} telah diterbitkan dan menunggu persetujuan Anda."
             from core.config import settings
-            default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
+            default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "manager@balitower.co.id"
             dispatch_res = await dispatcher.dispatch_email(
                 recipient_email=context.get("recipient_email") or (default_env_recip if (lv_id or ob_id) else None),
                 subject=f"Pengajuan Cuti Karyawan: {lv_id}" if lv_id else (f"Permohonan Otorisasi Sewa Menara: {ob_id}" if ob_id else (f"Permintaan Persetujuan Restock: {pr_num}" if pr_num else "Notifikasi Operasional")),
