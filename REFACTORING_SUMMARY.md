@@ -1,7 +1,7 @@
 # 📋 Dokumen Ringkasan Refactoring & Hardening Arsitektur
 ## AutoRestock-Agent Enterprise Refactor
 
-Dokumen ini ditujukan untuk tim engineer dan coding agent di kantor sebagai panduan lengkap mengenai seluruh perubahan, perbaikan celah keamanan, optimasi konkurensi, dan pembersihan *dead code* yang telah diterapkan pada repositori.
+Dokumen ini ditujukan untuk tim engineer dan coding agent di kantor sebagai panduan lengkap mengenai seluruh perubahan, perbaikan celah keamanan, optimasi konkurensi, pembersihan *dead code*, serta cetak biru (*blueprint*) dekomposisi modular untuk `json_executor.py`.
 
 Branch: `refactor/enterprise-architecture-cleanup`  
 Tanggal: 16 September 2026
@@ -154,4 +154,127 @@ Untuk melanjutkan pekerjaan atau memverifikasi perubahan ini di server kantor:
 
 ---
 
-*Refactoring selesai dengan aman tanpa mengubah fungsionalitas inti bisnis aplikasi AutoRestock-Agent.*
+## 🧩 4. Roadmap Tugas Lanjutan di Kantor (Opsi B): Dekomposisi `json_executor.py` ke Tool Registry Pattern
+
+File `agents/json_executor.py` saat ini terdiri dari **1.600+ baris kode** dengan satu fungsi raksasa `JSONExecutionEngine.execute()` yang menampung puluhan rantai percabangan `if/elif`.
+
+File ini sengaja **dipertahankan fungsionalitasnya 100% pada fase hardening darurat**, karena merupakan mesin runtime alur kerja (`WF-001` s/d `WF-010`). Namun, untuk pemeliharaan jangka panjang di kantor, file ini sangat disarankan untuk didekomposisi menggunakan **Tool Registry / Strategy Pattern**.
+
+Berikut adalah cetak biru (*blueprint*) arsitektur dan instruksi kerja siap pakai untuk coding agent kantor Anda.
+
+### A. Arsitektur Target
+
+```text
+agents/
+├── json_executor.py           <-- Runtime engine ringkas (~60 baris saja)
+├── registry.py                <-- Tool registry & decorator @register_tool
+└── handlers/                  <-- Modul handler modular per domain bisnis
+    ├── __init__.py
+    ├── inventory_handlers.py  <-- Logika restock, threshold, material registration
+    ├── hr_handlers.py         <-- Logika cuti, absensi GPS, screening pelamar
+    ├── finance_handlers.py    <-- Logika revenue report, opex, cashflow, onboarding
+    ├── docgen_handlers.py     <-- Logika kompilasi PDF Typst
+    └── notification_handlers.py <-- Logika email & dispatcher
+```
+
+### B. Implementasi Registry Pattern (`agents/registry.py`)
+
+```python
+# agents/registry.py
+import logging
+from typing import Callable, Coroutine, Any
+
+logger = logging.getLogger(__name__)
+
+TOOL_REGISTRY: dict[str, Callable[..., Coroutine[Any, Any, dict]]] = {}
+
+def register_tool(*aliases: str):
+    # Decorator to register a workflow step handler under one or more action aliases.
+    def decorator(func: Callable):
+        for alias in aliases:
+            TOOL_REGISTRY[alias] = func
+        return func
+    return decorator
+
+def get_tool_handler(action_name: str) -> Callable | None:
+    return TOOL_REGISTRY.get(action_name)
+```
+
+### C. Contoh Handler Modular (`agents/handlers/inventory_handlers.py`)
+
+```python
+# agents/handlers/inventory_handlers.py
+from agents.registry import register_tool
+
+@register_tool("inventory.get_low_stock_products", "inventory.get_low_stock")
+async def handle_get_low_stock(step: dict, context: dict) -> dict:
+    from mcp_server.tools import get_low_stock_items
+    tenant_id = context.get("tenant_id", "ALL")
+    items = get_low_stock_items(tenant_id=tenant_id)
+    context["low_stock_items"] = items
+    return {
+        "title": "Audit Stok Rendah Inventaris",
+        "status": "COMPLETED",
+        "details": f"Ditemukan {len(items)} barang di bawah ambang batas safety stock."
+    }
+```
+
+### D. Hasil Akhir `agents/json_executor.py` (Menyusut dari 1.600 Baris ke ~60 Baris)
+
+```python
+# agents/json_executor.py
+import logging
+from agents.registry import TOOL_REGISTRY, get_tool_handler
+import agents.handlers  # Auto-load all registered handlers
+
+logger = logging.getLogger(__name__)
+
+class JSONExecutionEngine:
+    @classmethod
+    async def execute(cls, compiled_json: dict, tenant_id: str = "ALL", custom_context: dict | None = None) -> dict:
+        steps = compiled_json.get("steps", [])
+        context = custom_context or {}
+        context["tenant_id"] = tenant_id
+        execution_results = []
+
+        for i, step in enumerate(steps, 1):
+            action = step.get("tool") or step.get("task")
+            handler = get_tool_handler(action)
+            
+            if not handler:
+                logger.warning(f"Unregistered workflow tool: {action}")
+                execution_results.append({
+                    "step_number": i,
+                    "title": f"Aksi: {action}",
+                    "status": "SKIPPED",
+                    "details": "Handler tool belum terdaftar."
+                })
+                continue
+
+            try:
+                result = await handler(step, context)
+                result["step_number"] = i
+                execution_results.append(result)
+            except Exception as step_err:
+                logger.error(f"Error on step {i} ({action}): {step_err}")
+                execution_results.append({
+                    "step_number": i,
+                    "title": f"Error: {action}",
+                    "status": "FAILED",
+                    "details": str(step_err)
+                })
+
+        return {
+            "status": "SUCCESS",
+            "execution_results": execution_results,
+            "context": context
+        }
+```
+
+### E. Prompt Siap Pakai untuk Coding Agent Kantor (Copy-Paste ke Agent):
+
+> *"Tolong dekomposisi file `agents/json_executor.py` yang saat ini berisi 1.600+ baris percabangan `if/elif` ke dalam arsitektur Tool Registry Pattern sesuai panduan teknis di Bagian 4 berkas `REFACTORING_SUMMARY.md`. Buat direktori `agents/handlers/` yang membagi handler per domain (`inventory_handlers.py`, `hr_handlers.py`, `finance_handlers.py`, `docgen_handlers.py`, `notification_handlers.py`), daftarkan semua alias tool menggunakan decorator `@register_tool`, dan rampingkan `JSONExecutionEngine` agar hanya mendispatch handler dari registry. Pastikan seluruh alur kerja WF-001 sampai WF-010 tetap berjalan identik tanpa regresi."*
+
+---
+
+*Refactoring fase 1 (Hardening, Security, Concurrency, & Cleanup) selesai dengan aman tanpa mengubah fungsionalitas inti bisnis aplikasi AutoRestock-Agent.*
