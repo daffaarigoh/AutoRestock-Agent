@@ -26,19 +26,41 @@ class TestDynamicEmailRecipient(unittest.TestCase):
         # Test Employee
         self.assertEqual(extract_recipient_email("Kirimkan berkas ke rian hidayat"), "muhammaddaffaarigoh@gmail.com")
 
-    def test_clarification_when_unspecified(self):
-        # When user asks to send email but mentions no recipient email/name
-        clarif = check_clarification_needs("Tolong kirimkan notifikasi dokumen ke email")
-        self.assertIsNotNone(clarif)
+    def test_user_reported_prompt_clarification(self):
+        # The exact prompt reported by user where email recipient is missing
+        user_prompt = "Periksa seluruh stok material yang menipis dan buat draft PR pengadaan barang dan kirimkan ke email"
+        recip = extract_recipient_email(user_prompt)
+        self.assertIsNone(recip, "Bare 'pengadaan barang' in PR phrase must NOT be falsely extracted as email recipient")
+        
+        clarif = check_clarification_needs(user_prompt)
+        self.assertIsNotNone(clarif, "Prompt requesting email dispatch without recipient MUST trigger clarification")
         self.assertEqual(clarif["field"], "recipient_email")
+        self.assertIn("muhammaddaffaarigoh@gmail.com", clarif["hint"])
 
-    def test_no_clarification_when_named_recipient_present(self):
-        # When named recipient is specified, no clarification needed
-        clarif_named = check_clarification_needs("Tolong kirimkan notifikasi dokumen ke Daffa")
-        self.assertIsNone(clarif_named)
+    def test_user_reported_prompt_with_email_ready(self):
+        # When user supplies the email, it should proceed without clarification
+        user_prompt = "Periksa seluruh stok material yang menipis dan buat draft PR pengadaan barang dan kirimkan ke email muhammaddaffaarigoh@gmail.com"
+        recip = extract_recipient_email(user_prompt)
+        self.assertEqual(recip, "muhammaddaffaarigoh@gmail.com")
+        
+        clarif = check_clarification_needs(user_prompt)
+        self.assertIsNone(clarif, "Prompt with explicit email address should NOT require clarification")
 
-        clarif_direct = check_clarification_needs("Kirimkan ke test@balitower.co.id")
-        self.assertIsNone(clarif_direct)
+    def test_missing_parameter_clarifications(self):
+        # 1. Threshold missing item name
+        c_thresh_item = check_clarification_needs("Ubah batas minimum menjadi 25")
+        self.assertIsNotNone(c_thresh_item)
+        self.assertEqual(c_thresh_item["field"], "threshold_item_name")
+
+        # 2. Threshold missing number
+        c_thresh_val = check_clarification_needs("Ubah batas minimum SFP Transceiver")
+        self.assertIsNotNone(c_thresh_val)
+        self.assertEqual(c_thresh_val["field"], "threshold_parameters")
+
+        # 3. Goods receipt missing PO number
+        c_po = check_clarification_needs("Catat penerimaan barang dari vendor")
+        self.assertIsNotNone(c_po)
+        self.assertEqual(c_po["field"], "po_number_required")
 
 if __name__ == "__main__":
     unittest.main()

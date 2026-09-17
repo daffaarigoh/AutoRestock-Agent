@@ -10,27 +10,35 @@ def extract_recipient_email(prompt: str) -> str | None:
     if not prompt:
         return None
 
-    # 1. Direct standard email regex pattern
+    # 1. Direct standard RFC email regex pattern (e.g. user@balitower.co.id)
     match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', prompt)
     if match:
         email = match.group(0).strip().rstrip(".,;:!?")
         return email
 
-    # 2. Dynamic employee & corporate role recipient resolution
-    p_lower = prompt.lower()
+    p_lower = prompt.lower().strip()
 
+    # Guard: If user literally asks to send to email without specifying an email address,
+    # do NOT resolve to any fallback account! Clarification MUST be requested instead.
+    if re.search(r'\b(?:ke\s+email|via\s+email|kirimkan?\s+(?:ke\s+)?email)\b', p_lower):
+        return None
+
+    # 2. Dynamic employee & corporate role recipient resolution
     # Named contact aliases
     if "zeiniah" in p_lower:
         return "zeiniahalfiah@gmail.com"
-    if "daffa" in p_lower:
+    if "daffa" in p_lower and any(w in p_lower for w in ["ke daffa", "kepada daffa", "untuk daffa", "daffa"]):
         return getattr(settings, "DEFAULT_RECIPIENT_EMAIL", None) or "muhammaddaffaarigoh@gmail.com"
 
     # Default recipient for roles and internal colleague resolution
     user_email = getattr(settings, "DEFAULT_RECIPIENT_EMAIL", None) or "muhammaddaffaarigoh@gmail.com"
 
-    role_keys = ["hr.operations", "hrd", "hr", "personalia", "manager", "manajer", "boss", "bos", "procurement", "pengadaan"]
+    # NOTE: "pengadaan" and "procurement" are explicitly excluded from bare role match
+    # because in Indonesian, "pengadaan barang" is the operational noun phrase, never an email recipient!
+    role_keys = ["hr.operations", "hrd", "hr", "personalia", "manager", "manajer", "boss", "bos"]
     for role_key in role_keys:
-        if re.search(r'\b' + re.escape(role_key) + r'\b', p_lower):
+        # Must be explicitly preceded by direction indicators like 'ke', 'kepada', 'teruskan ke'
+        if re.search(r'(?:ke|kepada|teruskan\s+ke|kirim\s+ke)\s+(?:rekan\s+|tim\s+|email\s+)?\b' + re.escape(role_key) + r'\b', p_lower):
             return user_email
 
     conn = None
@@ -43,7 +51,8 @@ def extract_recipient_email(prompt: str) -> str | None:
                 if not full_name:
                     continue
                 first_name = full_name.split()[0].lower()
-                if (len(first_name) >= 3 and re.search(r'\b' + re.escape(first_name) + r'\b', p_lower)) or (full_name.lower() in p_lower):
+                # Check for explicit recipient context: "ke <nama>" or "kepada <nama>"
+                if (len(first_name) >= 3 and re.search(r'(?:ke|kepada|teruskan\s+ke|kirim\s+ke)\s+(?:rekan\s+|staf\s+)?' + re.escape(first_name) + r'\b', p_lower)) or (f"ke {full_name.lower()}" in p_lower):
                     return user_email
     except Exception:
         pass
@@ -66,38 +75,64 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL", recipient_ema
         return None
     p_lower = prompt.lower().strip()
     
-    # 1. Email clarification: User requested email dispatch/approval, but provided no email address
-    has_email_intent = ("email" in p_lower or "surel" in p_lower) and any(w in p_lower for w in ["kirim", "send", "notif", "teruskan", "approve", "persetujuan", "surat"])
+    # 1. Email clarification: User requested email dispatch/approval, but provided no recipient email address
+    has_email_intent = (
+        any(w in p_lower for w in ["kirimkan ke email", "kirim ke email", "kirim via email", "kirimkan via email", "ke email", "via email", "kirim email", "notif email", "emailkan"])
+        or (("email" in p_lower or "surel" in p_lower) and any(w in p_lower for w in ["kirim", "send", "notif", "teruskan", "approve", "persetujuan", "surat"]))
+    )
     extracted_email = extract_recipient_email(prompt) or recipient_email
     if has_email_intent and not extracted_email:
         clean_prompt = prompt.strip()
+        default_target = getattr(settings, "DEFAULT_RECIPIENT_EMAIL", None) or "muhammaddaffaarigoh@gmail.com"
+        
+        # Build clean suggestion hint
         if re.search(r'ke\s+email\s*$', clean_prompt, re.IGNORECASE):
-            hint_str = re.sub(r'ke\s+email\s*$', 'ke manager@balitower.co.id', clean_prompt, flags=re.IGNORECASE)
+            hint_str = re.sub(r'ke\s+email\s*$', f'ke {default_target}', clean_prompt, flags=re.IGNORECASE)
+        elif re.search(r'ke\s+email\b', clean_prompt, re.IGNORECASE):
+            hint_str = re.sub(r'ke\s+email\b', f'ke {default_target}', clean_prompt, flags=re.IGNORECASE)
         else:
-            hint_str = f"{clean_prompt} ke manager@balitower.co.id"
+            hint_str = f"{clean_prompt} ke {default_target}"
 
         return {
             "needs_clarification": True,
             "field": "recipient_email",
             "title": "Alamat Email Diperlukan",
-            "message": "Anda meminta pengiriman notifikasi/persetujuan via email, namun alamat email penerima belum disebutkan. Mohon tentukan alamat email tujuan (contoh: *manager@balitower.co.id* atau nama rekan/pejabat).",
+            "message": f"Anda meminta pengiriman notifikasi/persetujuan via email, namun alamat email penerima belum disebutkan. Mohon tentukan alamat email tujuan (contoh: *{default_target}* atau *manager@balitower.co.id*).",
             "hint": hint_str
         }
         
-    # 2. Threshold update clarification: wants to update threshold but neither item nor value given
-    wants_threshold = any(w in p_lower for w in ["ubah threshold", "ganti ambang", "update batas stok", "atur threshold", "ubah batas"])
+    # 2. Threshold update clarification: wants to update threshold but lacks value or item name
+    wants_threshold = any(w in p_lower for w in ["ubah threshold", "ganti ambang", "update batas stok", "atur threshold", "ubah batas", "set threshold", "edit batas"])
     has_number = bool(re.search(r'\d+', prompt))
-    if wants_threshold and not has_number:
-        return {
-            "needs_clarification": True,
-            "field": "threshold_parameters",
-            "title": "Detail Batas Stok Diperlukan",
-            "message": "Untuk memperbarui batas minimum atau maksimum stok, mohon sebutkan nama barang serta nilai batas baru yang diinginkan (contoh: *'Ubah batas minimum SFP Transceiver menjadi 25'*).",
-            "hint": "Ubah batas minimum SFP Transceiver menjadi 25"
-        }
+    if wants_threshold:
+        if not has_number:
+            return {
+                "needs_clarification": True,
+                "field": "threshold_parameters",
+                "title": "Detail Batas Stok Diperlukan",
+                "message": "Untuk memperbarui batas minimum atau maksimum stok, mohon sebutkan nama barang serta nilai batas baru yang diinginkan (contoh: *'Ubah batas minimum SFP Transceiver menjadi 25'*).",
+                "hint": "Ubah batas minimum SFP Transceiver menjadi 25"
+            }
+        
+        # Check if item name is missing (e.g. "ubah batas minimum menjadi 25" without specifying which item)
+        inventory_words = ["sfp", "kabel", "patch", "drop", "otb", "adapter", "baterai", "transceiver", "core", "fo", "fiber", "router", "switch", "clamp", "odc", "odp", "closure"]
+        has_item_mention = any(iw in p_lower for iw in inventory_words) or any(len(word) > 3 and word not in ["ubah", "ganti", "update", "atur", "batas", "minimum", "maksimum", "menjadi", "threshold", "stok", "stoknya", "tolong", "buat", "biar"] for word in p_lower.split())
+        # If the words are strictly command words without an item subject
+        command_only_words = {"ubah", "ganti", "update", "atur", "batas", "minimum", "maksimum", "menjadi", "threshold", "stok", "stoknya", "tolong", "buat", "biar", "ke", "di", "dan", "ya", "dong"}
+        tokens = set(re.findall(r'[a-zA-Z]+', p_lower))
+        if tokens.issubset(command_only_words):
+            match_num = re.search(r'\d+', prompt)
+            val_num = match_num.group(0) if match_num else "25"
+            return {
+                "needs_clarification": True,
+                "field": "threshold_item_name",
+                "title": "Nama Barang Diperlukan",
+                "message": f"Mohon sebutkan nama barang material yang ingin diperbarui batas stoknya menjadi {val_num} (contoh: *'Ubah batas minimum SFP Transceiver menjadi {val_num}'*).",
+                "hint": f"Ubah batas minimum SFP Transceiver menjadi {val_num}"
+            }
         
     # 3. Product registration clarification: wants to register/add new product but no details provided
-    wants_register = any(w in p_lower for w in ["tambah produk", "tambah barang", "daftarkan barang", "daftarkan produk", "registrasi produk", "registrasi barang"])
+    wants_register = any(w in p_lower for w in ["tambah produk", "tambah barang", "daftarkan barang", "daftarkan produk", "registrasi produk", "registrasi barang", "tambah material"])
     has_spec = bool(re.search(r'(stok|batas|min|harga|satuan|\d+)', p_lower))
     if wants_register and not has_spec:
         return {
@@ -107,7 +142,42 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL", recipient_ema
             "message": "Untuk mendaftarkan produk baru ke database inventaris, mohon sertakan informasi nama produk dan jumlah stok awal (contoh: *'Tambah produk Baterai Lithium 48V, stok 15, batas min 5'*).",
             "hint": "Tambah produk Baterai Lithium 48V, stok 15, batas min 5"
         }
-        
+
+    # 4. Goods receipt clarification: wants to record received goods but no PO number
+    wants_receipt = any(w in p_lower for w in ["catat penerimaan", "penerimaan barang", "barang sudah sampai", "terima po", "catat po tiba", "barang tiba"])
+    if wants_receipt and not re.search(r'\bpo[-_]?\d+', p_lower):
+        return {
+            "needs_clarification": True,
+            "field": "po_number_required",
+            "title": "Nomor PO Diperlukan",
+            "message": "Untuk mencatat penerimaan barang masuk ke gudang, mohon sebutkan nomor Purchase Order (PO) yang diterima (contoh: *'Barang untuk PO-2026-006 sudah sampai di Gudang Bandung, tolong catat penerimaannya'*).",
+            "hint": "Barang untuk PO-2026-006 sudah sampai di Gudang Bandung, tolong catat penerimaannya"
+        }
+
+    # 5. PO document lookup clarification: wants to view PO document without PO number
+    wants_po_doc = any(w in p_lower for w in ["lihat dokumen po", "tampilkan berkas po", "unduh po", "cetak pdf po", "lihat berkas po", "tampilkan po", "download po", "lihat po"])
+    if wants_po_doc and not re.search(r'\bpo[-_]?\d+', p_lower):
+        return {
+            "needs_clarification": True,
+            "field": "po_lookup_id",
+            "title": "Nomor Purchase Order Diperlukan",
+            "message": "Mohon sebutkan nomor Purchase Order (PO) yang ingin dilihat atau diunduh dokumen PDF resminya (contoh: *'Tolong tampilkan dokumen PDF untuk PO-2026-006'*).",
+            "hint": "Tolong tampilkan dokumen PDF untuk PO-2026-006"
+        }
+
+    # 6. Specific item stock query clarification: asks for stock but specifies no item
+    wants_specific_stock = any(w in p_lower for w in ["berapa stok barang", "cek stok barang", "tampilkan stok barang", "cek saldo barang", "stok barang apa", "cek ketersediaan barang"])
+    generic_only = tokens = set(re.findall(r'[a-zA-Z]+', p_lower))
+    generic_stock_words = {"berapa", "cek", "tampilkan", "saldo", "stok", "barang", "barangnya", "material", "saat", "ini", "ada", "apa", "saja", "tolong", "gudang"}
+    if wants_specific_stock and tokens.issubset(generic_stock_words):
+        return {
+            "needs_clarification": True,
+            "field": "item_name_required",
+            "title": "Nama Barang Diperlukan",
+            "message": "Mohon sebutkan nama atau SKU barang material yang ingin Anda periksa stoknya (contoh: *'Berapa stok SFP Transceiver 10G saat ini?'*).",
+            "hint": "Berapa stok SFP Transceiver 10G saat ini?"
+        }
+
     return None
 
 
@@ -202,10 +272,14 @@ CRITICAL RULES:
 5. If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}].
 6. If the user specifies an item name to inspect, extract "target_item_name".
 7. If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
+8. If the user's command is missing a critical parameter required to execute (e.g. requested sending via email but gave no recipient address, wants to update threshold but gave no value or item, etc.), return:
+   {{"workflow_id": "clarification_needed", "needs_clarification": true, "clarification": {{"title": "string", "message": "string", "hint": "string"}}}}
 
 Output strictly valid JSON with exact keys:
 - "workflow_id" (string or null)
 - "is_unrelated" (boolean)
+- "needs_clarification" (optional boolean)
+- "clarification" (optional object with title, message, hint)
 - "new_item_data" (optional object)
 - "threshold_updates" (optional array)
 - "target_item_name" (optional string)
@@ -241,6 +315,21 @@ Output strictly valid JSON with exact keys:
             if json_match:
                 response_str = json_match.group(0)
             parsed = json.loads(response_str)
+
+            if parsed.get("needs_clarification") or parsed.get("workflow_id") == "clarification_needed":
+                return {
+                    "workflow_id": "clarification_needed",
+                    "action_type": "clarification_needed",
+                    "needs_clarification": True,
+                    "clarification": parsed.get("clarification") or {
+                        "title": "Klarifikasi Diperlukan",
+                        "message": "Mohon lengkapi parameter instruksi Anda.",
+                        "hint": prompt
+                    },
+                    "message": (parsed.get("clarification") or {}).get("message", "Mohon lengkapi parameter instruksi Anda."),
+                    "is_fallback": False
+                }
+
             valid_ids = {r[0] for r in workflows}
             if parsed.get("workflow_id") and parsed["workflow_id"] in valid_ids:
                 if extracted_email:

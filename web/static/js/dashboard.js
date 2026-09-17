@@ -2151,6 +2151,7 @@ async function submitPrompt() {
     window.claudePromptTypewriter.updateVisibility();
   }
 
+  const chatHistory = getChatHistory();
   appendUserMessage(promptText);
 
   const lower = promptText.toLowerCase();
@@ -2175,7 +2176,7 @@ async function submitPrompt() {
     const res = await fetch('/api/agent/stream-prompt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptText, destinations: [] }),
+      body: JSON.stringify({ prompt: promptText, destinations: [], history: chatHistory }),
       signal: activePromptAbortController.signal
     });
 
@@ -2333,6 +2334,35 @@ function getAgentBubbleHeaderHtml(badgeText = 'Agent Aktif', isError = false) {
       <div class="agent-time">${timeStr}</div>
     </div>
   `;
+}
+
+function getChatHistory() {
+  const feed = document.getElementById('copilotFeed');
+  if (!feed) return [];
+  const history = [];
+  const children = feed.children;
+  for (let i = 0; i < children.length; i++) {
+    const el = children[i];
+    if (el.classList.contains('user-query-bubble')) {
+      const txt = el.querySelector('.bubble-text');
+      if (txt && txt.textContent.trim()) {
+        history.push({ role: 'user', content: txt.textContent.trim() });
+      }
+    } else if (el.classList.contains('agent-response-box')) {
+      const clarifMsg = el.querySelector('.clarification-message');
+      const streamTxt = el.querySelector('.stream-text-slot');
+      let assistantContent = '';
+      if (clarifMsg && clarifMsg.textContent.trim()) {
+        assistantContent = clarifMsg.textContent.trim();
+      } else if (streamTxt && streamTxt.textContent.trim()) {
+        assistantContent = streamTxt.textContent.trim();
+      }
+      if (assistantContent) {
+        history.push({ role: 'assistant', content: assistantContent });
+      }
+    }
+  }
+  return history.slice(-6);
 }
 
 function appendUserMessage(text) {
@@ -2506,11 +2536,13 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
   } else if (prs.length > 0) {
     const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
     if (artifactsSlot) {
+      const isEmailSent = Boolean(payload.email_sent);
       const prCards = prs.map(pr => {
         const rawStatus = String(pr.status || '').toUpperCase();
         const supplier = pr.supplier_name || 'Vendor Terdaftar';
         const grandTotal = Number(pr.grand_total || pr.total_budget || 0);
         const escapedSupplier = escapeHtml(supplier).replace(/'/g, "\\'");
+        const prEmailSent = pr.email_sent !== undefined ? Boolean(pr.email_sent) : isEmailSent;
 
         return `
           <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-top: 8px; box-shadow: var(--shadow-xs);">
@@ -2524,10 +2556,17 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
             <div style="font-size: 12.5px; color: #475569; margin-bottom: 10px; line-height: 1.6;">
               ${(pr.items || []).map(it => `• <strong>${escapeHtml(it.item_name || it.name)}</strong>: ${it.quantity || it.reorder_qty} ${it.unit || 'pcs'}`).join('<br>')}
             </div>
+            ${prEmailSent ? `
             <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px;">
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
               <span>Dokumen PR resmi telah dikompilasi (PDF) dan notifikasi persetujuan telah otomatis dikirimkan ke email tujuan.</span>
             </div>
+            ` : `
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #475569; display: flex; align-items: center; gap: 8px;">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Dokumen PR resmi telah dikompilasi (PDF) dan tersimpan sebagai draf di sistem inventaris.</span>
+            </div>
+            `}
             <div style="display: flex; justify-content: flex-end;">
               <button class="btn btn-secondary btn-sm" onclick="openPdfModal('${pr.pr_number}', '${escapedSupplier}', ${grandTotal}, '${rawStatus}')">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -2539,10 +2578,10 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
       }).join('');
 
       artifactsSlot.innerHTML = `
-        <div class="action-card" style="border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7; margin-top: 10px;">
+        <div class="action-card" style="border-left: 4px solid ${isEmailSent ? '#16A34A' : '#2563EB'}; background: ${isEmailSent ? '#F0FDF4' : '#F8FAFC'}; border: 1px solid ${isEmailSent ? '#DCFCE7' : '#E2E8F0'}; margin-top: 10px;">
           <div class="action-card-header">
-            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">DOKUMEN PR DITERBITKAN & TERKIRIM KE EMAIL (${prs.length})</span>
-            <span class="badge badge-approved">TERKIRIM KE EMAIL</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: ${isEmailSent ? '#15803D' : '#1E40AF'};">${isEmailSent ? `DOKUMEN PR DITERBITKAN & TERKIRIM KE EMAIL (${prs.length})` : `DOKUMEN PR DITERBITKAN (DRAFT) (${prs.length})`}</span>
+            <span class="badge ${isEmailSent ? 'badge-approved' : 'badge-pending'}">${isEmailSent ? 'TERKIRIM KE EMAIL' : 'DRAFT TERSIMPAN'}</span>
           </div>
           <div class="action-card-body">
             ${prCards}

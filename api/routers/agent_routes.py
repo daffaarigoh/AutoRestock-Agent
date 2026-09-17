@@ -401,13 +401,42 @@ async def execute_prompt_logic(
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt tidak boleh kosong.")
 
+    from agents.router import extract_recipient_email, check_clarification_needs
+
+    # 0. Context Merge: If user is responding directly to a previous clarification question
+    if request.history and len(request.history) >= 1:
+        last_turn = request.history[-1]
+        last_content = str(last_turn.get("content", "")).lower()
+        # Case A: Email clarification response
+        if any(kw in last_content for kw in ["alamat email", "penerima belum disebutkan", "email tujuan"]):
+            new_email = extract_recipient_email(request.prompt)
+            if new_email:
+                prev_user_prompt = None
+                for turn in reversed(request.history[:-1]):
+                    if turn.get("role") == "user":
+                        prev_user_prompt = str(turn.get("content", "")).strip()
+                        break
+                if prev_user_prompt:
+                    merged = re.sub(r'\bke\s+email\b', f'ke {new_email}', prev_user_prompt, flags=re.IGNORECASE)
+                    if new_email not in merged:
+                        merged = f"{merged.rstrip('. ')} ke {new_email}"
+                    request.prompt = merged
+        # Case B: Threshold item or value clarification response
+        elif "batas minimum" in last_content or "ambang batas" in last_content:
+            prev_user_prompt = None
+            for turn in reversed(request.history[:-1]):
+                if turn.get("role") == "user":
+                    prev_user_prompt = str(turn.get("content", "")).strip()
+                    break
+            if prev_user_prompt and len(request.prompt.split()) <= 4:
+                request.prompt = f"{prev_user_prompt.rstrip('. ')} {request.prompt.strip()}"
+
     lower_prompt = request.prompt.strip().lower()
 
     if stage_callback:
         await stage_callback("analyze", "Menganalisis instruksi & hak akses wewenang...")
 
     # 1. Proactive Clarification Check
-    from agents.router import check_clarification_needs
     clarif = check_clarification_needs(
         request.prompt,
         tenant_id=current_user.tenant_id if current_user else "ALL",
@@ -475,6 +504,23 @@ async def execute_prompt_logic(
     )
 
     wf_id = routing_res.get("workflow_id") if isinstance(routing_res, dict) else None
+
+    # Handle LLM-determined clarification requirement
+    if isinstance(routing_res, dict) and (routing_res.get("needs_clarification") or wf_id == "clarification_needed"):
+        clarif = routing_res.get("clarification") or {
+            "title": "Klarifikasi Diperlukan",
+            "message": routing_res.get("message", "Mohon lengkapi parameter instruksi Anda."),
+            "hint": request.prompt
+        }
+        return {
+            "parsed_intent": {"workflow_id": "clarification_needed"},
+            "action_type": "clarification_needed",
+            "message": clarif.get("message", "Mohon lengkapi parameter instruksi Anda."),
+            "clarification": clarif,
+            "generated_prs": [],
+            "affected_items": []
+        }
+
     if wf_id:
         conn = get_db_connection(read_only=True)
         row = None
