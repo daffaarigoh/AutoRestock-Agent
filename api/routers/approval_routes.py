@@ -475,6 +475,7 @@ def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
 
     if pr_number == "PR-2026-0819-001":
         PR_STORE[pr_number] = _create_default_pr(pr_number)
+        persist_pr_to_db(PR_STORE[pr_number])
         return PR_STORE[pr_number]
     return None
 
@@ -1441,6 +1442,7 @@ async def reset_sample_data():
 
     PR_STORE["PR-2026-0819-001"] = _create_default_pr()
     _regenerate_pdf(PR_STORE["PR-2026-0819-001"])
+    persist_pr_to_db(PR_STORE["PR-2026-0819-001"])
 
     return {"status": "reset", "message": "PR-2026-0819-001 reset to PENDING status with all 5 DuckDB critical items."}
 

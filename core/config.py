@@ -1,5 +1,7 @@
+import json
 from pathlib import Path
 from typing import Any
+from pydantic import field_validator
 
 try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,12 +27,25 @@ class Settings(_BaseSettings):
     DEBUG: bool = True
     PUBLIC_URL: str | None = None
     SECRET_KEY: str = "super-secret-enterprise-key-for-autorestock-agent"
-    ALLOWED_ORIGINS: list[str] = [
+    ALLOWED_ORIGINS: list[str] | str = [
         "http://localhost:8050",
         "http://127.0.0.1:8050",
         "http://localhost:3000",
         "http://127.0.0.1:3000"
     ]
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            v = v.strip().strip('"').strip("'")
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     # Corporate LLM Gateway & standard env keys
     LLM_KEY: str | None = None

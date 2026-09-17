@@ -20,11 +20,11 @@ class TestDynamicEmailRecipient(unittest.TestCase):
         # Test Daffa
         self.assertEqual(extract_recipient_email("Cek data cuti pending dan kirim ke Daffa untuk persetujuan"), "muhammaddaffaarigoh@gmail.com")
         # Test HR
-        self.assertEqual(extract_recipient_email("Kirim rekap cuti pending ke HR"), "hr.operations@balitower.co.id")
+        self.assertEqual(extract_recipient_email("Kirim rekap cuti pending ke HR"), "muhammaddaffaarigoh@gmail.com")
         # Test Manager
-        self.assertEqual(extract_recipient_email("Tolong teruskan email ke manager"), "manager@balitower.co.id")
+        self.assertEqual(extract_recipient_email("Tolong teruskan email ke manager"), "muhammaddaffaarigoh@gmail.com")
         # Test Employee
-        self.assertEqual(extract_recipient_email("Kirimkan berkas ke rian hidayat"), "rian.hidayat@balitower.co.id")
+        self.assertEqual(extract_recipient_email("Kirimkan berkas ke rian hidayat"), "muhammaddaffaarigoh@gmail.com")
 
     def test_clarification_when_unspecified(self):
         # When user asks to send email but mentions no recipient email/name

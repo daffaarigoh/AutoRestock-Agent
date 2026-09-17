@@ -704,13 +704,31 @@ If no tool is needed (direct conversational response):
             raw_json = json_match.group(0) if json_match else llm_reply
             decision = json.loads(raw_json)
         except Exception as e:
-            logger.error(f"LLM decision parsing failed: {e!r}")
-            # Fallback to direct conversational response
-            return {
-                "action_type": "general",
-                "message": f"Maaf, terjadi kendala saat memproses penalaran AI ({e!s}). Silakan ulangi permintaan Anda.",
-                "parsed_intent": {"workflow_id": None}
-            }
+            logger.error(f"LLM decision parsing failed: {e!r}. Activating deterministic heuristic fallback...")
+            p_lower = prompt.lower()
+            po_match = re.search(r'\b(PO-\d{4}-\d{3,4})\b', prompt, re.IGNORECASE)
+
+            if po_match and any(k in p_lower for k in ["tampilkan", "dokumen", "pdf", "lihat", "view", "preview", "unduh"]):
+                decision = {
+                    "tool": "tool_view_po",
+                    "parameters": {"po_id": po_match.group(1).upper()}
+                }
+            elif any(k in p_lower for k in ["restock", "pengadaan", "stok menipis", "kritis", "pesan material", "buatkan pr"]):
+                decision = {
+                    "tool": "tool_procurement_cycle",
+                    "parameters": {"reason": prompt}
+                }
+            elif any(k in p_lower for k in ["threshold", "ambang", "ubah batas"]):
+                decision = {
+                    "tool": "tool_update_threshold",
+                    "parameters": {"item_name_or_id": prompt}
+                }
+            else:
+                return {
+                    "action_type": "general",
+                    "message": f"Maaf, terjadi kendala saat memproses penalaran AI ({e!s}). Silakan ulangi permintaan Anda.",
+                    "parsed_intent": {"workflow_id": None}
+                }
 
         tool_name = decision.get("tool")
         params = decision.get("parameters", {})

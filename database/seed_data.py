@@ -68,8 +68,7 @@ def init_db(db_path: Path = DB_PATH):
             lead_time_days INTEGER NOT NULL,
             rating FLOAT DEFAULT 5.0,
             tenant_id VARCHAR NOT NULL,
-            PRIMARY KEY (vendor_id, item_id),
-            FOREIGN KEY (item_id) REFERENCES items(item_id)
+            PRIMARY KEY (vendor_id, item_id)
         );
     """)
 

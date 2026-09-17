@@ -18,40 +18,41 @@ def extract_recipient_email(prompt: str) -> str | None:
 
     # 2. Dynamic employee & corporate role recipient resolution
     p_lower = prompt.lower()
-    role_map = {
-        "hr.operations": "hr.operations@balitower.co.id",
-        "hrd": "hr.operations@balitower.co.id",
-        "hr": "hr.operations@balitower.co.id",
-        "personalia": "hr.operations@balitower.co.id",
-        "manager": "manager@balitower.co.id",
-        "manajer": "manager@balitower.co.id",
-        "boss": "manager@balitower.co.id",
-        "bos": "manager@balitower.co.id",
-        "procurement": "procurement@balitower.co.id",
-        "pengadaan": "procurement@balitower.co.id",
-    }
-    for role_key, role_email in role_map.items():
-        if re.search(r'\b' + re.escape(role_key) + r'\b', p_lower):
-            return role_email
 
+    # Named contact aliases
+    if "zeiniah" in p_lower:
+        return "zeiniahalfiah@gmail.com"
+    if "daffa" in p_lower:
+        return getattr(settings, "DEFAULT_RECIPIENT_EMAIL", None) or "muhammaddaffaarigoh@gmail.com"
+
+    # Default recipient for roles and internal colleague resolution
+    user_email = getattr(settings, "DEFAULT_RECIPIENT_EMAIL", None) or "muhammaddaffaarigoh@gmail.com"
+
+    role_keys = ["hr.operations", "hrd", "hr", "personalia", "manager", "manajer", "boss", "bos", "procurement", "pengadaan"]
+    for role_key in role_keys:
+        if re.search(r'\b' + re.escape(role_key) + r'\b', p_lower):
+            return user_email
+
+    conn = None
     try:
         conn = get_db_connection(read_only=True)
         tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
         if "employees" in tables:
-            emp_rows = conn.execute("SELECT full_name, email FROM employees WHERE email IS NOT NULL;").fetchall()
-            conn.close()
-            for full_name, email in emp_rows:
-                if not full_name or not email:
+            emp_rows = conn.execute("SELECT full_name FROM employees WHERE full_name IS NOT NULL;").fetchall()
+            for (full_name,) in emp_rows:
+                if not full_name:
                     continue
                 first_name = full_name.split()[0].lower()
-                if len(first_name) >= 3 and re.search(r'\b' + re.escape(first_name) + r'\b', p_lower):
-                    return email
-                if full_name.lower() in p_lower:
-                    return email
-        else:
-            conn.close()
+                if (len(first_name) >= 3 and re.search(r'\b' + re.escape(first_name) + r'\b', p_lower)) or (full_name.lower() in p_lower):
+                    return user_email
     except Exception:
         pass
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     return None
 
