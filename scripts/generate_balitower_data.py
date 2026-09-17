@@ -591,13 +591,11 @@ conn.execute("""
 conn.execute("DELETE FROM users;")
 admin_hash = "$2b$12$reziVbiqV1qNNnELI.rGjeE7dJOMBhtT3C6/J3oP4foGl8JaE7ujm" # admin123
 user_hash = "$2b$12$/GHm/zDxQu4BNJ0DX0VBB.Msd3hWRvLEOl.6eo20LIFxXTiYBoLX." # user123
-jds2_hash = "$2b$12$xak7uySRXfEZsI/Gkyt.ROsx5.P13DJBs419t2S.mppAYB04G3EmK" # jds-magang
 users_data = [
     ("USR-001", "admin", admin_hash, "ADMIN", "ALL"),
     ("USR-002", "usera", user_hash, "USER", "INVENTORY"),
     ("USR-003", "userb", user_hash, "USER", "HR"),
-    ("USR-004", "userc", user_hash, "USER", "FINANCE"),
-    ("USR-005", "jds2", jds2_hash, "ADMIN", "ALL")
+    ("USR-004", "userc", user_hash, "USER", "FINANCE")
 ]
 conn.executemany("INSERT INTO users VALUES (?, ?, ?, ?, ?);", users_data)
 
