@@ -28,7 +28,7 @@ class TestPDFApprovalFlow(unittest.TestCase):
         app.dependency_overrides[get_current_user] = lambda: TokenData(username="admin", role="ADMIN", tenant_id="ALL")
         
         # 1. Reset database & store
-        res_reset = client.post("/api/approval/reset")
+        res_reset = client.post("/api/approval/reset?seed=true")
         self.assertEqual(res_reset.status_code, 200)
         
         # 2. Get PR list

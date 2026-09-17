@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import subprocess
 from pathlib import Path
 import pytest
@@ -14,7 +14,22 @@ def ensure_test_database():
     exists and contains seeded tables before any test runs.
     """
     db_path = WORKSPACE_DIR / "storage" / "balitower.db"
+    generator_script = WORKSPACE_DIR / "scripts" / "generate_balitower_data.py"
+
+    needs_seed = False
     if not db_path.exists() or db_path.stat().st_size < 1000:
-        generator_script = WORKSPACE_DIR / "scripts" / "generate_balitower_data.py"
-        if generator_script.exists():
-            subprocess.run([sys.executable, str(generator_script)], check=True)
+        needs_seed = True
+    else:
+        try:
+            from database.db import get_db_connection
+            conn = get_db_connection(read_only=True)
+            po_count = conn.execute("SELECT COUNT(*) FROM purchase_orders;").fetchone()[0]
+            conn.close()
+            if po_count < 8:
+                needs_seed = True
+        except Exception:
+            needs_seed = True
+
+    if needs_seed and generator_script.exists():
+        subprocess.run([sys.executable, str(generator_script)], check=True)
+

@@ -7,6 +7,7 @@ Mencakup 3 Scope:
 """
 
 import os
+import sys
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -240,33 +241,67 @@ df_stock = pd.DataFrame(stock_records, columns=[
 df_stock.to_csv(INV_DIR / "stock_balances.csv", index=False)
 
 # Purchase Orders: 16 PO dengan dua status resmi ERP (ORDERED dan DELIVERED)
-po_records = [
-    # Historical Delivered POs (Stok telah masuk fisik di gudang)
-    ("PO-2026-001", "PO/BLT/2026/01/012", "SUP-002", "BLT-INV-005", 10, 18500000, 185000000, "DELIVERED", "2026-01-10", "2026-01-31", "2026-01-29", "WH-JKT-01"),
-    ("PO-2026-002", "PO/BLT/2026/01/018", "SUP-001", "BLT-INV-001", 5000, 14500, 72500000, "DELIVERED", "2026-01-15", "2026-01-22", "2026-01-22", "WH-BDG-01"),
-    ("PO-2026-003", "PO/BLT/2026/02/004", "SUP-003", "BLT-INV-009", 25, 1450000, 36250000, "DELIVERED", "2026-02-05", "2026-02-15", "2026-02-14", "WH-SBY-01"),
-    
-    # Active ORDERED POs (Menunggu kedatangan barang fisik di gudang untuk menjadi DELIVERED)
-    ("PO-2026-004", "PO/BLT/2026/02/029", "SUP-002", "BLT-INV-006", 8, 12000000, 96000000, "ORDERED", "2026-02-20", "2026-03-12", None, "WH-BDG-01"),
-    ("PO-2026-005", "PO/BLT/2026/03/002", "SUP-001", "BLT-INV-003", 20, 480000, 9600000, "ORDERED", "2026-03-01", "2026-03-10", None, "WH-BDG-01"),
-    ("PO-2026-006", "PO/BLT/2026/03/008", "SUP-008", "BLT-INV-002", 3000, 22000, 66000000, "ORDERED", "2026-03-03", "2026-03-14", None, "WH-BDG-01"),
-    ("PO-2026-007", "PO/BLT/2026/03/011", "SUP-009", "BLT-INV-005", 12, 18500000, 222000000, "ORDERED", "2026-03-04", "2026-03-18", None, "WH-DPS-01"),
-    ("PO-2026-008", "PO/BLT/2026/03/014", "SUP-002", "BLT-INV-021", 15, 2400000, 36000000, "ORDERED", "2026-03-05", "2026-03-15", None, "WH-DPS-01"),
-    ("PO-2026-009", "PO/BLT/2026/03/017", "SUP-010", "BLT-INV-023", 4, 16500000, 66000000, "ORDERED", "2026-03-06", "2026-03-20", None, "WH-MDN-01"),
-    ("PO-2026-010", "PO/BLT/2026/03/020", "SUP-006", "BLT-INV-016", 5000, 3200, 16000000, "ORDERED", "2026-03-07", "2026-03-14", None, "WH-SMG-01"),
-    ("PO-2026-011", "PO/BLT/2026/03/022", "SUP-003", "BLT-INV-008", 120, 85000, 10200000, "ORDERED", "2026-03-07", "2026-03-17", None, "WH-SBY-01"),
-    ("PO-2026-012", "PO/BLT/2026/03/025", "SUP-007", "BLT-INV-033", 40, 280000, 11200000, "ORDERED", "2026-03-08", "2026-03-22", None, "WH-MKS-01"),
-    ("PO-2026-013", "PO/BLT/2026/03/028", "SUP-004", "BLT-INV-011", 5, 7500000, 37500000, "ORDERED", "2026-03-08", "2026-03-25", None, "WH-JKT-01"),
-    ("PO-2026-014", "PO/BLT/2026/03/030", "SUP-001", "BLT-INV-004", 4, 4200000, 16800000, "ORDERED", "2026-03-09", "2026-03-23", None, "WH-JKB-01"),
-    ("PO-2026-015", "PO/BLT/2026/03/032", "SUP-003", "BLT-INV-025", 300, 28000, 8400000, "ORDERED", "2026-03-09", "2026-03-20", None, "WH-BDG-01"),
-    ("PO-2026-016", "PO/BLT/2026/03/035", "SUP-005", "BLT-INV-013", 25, 750000, 18750000, "ORDERED", "2026-03-09", "2026-03-24", None, "WH-JKT-01"),
-]
+EMPTY_PR_PO = os.environ.get("EMPTY_PR_PO", "0") == "1" or any(arg in sys.argv for arg in ["--empty-pr-po", "--clean", "--clean-pr-po"])
+if EMPTY_PR_PO:
+    print(">>> [Mode Reset Bersih] Tabel Purchase Orders dan PR diinisialisasi KOSONG (0 records).")
+    po_records = []
+else:
+    po_records = [
+        # Historical Delivered POs (Stok telah masuk fisik di gudang)
+        ("PO-2026-001", "PO/BLT/2026/01/012", "SUP-002", "BLT-INV-005", 10, 18500000, 185000000, "DELIVERED", "2026-01-10", "2026-01-31", "2026-01-29", "WH-JKT-01"),
+        ("PO-2026-002", "PO/BLT/2026/01/018", "SUP-001", "BLT-INV-001", 5000, 14500, 72500000, "DELIVERED", "2026-01-15", "2026-01-22", "2026-01-22", "WH-BDG-01"),
+        ("PO-2026-003", "PO/BLT/2026/02/004", "SUP-003", "BLT-INV-009", 25, 1450000, 36250000, "DELIVERED", "2026-02-05", "2026-02-15", "2026-02-14", "WH-SBY-01"),
+        
+        # Active ORDERED POs (Menunggu kedatangan barang fisik di gudang untuk menjadi DELIVERED)
+        ("PO-2026-004", "PO/BLT/2026/02/029", "SUP-002", "BLT-INV-006", 8, 12000000, 96000000, "ORDERED", "2026-02-20", "2026-03-12", None, "WH-BDG-01"),
+        ("PO-2026-005", "PO/BLT/2026/03/002", "SUP-001", "BLT-INV-003", 20, 480000, 9600000, "ORDERED", "2026-03-01", "2026-03-10", None, "WH-BDG-01"),
+        ("PO-2026-006", "PO/BLT/2026/03/008", "SUP-008", "BLT-INV-002", 3000, 22000, 66000000, "ORDERED", "2026-03-03", "2026-03-14", None, "WH-BDG-01"),
+        ("PO-2026-007", "PO/BLT/2026/03/011", "SUP-009", "BLT-INV-005", 12, 18500000, 222000000, "ORDERED", "2026-03-04", "2026-03-18", None, "WH-DPS-01"),
+        ("PO-2026-008", "PO/BLT/2026/03/014", "SUP-002", "BLT-INV-021", 15, 2400000, 36000000, "ORDERED", "2026-03-05", "2026-03-15", None, "WH-DPS-01"),
+        ("PO-2026-009", "PO/BLT/2026/03/017", "SUP-010", "BLT-INV-023", 4, 16500000, 66000000, "ORDERED", "2026-03-06", "2026-03-20", None, "WH-MDN-01"),
+        ("PO-2026-010", "PO/BLT/2026/03/020", "SUP-006", "BLT-INV-016", 5000, 3200, 16000000, "ORDERED", "2026-03-07", "2026-03-14", None, "WH-SMG-01"),
+        ("PO-2026-011", "PO/BLT/2026/03/022", "SUP-003", "BLT-INV-008", 120, 85000, 10200000, "ORDERED", "2026-03-07", "2026-03-17", None, "WH-SBY-01"),
+        ("PO-2026-012", "PO/BLT/2026/03/025", "SUP-007", "BLT-INV-033", 40, 280000, 11200000, "ORDERED", "2026-03-08", "2026-03-22", None, "WH-MKS-01"),
+        ("PO-2026-013", "PO/BLT/2026/03/028", "SUP-004", "BLT-INV-011", 5, 7500000, 37500000, "ORDERED", "2026-03-08", "2026-03-25", None, "WH-JKT-01"),
+        ("PO-2026-014", "PO/BLT/2026/03/030", "SUP-001", "BLT-INV-004", 4, 4200000, 16800000, "ORDERED", "2026-03-09", "2026-03-23", None, "WH-JKB-01"),
+        ("PO-2026-015", "PO/BLT/2026/03/032", "SUP-003", "BLT-INV-025", 300, 28000, 8400000, "ORDERED", "2026-03-09", "2026-03-20", None, "WH-BDG-01"),
+        ("PO-2026-016", "PO/BLT/2026/03/035", "SUP-005", "BLT-INV-013", 25, 750000, 18750000, "ORDERED", "2026-03-09", "2026-03-24", None, "WH-JKT-01"),
+    ]
+
 df_po = pd.DataFrame(po_records, columns=[
     "po_id", "po_number", "supplier_id", "item_id", "order_quantity", "unit_price", "total_amount", "status", "order_date", "expected_delivery", "actual_delivery", "warehouse_id"
 ])
 df_po["pr_number"] = None
-df_po["pr_number"] = df_po["pr_number"].astype("string")
+if EMPTY_PR_PO:
+    df_po = df_po.astype({
+        "po_id": "string",
+        "po_number": "string",
+        "supplier_id": "string",
+        "item_id": "string",
+        "order_quantity": "int64",
+        "unit_price": "float64",
+        "total_amount": "float64",
+        "status": "string",
+        "order_date": "string",
+        "expected_delivery": "string",
+        "actual_delivery": "string",
+        "warehouse_id": "string",
+        "pr_number": "string",
+    })
+else:
+    df_po["pr_number"] = df_po["pr_number"].astype("string")
 df_po.to_csv(INV_DIR / "purchase_orders.csv", index=False)
+
+if EMPTY_PR_PO:
+    print(">>> [Mode Reset Bersih] Menghapus berkas PDF sisa di direktori storage...")
+    for sub in ["documents", "pending", "approved", "rejected", "purchase_orders"]:
+        p = STORAGE_DIR / sub
+        if p.exists():
+            for f in p.glob("*.pdf"):
+                try:
+                    f.unlink()
+                except Exception as e:
+                    print(f"Warning: gagal menghapus {f}: {e}")
 
 
 # ==============================================================================
@@ -707,6 +742,11 @@ conn.execute("""
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 """)
+
+if EMPTY_PR_PO:
+    conn.execute("DELETE FROM purchase_requests;")
+    conn.execute("DELETE FROM orders;")
+    conn.execute("DELETE FROM purchase_orders;")
 
 conn.close()
 

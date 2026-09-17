@@ -502,10 +502,6 @@ def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
     except Exception as e:
         print(f"[_ensure_pr_in_store] Error loading from DB: {e}")
 
-    if pr_number == "PR-2026-0819-001":
-        PR_STORE[pr_number] = _create_default_pr(pr_number)
-        persist_pr_to_db(PR_STORE[pr_number])
-        return PR_STORE[pr_number]
     return None
 
 
@@ -1458,29 +1454,54 @@ async def execute_approval_action(payload: ApprovalActionPayload):
 
 
 @router.post("/reset")
-async def reset_sample_data():
+async def reset_sample_data(seed: bool = False):
     """
-    Resets PR_STORE to clean initial PENDING state, resets DuckDB stock to initial state,
-    and regenerates the clean initial PDF.
+    Resets PR_STORE to clean state, clears DuckDB orders, purchase_orders, and purchase_requests.
+    If seed=True, seeds PR-2026-0819-001 for test suites.
     """
+    PR_STORE.clear()
+
     try:
         from database.db import execute_db_write
-        execute_db_write("DELETE FROM orders WHERE pr_number = 'PR-2026-0819-001';")
+
+        def _clear_all_tables(conn):
+            existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+            if "orders" in existing_tables:
+                conn.execute("DELETE FROM orders;")
+            if "purchase_orders" in existing_tables:
+                conn.execute("DELETE FROM purchase_orders;")
+            if "purchase_requests" in existing_tables:
+                conn.execute("DELETE FROM purchase_requests;")
+
+        execute_db_write(_clear_all_tables)
     except Exception as e:
-        print(f"[RESET] Warning cleaning balitower orders: {e}")
+        print(f"[RESET] Warning cleaning balitower orders/PRs: {e}")
 
-    PR_STORE["PR-2026-0819-001"] = _create_default_pr()
-    _regenerate_pdf(PR_STORE["PR-2026-0819-001"])
-    persist_pr_to_db(PR_STORE["PR-2026-0819-001"])
+    # Synchronize purchase_orders.csv
+    try:
+        from database.db import WORKSPACE_DIR
+        inv_csv = WORKSPACE_DIR / "data" / "balitower" / "01_inventory" / "purchase_orders.csv"
+        if inv_csv.exists():
+            inv_csv.write_text("po_id,po_number,supplier_id,item_id,order_quantity,unit_price,total_amount,status,order_date,expected_delivery,actual_delivery,warehouse_id,pr_number\n", encoding="utf-8")
+    except Exception as e:
+        print(f"[RESET] Could not clear purchase_orders.csv: {e}")
 
-    return {"status": "reset", "message": "PR-2026-0819-001 reset to PENDING status with all 5 DuckDB critical items."}
+    if seed:
+        sample_pr = _create_default_pr()
+        PR_STORE["PR-2026-0819-001"] = sample_pr
+        _regenerate_pdf(sample_pr)
+        persist_pr_to_db(sample_pr)
+        return {"status": "reset", "message": "PR-2026-0819-001 reset to PENDING status with all 5 DuckDB critical items."}
+
+    return {"status": "reset", "message": "Seluruh PR dan PO berhasil dikosongkan (Clean Reset)."}
 
 
 @router.post("/clear-all")
 async def clear_all_prs_and_pos(current_user: TokenData = Depends(get_current_user)):
     """
     Membersihkan seluruh draf PR, mengosongkan PR_STORE, menghapus seluruh berkas PDF PR dan PO,
-    serta mengosongkan tabel purchase_orders, purchase_requests, dan orders di DuckDB.
+    serta mengosongkan tabel purchase_orders, purchase_requests, dan orders di DuckDB,
+    dan mengosongkan berkas purchase_orders.csv.
     """
     PR_STORE.clear()
 
@@ -1501,6 +1522,15 @@ async def clear_all_prs_and_pos(current_user: TokenData = Depends(get_current_us
     except Exception as e:
         print(f"[CLEAR-ALL] Error clearing DuckDB orders: {e}")
 
+    # Synchronize purchase_orders.csv to 0 rows (only header)
+    try:
+        from database.db import WORKSPACE_DIR
+        inv_csv = WORKSPACE_DIR / "data" / "balitower" / "01_inventory" / "purchase_orders.csv"
+        if inv_csv.exists():
+            inv_csv.write_text("po_id,po_number,supplier_id,item_id,order_quantity,unit_price,total_amount,status,order_date,expected_delivery,actual_delivery,warehouse_id,pr_number\n", encoding="utf-8")
+    except Exception as e:
+        print(f"[CLEAR-ALL] Could not clear purchase_orders.csv: {e}")
+
     # Remove generated PDFs from storage
     deleted_files = 0
     from database.db import STORAGE_DIR
@@ -1520,5 +1550,6 @@ async def clear_all_prs_and_pos(current_user: TokenData = Depends(get_current_us
         "total_prs_now": len(PR_STORE),
         "total_pos_now": 0
     }
+
 
 
