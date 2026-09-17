@@ -272,6 +272,18 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
     grand_total = subtotal + ppn
     terbilang = angka_ke_terbilang(grand_total)
 
+    # Multi-Warehouse checks
+    distinct_warehouses = list(dict.fromkeys(r[20] for r in rows if r[20]))
+    is_multi_wh = len(distinct_warehouses) > 1
+
+    # Determine overall status across all lines
+    if all(r[16] == "DELIVERED" for r in rows):
+        overall_status = "DELIVERED"
+    elif any(r[16] == "DELIVERED" for r in rows):
+        overall_status = "PARTIAL_DELIVERED"
+    else:
+        overall_status = po_dict.get("status", "ORDERED")
+
     # Build items table rows
     item_row_strings = []
     for idx, r in enumerate(rows, 1):
@@ -282,9 +294,15 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
         qty = int(r[13] or 1)
         unit_price = float(r[14] or 0)
         line_total = float(r[15] or 0)
+        wh_code = r[20] or ""
+
+        wh_badge = ""
+        if is_multi_wh and wh_code:
+            wh_badge = f"\\ #text(size: 7.5pt, fill: rgb(\"#0284c7\"), weight: \"semibold\")[Destinasi: [{escape_typst(wh_code)}]]"
+
         item_row_strings.append(f"""    [{idx}],
     [{item_code_esc}],
-    [*{item_name_esc}*],
+    [*{item_name_esc}*{wh_badge}],
     [{category_esc}],
     [*{qty:,}* {unit_esc}],
     [{format_currency(unit_price)}],
@@ -295,23 +313,37 @@ def generate_po_pdf(po_input: str | dict, output_path: str | Path | None = None)
     actual_deliv = po_dict.get("actual_delivery")
     actual_deliv_str = str(actual_deliv) if actual_deliv else "-"
 
+    warehouse_name = po_dict.get("warehouse_name", "-")
+    warehouse_id = po_dict.get("warehouse_id", "-")
+    warehouse_region = po_dict.get("region", "-")
+    warehouse_address = po_dict.get("address", "-")
+    warehouse_supervisor = po_dict.get("supervisor", "Logistics Lead")
+
+    if is_multi_wh:
+        distinct_wh_names = list(dict.fromkeys(r[21] for r in rows if r[21]))
+        warehouse_name = "Distribusi Multi-Gudang Regional"
+        warehouse_id = ", ".join(distinct_warehouses)
+        warehouse_region = "Multi-Regional Hubs"
+        warehouse_address = f"Alokasi ke {len(distinct_warehouses)} lokasi: {', '.join(distinct_wh_names)}"
+        warehouse_supervisor = "Supervisor Masing-Masing Regional"
+
     rendered_typst = (
         template_str
         .replace("{{PO_NUMBER}}", escape_typst(po_dict.get("po_number", "-")))
         .replace("{{PO_ID}}", escape_typst(po_dict.get("po_id", "-")))
         .replace("{{ORDER_DATE}}", escape_typst(po_dict.get("order_date", "-")))
-        .replace("{{STATUS}}", escape_typst(po_dict.get("status", "ORDERED")))
+        .replace("{{STATUS}}", escape_typst(overall_status))
         .replace("{{SUPPLIER_NAME}}", escape_typst(po_dict.get("supplier_name", "-")))
         .replace("{{SUPPLIER_ID}}", escape_typst(po_dict.get("supplier_id", "-")))
         .replace("{{SUPPLIER_CATEGORY}}", escape_typst(po_dict.get("sup_cat") or po_dict.get("category", "-")))
         .replace("{{SUPPLIER_PHONE}}", escape_typst(po_dict.get("phone", "-")))
         .replace("{{SUPPLIER_EMAIL}}", escape_typst(po_dict.get("email", "-")))
         .replace("{{PAYMENT_TERMS}}", escape_typst(po_dict.get("payment_terms", "Net 30")))
-        .replace("{{WAREHOUSE_NAME}}", escape_typst(po_dict.get("warehouse_name", "-")))
-        .replace("{{WAREHOUSE_ID}}", escape_typst(po_dict.get("warehouse_id", "-")))
-        .replace("{{WAREHOUSE_REGION}}", escape_typst(po_dict.get("region", "-")))
-        .replace("{{WAREHOUSE_ADDRESS}}", escape_typst(po_dict.get("address", "-")))
-        .replace("{{WAREHOUSE_SUPERVISOR}}", escape_typst(po_dict.get("supervisor", "Logistics Lead")))
+        .replace("{{WAREHOUSE_NAME}}", escape_typst(warehouse_name))
+        .replace("{{WAREHOUSE_ID}}", escape_typst(warehouse_id))
+        .replace("{{WAREHOUSE_REGION}}", escape_typst(warehouse_region))
+        .replace("{{WAREHOUSE_ADDRESS}}", escape_typst(warehouse_address))
+        .replace("{{WAREHOUSE_SUPERVISOR}}", escape_typst(warehouse_supervisor))
         .replace("{{EXPECTED_DELIVERY}}", escape_typst(po_dict.get("expected_delivery", "-")))
         .replace("{{ACTUAL_DELIVERY}}", escape_typst(actual_deliv_str))
         .replace("{{ITEMS_TABLE_ROWS}}", items_table_rows)

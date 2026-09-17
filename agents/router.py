@@ -145,7 +145,14 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL", recipient_ema
 
     # 4. Goods receipt clarification: wants to record received goods but no PO number
     wants_receipt = any(w in p_lower for w in ["catat penerimaan", "penerimaan barang", "barang sudah sampai", "terima po", "catat po tiba", "barang tiba"])
-    if wants_receipt and not re.search(r'\bpo[-_]?\d+', p_lower):
+    has_po_mention = bool(
+        re.search(r'po/blt/\d{4}/\d{1,2}/\d{1,4}', p_lower) or
+        re.search(r'\bpo[-_/\s]?\w*[-_/\s]?\d+', p_lower) or
+        re.search(r'\bpo[-_]?\d+', p_lower) or
+        "po/" in p_lower or
+        "po-" in p_lower
+    )
+    if wants_receipt and not has_po_mention:
         return {
             "needs_clarification": True,
             "field": "po_number_required",
@@ -156,7 +163,7 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL", recipient_ema
 
     # 5. PO document lookup clarification: wants to view PO document without PO number
     wants_po_doc = any(w in p_lower for w in ["lihat dokumen po", "tampilkan berkas po", "unduh po", "cetak pdf po", "lihat berkas po", "tampilkan po", "download po", "lihat po"])
-    if wants_po_doc and not re.search(r'\bpo[-_]?\d+', p_lower):
+    if wants_po_doc and not has_po_mention:
         return {
             "needs_clarification": True,
             "field": "po_lookup_id",
