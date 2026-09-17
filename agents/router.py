@@ -179,7 +179,7 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL", recipient_ema
         }
 
     # 7. Leave approval or processing clarification: wants to approve/reject leave but no leave ID or employee
-    wants_leave_action = any(w in p_lower for w in ["setujui cuti", "tolak cuti", "proses cuti", "otorisasi cuti", "verifikasi cuti"])
+    wants_leave_action = ("cuti" in p_lower) and any(w in p_lower for w in ["setujui", "tolak", "proses", "otorisasi", "verifikasi", "approve", "reject"])
     if wants_leave_action:
         has_leave_id = bool(re.search(r'\blv[-_]?\d+', p_lower))
         emp_match = re.search(r'(?:cuti|milik|atas\s+nama)\s+(?:sdr\s+|bapak\s+|ibu\s+|pak\s+)?([a-zA-Z]{3,})', p_lower)
