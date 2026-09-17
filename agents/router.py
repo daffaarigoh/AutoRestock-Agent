@@ -178,6 +178,34 @@ def check_clarification_needs(prompt: str, tenant_id: str = "ALL", recipient_ema
             "hint": "Berapa stok SFP Transceiver 10G saat ini?"
         }
 
+    # 7. Leave approval or processing clarification: wants to approve/reject leave but no leave ID or employee
+    wants_leave_action = any(w in p_lower for w in ["setujui cuti", "tolak cuti", "proses cuti", "otorisasi cuti", "verifikasi cuti"])
+    if wants_leave_action:
+        has_leave_id = bool(re.search(r'\blv[-_]?\d+', p_lower))
+        emp_match = re.search(r'(?:cuti|milik|atas\s+nama)\s+(?:sdr\s+|bapak\s+|ibu\s+|pak\s+)?([a-zA-Z]{3,})', p_lower)
+        filler_leave_words = {"ini", "itu", "dong", "ya", "saja", "lah", "tersebut", "yang", "pending", "diajukan"}
+        has_valid_emp = emp_match and (emp_match.group(1).lower() not in filler_leave_words)
+        if not (has_leave_id or has_valid_emp):
+            return {
+                "needs_clarification": True,
+                "field": "leave_id_required",
+                "title": "ID Pengajuan Cuti Diperlukan",
+                "message": "Untuk memproses persetujuan atau penolakan cuti karyawan, mohon sebutkan nomor registrasi pengajuan cuti (contoh: *'Setujui pengajuan cuti LV-20260910-001'*).",
+                "hint": "Setujui pengajuan cuti LV-20260910-001"
+            }
+
+    # 8. Invoice / Billing generation clarification: wants to generate invoice without client/operator
+    wants_invoice_gen = ("invoice" in p_lower or "tagihan" in p_lower) and any(w in p_lower for w in ["buat", "terbitkan", "draf", "draft", "generate", "cetak"])
+    has_operator = any(op in p_lower for op in ["telkomsel", "tsel", "indosat", "isat", "xl", "smartfren", "smart", "moratel", "hutchison"])
+    if wants_invoice_gen and not has_operator:
+        return {
+            "needs_clarification": True,
+            "field": "client_operator_required",
+            "title": "Nama Operator / Klien Diperlukan",
+            "message": "Untuk menerbitkan dokumen tagihan/invoice sewa menara, mohon sebutkan nama operator telekomunikasi klien (contoh: *'Buat draf invoice sewa menara untuk operator Telkomsel'*).",
+            "hint": "Buat draf invoice sewa menara untuk operator Telkomsel"
+        }
+
     return None
 
 
@@ -272,8 +300,26 @@ CRITICAL RULES:
 5. If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}].
 6. If the user specifies an item name to inspect, extract "target_item_name".
 7. If the user explicitly asks to send an email, report, or notify via email, extract "send_email": true. Otherwise, "send_email": false.
-8. If the user's command is missing a critical parameter required to execute (e.g. requested sending via email but gave no recipient address, wants to update threshold but gave no value or item, etc.), return:
-   {{"workflow_id": "clarification_needed", "needs_clarification": true, "clarification": {{"title": "string", "message": "string", "hint": "string"}}}}
+8. STRICT PARAMETER COMPLETENESS & CLARIFICATION VALIDATION:
+   You MUST verify if all mandatory parameters required for the user's intended action are present. If ANY critical parameter is missing, DO NOT guess, DO NOT execute the workflow, and DO NOT default to preset values. You MUST return:
+   {{
+     "workflow_id": "clarification_needed",
+     "needs_clarification": true,
+     "clarification": {{
+       "title": "Judul Parameter yang Kurang",
+       "message": "Pesan ramah dalam Bahasa Indonesia yang menjelaskan parameter apa yang belum lengkap dan meminta konfirmasi ke pengguna.",
+       "hint": "Contoh kalimat prompt lengkap yang bisa langsung digunakan pengguna"
+     }}
+   }}
+   Mandatory Parameter Rules:
+   a. Email Dispatch: If user mentions sending to email ("kirim ke email", "kirimkan ke email", "via email", "emailkan"), but does NOT mention a specific recipient email address (e.g. manager@balitower.co.id) or named person/role, return clarification requesting the recipient email address.
+   b. Threshold Update: If user requests updating stock thresholds ("ubah threshold", "ganti ambang batas"), but does not specify the item name or the target number, return clarification requesting the missing item/number.
+   c. Goods Receipt: If user requests recording received goods ("catat penerimaan", "barang tiba"), but does not specify the Purchase Order (PO) number, return clarification requesting the PO number.
+   d. PO Document View: If user requests viewing/downloading a PO document ("lihat berkas PO", "tampilkan PO"), but does not specify the PO number, return clarification.
+   e. Product Registration: If user requests adding/registering a new product, but provides no product name or specifications, return clarification.
+   f. Specific Stock Query: If user asks for current stock but gives no item name, return clarification.
+   g. Leave Action: If user asks to approve/reject leave without a leave request ID or employee name, return clarification.
+   h. Invoice Billing: If user asks to generate an invoice without an operator/client name, return clarification.
 
 Output strictly valid JSON with exact keys:
 - "workflow_id" (string or null)
@@ -352,6 +398,17 @@ Output strictly valid JSON with exact keys:
         # ----------------------------------------------------
         # LAYER 2: FAIL-SAFE HEURISTIC MATCHER (Only on LLM Error)
         # ----------------------------------------------------
+        # CRITICAL GUARD: Check clarification needs first in fallback mode before attempting heuristic match!
+        clarif = check_clarification_needs(prompt, tenant_id=tenant_id, recipient_email=extracted_email)
+        if clarif:
+            return {
+                "workflow_id": "clarification_needed",
+                "action_type": "clarification_needed",
+                "needs_clarification": True,
+                "clarification": clarif,
+                "message": clarif.get("message", "Mohon lengkapi parameter instruksi Anda."),
+                "is_fallback": True
+            }
         # 1. Match example_prompts & titles of all registered workflows (including Admin-created workflows)
         for row in workflows:
             wf_id, wf_name, wf_desc, wf_inst, wf_ex, wf_tenant = row

@@ -752,24 +752,34 @@ class JSONExecutionEngine:
                         or step.get("params", {}).get("recipient_email")
                         or default_recip
                     )
-                    dispatch_res = await dispatcher.dispatch_email(
-                        recipient_email=target_recip,
-                        subject=default_subj,
-                        content_text=msg,
-                        html_content=custom_html,
-                        attachment_path=context.get("pdf_path"),
-                        pr_number=pr_number,
-                        leave_id=leave_id,
-                        leave_data=context
-                    )
-                    context["email_sent"] = True
-                    context["email_dispatch_res"] = dispatch_res
-                    execution_results.append({
-                        "step_number": i,
-                        "title": "Send Notification / Email",
-                        "status": "COMPLETED",
-                        "details": f"Notification dispatched to {dispatch_res.get('recipient', 'manager')}. Status: {dispatch_res.get('status')}."
-                    })
+                    if not target_recip:
+                        logger.warning("Notification dispatch skipped: No recipient email address specified.")
+                        context["email_sent"] = False
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Send Notification / Email",
+                            "status": "SKIPPED",
+                            "details": "Langkah pengiriman email ditangguhkan karena alamat email penerima belum ditentukan oleh pengguna."
+                        })
+                    else:
+                        dispatch_res = await dispatcher.dispatch_email(
+                            recipient_email=target_recip,
+                            subject=default_subj,
+                            content_text=msg,
+                            html_content=custom_html,
+                            attachment_path=context.get("pdf_path"),
+                            pr_number=pr_number,
+                            leave_id=leave_id,
+                            leave_data=context
+                        )
+                        context["email_sent"] = True
+                        context["email_dispatch_res"] = dispatch_res
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Send Notification / Email",
+                            "status": "COMPLETED",
+                            "details": f"Notification dispatched to {dispatch_res.get('recipient', target_recip)}. Status: {dispatch_res.get('status')}."
+                        })
 
                 # ----------------------------------------------------
                 # BLOCK 4: DOCUMENT GENERATION (Tools)
@@ -1630,35 +1640,46 @@ class JSONExecutionEngine:
 
         # If user explicitly requested email notification and it hasn't been sent yet in steps
         if context.get("send_email") and not context.get("email_sent"):
-            pr_num = context.get("pr_number")
-            lv_id = context.get("leave_id")
-            ob_id = context.get("onboarding_id")
-            msg = f"Laporan eksekusi alur kerja '{compiled_json.get('workflow', 'Pengadaan')}' telah selesai."
-            if lv_id:
-                msg = f"Surat Pengajuan Cuti {lv_id} telah diterbitkan dan dikirimkan ke Divisi HR."
-            elif ob_id:
-                msg = f"Permohonan otorisasi sewa menara {ob_id} telah diterbitkan dan menunggu persetujuan otorisasi."
-            elif pr_num:
-                msg = f"Dokumen PR #{pr_num} telah diterbitkan dan menunggu persetujuan Anda."
-            from core.config import settings
-            default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "manager@balitower.co.id"
-            dispatch_res = await dispatcher.dispatch_email(
-                recipient_email=context.get("recipient_email") or (default_env_recip if (lv_id or ob_id) else None),
-                subject=f"Pengajuan Cuti Karyawan: {lv_id}" if lv_id else (f"Permohonan Otorisasi Sewa Menara: {ob_id}" if ob_id else (f"Permintaan Persetujuan Restock: {pr_num}" if pr_num else "Notifikasi Operasional")),
-                content_text=msg,
-                attachment_path=context.get("pdf_path"),
-                pr_number=pr_num,
-                leave_id=lv_id,
-                leave_data=context
-            )
-            context["email_sent"] = True
-            context["email_dispatch_res"] = dispatch_res
-            execution_results.append({
-                "step_number": len(steps) + 1,
-                "title": "Send Notification / Email (Permintaan Pengguna)",
-                "status": "COMPLETED",
-                "details": f"Notification dispatched to {dispatch_res.get('recipient', 'manager')}. Status: {dispatch_res.get('status')}."
-            })
+            target_recip = context.get("recipient_email")
+            if not target_recip and not (lv_id or ob_id):
+                logger.warning("User requested email dispatch, but recipient_email is missing. Halting email dispatch.")
+                context["email_sent"] = False
+                execution_results.append({
+                    "step_number": len(steps) + 1,
+                    "title": "Send Notification / Email (Permintaan Pengguna)",
+                    "status": "SKIPPED",
+                    "details": "Langkah pengiriman email ditangguhkan karena alamat email penerima belum ditentukan oleh pengguna."
+                })
+            else:
+                pr_num = context.get("pr_number")
+                lv_id = context.get("leave_id")
+                ob_id = context.get("onboarding_id")
+                msg = f"Laporan eksekusi alur kerja '{compiled_json.get('workflow', 'Pengadaan')}' telah selesai."
+                if lv_id:
+                    msg = f"Surat Pengajuan Cuti {lv_id} telah diterbitkan dan dikirimkan ke Divisi HR."
+                elif ob_id:
+                    msg = f"Permohonan otorisasi sewa menara {ob_id} telah diterbitkan dan menunggu persetujuan otorisasi."
+                elif pr_num:
+                    msg = f"Dokumen PR #{pr_num} telah diterbitkan dan menunggu persetujuan Anda."
+                from core.config import settings
+                default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "manager@balitower.co.id"
+                dispatch_res = await dispatcher.dispatch_email(
+                    recipient_email=target_recip or (default_env_recip if (lv_id or ob_id) else None),
+                    subject=f"Pengajuan Cuti Karyawan: {lv_id}" if lv_id else (f"Permohonan Otorisasi Sewa Menara: {ob_id}" if ob_id else (f"Permintaan Persetujuan Restock: {pr_num}" if pr_num else "Notifikasi Operasional")),
+                    content_text=msg,
+                    attachment_path=context.get("pdf_path"),
+                    pr_number=pr_num,
+                    leave_id=lv_id,
+                    leave_data=context
+                )
+                context["email_sent"] = True
+                context["email_dispatch_res"] = dispatch_res
+                execution_results.append({
+                    "step_number": len(steps) + 1,
+                    "title": "Send Notification / Email (Permintaan Pengguna)",
+                    "status": "COMPLETED",
+                    "details": f"Notification dispatched to {dispatch_res.get('recipient', target_recip or 'manager')}. Status: {dispatch_res.get('status')}."
+                })
 
         has_email = any(s.get("tool") in ["notification.send_email", "notification.dispatch"] for s in steps) or bool(context.get("send_email")) or bool(context.get("email_sent"))
         

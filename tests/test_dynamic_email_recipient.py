@@ -62,5 +62,15 @@ class TestDynamicEmailRecipient(unittest.TestCase):
         self.assertIsNotNone(c_po)
         self.assertEqual(c_po["field"], "po_number_required")
 
+        # 4. Leave approval missing leave ID
+        c_leave = check_clarification_needs("Tolong setujui cuti ini dong")
+        self.assertIsNotNone(c_leave)
+        self.assertEqual(c_leave["field"], "leave_id_required")
+
+        # 5. Invoice generation missing client name
+        c_inv = check_clarification_needs("Buat draf invoice tagihan sewa menara")
+        self.assertIsNotNone(c_inv)
+        self.assertEqual(c_inv["field"], "client_operator_required")
+
 if __name__ == "__main__":
     unittest.main()
