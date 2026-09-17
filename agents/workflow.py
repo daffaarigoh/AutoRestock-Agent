@@ -235,6 +235,8 @@ Output format must be a JSON object with a key 'items' containing a list of obje
             min_threshold=item["min_threshold"],
             reorder_qty=item["reorder_qty"],
             unit=item["unit"],
+            warehouse_id=item.get("warehouse_id"),
+            warehouse_name=item.get("warehouse_name"),
             vendor_id=vendor_id,
             vendor_name=vendor_name,
             unit_price=unit_price,

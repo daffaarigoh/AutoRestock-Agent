@@ -165,6 +165,8 @@ class JSONExecutionEngine:
                             reorder_qty=qty,
                             safety_stock=item.get("safety_stock", 0),
                             unit=item["unit"],
+                            warehouse_id=item.get("warehouse_id"),
+                            warehouse_name=item.get("warehouse_name"),
                             vendor_id=v_id,
                             vendor_name=v_name,
                             unit_price=price,

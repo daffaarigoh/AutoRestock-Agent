@@ -115,7 +115,9 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
                     "vendor_id": getattr(it, "vendor_id", "SUP-001"),
                     "quantity": int(getattr(it, "reorder_qty", 1)),
                     "unit_price": int(getattr(it, "unit_price", 0)),
-                    "total_price": int(getattr(it, "total_price", 0))
+                    "total_price": int(getattr(it, "total_price", 0)),
+                    "warehouse_id": getattr(it, "warehouse_id", None) or (it.get("warehouse_id") if isinstance(it, dict) else None),
+                    "warehouse_name": getattr(it, "warehouse_name", None) or (it.get("warehouse_name") if isinstance(it, dict) else None)
                 })
         else:
             ord_rows = conn.execute("""
@@ -129,7 +131,9 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
                     "vendor_id": o_ven or "SUP-001",
                     "quantity": int(o_qty or 1),
                     "unit_price": int(o_prc or 0),
-                    "total_price": int(o_tot or 0)
+                    "total_price": int(o_tot or 0),
+                    "warehouse_id": None,
+                    "warehouse_name": None
                 })
 
         # Also check purchase_requests if still empty
@@ -145,7 +149,9 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
                             "vendor_id": pit.get("vendor_id", "SUP-001"),
                             "quantity": int(pit.get("quantity", 1)),
                             "unit_price": int(pit.get("unit_price", 0)),
-                            "total_price": int(pit.get("total_price", 0))
+                            "total_price": int(pit.get("total_price", 0)),
+                            "warehouse_id": pit.get("warehouse_id"),
+                            "warehouse_name": pit.get("warehouse_name")
                         })
                 except Exception:
                     pass
@@ -168,6 +174,8 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
         new_po_id = f"PO-2026-{(current_max + 1):03d}"
         new_po_num = f"PO/BLT/{month_s}/{(30 + current_max + 1):03d}"
 
+        assigned_warehouses: dict[str, set[str]] = {}
+
         for idx, item in enumerate(items_to_create, 1):
             # Resolve valid supplier_id from inventory_items
             sup_id = item["vendor_id"]
@@ -175,15 +183,34 @@ def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequis
                 sup_row = conn.execute("SELECT supplier_id FROM inventory_items WHERE item_id = ?;", [item["item_id"]]).fetchone()
                 sup_id = sup_row[0] if sup_row and sup_row[0] else "SUP-001"
 
-            # Resolve warehouse_id from stock_balances that has critical/low stock
-            wh_row = conn.execute("""
-                SELECT warehouse_id FROM stock_balances 
-                WHERE item_id = ? AND (stock_status IN ('CRITICAL', 'LOW_STOCK') OR quantity_on_hand <= reorder_point)
-                ORDER BY quantity_on_hand ASC LIMIT 1;
-            """, [item["item_id"]]).fetchone()
-            if not wh_row:
-                wh_row = conn.execute("SELECT warehouse_id FROM stock_balances WHERE item_id = ? ORDER BY quantity_on_hand ASC LIMIT 1;", [item["item_id"]]).fetchone()
-            target_wh = wh_row[0] if wh_row and wh_row[0] else "WH-BDG-01"
+            target_wh = item.get("warehouse_id")
+            if not target_wh:
+                item_assigned = assigned_warehouses.get(item["item_id"], set())
+                # Resolve warehouse_id from stock_balances that has critical/low stock
+                wh_rows = conn.execute("""
+                    SELECT warehouse_id FROM stock_balances 
+                    WHERE item_id = ? AND (stock_status IN ('CRITICAL', 'LOW_STOCK') OR quantity_on_hand <= reorder_point)
+                    ORDER BY quantity_on_hand ASC;
+                """, [item["item_id"]]).fetchall()
+
+                candidate_wh = None
+                for (r_wh,) in wh_rows:
+                    if r_wh not in item_assigned:
+                        candidate_wh = r_wh
+                        break
+
+                if not candidate_wh:
+                    all_wh_rows = conn.execute("SELECT warehouse_id FROM stock_balances WHERE item_id = ? ORDER BY quantity_on_hand ASC;", [item["item_id"]]).fetchall()
+                    for (r_wh,) in all_wh_rows:
+                        if r_wh not in item_assigned:
+                            candidate_wh = r_wh
+                            break
+                    if not candidate_wh and all_wh_rows:
+                        candidate_wh = all_wh_rows[0][0]
+
+                target_wh = candidate_wh or "WH-BDG-01"
+
+            assigned_warehouses.setdefault(item["item_id"], set()).add(target_wh)
 
             conn.execute("""
                 INSERT INTO purchase_orders (
@@ -445,6 +472,8 @@ def _ensure_pr_in_store(pr_number: str) -> PurchaseRequisitionDoc | None:
                             name=it.get("item_name") or it.get("name", "Material Item"),
                             reorder_qty=int(it.get("quantity") or it.get("reorder_qty", 1)),
                             unit=it.get("unit", "pcs"),
+                            warehouse_id=it.get("warehouse_id"),
+                            warehouse_name=it.get("warehouse_name"),
                             vendor_id=it.get("vendor_id", "VND-001"),
                             vendor_name=it.get("vendor_name", "Vendor Terdaftar"),
                             unit_price=float(it.get("unit_price", 0.0)),

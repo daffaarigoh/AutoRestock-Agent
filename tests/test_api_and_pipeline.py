@@ -21,10 +21,6 @@ def override_get_current_user():
     return TokenData(username="test_admin", role="ADMIN", tenant_id="ALL")
 
 
-app.dependency_overrides[get_current_user] = override_get_current_user
-app.dependency_overrides[get_current_admin] = override_get_current_user
-
-
 class TestAutoRestockPipeline(unittest.TestCase):
 
     def setUp(self):
@@ -159,6 +155,117 @@ class TestAutoRestockPipeline(unittest.TestCase):
         res_templates = self.client.get("/api/agent/prompt-templates")
         self.assertEqual(res_templates.status_code, 200)
         self.assertGreaterEqual(len(res_templates.json()), 4)
+
+    def test_warehouse_allocation_on_approval(self):
+        """Verifies that PR approval correctly preserves distinct warehouse destinations across multiple locations."""
+        from api.routers.approval_routes import PR_STORE, sync_approved_pr_to_purchase_orders
+
+        # Test Case 1: Explicit warehouse_id in PR items
+        pr_num = "PR-TEST-WH-001"
+        pr_doc = PurchaseRequisitionDoc(
+            pr_number=pr_num,
+            created_at="2026-09-17 10:00",
+            items=[
+                RestockItem(
+                    item_id="BLT-INV-003",
+                    name="Fiber Patch Cord SC-UPC 3M (Bandung)",
+                    warehouse_id="WH-BDG-01",
+                    warehouse_name="Gudang Bandung",
+                    reorder_qty=30,
+                    unit="pcs",
+                    vendor_id="SUP-001",
+                    vendor_name="PT Bali Vendor Utama",
+                    unit_price=15000.0,
+                    total_price=450000.0,
+                    reason="Low stock Bandung"
+                ),
+                RestockItem(
+                    item_id="BLT-INV-003",
+                    name="Fiber Patch Cord SC-UPC 3M (Jakarta Sunter)",
+                    warehouse_id="WH-JKT-01",
+                    warehouse_name="Gudang Sunter",
+                    reorder_qty=40,
+                    unit="pcs",
+                    vendor_id="SUP-001",
+                    vendor_name="PT Bali Vendor Utama",
+                    unit_price=15000.0,
+                    total_price=600000.0,
+                    reason="Low stock Jakarta"
+                ),
+                RestockItem(
+                    item_id="BLT-INV-003",
+                    name="Fiber Patch Cord SC-UPC 3M (Semarang)",
+                    warehouse_id="WH-SMG-01",
+                    warehouse_name="Gudang Semarang",
+                    reorder_qty=32,
+                    unit="pcs",
+                    vendor_id="SUP-001",
+                    vendor_name="PT Bali Vendor Utama",
+                    unit_price=15000.0,
+                    total_price=480000.0,
+                    reason="Low stock Semarang"
+                )
+            ],
+            total_budget=1530000.0,
+            auditor_status="PASSED",
+            auditor_notes="Valid multi-warehouse restock",
+            status="APPROVED"
+        )
+        PR_STORE[pr_num] = pr_doc
+
+        conn = get_db_connection(read_only=False)
+        po_ids = sync_approved_pr_to_purchase_orders(conn, pr_num, pr_doc)
+        conn.commit()
+        self.assertTrue(len(po_ids) > 0)
+
+        rows = conn.execute("SELECT warehouse_id, order_quantity FROM purchase_orders WHERE pr_number = ? ORDER BY order_quantity ASC;", [pr_num]).fetchall()
+        wh_set = {r[0] for r in rows}
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(wh_set, {"WH-BDG-01", "WH-JKT-01", "WH-SMG-01"})
+
+        # Test Case 2: Fallback when warehouse_id is None - should allocate across different warehouses
+        pr_num2 = "PR-TEST-WH-FALLBACK"
+        pr_doc2 = PurchaseRequisitionDoc(
+            pr_number=pr_num2,
+            created_at="2026-09-17 10:00",
+            items=[
+                RestockItem(
+                    item_id="BLT-INV-003",
+                    name="Fiber Patch Cord SC-UPC 3M",
+                    warehouse_id=None,
+                    reorder_qty=10,
+                    unit="pcs",
+                    vendor_id="SUP-001",
+                    vendor_name="PT Bali Vendor Utama",
+                    unit_price=15000.0,
+                    total_price=150000.0,
+                    reason="Fallback restock 1"
+                ),
+                RestockItem(
+                    item_id="BLT-INV-003",
+                    name="Fiber Patch Cord SC-UPC 3M",
+                    warehouse_id=None,
+                    reorder_qty=20,
+                    unit="pcs",
+                    vendor_id="SUP-001",
+                    vendor_name="PT Bali Vendor Utama",
+                    unit_price=15000.0,
+                    total_price=300000.0,
+                    reason="Fallback restock 2"
+                )
+            ],
+            total_budget=450000.0,
+            auditor_status="PASSED",
+            status="APPROVED"
+        )
+        po_ids2 = sync_approved_pr_to_purchase_orders(conn, pr_num2, pr_doc2)
+        conn.commit()
+        rows2 = conn.execute("SELECT warehouse_id FROM purchase_orders WHERE pr_number = ?;", [pr_num2]).fetchall()
+        assigned_whs = [r[0] for r in rows2]
+        # Must not assign both items to the exact same warehouse if multiple need restock
+        self.assertEqual(len(assigned_whs), 2)
+        self.assertNotEqual(assigned_whs[0], assigned_whs[1], "Fallback must distribute across distinct warehouses")
+        conn.close()
 
 
 if __name__ == "__main__":

@@ -148,6 +148,8 @@ class AutonomousAgent:
                 min_threshold=it.get("min_threshold", 10),
                 reorder_qty=reorder_qty,
                 unit=it.get("unit", "pcs"),
+                warehouse_id=it.get("warehouse_id"),
+                warehouse_name=it.get("warehouse_name"),
                 vendor_id=vendor.get("vendor_id", "VND-DEFAULT"),
                 vendor_name=vendor.get("name", "PT Bali Vendor Utama"),
                 unit_price=u_price,

@@ -11,6 +11,8 @@ class RestockItem(BaseModel):
     min_threshold: int = Field(0, description="Minimum safety threshold")
     reorder_qty: int = Field(..., description="Calculated reorder quantity")
     unit: str = Field("pcs", description="Unit of measurement (pcs, spool, roll, etc.)")
+    warehouse_id: str | None = Field(None, description="Target warehouse ID")
+    warehouse_name: str | None = Field(None, description="Target warehouse name")
     vendor_id: str = Field("VND-001", description="ID of the matched vendor")
     vendor_name: str = Field(..., description="Name of the matched vendor")
     unit_price: float = Field(..., description="Unit price offered by vendor")
