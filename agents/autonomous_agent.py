@@ -193,7 +193,7 @@ class AutonomousAgent:
             pass
 
         email_dispatched = False
-        target_email = recipient_email or settings.DEFAULT_RECIPIENT_EMAIL
+        target_email = recipient_email
         if target_email:
             try:
                 await dispatcher.dispatch_email(
@@ -207,6 +207,8 @@ class AutonomousAgent:
             except Exception as e:
                 logger.warning(f"Failed to dispatch email: {e}")
 
+        pr_doc.email_sent = email_dispatched
+
         supplier_main = planned_items[0].vendor_name if planned_items else "Vendor Rekanan"
         return {
             "status": "SUCCESS",
@@ -218,6 +220,52 @@ class AutonomousAgent:
             "recipient_email": target_email,
             "pdf_path": str(pdf_path),
             "items": [it.model_dump() for it in planned_items]
+        }
+
+    @classmethod
+    async def execute_tool_dispatch_pr_email(cls, pr_number: str, recipient_email: str | None = None) -> dict[str, Any]:
+        """Dispatches an interactive approval notification email with Typst PDF attachment for an existing Purchase Requisition."""
+        from api.routers.approval_routes import _ensure_pr_in_store, _regenerate_pdf
+        from pathlib import Path
+
+        pr = _ensure_pr_in_store(pr_number)
+        if not pr:
+            return {"error": f"Dokumen Purchase Requisition '{pr_number}' tidak ditemukan di database."}
+
+        target_email = recipient_email or getattr(settings, "DEFAULT_RECIPIENT_EMAIL", None) or "manager.logistik@balitower.co.id"
+        clean_filename = f"{pr.pr_number.replace('-', '_')}.pdf"
+        pdf_path = None
+
+        if pr.pdf_path and Path(pr.pdf_path).exists():
+            pdf_path = Path(pr.pdf_path)
+        elif (Path("storage/documents") / clean_filename).exists():
+            pdf_path = Path("storage/documents") / clean_filename
+        elif (Path("storage/pending") / clean_filename).exists():
+            pdf_path = Path("storage/pending") / clean_filename
+
+        if not pdf_path or not pdf_path.exists():
+            _regenerate_pdf(pr)
+            if pr.pdf_path and Path(pr.pdf_path).exists():
+                pdf_path = Path(pr.pdf_path)
+            elif (Path("storage/documents") / clean_filename).exists():
+                pdf_path = Path("storage/documents") / clean_filename
+
+        dispatch_res = await dispatcher.dispatch_email(
+            recipient_email=target_email,
+            subject=f"Permintaan Persetujuan Pengadaan Material: {pr.pr_number} - PT Bali Towerindo Sentra Tbk",
+            content_text=f"Dokumen pengajuan {pr.pr_number} sebesar Rp {pr.total_budget:,.2f} telah diterbitkan dan menunggu persetujuan Anda.",
+            attachment_path=str(pdf_path) if pdf_path else None,
+            pr_number=pr.pr_number
+        )
+
+        pr.email_sent = True
+        return {
+            "status": "SUCCESS",
+            "pr_number": pr.pr_number,
+            "recipient_email": target_email,
+            "total_budget": pr.total_budget,
+            "email_sent": True,
+            "message": f"Email permohonan persetujuan untuk {pr.pr_number} berhasil dikirim ke {target_email}."
         }
 
     @classmethod
@@ -573,6 +621,7 @@ class AutonomousAgent:
     execute_tool_view_po_document = execute_tool_view_po
     execute_tool_update_inventory_threshold = execute_tool_update_threshold
     execute_tool_register_new_product = execute_tool_register_product
+    execute_tool_dispatch_email = execute_tool_dispatch_pr_email
 
     @classmethod
     async def run(
@@ -654,6 +703,8 @@ AVAILABLE TOOLS:
    Parameters: {{"action": "SUBMIT" | "APPROVE", "employee_name": "optional name", "leave_type": "Tahunan" | "Sakit" | "Melahirkan", "start_date": "YYYY-MM-DD", "days_requested": int, "reason": "string", "leave_id": "optional for APPROVE"}}
 8. "tool_manage_telecom_invoice": Draft client tower lease onboarding, MLA contract & first invoice with official PDF, or approve onboarding.
    Parameters: {{"action": "DRAFT_ONBOARDING" | "APPROVE", "client_name": "string", "site_id": "string", "monthly_rate": float, "billing_frequency": "QUARTERLY" | "MONTHLY", "onboarding_id": "optional for APPROVE"}}
+9. "tool_dispatch_pr_email": Send interactive approval notification email with official Typst PDF for an existing Purchase Requisition (PR).
+   Parameters: {{"pr_number": "PR-2026-0819-001", "recipient_email": "optional recipient email address"}}
 
 RULES OF ENGAGEMENT:
 1. Greet, chit-chat, pleasantries, simple guidance, or general questions can be answered DIRECTLY without calling any tools. Keep tone helpful, polite, and professional in Indonesian.
@@ -664,8 +715,9 @@ RULES OF ENGAGEMENT:
 6. When the user wants to adjust stock threshold, choose "tool_update_threshold".
 7. When the user wants to submit or approve leave/cuti, choose "tool_process_leave_request".
 8. When the user wants to draft/approve tower lease onboarding or invoice, choose "tool_manage_telecom_invoice".
-9. Strict Multi-Tenant Isolation: If a user with Divisi 'HR' asks for Finance data or Inventory data, politely refuse with access denied explanation.
-10. Format responses using beautiful, clean GitHub-flavored Markdown tables and bullet points.
+9. When the user asks to send, dispatch, or forward an existing PR document to an email, choose "tool_dispatch_pr_email".
+10. Strict Multi-Tenant Isolation: If a user with Divisi 'HR' asks for Finance data or Inventory data, politely refuse with access denied explanation.
+11. Format responses using beautiful, clean GitHub-flavored Markdown tables and bullet points.
 
 DECISION OUTPUT FORMAT:
 You must output strictly valid JSON:
@@ -708,9 +760,19 @@ If no tool is needed (direct conversational response):
         except Exception as e:
             logger.error(f"LLM decision parsing failed: {e!r}. Activating deterministic heuristic fallback...")
             p_lower = prompt.lower()
+            pr_match = re.search(r'\b(PR[-_]\d{4,8}[-_]\d{3,6}|PR[-_]\d{4}[-_]\d{3}[-_]\d{3})\b', prompt, re.IGNORECASE)
             po_match = re.search(r'\b(PO-\d{4}-\d{3,4})\b', prompt, re.IGNORECASE)
 
-            if po_match and any(k in p_lower for k in ["tampilkan", "dokumen", "pdf", "lihat", "view", "preview", "unduh"]):
+            if pr_match and any(k in p_lower for k in ["kirim", "email", "dispatch", "send", "teruskan"]):
+                email_match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', prompt)
+                decision = {
+                    "tool": "tool_dispatch_pr_email",
+                    "parameters": {
+                        "pr_number": pr_match.group(1).replace('_', '-'),
+                        "recipient_email": email_match.group(0) if email_match else "manager.logistik@balitower.co.id"
+                    }
+                }
+            elif po_match and any(k in p_lower for k in ["tampilkan", "dokumen", "pdf", "lihat", "view", "preview", "unduh"]):
                 decision = {
                     "tool": "tool_view_po",
                     "parameters": {"po_id": po_match.group(1).upper()}
@@ -882,6 +944,25 @@ If no tool is needed (direct conversational response):
             action_type = "finance_onboarding"
             if "error" not in tool_result:
                 extra_payload.update(tool_result)
+
+        elif tool_name in ["tool_dispatch_pr_email", "dispatch_pr_email", "tool_dispatch_email", "dispatch_email"]:
+            if stage_callback:
+                await stage_callback("executing", "Mengirimkan email permohonan persetujuan PR...")
+            pr_num = params.get("pr_number", "")
+            rec_email = params.get("recipient_email")
+            tool_result = await cls.execute_tool_dispatch_pr_email(pr_num, rec_email)
+            action_type = "review_prs"
+            if "error" not in tool_result:
+                extra_payload["email_sent"] = True
+                pr_card = {
+                    "pr_number": tool_result["pr_number"],
+                    "grand_total": tool_result.get("total_budget", 0),
+                    "total_budget": tool_result.get("total_budget", 0),
+                    "status": "PENDING",
+                    "email_sent": True
+                }
+                extra_payload["generated_prs"] = [pr_card]
+                extra_payload["prs"] = [pr_card]
 
         else:
             tool_result = {"error": f"Tool '{tool_name}' tidak dikenal."}

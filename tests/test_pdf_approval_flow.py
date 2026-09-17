@@ -18,8 +18,10 @@ from core.security import get_current_user, TokenData
 
 import io
 import unittest
-
 class TestPDFApprovalFlow(unittest.TestCase):
+
+    def tearDown(self):
+        app.dependency_overrides.clear()
 
     def test_approval_and_pdf_rendering(self):
         client = TestClient(app)

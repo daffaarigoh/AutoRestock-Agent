@@ -302,7 +302,7 @@ CRITICAL RULES:
 1. Prioritize matching based on the workflow's Description, Business Instruction, and Example Prompts.
 2. If the user's prompt is UNRELATED, vague, ambiguous, programming questions, chit-chat, or general greetings without clear command, return:
    {{"workflow_id": null, "is_unrelated": true}}
-3. DO NOT match to a restock/procurement pipeline (like WF-A01) unless the user EXPLICITLY commands to restock, draft/issue a PR, or order depleted material.
+3. DO NOT match to a restock/procurement pipeline (like WF-A01) unless the user EXPLICITLY commands to restock, draft/issue a new PR, or order depleted material. If the user asks to send/forward/email an ALREADY EXISTING PR document (e.g. 'Kirimkan dokumen PR-2026-xxxx ke email...'), return {{"workflow_id": null, "is_unrelated": false, "send_email": true}} so the autonomous agent can dispatch the existing PR.
 4. If the user wants to register, add, or create a new inventory item, extract "new_item_data": {{"name": string, "category": string, "current_stock": int, "min_threshold": int, "max_threshold": int, "avg_daily_usage": float, "lead_time_days": int, "unit": string}}.
 5. If the user wants to update a threshold, extract "threshold_updates": [{{"item_name": "name of item", "new_min_threshold": 100, "new_max_threshold": 300}}].
 6. If the user specifies an item name to inspect, extract "target_item_name".
@@ -531,6 +531,17 @@ Output strictly valid JSON with exact keys:
             for row in workflows:
                 if row[0] == "WF-002" or "threshold" in row[1].lower():
                     return {"workflow_id": row[0], "threshold_updates": [], "send_email": False, "is_fallback": True}
+
+        # 10b. Existing PR Email Dispatch (Do not trigger PR creation workflow WF-A01)
+        pr_match = re.search(r'\b(PR[-_]\d{4,8}[-_]\d{3,6}|PR[-_]\d{4}[-_]\d{3}[-_]\d{3})\b', prompt, re.IGNORECASE)
+        if pr_match and any(k in prompt_lower for k in ["kirim", "email", "dispatch", "send", "teruskan"]):
+            return {
+                "workflow_id": None,
+                "is_unrelated": False,
+                "send_email": True,
+                "recipient_email": extracted_email,
+                "is_fallback": True
+            }
 
         # 11. Restock / PR Creation Pipeline
         if any(k in prompt_lower for k in ["buatkan pr", "bikin pr", "terbitkan pr", "draf pr", "draft pr", "restock material", "pesan material"]):

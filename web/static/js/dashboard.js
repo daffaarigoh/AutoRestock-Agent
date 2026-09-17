@@ -2562,9 +2562,39 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
               <span>Dokumen PR resmi telah dikompilasi (PDF) dan notifikasi persetujuan telah otomatis dikirimkan ke email tujuan.</span>
             </div>
             ` : `
-            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #475569; display: flex; align-items: center; gap: 8px;">
-              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-              <span>Dokumen PR resmi telah dikompilasi (PDF) dan tersimpan sebagai draf di sistem inventaris.</span>
+            <div id="email-action-box-${pr.pr_number}" class="pr-email-action-box" style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+              <div style="font-weight: 700; font-size: 13px; color: #0F172A; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span>Kirimkan Notifikasi Persetujuan via Email?</span>
+              </div>
+              <div style="font-size: 12px; color: #64748B; margin-bottom: 10px; line-height: 1.5;">
+                Draf PR berhasil dibuat dan tersimpan di sistem. Anda dapat langsung mengirimkannya ke Manajer Logistik untuk otorisasi.
+              </div>
+              <div id="email-action-buttons-${pr.pr_number}" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="dispatchPrEmail('${pr.pr_number}', 'manager.logistik@balitower.co.id')">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                  <span>Kirim ke Manajer Logistik (manager.logistik@balitower.co.id)</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCustomEmailInput('${pr.pr_number}')">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                  <span>Kirim ke Email Lain...</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" style="color: #64748B;" onclick="skipPrEmail('${pr.pr_number}')">
+                  <span>Lewati (Hanya Simpan Draf)</span>
+                </button>
+              </div>
+              <div id="custom-email-form-${pr.pr_number}" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #CBD5E1;">
+                <div style="font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">Masukkan Alamat Email Tujuan:</div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <input type="email" id="custom-email-input-${pr.pr_number}" placeholder="contoh: nama.manajer@balitower.co.id" class="form-input" style="flex: 1; padding: 6px 10px; font-size: 12px; border: 1px solid #CBD5E1; border-radius: 6px;" onkeydown="if(event.key === 'Enter') submitCustomEmail('${pr.pr_number}')" />
+                  <button type="button" class="btn btn-primary btn-sm" onclick="submitCustomEmail('${pr.pr_number}')">
+                    <span>Kirim</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCustomEmailInput('${pr.pr_number}')">
+                    <span>Batal</span>
+                  </button>
+                </div>
+              </div>
             </div>
             `}
             <div style="display: flex; justify-content: flex-end;">
@@ -2720,6 +2750,126 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
 
   scrollChatToBottom();
 }
+
+// ==============================================================================
+// 1-CLICK EMAIL DISPATCH & INTERACTIVE ACTION HANDLERS FOR PR DRAFTS
+// ==============================================================================
+
+window.toggleCustomEmailInput = function(prNumber) {
+  const form = document.getElementById(`custom-email-form-${prNumber}`);
+  if (form) {
+    const isHidden = form.style.display === 'none' || form.style.display === '';
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      const input = document.getElementById(`custom-email-input-${prNumber}`);
+      if (input) input.focus();
+    }
+  }
+};
+
+window.submitCustomEmail = async function(prNumber) {
+  const input = document.getElementById(`custom-email-input-${prNumber}`);
+  if (!input) return;
+  const email = (input.value || '').trim();
+  if (!email || !email.includes('@')) {
+    showToast("Mohon masukkan alamat email tujuan yang valid.", "error");
+    if (input) input.focus();
+    return;
+  }
+  await window.dispatchPrEmail(prNumber, email);
+};
+
+window.skipPrEmail = function(prNumber) {
+  const box = document.getElementById(`email-action-box-${prNumber}`);
+  if (box) {
+    box.outerHTML = `
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #475569; display: flex; align-items: center; gap: 8px;">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <span>Dokumen PR resmi telah dikompilasi (PDF) dan tersimpan sebagai draf di sistem inventaris.</span>
+      </div>
+    `;
+  }
+  saveCopilotFeed();
+  showToast(`Dokumen PR resmi telah dikompilasi (PDF) dan tersimpan sebagai draf di sistem inventaris.`, 'info');
+};
+
+window.dispatchPrEmail = async function(prNumber, email) {
+  const box = document.getElementById(`email-action-box-${prNumber}`);
+  const targetEmail = email || "manager.logistik@balitower.co.id";
+
+  if (box) {
+    box.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 6px; font-size: 12.5px; color: #2563EB;">
+        <svg class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>
+        <span>Mengirimkan berkas permohonan persetujuan ${escapeHtml(prNumber)} ke ${escapeHtml(targetEmail)}...</span>
+      </div>
+    `;
+  }
+
+  try {
+    const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch('/api/approval/dispatch-email', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        pr_number: prNumber,
+        recipient_email: targetEmail
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || "Gagal mengirimkan email permohonan persetujuan.");
+    }
+
+    if (box) {
+      box.outerHTML = `
+        <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px;">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span>Dokumen PR resmi telah dikompilasi (PDF) dan permohonan persetujuan telah berhasil dikirimkan ke <strong>${escapeHtml(targetEmail)}</strong>.</span>
+        </div>
+      `;
+    }
+
+    const cardEl = box ? box.closest('.action-card') : null;
+    if (cardEl) {
+      const headerTag = cardEl.querySelector('.action-card-header .badge');
+      if (headerTag) {
+        headerTag.className = 'badge badge-approved';
+        headerTag.textContent = 'TERKIRIM KE EMAIL';
+      }
+      const titleSpan = cardEl.querySelector('.action-card-header span:first-child');
+      if (titleSpan) {
+        titleSpan.style.color = '#15803D';
+        titleSpan.textContent = titleSpan.textContent.replace('DRAFT', 'TERKIRIM KE EMAIL');
+      }
+    }
+
+    saveCopilotFeed();
+    showToast(`Dokumen PR resmi telah dikompilasi (PDF) dan permohonan persetujuan telah berhasil dikirimkan ke ${targetEmail}`, 'success');
+  } catch (err) {
+    console.error("dispatchPrEmail error:", err);
+    if (box) {
+      box.innerHTML = `
+        <div style="color: #DC2626; font-size: 12px; margin-bottom: 8px;">
+          ⚠️ ${escapeHtml(err.message || "Gagal mengirimkan email.")}
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="dispatchPrEmail('${prNumber}', '${targetEmail}')">
+            <span>Coba Lagi</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="skipPrEmail('${prNumber}')">
+            <span>Lewati</span>
+          </button>
+        </div>
+      `;
+    }
+    showToast(err.message || "Gagal mengirimkan email", 'error');
+  }
+};
 
 function appendAgentErrorMessage(errorText) {
   const feed = document.getElementById('copilotFeed');

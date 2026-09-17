@@ -32,6 +32,7 @@ class PurchaseRequisition(BaseModel):
     status: str = Field("PENDING", description="Requisition status: PENDING | APPROVED | REJECTED")
     tenant_id: str = Field("ALL", description="Tenant owner of the purchase requisition")
     thread_id: str | None = Field(None, description="LangGraph execution thread identifier")
+    email_sent: bool = Field(False, description="Whether approval email notification has been dispatched")
 
 
 

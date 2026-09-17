@@ -76,6 +76,12 @@ class ApprovalActionPayload(BaseModel):
     notes: str | None = None
 
 
+class DispatchEmailPayload(BaseModel):
+    pr_number: str
+    recipient_email: str | None = None
+    manager_name: str | None = "Manager Logistik"
+
+
 # --- Helper: Synchronize Approved PR to purchase_orders Table ---
 
 def sync_approved_pr_to_purchase_orders(conn, pr_number: str, pr: PurchaseRequisitionDoc | None = None) -> list[str]:
@@ -1450,6 +1456,54 @@ async def execute_approval_action(payload: ApprovalActionPayload):
         "new_status": pr.status,
         "message": message,
         "updated_at": datetime.now().isoformat()
+    }
+
+
+@router.post("/dispatch-email")
+async def dispatch_pr_email(payload: DispatchEmailPayload, current_user: TokenData = Depends(get_current_user)):
+    """
+    Dispatches formal Typst PR approval notification email to Logistics Manager or custom recipient.
+    """
+    pr = _ensure_pr_in_store(payload.pr_number)
+    if not pr:
+        raise HTTPException(status_code=404, detail=f"Draf PR {payload.pr_number} tidak ditemukan.")
+
+    target_email = payload.recipient_email or "manager.logistik@balitower.co.id"
+
+    from pathlib import Path
+    pdf_path = None
+    clean_filename = f"{pr.pr_number.replace('-', '_')}.pdf"
+
+    if pr.pdf_path and Path(pr.pdf_path).exists():
+        pdf_path = Path(pr.pdf_path)
+    elif (Path("storage/documents") / clean_filename).exists():
+        pdf_path = Path("storage/documents") / clean_filename
+    elif (Path("storage/pending") / clean_filename).exists():
+        pdf_path = Path("storage/pending") / clean_filename
+
+    if not pdf_path or not pdf_path.exists():
+        _regenerate_pdf(pr)
+        if pr.pdf_path and Path(pr.pdf_path).exists():
+            pdf_path = Path(pr.pdf_path)
+        elif (Path("storage/documents") / clean_filename).exists():
+            pdf_path = Path("storage/documents") / clean_filename
+
+    from core.dispatcher import dispatcher
+    dispatch_res = await dispatcher.dispatch_email(
+        recipient_email=target_email,
+        subject=f"Permintaan Persetujuan Pengadaan Material: {pr.pr_number} - PT Bali Towerindo Sentra Tbk",
+        content_text=f"Dokumen pengajuan {pr.pr_number} sebesar Rp {pr.total_budget:,.2f} telah diterbitkan dan menunggu persetujuan Anda.",
+        attachment_path=str(pdf_path) if pdf_path else None,
+        pr_number=pr.pr_number
+    )
+
+    pr.email_sent = True
+
+    return {
+        "status": "success",
+        "pr_number": pr.pr_number,
+        "recipient_email": target_email,
+        "message": f"Email permohonan persetujuan untuk {pr.pr_number} berhasil dikirim ke {target_email}."
     }
 
 
