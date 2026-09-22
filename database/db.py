@@ -12,7 +12,7 @@ DB_PATH = STORAGE_DIR / "balitower.db"
 _db_write_lock = threading.RLock()
 
 
-def get_db_connection(read_only: bool = False, max_retries: int = 5) -> duckdb.DuckDBPyConnection:
+def get_db_connection(read_only: bool = False, max_retries: int = 15) -> duckdb.DuckDBPyConnection:
     """Get a connection to the DuckDB inventory database with retry logic for file locks."""
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     
@@ -22,7 +22,7 @@ def get_db_connection(read_only: bool = False, max_retries: int = 5) -> duckdb.D
         except duckdb.IOException as e:
             if attempt == max_retries - 1:
                 raise e
-            time.sleep(0.05 * (2 ** attempt))  # Exponential backoff: 0.05s, 0.1s, 0.2s, 0.4s
+            time.sleep(0.1 + 0.05 * attempt)
 
 
 class DuckDBManager:

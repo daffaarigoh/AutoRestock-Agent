@@ -543,7 +543,6 @@ def get_attendances(
                 e.job_title,
                 a.site_id,
                 COALESCE(s.site_name, 'Kantor Pusat / NOC') AS site_name,
-                a.distance_to_site_m,
                 a.attendance_type,
                 a.overtime_hours,
                 a.status
@@ -879,8 +878,6 @@ def get_sites(current_user: TokenData = Depends(require_hr_access)):
                 s.site_name,
                 s.site_type,
                 s.region,
-                s.latitude,
-                s.longitude,
                 s.tower_height_m AS height_meters,
                 'Monopole / SST' AS structure_type,
                 (SELECT COUNT(*) FROM mla_contracts m WHERE m.site_id = s.site_id) AS tenant_count,
@@ -907,12 +904,13 @@ def get_finance_summary(current_user: TokenData = Depends(require_finance_access
         total_paid = conn.execute("SELECT COALESCE(SUM(total_billed), 0) FROM revenue_invoices WHERE payment_status = 'PAID';").fetchone()[0]
         total_unpaid = conn.execute("SELECT COALESCE(SUM(total_billed), 0) FROM revenue_invoices WHERE payment_status = 'UNPAID';").fetchone()[0]
 
-        inflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'INFLOW';").fetchone()[0]
-        outflow = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE trx_type = 'OUTFLOW';").fetchone()[0]
-
         pln_cost = conn.execute("SELECT COALESCE(SUM(pln_cost), 0) FROM site_utilities_cost;").fetchone()[0]
         genset_cost = conn.execute("SELECT COALESCE(SUM(genset_fuel_cost), 0) FROM site_utilities_cost;").fetchone()[0]
         land_leases_cost = conn.execute("SELECT COALESCE(SUM(annual_lease_cost), 0) FROM site_land_leases;").fetchone()[0]
+        total_opex = pln_cost + genset_cost + land_leases_cost
+
+        inflow = total_paid
+        outflow = total_opex
 
         return {
             "total_revenue_billed_idr": int(total_billed),
@@ -1085,44 +1083,14 @@ def get_transactions(
     limit: int = 100,
     current_user: TokenData = Depends(require_finance_access)
 ):
-    """Tabel 17: financial_transactions - Buku besar mutasi kas masuk (inflow) dan keluar (outflow)."""
-    conn = get_db_connection(read_only=True)
-    try:
-        query = "SELECT * FROM financial_transactions WHERE 1=1"
-        params = []
-        if trx_type:
-            query += " AND trx_type = ?"
-            params.append(trx_type.upper())
-            
-        query += " ORDER BY trx_date DESC, trx_id DESC LIMIT ?"
-        params.append(limit)
-
-        rows = conn.execute(query, params).fetchall()
-        cols = [desc[0] for desc in conn.description]
-        return [dict(zip(cols, r)) for r in rows]
-    finally:
-        conn.close()
+    """Tabel 17: financial_transactions - Decommissioned (mengembalikan list kosong demi kompatibilitas)."""
+    return []
 
 
 @router.get("/api/balitower/finance/chart-of-accounts")
 def get_chart_of_accounts(current_user: TokenData = Depends(require_finance_access)):
-    """Tabel 18: chart_of_accounts - Bagan akun standar akuntansi (COA)."""
-    conn = get_db_connection(read_only=True)
-    try:
-        rows = conn.execute("""
-            SELECT 
-                account_code,
-                account_name,
-                account_type,
-                normal_balance,
-                'Akun standar akuntansi operasional PT Bali Towerindo Sentra Tbk' AS description
-            FROM chart_of_accounts
-            ORDER BY account_code ASC;
-        """).fetchall()
-        cols = [desc[0] for desc in conn.description]
-        return [dict(zip(cols, r)) for r in rows]
-    finally:
-        conn.close()
+    """Tabel 18: chart_of_accounts - Decommissioned (mengembalikan list kosong demi kompatibilitas)."""
+    return []
 
 
 @router.get("/api/balitower/finance/revenue-breakdown")
@@ -1156,13 +1124,25 @@ def get_opex_breakdown(current_user: TokenData = Depends(require_finance_access)
     try:
         query = """
             SELECT 
-                account_code,
-                account_name AS expense_category,
+                '5120' AS account_code,
+                'Beban Listrik PLN' AS expense_category,
                 COUNT(*) AS transaction_count,
-                CAST(SUM(amount) AS BIGINT) AS total_expense
-            FROM financial_transactions
-            WHERE trx_type = 'OUTFLOW'
-            GROUP BY account_code, account_name
+                CAST(COALESCE(SUM(pln_cost), 0) AS BIGINT) AS total_expense
+            FROM site_utilities_cost
+            UNION ALL
+            SELECT 
+                '5130' AS account_code,
+                'Beban Bahan Bakar Minyak Genset' AS expense_category,
+                COUNT(CASE WHEN genset_fuel_cost > 0 THEN 1 END) AS transaction_count,
+                CAST(COALESCE(SUM(genset_fuel_cost), 0) AS BIGINT) AS total_expense
+            FROM site_utilities_cost
+            UNION ALL
+            SELECT 
+                '5110' AS account_code,
+                'Beban Sewa Lahan Menara' AS expense_category,
+                COUNT(*) AS transaction_count,
+                CAST(COALESCE(SUM(annual_lease_cost), 0) AS BIGINT) AS total_expense
+            FROM site_land_leases
             ORDER BY total_expense DESC;
         """
         rows = conn.execute(query).fetchall()

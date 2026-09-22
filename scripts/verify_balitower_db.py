@@ -63,9 +63,9 @@ query_hr_filter = """
 """
 print(conn.execute(query_hr_filter).df().to_string(index=False))
 
-# 3. Scope HR: Flow Absensi Geofencing Site Visit & Lembur
+# 3. Scope HR: Flow Absensi Site Visit & Lembur
 print("\n" + "=" * 80)
-print("--> [3] HR - FLOW ABSENSI SITE VISIT MENARA & VALIDASI GEOFENCING:")
+print("--> [3] HR - FLOW ABSENSI SITE VISIT MENARA & VERIFIKASI LEMBUR:")
 query_hr_att = """
     SELECT 
         a.attendance_id,
@@ -73,7 +73,7 @@ query_hr_att = """
         e.full_name AS teknisi,
         s.site_id,
         s.site_name,
-        a.distance_to_site_m AS jarak_gps_meter,
+        a.attendance_type AS tipe_kehadiran,
         a.overtime_hours AS jam_lembur,
         a.status
     FROM attendances a
@@ -125,12 +125,22 @@ print("\n" + "=" * 80)
 print("--> [6] FINANCE - FLOW LAPORAN PENGELUARAN BIAYA OPERASIONAL SITE (OPEX):")
 query_fin_opex = """
     SELECT 
-        account_name AS kategori_beban,
-        COUNT(*) AS frekuensi_transaksi,
-        CAST(SUM(amount) AS BIGINT) AS total_pengeluaran_idr
-    FROM financial_transactions
-    WHERE trx_type = 'OUTFLOW'
-    GROUP BY account_name
+        'Beban Listrik PLN' AS kategori_beban,
+        COUNT(*) AS frekuensi_tagihan,
+        CAST(COALESCE(SUM(pln_cost), 0) AS BIGINT) AS total_pengeluaran_idr
+    FROM site_utilities_cost
+    UNION ALL
+    SELECT 
+        'Beban BBM Genset' AS kategori_beban,
+        COUNT(CASE WHEN genset_fuel_cost > 0 THEN 1 END) AS frekuensi_tagihan,
+        CAST(COALESCE(SUM(genset_fuel_cost), 0) AS BIGINT) AS total_pengeluaran_idr
+    FROM site_utilities_cost
+    UNION ALL
+    SELECT 
+        'Beban Sewa Lahan Menara' AS kategori_beban,
+        COUNT(*) AS frekuensi_tagihan,
+        CAST(COALESCE(SUM(annual_lease_cost), 0) AS BIGINT) AS total_pengeluaran_idr
+    FROM site_land_leases
     ORDER BY total_pengeluaran_idr DESC;
 """
 print(conn.execute(query_fin_opex).df().to_string(index=False))
@@ -138,15 +148,19 @@ print(conn.execute(query_fin_opex).df().to_string(index=False))
 # 7. Scope Finance: Ringkasan Arus Kas Masuk vs Keluar (Net Cash Flow)
 print("\n" + "=" * 80)
 print("--> [7] FINANCE - ARUS KAS BERSIH (NET CASH FLOW):")
-query_cashflow = """
-    SELECT 
-        trx_type AS jenis_arus_kas,
-        COUNT(*) AS total_transaksi,
-        CAST(SUM(amount) AS BIGINT) AS total_nominal_idr
-    FROM financial_transactions
-    GROUP BY trx_type;
-"""
-print(conn.execute(query_cashflow).df().to_string(index=False))
+paid_inflow = conn.execute("SELECT COALESCE(SUM(total_billed), 0) FROM revenue_invoices WHERE payment_status = 'PAID'").fetchone()[0]
+pln_opex = conn.execute("SELECT COALESCE(SUM(pln_cost), 0) FROM site_utilities_cost").fetchone()[0]
+genset_opex = conn.execute("SELECT COALESCE(SUM(genset_fuel_cost), 0) FROM site_utilities_cost").fetchone()[0]
+land_opex = conn.execute("SELECT COALESCE(SUM(annual_lease_cost), 0) FROM site_land_leases").fetchone()[0]
+total_outflow = pln_opex + genset_opex + land_opex
+net_cash = paid_inflow - total_outflow
+
+df_cf = pd.DataFrame([
+    ("Total Kas Masuk (Invoice Terbayar)", int(paid_inflow)),
+    ("Total Kas Keluar (Beban Utilitas & Lahan)", int(total_outflow)),
+    ("Net Cash Flow Bersih", int(net_cash))
+], columns=["Komponen Arus Kas", "Nominal (IDR)"])
+print(df_cf.to_string(index=False))
 
 # 8. Scope Inventory: Stok Kritis yang Membutuhkan Restock
 print("\n" + "=" * 80)

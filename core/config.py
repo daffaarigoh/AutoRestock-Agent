@@ -53,8 +53,8 @@ class Settings(_BaseSettings):
     API_LLM: str | None = None
     API_KEY_LLM: str | None = None
 
-    # Active AI Model Configuration (Single Model: Nemotron-35)
-    MODEL_NAME: str = "nemotron-35"
+    # Active AI Model Configuration (Single Model: qwen-38)
+    MODEL_NAME: str = "qwen-38"
     MODEL_URL: str = "http://localhost:8001/v1"
     MODEL_API_KEY: str = "dummy-key"
 

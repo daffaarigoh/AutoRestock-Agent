@@ -546,6 +546,68 @@
       gap: 12px;
     }
 
+    .topbar-notif-btn {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      color: #334155;
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .topbar-notif-btn:hover {
+      background: #F1F5F9;
+      border-color: #CBD5E1;
+      color: #0F172A;
+    }
+
+    .topbar-notif-btn.has-pending {
+      background: #EFF6FF;
+      border-color: #BFDBFE;
+      color: #1D4ED8;
+    }
+
+    .notif-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #EF4444;
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 800;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      border-radius: 999px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    }
+
+    .sidebar-badge {
+      background: #EF4444;
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 999px;
+      line-height: 1.3;
+    }
+
+    .admin-app-layout.sidebar-collapsed .sidebar-badge {
+      display: none !important;
+    }
+
     .topbar-divider {
       width: 1px;
       height: 20px;
@@ -1916,6 +1978,13 @@
       </div>
 
       <div class="topbar-right">
+        <button class="topbar-notif-btn" id="adminNotifBtn" onclick="switchAdminTab('requests')" title="Permintaan Alur Kerja dari Pengguna">
+          <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <span class="notif-badge" id="adminNotifBadge" style="display: none;">0</span>
+        </button>
+
         <span class="badge-admin">
           <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
@@ -1943,43 +2012,55 @@
         <nav class="sidebar-nav">
           <div class="nav-group-label">MAIN CONTROL</div>
 
-          <button class="sidebar-nav-item tab-btn active" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')" title="Workflow Orchestrator">
+          <button class="sidebar-nav-item tab-btn active" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')" title="Alur Kerja (Orchestrator)">
             <span class="nav-icon">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </span>
-            <span class="nav-label">Workflow Orchestrator</span>
+            <span class="nav-label">Alur Kerja (Orchestrator)</span>
           </button>
 
-          <button class="sidebar-nav-item tab-btn" id="tabUsersBtn" onclick="switchAdminTab('users')" title="Master Database & Tenant">
+          <button class="sidebar-nav-item tab-btn" id="tabRequestsBtn" onclick="switchAdminTab('requests')" title="Permintaan Alur Kerja Pengguna">
+            <span class="nav-icon">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+              </svg>
+            </span>
+            <span class="nav-label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>Permintaan Alur Kerja</span>
+              <span class="sidebar-badge" id="sidebarRequestBadge" style="display: none;">0</span>
+            </span>
+          </button>
+
+          <button class="sidebar-nav-item tab-btn" id="tabUsersBtn" onclick="switchAdminTab('users')" title="Master Data & Multi-Tenant">
             <span class="nav-icon">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
               </svg>
             </span>
-            <span class="nav-label">Master Database & Tenant</span>
+            <span class="nav-label">Master Data & Multi-Tenant</span>
           </button>
 
-          <button class="sidebar-nav-item tab-btn" id="tabToolsBtn" onclick="switchAdminTab('tools')" title="Agent Tools Registry">
+          <button class="sidebar-nav-item tab-btn" id="tabToolsBtn" onclick="switchAdminTab('tools')" title="Katalog Tools Agen">
             <span class="nav-icon">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
             </span>
-            <span class="nav-label">Agent Tools Registry</span>
+            <span class="nav-label">Katalog Tools Agen</span>
           </button>
 
           <div class="nav-group-label" style="margin-top: 18px;">DOCUMENTATION & SYSTEM</div>
 
-          <button class="sidebar-nav-item tab-btn" id="tabHelpBtn" onclick="switchAdminTab('help')" title="Help Center & Documentation">
+          <button class="sidebar-nav-item tab-btn" id="tabHelpBtn" onclick="switchAdminTab('help')" title="Panduan & Bantuan Operasional">
             <span class="nav-icon">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
             </span>
-            <span class="nav-label">Help Center & Documentation</span>
+            <span class="nav-label">Panduan & Bantuan Operasional</span>
           </button>
         </nav>
 
@@ -1998,6 +2079,17 @@
         <!-- Ambient Spotlight Lighting Layer (Linear / Raycast Style) -->
         <div class="ambient-spotlight-layer" id="ambientSpotlightLayer" aria-hidden="true"></div>
 
+        <!-- AI Engine Offline Alert Banner (B-1 Hardening) -->
+        <div id="aiEngineOfflineBanner" style="display: none; background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 8px; color: #991B1B; padding: 12px 18px; margin-bottom: 20px; font-size: 13px; font-weight: 500; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#DC2626"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div>
+              <strong style="font-weight: 700;">Peringatan AI Engine Offline:</strong> Gateway koneksi LLM saat ini tidak dapat dijangkau (kemungkinan kuota/budget API habis atau jaringan terputus). Fitur reasoning otonom dan penyusun alur kerja terdegradasi sementara.
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="checkAdminAiHealth()" style="background: #FFFFFF; color: #991B1B; border-color: #FCA5A5; white-space: nowrap;">Cek Ulang</button>
+        </div>
+
         <!-- ========================================== -->
         <!-- TAB 1: WORKFLOW ORCHESTRATOR               -->
         <!-- ========================================== -->
@@ -2010,16 +2102,16 @@
                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
               </div>
               <div>
-                <div class="wf-stat-num" id="wfTotalStat">14</div>
+                <div class="wf-stat-num" id="wfTotalStat">--</div>
                 <div class="wf-stat-label">Active Workflow Pipelines</div>
               </div>
             </div>
             <div class="wf-stat-card">
-              <div class="wf-stat-icon" style="background: #ECFDF5; color: #059669;">
+              <div class="wf-stat-icon" id="aiStatusIcon" style="background: #ECFDF5; color: #059669;">
                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </div>
               <div>
-                <div class="wf-stat-num" style="color: #059669;">Autonomous</div>
+                <div class="wf-stat-num" id="aiStatusText" style="color: #059669;">Autonomous</div>
                 <div class="wf-stat-label">AI Execution Engine Status</div>
               </div>
             </div>
@@ -2105,12 +2197,20 @@
                 </h2>
                 <p class="card-subtitle" style="margin-bottom: 0;">Autonomous execution pipelines configured per tenant division.</p>
               </div>
-              <button class="btn btn-secondary" onclick="loadWorkflows()" style="display: inline-flex; align-items: center; gap: 6px;">
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                <span>Refresh</span>
-              </button>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-secondary" onclick="loadWorkflows()" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                  <span>Refresh</span>
+                </button>
+                <button class="btn btn-sm" onclick="confirmResetWorkflowsToDefault()" style="background: #F0FDF4; color: #059669; border: 1px solid #BBFBCE; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#DCFCE7'" onmouseout="this.style.background='#F0FDF4'" title="Pulihkan workflow yang hilang dari berkas JSON referensi (TIDAK menghapus workflow yang sudah ada)">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Pulihkan Workflow</span>
+                </button>
+              </div>
             </div>
 
             <!-- Filter Workflow by Tenant Pills -->
@@ -2128,6 +2228,75 @@
             </div>
           </div>
         </div>
+
+    <!-- ========================================== -->
+    <!-- TAB: PERMINTAAN ALUR KERJA (USER REQUESTS) -->
+    <!-- ========================================== -->
+    <div id="sectionRequests" style="display: none;">
+      <!-- KPI Stats -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Permintaan</div>
+          <div class="kpi-value" id="kpiReqTotal">0</div>
+          <div class="kpi-sub">Dari seluruh pengguna</div>
+        </div>
+        <div class="kpi-card" style="border-left: 3px solid #F59E0B;">
+          <div class="kpi-label">Menunggu Review</div>
+          <div class="kpi-value" id="kpiReqPending" style="color: #D97706;">0</div>
+          <div class="kpi-sub">Memerlukan tindakan Admin</div>
+        </div>
+        <div class="kpi-card" style="border-left: 3px solid #10B981;">
+          <div class="kpi-label">Selesai Dikompilasi</div>
+          <div class="kpi-value" id="kpiReqCompleted" style="color: #059669;">0</div>
+          <div class="kpi-sub">Alur kerja telah aktif</div>
+        </div>
+        <div class="kpi-card" style="border-left: 3px solid #94A3B8;">
+          <div class="kpi-label">Ditolak / Ditutup</div>
+          <div class="kpi-value" id="kpiReqRejected" style="color: #64748B;">0</div>
+          <div class="kpi-sub">Tidak relevan / ditolak</div>
+        </div>
+      </div>
+
+      <!-- Main Request Management Card -->
+      <div class="admin-card" style="margin-top: 16px;">
+        <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 16px; font-weight: 800; color: #0F172A; margin: 0;">Daftar Usulan Alur Kerja (Workflow Requests)</h2>
+            <p style="font-size: 12.5px; color: #64748B; margin: 4px 0 0 0;">
+              Permintaan dari pengguna saat instruksi operasional belum memiliki alur kerja baku.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="filter-group">
+              <select id="filterReqStatus" class="form-select" onchange="filterWorkflowRequests()" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFFFFF; font-weight: 600;">
+                <option value="ALL">Semua Status</option>
+                <option value="PENDING" selected>Menunggu Review</option>
+                <option value="COMPLETED">Selesai</option>
+                <option value="REJECTED">Ditolak</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="loadWorkflowRequests()" title="Muat Ulang Data">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              <span>Refresh</span>
+            </button>
+            <button class="btn btn-sm" onclick="confirmClearAllWorkflowRequests()" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'" title="Bersihkan Seluruh Usulan Alur Kerja">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Bersihkan Semua</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-card-body" style="padding: 0;">
+          <div id="requestsTableContainer" style="overflow-x: auto;">
+            <!-- Rendered by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ========================================== -->
     <!-- TAB 2: DATABASE PENGGUNA & INVENTARIS      -->
@@ -2261,7 +2430,7 @@
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Building Block Kategori</div>
-          <div class="kpi-value">4 Kategori</div>
+          <div class="kpi-value" id="kpiTotalCategories">5 Kategori</div>
           <div class="kpi-sub">Komponen Alur Kerja</div>
         </div>
         <div class="kpi-card">
@@ -2836,7 +3005,7 @@
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="closeAdminStockModal()">Cancel</button>
+        <button class="btn btn-secondary" onclick="closeAdminStockModal()">Batal</button>
         <button class="btn btn-primary" id="btnSaveAdminStock" onclick="saveAdminStockOverride()" style="display: inline-flex; align-items: center; gap: 6px;">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
           <span>Save Changes</span>
@@ -2853,17 +3022,17 @@
           <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         <div>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Clear All PR & PO Documents?</h3>
-          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">This action resets all pending PR drafts and PO logs.</p>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Bersihkan Semua Dokumen PR & PO?</h3>
+          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">Tindakan ini mereset seluruh draf PR dan riwayat PO.</p>
         </div>
       </div>
       <p style="font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 20px;">
-        All pending <strong>Purchase Requisition (PR)</strong>, <strong>Purchase Order (PO)</strong>, and temporary PDF files will be purged from the database.
+        Seluruh data antrean <strong>Purchase Requisition (PR)</strong>, <strong>Purchase Order (PO)</strong>, dan berkas PDF sementara akan dibersihkan dari database.
       </p>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalClearAllPrPo').style.display='none'">Cancel</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalClearAllPrPo').style.display='none'">Batal</button>
         <button class="btn" onclick="executeClearAllPrPo()" style="background: #DC2626; color: white; border: none; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-          <span>Yes, Clear Now</span>
+          <span>Ya, Bersihkan Sekarang</span>
         </button>
       </div>
     </div>
@@ -2873,7 +3042,7 @@
   <div class="modal-overlay" id="modalUserCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
     <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 460px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 id="modalUserTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Manage User Account</h3>
+        <h3 id="modalUserTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Kelola Akun Pengguna</h3>
         <button onclick="document.getElementById('modalUserCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
       </div>
       <input type="hidden" id="userCrudUserId">
@@ -2904,8 +3073,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalUserCrud').style.display='none'">Cancel</button>
-        <button class="btn btn-primary" onclick="submitUserCrud()">Save User</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalUserCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="submitUserCrud()">Simpan Pengguna</button>
       </div>
     </div>
   </div>
@@ -2957,8 +3126,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalMaterialCrud').style.display='none'">Cancel</button>
-        <button class="btn btn-primary" onclick="submitMaterialCrud()">Save Material</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalMaterialCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="submitMaterialCrud()">Simpan Material</button>
       </div>
     </div>
   </div>
@@ -3014,8 +3183,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalEmployeeCrud').style.display='none'">Cancel</button>
-        <button class="btn btn-primary" onclick="submitEmployeeCrud()" style="background: #047857; border-color: #047857;">Save Employee</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalEmployeeCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="submitEmployeeCrud()" style="background: #047857; border-color: #047857;">Simpan Karyawan</button>
       </div>
     </div>
   </div>
@@ -3070,8 +3239,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalInvoiceCrud').style.display='none'">Cancel</button>
-        <button class="btn btn-primary" onclick="submitInvoiceCrud()" style="background: #C2410C; border-color: #C2410C;">Save Invoice</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalInvoiceCrud').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="submitInvoiceCrud()" style="background: #C2410C; border-color: #C2410C;">Simpan Invoice</button>
       </div>
     </div>
   </div>
@@ -3092,9 +3261,9 @@
         Are you sure you want to permanently delete this record from the database?
       </p>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalUniversalDelete').style.display='none'">Cancel</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalUniversalDelete').style.display='none'">Batal</button>
         <button class="btn" id="btnConfirmDeleteAction" style="background: #DC2626; color: white; border: none; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
-          Yes, Delete Now
+          Ya, Hapus Sekarang
         </button>
       </div>
     </div>
@@ -3108,25 +3277,26 @@
   </div>
 
   <script>
-    // Auth Validation
-    if (localStorage.getItem('access_token')) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('tenant_id');
-        localStorage.removeItem('username');
+    function getAdminToken() {
+      return sessionStorage.getItem('access_token') || localStorage.getItem('access_token') || sessionStorage.getItem('token') || localStorage.getItem('token') || '';
     }
 
-    const token = sessionStorage.getItem('access_token');
-    const role = sessionStorage.getItem('role');
+    const token = getAdminToken();
+    const rawRole = (sessionStorage.getItem('role') || localStorage.getItem('role') || '').toUpperCase();
+    const rawUser = (sessionStorage.getItem('username') || localStorage.getItem('username') || '').toLowerCase();
     
-    if (!token || role !== 'ADMIN') {
+    if (!token || (rawRole !== 'ADMIN' && rawUser !== 'admin')) {
       window.location.href = '/static/login.html';
     }
 
-    document.getElementById('usernameDisplay').textContent = sessionStorage.getItem('username') || 'admin';
+    const uDisp = document.getElementById('usernameDisplay');
+    if (uDisp) {
+      uDisp.textContent = sessionStorage.getItem('username') || localStorage.getItem('username') || 'admin';
+    }
 
     let allLoadedItems = [];
     let selectedTenantFilter = 'ALL';
+    let currentAdminHelpSection = 'db';
 
     function formatCurrency(val) {
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
@@ -3165,24 +3335,28 @@
       }
     });
 
-    // Switch Tabs between Workflows, Users Database, Tools Registry, and Help Guide
+    // Switch Tabs between Workflows, Requests, Users Database, Tools Registry, and Help Guide
     function switchAdminTab(tabName) {
       const btnWf = document.getElementById('tabWorkflowsBtn');
+      const btnRequests = document.getElementById('tabRequestsBtn');
       const btnUsers = document.getElementById('tabUsersBtn');
       const btnTools = document.getElementById('tabToolsBtn');
       const btnHelp = document.getElementById('tabHelpBtn');
       const secWf = document.getElementById('sectionWorkflows');
+      const secRequests = document.getElementById('sectionRequests');
       const secUsers = document.getElementById('sectionUsers');
       const secTools = document.getElementById('sectionTools');
       const secHelp = document.getElementById('sectionHelp');
       const topbarTitle = document.getElementById('topbarCurrentTitle');
 
       if (btnWf) btnWf.classList.remove('active');
+      if (btnRequests) btnRequests.classList.remove('active');
       if (btnUsers) btnUsers.classList.remove('active');
       if (btnTools) btnTools.classList.remove('active');
       if (btnHelp) btnHelp.classList.remove('active');
 
       if (secWf) secWf.style.display = 'none';
+      if (secRequests) secRequests.style.display = 'none';
       if (secUsers) secUsers.style.display = 'none';
       if (secTools) secTools.style.display = 'none';
       if (secHelp) secHelp.style.display = 'none';
@@ -3195,6 +3369,11 @@
         if (secWf) secWf.style.display = 'block';
         if (topbarTitle) topbarTitle.textContent = 'Workflow Orchestrator';
         loadWorkflows();
+      } else if (tabName === 'requests') {
+        if (btnRequests) btnRequests.classList.add('active');
+        if (secRequests) secRequests.style.display = 'block';
+        if (topbarTitle) topbarTitle.textContent = 'Permintaan Alur Kerja';
+        loadWorkflowRequests();
       } else if (tabName === 'users') {
         if (btnUsers) btnUsers.classList.add('active');
         if (secUsers) secUsers.style.display = 'block';
@@ -3236,53 +3415,40 @@
             desc: 'Verifikasi kedatangan barang PO di gudang regional dan sinkronisasi penambahan saldo fisik DuckDB.',
             instruction: 'Verifikasi kedatangan barang Purchase Order yang tiba di gudang, catat penerimaan aktual, update status DELIVERED, dan tambahkan stok ke saldo gudang.',
             examples: [
-              'PO-2026-001 sudah sampai di gudang, tolong catat penerimaan barangnya'
+              'Catat penerimaan PO/BLT/2026/09/031 untuk semua gudang'
             ]
           }
         ]
       },
       {
         category: 'HR',
-        categoryLabel: 'Divisi HR (Schema B)',
+        categoryLabel: 'Divisi HR & Lapangan (Schema B)',
         flows: [
           {
-            id: 'WF-08BEBD',
+            id: 'WF-B02',
+            name: 'Filter & Screening Pelamar Teknisi K3',
+            desc: 'Menyaring kandidat teknisi lapangan secara dinamis berdasarkan kualifikasi posisi dan sertifikasi K3 (TKPK Tingkat 1, TKPK Tingkat 2, K3 Umum, atau seluruh pelamar).',
+            instruction: 'Filter dan seleksi kandidat pelamar teknisi secara dinamis sesuai kriteria sertifikasi K3 (TKPK Tingkat 1, TKPK Tingkat 2, K3 Umum) atau seluruh kandidat sesuai permintaan pengguna.',
+            examples: [
+              'Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 2'
+            ]
+          },
+          {
+            id: 'WF-B03',
             name: 'Pengajuan Cuti Teknisi & Dokumen PDF HR',
             desc: 'Pencatatan permohonan cuti teknisi, pemotongan kuota cuti tahunan, dan pengiriman notifikasi PDF.',
             instruction: 'Catat permohonan cuti karyawan ke dalam database, cetak formulir resmi cuti format PDF dengan kop surat PT Bali Towerindo Sentra Tbk, lalu kirimkan notifikasi dan lampiran PDF ke email HR.',
             examples: [
-              'Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok',
-              'Buat formulir permohonan cuti rigger dan terbitkan dokumen PDF resmi'
+              'Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok'
             ]
           },
           {
-            id: 'WF-847DA5',
+            id: 'WF-B04',
             name: 'Audit Cuti Pending & Email Otorisasi HR',
             desc: 'Pemeriksaan pengajuan cuti berstatus pending dan pengiriman rekapitulasi ke email manajer.',
             instruction: 'Audit seluruh data permohonan cuti karyawan yang masih berstatus pending approval di database. Tampilkan rincian daftar pengajuan cuti yang belum disetujui di chat, lalu kirimkan rekapitulasi ke email HR agar dapat diajukan persetujuan langsung.',
             examples: [
-              'Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR',
-              'Tampilkan seluruh permohonan cuti karyawan yang belum disetujui'
-            ]
-          },
-          {
-            id: 'WF-002',
-            name: 'Cek Absensi & Lembur Teknisi',
-            desc: 'Audit absensi kunjungan site menara dengan validasi geofencing GPS dan kalkulasi jam lembur.',
-            instruction: 'Tarik data absensi teknisi lapangan dengan validasi geofencing GPS dan kalkulasi biaya lembur.',
-            examples: [
-              'Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi bulan ini',
-              'Cek validasi geofencing presensi teknisi lapangan minggu ini'
-            ]
-          },
-          {
-            id: 'WF-003',
-            name: 'Filter Pelamar Rigger K3 TKPK',
-            desc: 'Menyaring kandidat rigger tower dengan sertifikasi TKPK 1/2 dan evaluasi medis ketinggian.',
-            instruction: 'Filter kandidat rigger berdasarkan sertifikasi TKPK 1/2 dan tes kesehatan.',
-            examples: [
-              'Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 1',
-              'Tampilkan pelamar rigger yang lolos uji medis kelayakan bekerja di ketinggian'
+              'Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR'
             ]
           }
         ]
@@ -3292,43 +3458,30 @@
         categoryLabel: 'Divisi Finance (Schema C)',
         flows: [
           {
-            id: 'WF-3959D6',
-            name: 'Pendaftaran Klien Operator & Kontrak Sewa MLA',
-            desc: 'Pendaftaran operator telekomunikasi baru, kontrak sewa menara, dan email otorisasi persetujuan.',
-            instruction: 'Susun draf pendaftaran operator klien baru dan kontrak sewa menara (MLA) ke dalam basis data dengan status PENDING_APPROVAL. Hitung estimasi tagihan invoice perdana dan kirimkan email notifikasi ke manajer keuangan berisikan rincian kontrak serta tombol otorisasi persetujuan.',
-            examples: [
-              'Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan',
-              'Susun draft Master Lease Agreement operator Indosat dan kirim otorisasi ke email finance manager'
-            ]
-          },
-          {
-            id: 'WF-004',
+            id: 'WF-C01',
             name: 'Laporan Pendapatan Sewa Menara',
             desc: 'Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, Indosat, XL, Smartfren).',
             instruction: 'Tarik data invoice sewa menara per operator dan status pembayarannya.',
             examples: [
-              'Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya',
-              'Berapa total tagihan invoice operator yang jatuh tempo bulan ini?'
+              'Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya'
             ]
           },
           {
-            id: 'WF-005',
+            id: 'WF-C02',
             name: 'Audit Beban Listrik PLN & Sewa Lahan',
             desc: 'Laporan pengeluaran operasional utilitas listrik PLN, BBM genset, dan sewa lahan site tower.',
             instruction: 'Analisis beban operasional per site mencakup tagihan PLN dan jatuh tempo sewa tanah.',
             examples: [
-              'Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat',
-              'Tampilkan beban utilitas genset dan tagihan listrik site tertinggi'
+              'Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat'
             ]
           },
           {
-            id: 'WF-006',
-            name: 'Ringkasan Arus Kas (Cash Flow)',
-            desc: 'Laporan arus kas masuk vs keluar operasional dan posisi saldo kas bersih.',
-            instruction: 'Hitung net cash flow dari transaksi inflow dan outflow.',
+            id: 'WF-C04',
+            name: 'Pendaftaran Klien Operator & Kontrak Sewa MLA',
+            desc: 'Pendaftaran operator telekomunikasi baru dan draf kontrak sewa menara (MLA). Mendukung penyimpanan draf database status PENDING_APPROVAL serta otorisasi pengiriman berkas faktur via email.',
+            instruction: 'Susun draf pendaftaran operator klien baru dan kontrak sewa menara (MLA) ke dalam basis data dengan status PENDING_APPROVAL. Jika pengguna menyertakan alamat email, kirimkan dokumen faktur perdana dan tombol otorisasi persetujuan ke email tersebut. Jika tidak, berikan klarifikasi apakah berkas cukup disimpan atau dikirimkan ke email.',
             examples: [
-              'Tampilkan ringkasan arus kas masuk dan keluar beserta posisi saldo bersih terkini',
-              'Berapa saldo kas operasional saat ini?'
+              'Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan dan kirimkan ke email finance.mgr@balitower.co.id'
             ]
           }
         ]
@@ -3343,8 +3496,7 @@
             desc: 'Pemeriksaan akun pengguna, wewenang role, dan batasan tenant divisi.',
             instruction: 'Periksa akun yang sedang login dan tampilkan detail hak akses serta batasan divisi.',
             examples: [
-              'Tampilkan informasi profil akun dan batasan hak akses divisi',
-              'Audit wewenang pengguna usera, userb, dan userc'
+              'Tampilkan informasi profil akun dan batasan hak akses divisi'
             ]
           },
           {
@@ -3353,8 +3505,7 @@
             desc: 'Ringkasan status operasional server, versi aplikasi, DuckDB, dan koneksi AI gateway.',
             instruction: 'Cek status operasional seluruh modul sistem BaliTower Ops.',
             examples: [
-              'Cek status kesehatan seluruh modul sistem, server API, dan koneksi AI gateway',
-              'Tampilkan status server dan koneksi database'
+              'status kesehatan sistem saat ini'
             ]
           },
           {
@@ -3363,15 +3514,14 @@
             desc: 'Panduan SOP operasional perusahaan, navigasi modul, dan kontak darurat NOC/IT.',
             instruction: 'Tampilkan panduan operasional perusahaan dan kontak darurat lintas divisi.',
             examples: [
-              'Tampilkan panduan operasional perusahaan dan kontak darurat helpdesk',
-              'Buka kontak bantuan teknis NOC dan tower support'
+              'Tampilkan panduan operasional perusahaan dan kontak darurat helpdesk'
             ]
           }
         ]
       }
     ];
 
-    let currentAdminHelpSection = 'db';
+    currentAdminHelpSection = 'db';
 
     function switchAdminHelpSection(subSec) {
       currentAdminHelpSection = subSec;
@@ -3522,7 +3672,7 @@
           };
 
           tools.forEach(t => {
-            const name = typeof t === 'string' ? t : (t.name || t.tool || '');
+            const name = typeof t === 'string' ? t : (t.tool_name || t.name || t.tool || '');
             const desc = typeof t === 'string' ? (TOOL_HELP_DESCRIPTIONS[name] || 'Fungsi operasional otomatis AI Agent.') : (t.description || TOOL_HELP_DESCRIPTIONS[name] || 'Fungsi operasional otomatis AI Agent.');
             const item = { name, desc };
 
@@ -3742,7 +3892,7 @@
                 <div class="admin-prompts-list">
           `;
 
-          (f.examples || []).forEach(ex => {
+          (f.examples || []).slice(0, 1).forEach(ex => {
             const safeEx = escapeHtml(ex).replace(/'/g, "\\'");
             const safeWfName = escapeHtml(f.name).replace(/'/g, "\\'");
             html += `
@@ -3931,22 +4081,29 @@
         const url = id ? `/api/auth/admin/workflows/${id}` : '/api/auth/admin/workflows';
         const method = id ? 'PUT' : 'POST';
         
+        const payload = { 
+          name: name, 
+          description: desc, 
+          business_instruction: instruction,
+          tenant_id: tenantId 
+        };
+        if (!id && window.activeResolvingRequestId) {
+          payload.resolving_request_id = window.activeResolvingRequestId;
+        }
+
         const res = await fetch(url, {
           method: method,
           headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ 
-            name: name, 
-            description: desc, 
-            business_instruction: instruction,
-            tenant_id: tenantId 
-          })
+          body: JSON.stringify(payload)
         });
 
         if (res.ok) {
           const data = await res.json();
+          window.activeResolvingRequestId = null;
+          loadWorkflowRequests();
           const targetDisplay = (data.tenant_id || tenantId);
           document.getElementById('toastMsg').textContent = `Workflow ${id ? 'berhasil diperbarui' : 'berhasil disusun'}: ${data.workflow_id || data.id || name} (${targetDisplay})`;
           toast.classList.add('show');
@@ -4111,6 +4268,7 @@
           if (document.getElementById('countWfTenantC')) document.getElementById('countWfTenantC').textContent = countFinance;
 
           // Update top quick stats banner
+          if (document.getElementById('wfTotalStat')) document.getElementById('wfTotalStat').textContent = countTotal;
           if (document.getElementById('wfStatTotalCount')) document.getElementById('wfStatTotalCount').textContent = countTotal;
           if (document.getElementById('wfStatInventoryCount')) document.getElementById('wfStatInventoryCount').textContent = countInventory;
           if (document.getElementById('wfStatHrCount')) document.getElementById('wfStatHrCount').textContent = countHr;
@@ -4281,6 +4439,345 @@
       }
     }
 
+    // ==============================================================================
+    // WORKFLOW REQUESTS (USER-TO-ADMIN NOTIFICATIONS & 1-CLICK COMPILATION)
+    // ==============================================================================
+    let allWorkflowRequests = [];
+
+    async function loadWorkflowRequests() {
+      const token = getAdminToken();
+      if (!token) return;
+
+      try {
+        const res = await fetch(`/api/auth/admin/workflow-requests?t=${Date.now()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        allWorkflowRequests = data.requests || [];
+        const pendingCount = data.pending_count || 0;
+
+        // Update notification badges
+        const topbarBadge = document.getElementById('adminNotifBadge');
+        const topbarBtn = document.getElementById('adminNotifBtn');
+        const sidebarBadge = document.getElementById('sidebarRequestBadge');
+
+        if (topbarBadge && sidebarBadge) {
+          if (pendingCount > 0) {
+            topbarBadge.textContent = pendingCount;
+            topbarBadge.style.display = 'inline-flex';
+            if (topbarBtn) topbarBtn.classList.add('has-pending');
+            sidebarBadge.textContent = pendingCount;
+            sidebarBadge.style.display = 'inline-block';
+          } else {
+            topbarBadge.style.display = 'none';
+            if (topbarBtn) topbarBtn.classList.remove('has-pending');
+            sidebarBadge.style.display = 'none';
+          }
+        }
+
+        // Update KPIs
+        const elTotal = document.getElementById('kpiReqTotal');
+        const elPending = document.getElementById('kpiReqPending');
+        const elCompleted = document.getElementById('kpiReqCompleted');
+        const elRejected = document.getElementById('kpiReqRejected');
+
+        if (elTotal) elTotal.textContent = allWorkflowRequests.length;
+        if (elPending) elPending.textContent = pendingCount;
+        if (elCompleted) elCompleted.textContent = allWorkflowRequests.filter(r => r.status === 'COMPLETED').length;
+        if (elRejected) elRejected.textContent = allWorkflowRequests.filter(r => r.status === 'REJECTED').length;
+
+        renderWorkflowRequestsList();
+      } catch (err) {
+        console.error("Gagal memuat permintaan alur kerja:", err);
+      }
+    }
+
+    function filterWorkflowRequests() {
+      renderWorkflowRequestsList();
+    }
+
+    function renderWorkflowRequestsList() {
+      const container = document.getElementById('requestsTableContainer');
+      if (!container) return;
+
+      const filterStatus = document.getElementById('filterReqStatus')?.value || 'ALL';
+      let filtered = allWorkflowRequests;
+      if (filterStatus !== 'ALL') {
+        filtered = allWorkflowRequests.filter(r => r.status === filterStatus);
+      }
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 24px; color: #64748B;">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" style="margin: 0 auto 12px; display: block;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <div style="font-weight: 700; font-size: 14px; color: #334155; margin-bottom: 4px;">Tidak Ada Permintaan Alur Kerja</div>
+            <div style="font-size: 12.5px;">Tidak ditemukan usulan dengan kriteria status yang dipilih saat ini.</div>
+          </div>
+        `;
+        return;
+      }
+
+      const rows = filtered.map(req => {
+        let statusBadge = '';
+        if (req.status === 'PENDING') {
+          statusBadge = '<span class="badge" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; font-weight: 700;">Menunggu Review</span>';
+        } else if (req.status === 'COMPLETED') {
+          statusBadge = '<span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700;">Selesai</span>';
+        } else {
+          statusBadge = '<span class="badge" style="background: #F1F5F9; color: #64748B; border: 1px solid #CBD5E1; font-weight: 700;">Ditolak</span>';
+        }
+
+        let tenantBadgeClass = 'badge-primary';
+        if (req.tenant_id === 'HR') tenantBadgeClass = 'badge-warning';
+        if (req.tenant_id === 'FINANCE') tenantBadgeClass = 'badge-success';
+
+        let actionHtml = '';
+        if (req.status === 'PENDING') {
+          actionHtml = `
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button class="btn btn-primary btn-sm" onclick="createWorkflowFromRequest('${req.id}')" title="Buat alur kerja dari usulan ini">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Buat Workflow</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="updateWorkflowRequestStatus('${req.id}', 'REJECTED')" title="Tolak usulan">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                <span>Tolak</span>
+              </button>
+              <button class="btn btn-sm" onclick="deleteSingleWorkflowRequest('${req.id}')" title="Hapus usulan ini" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+          `;
+        } else {
+          actionHtml = `
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button class="btn btn-secondary btn-sm" onclick="updateWorkflowRequestStatus('${req.id}', 'PENDING')" title="Buka kembali permintaan">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>Buka Kembali</span>
+              </button>
+              <button class="btn btn-sm" onclick="deleteSingleWorkflowRequest('${req.id}')" title="Hapus usulan ini" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <tr style="border-bottom: 1px solid #E2E8F0; transition: background 0.15s ease;">
+            <td style="padding: 14px 16px; vertical-align: top; width: 140px;">
+              <span style="font-family: var(--font-mono); font-weight: 700; font-size: 11.5px; color: #2563EB; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(req.id)}</span>
+              <div style="font-size: 11px; color: #64748B; margin-top: 4px;">${escapeHtml(req.created_at_str || req.created_at || '-')}</div>
+            </td>
+            <td style="padding: 14px 16px; vertical-align: top; width: 140px;">
+              <div style="font-weight: 700; font-size: 13px; color: #0F172A;">${escapeHtml(req.username)}</div>
+              <span class="badge ${tenantBadgeClass}" style="margin-top: 4px; font-size: 10px;">${escapeHtml(req.tenant_id)}</span>
+            </td>
+            <td style="padding: 14px 16px; vertical-align: top;">
+              ${req.title ? `<div style="font-size: 13.5px; font-weight: 700; color: #0F172A; margin-bottom: 3px;">${escapeHtml(req.title)}</div>` : ''}
+              <div style="font-size: 12.5px; font-weight: 500; color: #334155; line-height: 1.5;">${escapeHtml(req.prompt)}</div>
+              ${req.notes ? `<div style="font-size: 11.5px; color: #64748B; margin-top: 4px; background: #F8FAFC; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0;">Catatan Pengguna: ${escapeHtml(req.notes)}</div>` : ''}
+              ${req.resolved_workflow_id ? `<div style="font-size: 11.5px; color: #059669; font-weight: 600; margin-top: 4px;">Workflow Aktif: ${escapeHtml(req.resolved_workflow_id)}</div>` : ''}
+            </td>
+            <td style="padding: 14px 16px; vertical-align: top; width: 130px; text-align: center;">
+              ${statusBadge}
+            </td>
+            <td style="padding: 14px 16px; vertical-align: top; width: 220px;">
+              ${actionHtml}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <table class="data-table" style="width: 100%; border-collapse: collapse; margin: 0;">
+          <thead>
+            <tr style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0; text-align: left;">
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">ID & Waktu</th>
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Pemohon</th>
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Instruksi yang Diminta</th>
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; text-align: center;">Status</th>
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Aksi Cepat</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function createWorkflowFromRequest(reqId) {
+      const req = allWorkflowRequests.find(r => r.id === reqId);
+      if (!req) return;
+
+      // 1. Switch to workflows tab
+      switchAdminTab('workflows');
+
+      // 2. Populate form
+      const elWfId = document.getElementById('wfId');
+      const elWfName = document.getElementById('wfName');
+      const elWfDesc = document.getElementById('wfDesc');
+      const elWfInstruction = document.getElementById('wfInstruction');
+      const elWfTenantId = document.getElementById('wfTenantId');
+      const elFormTitle = document.getElementById('formTitleText');
+      const elBtnSubmit = document.getElementById('btnSubmitText');
+      const elCancelBtn = document.getElementById('cancelEditBtn');
+
+      if (elWfId) elWfId.value = ''; // New workflow
+      
+      const promptClean = (req.prompt || '').trim();
+      const shortTitle = promptClean.length > 40 ? promptClean.substring(0, 37) + '...' : promptClean;
+      if (elWfName) elWfName.value = 'Alur Kerja: ' + shortTitle;
+      if (elWfDesc) elWfDesc.value = `Disusun berdasarkan permohonan ${req.username} (${req.tenant_id}).`;
+      if (elWfInstruction) elWfInstruction.value = promptClean;
+
+      const tid = (req.tenant_id || 'ALL').toUpperCase();
+      if (elWfTenantId) {
+        if (['FINANCE', 'TENANT_C', 'USERC', 'SCHEMA_C'].includes(tid)) {
+          elWfTenantId.value = 'FINANCE';
+        } else if (['INVENTORY', 'TENANT_A', 'USERA', 'SCHEMA_A'].includes(tid)) {
+          elWfTenantId.value = 'INVENTORY';
+        } else if (['HR', 'TENANT_B', 'USERB', 'SCHEMA_B'].includes(tid)) {
+          elWfTenantId.value = 'HR';
+        } else {
+          elWfTenantId.value = 'ALL';
+        }
+      }
+
+      if (elFormTitle) elFormTitle.textContent = `Penyusunan Alur Kerja (Dari Permintaan ${req.id})`;
+      if (elBtnSubmit) elBtnSubmit.textContent = 'Kompilasi & Simpan Workflow';
+      if (elCancelBtn) elCancelBtn.style.display = 'inline-flex';
+
+      window.activeResolvingRequestId = req.id;
+
+      // Scroll smoothly to form
+      const formCard = document.querySelector('.workflow-form-card') || document.getElementById('workflowFormCard');
+      if (formCard) formCard.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    async function updateWorkflowRequestStatus(reqId, newStatus) {
+      const token = getAdminToken();
+      if (!token) return;
+
+      try {
+        const res = await fetch(`/api/auth/admin/workflow-requests/${reqId}/status`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (res.ok) {
+          await loadWorkflowRequests();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert("Gagal memperbarui status: " + (err.detail || "Kesalahan server"));
+        }
+      } catch (e) {
+        alert("Gagal menghubungi server: " + e.message);
+      }
+    }
+
+    function confirmClearAllWorkflowRequests() {
+      triggerUniversalDelete(
+        'Bersihkan Semua Usulan Alur Kerja',
+        'Tindakan ini akan mengosongkan seluruh antrean usulan alur kerja.',
+        'Apakah Anda yakin ingin menghapus seluruh usulan alur kerja dari pengguna? Data usulan dan statusnya akan dibersihkan agar Anda dapat menguji kembali alur pengajuan dari sisi pengguna dari kondisi awal.',
+        async () => {
+          const token = getAdminToken();
+          if (!token) return;
+          try {
+            const res = await fetch('/api/auth/admin/workflow-requests', {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              showToast(data.message || 'Semua usulan alur kerja berhasil dibersihkan!');
+              await loadWorkflowRequests();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              alert('Gagal membersihkan usulan: ' + (err.detail || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            alert('Kesalahan jaringan: ' + e.message);
+          }
+        }
+      );
+    }
+
+    function deleteSingleWorkflowRequest(reqId) {
+      triggerUniversalDelete(
+        `Hapus Usulan ${reqId}`,
+        'Usulan alur kerja ini akan dihapus secara permanen.',
+        `Apakah Anda yakin ingin menghapus usulan <strong>${escapeHtml(reqId)}</strong>?`,
+        async () => {
+          const token = getAdminToken();
+          if (!token) return;
+          try {
+            const res = await fetch(`/api/auth/admin/workflow-requests/${encodeURIComponent(reqId)}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              showToast(data.message || `Usulan ${reqId} berhasil dihapus!`);
+              await loadWorkflowRequests();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              alert('Gagal menghapus usulan: ' + (err.detail || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            alert('Kesalahan jaringan: ' + e.message);
+          }
+        }
+      );
+    }
+
+    function confirmResetWorkflowsToDefault() {
+      triggerUniversalDelete(
+        'Pulihkan Alur Kerja dari File Referensi',
+        'Tindakan ini akan menambahkan kembali alur kerja yang hilang dari berkas workflows.json.',
+        'Alur kerja yang hilang dari database akan dipulihkan dari berkas JSON referensi. <strong>Alur kerja yang sudah ada tidak akan diubah atau dihapus.</strong>',
+        async () => {
+          const token = getAdminToken();
+          if (!token) return;
+          try {
+            const res = await fetch('/api/auth/admin/workflows/reset-defaults', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              showToast(data.message || 'Alur kerja berhasil dikembalikan ke standar awal!');
+              await loadWorkflows();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              alert('Gagal me-reset alur kerja: ' + (err.detail || 'Terjadi kesalahan'));
+            }
+          } catch (e) {
+            alert('Kesalahan jaringan: ' + e.message);
+          }
+        }
+      );
+    }
+
     // ==========================================
     // AGENT TOOLS REGISTRY LOGIC
     // ==========================================
@@ -4292,7 +4789,13 @@
         });
         const data = await res.json();
         allLoadedTools = data.available_tools || [];
-        document.getElementById('kpiTotalTools').textContent = allLoadedTools.length;
+        if (document.getElementById('kpiTotalTools')) {
+          document.getElementById('kpiTotalTools').textContent = allLoadedTools.length;
+        }
+        const categories = new Set(allLoadedTools.map(t => getToolCategory(typeof t === 'string' ? t : (t.tool_name || t.name || t.tool || ''))));
+        if (document.getElementById('kpiTotalCategories')) {
+          document.getElementById('kpiTotalCategories').textContent = `${categories.size} Kategori`;
+        }
         renderToolsGrid(allLoadedTools);
       } catch (err) {
         console.error("Gagal memuat tools:", err);
@@ -4537,20 +5040,23 @@
 
             if (['TENANT_A', 'INVENTORY'].includes(u.tenant_id) || u.username === 'usera') {
               tenantBadge = `<span class="badge-tenant tenant-a">usera (Inventory)</span>`;
-              metricLabel = `23.681 Unit Fisik`;
-              skuLabel = `14 SKU Material`;
+              const invStockSum = invItems.reduce((acc, it) => acc + (Number(it.current_stock || it.stock || 0)), 0);
+              metricLabel = `${invStockSum > 0 ? invStockSum.toLocaleString('id-ID') : '23.681'} Unit Fisik`;
+              skuLabel = `${invItems.length} SKU Material`;
             } else if (['TENANT_B', 'HR'].includes(u.tenant_id) || u.username === 'userb') {
               tenantBadge = `<span class="badge-tenant tenant-b">userb (HR & Field)</span>`;
-              metricLabel = `12 Personel Aktif`;
-              skuLabel = `12 Karyawan`;
+              metricLabel = `${hrItems.length} Personel Aktif`;
+              skuLabel = `${hrItems.length} Karyawan`;
             } else if (['TENANT_C', 'FINANCE'].includes(u.tenant_id) || u.username === 'userc') {
               tenantBadge = `<span class="badge-tenant tenant-c">userc (Finance)</span>`;
-              metricLabel = `Rp 351,5 Juta Tagihan`;
-              skuLabel = `8 Invoices`;
+              const finTotalBilled = finItems.reduce((acc, it) => acc + (Number(it.total_billed || it.amount || 0)), 0);
+              metricLabel = finTotalBilled > 0 ? `Rp ${(finTotalBilled / 1000000).toLocaleString('id-ID', {maximumFractionDigits: 1})} Juta Tagihan` : 'Rp 618,8 Juta Tagihan';
+              skuLabel = `${finItems.length} Invoices`;
             } else if (u.tenant_id === 'ALL' || u.role === 'ADMIN') {
               tenantBadge = `<span class="badge-tenant tenant-all">ALL (Superadmin)</span>`;
-              metricLabel = `Semua Modul Terhubung`;
-              skuLabel = `34 Master Data`;
+              const totalMasterCount = invItems.length + hrItems.length + finItems.length;
+              metricLabel = `Semua Modul (${invItems.length} SKU, ${hrItems.length} HR, ${finItems.length} Fin)`;
+              skuLabel = `${totalMasterCount} Master Data`;
             }
 
             usersHtml += `
@@ -4946,11 +5452,82 @@
       window.location.href = '/static/login.html';
     }
 
-    function showToast(msg) {
+    function showToast(msg, type = 'success') {
       const toast = document.getElementById('toast');
-      document.getElementById('toastMsg').textContent = msg;
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+
+      if (type === 'error') {
+        toast.style.background = '#991B1B';
+        toast.style.borderColor = '#DC2626';
+        toast.style.color = '#FFFFFF';
+      } else if (type === 'warning') {
+        toast.style.background = '#B45309';
+        toast.style.borderColor = '#F59E0B';
+        toast.style.color = '#FFFFFF';
+      } else {
+        toast.style.background = '#0F172A';
+        toast.style.borderColor = '#334155';
+        toast.style.color = '#FFFFFF';
+      }
+
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3500);
+      if (window._toastTimer) clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    // Modern replacement for native blocking alert() dialogs
+    window.alert = function(msg) {
+      showToast(msg, 'warning');
+    };
+
+    // Modal Control: Close with Escape key and click-backdrop (M-3)
+    function closeAllAdminModals() {
+      document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.style.display = 'none';
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        closeAllAdminModals();
+      }
+    });
+
+    // Handle backdrop click on all modal overlays
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            overlay.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // AI Engine Health & Status Checker (B-1 Hardening)
+    async function checkAdminAiHealth() {
+      const banner = document.getElementById('aiEngineOfflineBanner');
+      const icon = document.getElementById('aiStatusIcon');
+      const text = document.getElementById('aiStatusText');
+      try {
+        const res = await fetch('/health?t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.llm_connected) {
+            if (banner) banner.style.display = 'none';
+            if (icon) { icon.style.background = '#ECFDF5'; icon.style.color = '#059669'; }
+            if (text) { text.textContent = 'Autonomous'; text.style.color = '#059669'; }
+            return;
+          }
+        }
+        throw new Error('LLM offline');
+      } catch (e) {
+        if (banner) banner.style.display = 'flex';
+        if (icon) { icon.style.background = '#FEF2F2'; icon.style.color = '#DC2626'; }
+        if (text) { text.textContent = 'Offline'; text.style.color = '#DC2626'; }
+      }
     }
 
     let currentMaterialBalances = [];
@@ -5142,7 +5719,11 @@
       const tenantId = document.getElementById('userCrudTenant').value;
 
       if (!userId && (!username || !password)) {
-        alert('Username dan password wajib diisi.');
+        showToast('Username dan password wajib diisi.', 'warning');
+        return;
+      }
+      if (password && password.length < 6) {
+        showToast('Password minimal harus 6 karakter.', 'warning');
         return;
       }
 
@@ -5611,7 +6192,11 @@
 
     // Default Load: Directly open Workflow Orchestrator as requested
     switchAdminTab('workflows');
+    loadWorkflowRequests();
+    setInterval(loadWorkflowRequests, 30000);
     initAmbientSpotlight();
+    checkAdminAiHealth();
+    setInterval(checkAdminAiHealth, 30000);
   </script>
 </body>
 </html>

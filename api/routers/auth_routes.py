@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -99,14 +99,18 @@ def _sync_workflows_from_json_if_empty(conn):
             with open(WORKFLOWS_JSON_PATH, "r", encoding="utf-8") as f:
                 workflows = json.load(f)
             existing_ids = set(r[0] for r in conn.execute("SELECT id FROM workflows;").fetchall())
+            existing_names = set(r[0].strip().lower() for r in conn.execute("SELECT name FROM workflows;").fetchall() if r[0])
             for wf in workflows:
-                if wf["id"] not in existing_ids:
+                wf_name = (wf.get("name") or "").strip().lower()
+                if wf["id"] not in existing_ids and wf_name not in existing_names:
                     compiled_str = json.dumps(wf["compiled_json"]) if isinstance(wf.get("compiled_json"), dict) else str(wf.get("compiled_json", "{}"))
                     ex_prompts_str = json.dumps(wf.get("example_prompts", []), ensure_ascii=False)
                     conn.execute(
                         "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         [wf["id"], wf["name"], wf.get("description", ""), wf.get("business_instruction", ""), compiled_str, wf.get("tenant_id", "ALL"), ex_prompts_str]
                     )
+                    existing_names.add(wf_name)
+                    existing_ids.add(wf["id"])
     except Exception as e:
         pass
 
@@ -137,6 +141,31 @@ def _ensure_workflow_tenant_column(conn):
                     """, [ex_str, wf["id"]])
     except Exception as e:
         pass
+
+
+def _ensure_workflow_requests_table(conn):
+    """Ensure the workflow_requests table exists for user-to-admin workflow notifications."""
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS workflow_requests (
+                id VARCHAR PRIMARY KEY,
+                username VARCHAR NOT NULL,
+                tenant_id VARCHAR NOT NULL,
+                prompt TEXT NOT NULL,
+                notes TEXT,
+                status VARCHAR DEFAULT 'PENDING',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_by VARCHAR,
+                resolved_workflow_id VARCHAR,
+                title VARCHAR
+            );
+        """)
+        try:
+            conn.execute("ALTER TABLE workflow_requests ADD COLUMN title VARCHAR;")
+        except Exception:
+            pass
+    except Exception as e:
+        print(f"[AUTH] Failed to ensure workflow_requests table: {e}")
 
 
 def _normalize_tenant_id(val: str) -> str:
@@ -170,9 +199,23 @@ class CreateWorkflowRequest(BaseModel):
     business_instruction: str
     tenant_id: str = "ALL"  # ALL, INVENTORY, HR, FINANCE
     example_prompts: list[str] | None = None
+    resolving_request_id: str | None = None
 
 @router.post("/admin/workflows")
 async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends(get_current_admin)):
+    check_conn = get_db_connection(read_only=True)
+    _ensure_workflow_tenant_column(check_conn)
+    existing = check_conn.execute(
+        "SELECT id, name FROM workflows WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))",
+        [req.name]
+    ).fetchone()
+    check_conn.close()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Workflow dengan nama '{req.name}' sudah terdaftar (ID: {existing[0]}). Gunakan nama yang berbeda atau perbarui alur kerja yang ada."
+        )
+
     from agents.workflow_compiler import WorkflowCompiler
     import uuid
     
@@ -185,10 +228,16 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
     
     conn = get_db_connection(read_only=False)
     _ensure_workflow_tenant_column(conn)
+    _ensure_workflow_requests_table(conn)
     conn.execute(
         "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?, ?, ?, ?, ?, ?, ?)", 
         [wf_id, req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val, ex_prompts_json]
     )
+    if req.resolving_request_id:
+        conn.execute(
+            "UPDATE workflow_requests SET status = 'COMPLETED', reviewed_by = ?, resolved_workflow_id = ? WHERE id = ?",
+            [admin.username, wf_id, req.resolving_request_id]
+        )
     _sync_workflows_to_json(conn)
     conn.close()
     
@@ -205,11 +254,20 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    conn = get_db_connection(read_only=False)
-    _ensure_workflow_tenant_column(conn)
-    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
-    columns = [desc[0] for desc in conn.description]
-    conn.close()
+    conn = get_db_connection(read_only=True)
+    try:
+        rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
+        columns = [desc[0] for desc in conn.description]
+    except Exception:
+        conn.close()
+        write_conn = get_db_connection(read_only=False)
+        _ensure_workflow_tenant_column(write_conn)
+        write_conn.close()
+        conn = get_db_connection(read_only=True)
+        rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
+        columns = [desc[0] for desc in conn.description]
+    finally:
+        conn.close()
     
     workflows = []
     for r in rows:
@@ -293,6 +351,10 @@ async def get_help_catalog(tenant: str | None = None):
             from agents.workflow_compiler import WorkflowCompiler
             wf["example_prompts"] = WorkflowCompiler.generate_heuristic_examples(wf.get("name", ""), wf.get("business_instruction", "") or wf.get("description", ""))
         
+        # Enforce exactly one example prompt per workflow
+        if wf.get("example_prompts"):
+            wf["example_prompts"] = wf["example_prompts"][:1]
+        
         if tenant:
             norm_t = _normalize_tenant_id(tenant)
             if norm_t != "ALL" and wf["tenant_id"] not in [norm_t, "ALL"]:
@@ -300,6 +362,197 @@ async def get_help_catalog(tenant: str | None = None):
         workflows.append(wf)
         
     return {"status": "success", "workflows": workflows}
+
+
+class WorkflowRequestPayload(BaseModel):
+    prompt: str
+    title: str | None = None
+    notes: str | None = None
+    tenant_id: str | None = None
+
+class WorkflowRequestStatusPayload(BaseModel):
+    status: str
+    resolved_workflow_id: str | None = None
+
+
+@router.post("/workflows/request")
+async def submit_workflow_request(req: WorkflowRequestPayload, current_user: TokenData = Depends(get_current_user)):
+    """User submits a new workflow request to the Administrator."""
+    if not req.prompt or not req.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt instruksi tidak boleh kosong")
+    
+    clean_prompt = req.prompt.strip()
+    clean_title = (req.title or "").strip() or None
+    clean_notes = (req.notes or "").strip()
+    req_id = f"REQ-{uuid.uuid4().hex[:6].upper()}"
+    u_name = current_user.username or "user"
+    u_tenant = _normalize_tenant_id(req.tenant_id or current_user.tenant_id)
+    
+    conn = get_db_connection(read_only=False)
+    try:
+        _ensure_workflow_requests_table(conn)
+        conn.execute(
+            "INSERT INTO workflow_requests (id, username, tenant_id, prompt, notes, status, title) VALUES (?, ?, ?, ?, ?, 'PENDING', ?)",
+            [req_id, u_name, u_tenant, clean_prompt, clean_notes, clean_title]
+        )
+    finally:
+        conn.close()
+        
+    return {
+        "status": "success",
+        "request_id": req_id,
+        "title": clean_title,
+        "message": "Permintaan alur kerja berhasil dikirimkan ke Administrator."
+    }
+
+
+@router.get("/admin/workflow-requests")
+async def get_workflow_requests(response: Response, admin: TokenData = Depends(get_current_admin)):
+    """Admin endpoint to fetch user workflow requests and pending count."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    conn = get_db_connection(read_only=True)
+    try:
+        rows = conn.execute("""
+            SELECT id, username, tenant_id, prompt, notes, status, 
+                   strftime(created_at, '%d %b %Y, %H:%M') as created_at_str,
+                   reviewed_by, resolved_workflow_id, title
+            FROM workflow_requests 
+            ORDER BY 
+                CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END,
+                created_at DESC
+            LIMIT 100
+        """).fetchall()
+    except Exception:
+        conn.close()
+        write_conn = get_db_connection(read_only=False)
+        _ensure_workflow_requests_table(write_conn)
+        write_conn.close()
+        conn = get_db_connection(read_only=True)
+        rows = conn.execute("""
+            SELECT id, username, tenant_id, prompt, notes, status, 
+                   strftime(created_at, '%d %b %Y, %H:%M') as created_at_str,
+                   reviewed_by, resolved_workflow_id, title
+            FROM workflow_requests 
+            ORDER BY 
+                CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END,
+                created_at DESC
+            LIMIT 100
+        """).fetchall()
+    finally:
+        conn.close()
+
+    columns = ["id", "username", "tenant_id", "prompt", "notes", "status", "created_at", "reviewed_by", "resolved_workflow_id", "title"]
+    requests = [dict(zip(columns, r)) for r in rows]
+    pending_count = sum(1 for r in requests if r["status"] == "PENDING")
+    return {
+        "status": "success",
+        "requests": requests,
+        "pending_count": pending_count
+    }
+
+
+@router.post("/admin/workflow-requests/{req_id}/status")
+async def update_workflow_request_status(
+    req_id: str, 
+    payload: WorkflowRequestStatusPayload, 
+    admin: TokenData = Depends(get_current_admin)
+):
+    """Admin endpoint to update workflow request status (COMPLETED, REJECTED, PENDING)."""
+    valid_statuses = ["PENDING", "COMPLETED", "REJECTED"]
+    st = payload.status.strip().upper()
+    if st not in valid_statuses:
+        raise HTTPException(status_code=400, detail="Status tidak valid. Gunakan PENDING, COMPLETED, atau REJECTED.")
+        
+    conn = get_db_connection(read_only=False)
+    _ensure_workflow_requests_table(conn)
+    try:
+        conn.execute("""
+            UPDATE workflow_requests 
+            SET status = ?, reviewed_by = ?, resolved_workflow_id = ?
+            WHERE id = ?
+        """, [st, admin.username, payload.resolved_workflow_id, req_id])
+    finally:
+        conn.close()
+        
+    return {"status": "success", "request_id": req_id, "updated_status": st}
+
+
+@router.delete("/admin/workflow-requests/{req_id}")
+async def delete_workflow_request(
+    req_id: str, 
+    admin: TokenData = Depends(get_current_admin)
+):
+    """Admin endpoint to delete a specific workflow request."""
+    conn = get_db_connection(read_only=False)
+    _ensure_workflow_requests_table(conn)
+    try:
+        conn.execute("DELETE FROM workflow_requests WHERE id = ?", [req_id])
+    finally:
+        conn.close()
+    return {"status": "success", "request_id": req_id, "message": f"Permintaan {req_id} berhasil dihapus."}
+
+
+@router.delete("/admin/workflow-requests")
+async def clear_workflow_requests(
+    status: str | None = None,
+    admin: TokenData = Depends(get_current_admin)
+):
+    """Admin endpoint to clear all or filtered workflow requests."""
+    conn = get_db_connection(read_only=False)
+    _ensure_workflow_requests_table(conn)
+    try:
+        if not status or status.strip().upper() in ["ALL", ""]:
+            count_res = conn.execute("SELECT COUNT(*) FROM workflow_requests").fetchone()
+            count = count_res[0] if count_res else 0
+            conn.execute("DELETE FROM workflow_requests")
+        else:
+            st = status.strip().upper()
+            count_res = conn.execute("SELECT COUNT(*) FROM workflow_requests WHERE status = ?", [st]).fetchone()
+            count = count_res[0] if count_res else 0
+            conn.execute("DELETE FROM workflow_requests WHERE status = ?", [st])
+    finally:
+        conn.close()
+    return {
+        "status": "success",
+        "deleted_count": count,
+        "message": f"Berhasil menghapus {count} usulan alur kerja."
+    }
+
+
+@router.post("/admin/workflows/reset-defaults")
+async def reset_workflows_to_defaults(admin: TokenData = Depends(get_current_admin)):
+    """Admin endpoint to restore any missing base seed workflows from workflows.json.
+    
+    SAFE: This does NOT delete any existing custom workflows. It only re-adds 
+    workflows from data/balitower/workflows.json that are currently missing from the DB.
+    """
+    conn = get_db_connection(read_only=False)
+    _ensure_workflow_tenant_column(conn)
+    try:
+        restored = 0
+        if WORKFLOWS_JSON_PATH.exists():
+            with open(WORKFLOWS_JSON_PATH, "r", encoding="utf-8") as f:
+                seed_wfs = json.load(f)
+            existing_ids = set(r[0] for r in conn.execute("SELECT id FROM workflows").fetchall())
+            for wf in seed_wfs:
+                wid = wf.get("id")
+                if not wid:
+                    continue
+                compiled_str = json.dumps(wf["compiled_json"]) if isinstance(wf.get("compiled_json"), dict) else str(wf.get("compiled_json", "{}"))
+                ex_prompts_str = json.dumps(wf.get("example_prompts", []), ensure_ascii=False)
+                if wid not in existing_ids:
+                    conn.execute(
+                        "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?,?,?,?,?,?,?)",
+                        [wid, wf["name"], wf.get("description", ""), wf.get("business_instruction", ""), compiled_str, wf.get("tenant_id", "ALL"), ex_prompts_str]
+                    )
+                    restored += 1
+        _sync_workflows_to_json(conn)
+    finally:
+        conn.close()
+    return {"status": "success", "message": f"Selesai. {restored} alur kerja berhasil dipulihkan dari berkas JSON referensi. Workflow yang sudah ada tidak diubah."}
 
 
 
@@ -485,14 +738,14 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
 
 class AdminCreateUserRequest(BaseModel):
     username: str
-    password: str
+    password: str = Field(..., min_length=6, description="Password minimal 6 karakter")
     role: str = "USER"
     tenant_id: str = "INVENTORY"
 
 class AdminUpdateUserRequest(BaseModel):
     role: str | None = None
     tenant_id: str | None = None
-    password: str | None = None
+    password: str | None = Field(default=None, min_length=6, description="Password minimal 6 karakter")
 
 class AdminDbInsertRequest(BaseModel):
     data: dict
@@ -510,6 +763,9 @@ class AdminDbDeleteRequest(BaseModel):
 @router.post("/admin/users")
 async def create_user(req: AdminCreateUserRequest, admin: TokenData = Depends(get_current_admin)):
     """Create a new user account with hashed credentials in the users table."""
+    if not req.password or len(req.password.strip()) < 6:
+        raise HTTPException(status_code=400, detail="Password minimal harus 6 karakter.")
+
     conn = get_db_connection(read_only=True)
     existing = conn.execute("SELECT username FROM users WHERE username = ?", [req.username]).fetchone()
     conn.close()
@@ -517,7 +773,7 @@ async def create_user(req: AdminCreateUserRequest, admin: TokenData = Depends(ge
         raise HTTPException(status_code=400, detail=f"Username '{req.username}' sudah terdaftar.")
 
     user_id = f"USR-{uuid.uuid4().hex[:6].upper()}"
-    p_hash = await asyncio.to_thread(get_password_hash, req.password)
+    p_hash = await asyncio.to_thread(get_password_hash, req.password.strip())
     tenant_val = _normalize_tenant_id(req.tenant_id)
     role_val = req.role.strip().upper() if req.role else "USER"
     if role_val not in ["ADMIN", "USER"]:
@@ -549,7 +805,9 @@ async def update_user(user_id: str, req: AdminUpdateUserRequest, admin: TokenDat
     if req.tenant_id:
         updates.append("tenant_id = ?")
         vals.append(_normalize_tenant_id(req.tenant_id))
-    if req.password and req.password.strip():
+    if req.password is not None:
+        if len(req.password.strip()) < 6:
+            raise HTTPException(status_code=400, detail="Password baru minimal harus 6 karakter.")
         new_hash = await asyncio.to_thread(get_password_hash, req.password.strip())
         updates.append("password_hash = ?")
         vals.append(new_hash)

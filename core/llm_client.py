@@ -18,7 +18,7 @@ class CircuitBreakerOpenException(Exception):
 class ModelGateway:
     """
     Unified client gateway for:
-    - 'nemotron-35': Single corporate model for Planning, Routing, and Compliance Auditing
+    - 'qwen-38': Single corporate model for Planning, Routing, and Compliance Auditing
     Includes persistent class-level circuit breaker and shared HTTP client pool.
     """
     _instance = None
@@ -36,7 +36,7 @@ class ModelGateway:
     @classmethod
     def get_client(cls) -> httpx.AsyncClient:
         if cls._client is None or cls._client.is_closed:
-            timeout = httpx.Timeout(timeout=25.0, connect=5.0, read=25.0)
+            timeout = httpx.Timeout(timeout=60.0, connect=10.0, read=60.0)
             limits = httpx.Limits(max_keepalive_connections=10, max_connections=20)
             cls._client = httpx.AsyncClient(timeout=timeout, limits=limits)
         return cls._client
@@ -59,17 +59,17 @@ class ModelGateway:
 
     async def chat_completion(
         self,
-        model_name: str = "nemotron-35",
+        model_name: str = "qwen-38",
         messages: list[dict[str, str]] | None = None,
         temperature: float = 0.2,
         response_format_json: bool = False,
     ) -> str:
         """
-        Calls configured LLM model (nemotron-35) using settings from .env.
+        Calls configured LLM model (qwen-38) using settings from .env.
         """
         self._check_circuit()
 
-        actual_model = settings.MODEL_NAME or "nemotron-35"
+        actual_model = settings.MODEL_NAME or "qwen-38"
         endpoint = (settings.MODEL_URL or "http://localhost:8001/v1").rstrip("/")
         if endpoint.endswith("/models"):
             endpoint = endpoint[:-7]
@@ -94,7 +94,8 @@ class ModelGateway:
             res.raise_for_status()
             data = res.json()
             self._record_success()
-            return data["choices"][0]["message"]["content"]
+            msg = data["choices"][0]["message"]
+            return msg.get("content") or msg.get("reasoning_content") or ""
         except Exception as e:
             self._record_failure()
             logger.error(f"Failed to connect to model {actual_model} at {endpoint}: {e!r}")
@@ -102,17 +103,17 @@ class ModelGateway:
 
     async def chat_completion_stream(
         self,
-        model_name: str = "nemotron-35",
+        model_name: str = "qwen-38",
         messages: list[dict[str, str]] | None = None,
         temperature: float = 0.2,
     ):
         """
-        Streams response tokens from configured LLM model (nemotron-35).
+        Streams response tokens from configured LLM model (qwen-38).
         Yields text chunks as they arrive from the upstream server.
         """
         self._check_circuit()
 
-        actual_model = settings.MODEL_NAME or "nemotron-35"
+        actual_model = settings.MODEL_NAME or "qwen-38"
         endpoint = (settings.MODEL_URL or "http://localhost:8001/v1").rstrip("/")
         if endpoint.endswith("/models"):
             endpoint = endpoint[:-7]

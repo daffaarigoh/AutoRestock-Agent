@@ -19,6 +19,10 @@ def login(username: str = "usera", password: str = "user123"):
 
 
 class TestPOPDFGeneration(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from tests.conftest import seed_test_database_if_needed
+        seed_test_database_if_needed()
 
     def test_terbilang_helper(self):
         self.assertIn("Enam Puluh Enam Juta", angka_ke_terbilang(66000000))

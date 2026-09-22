@@ -2332,26 +2332,49 @@ body.sidebar-collapsed .sidebar-resizer {
   line-height: 1.45;
 }
 
-/* Modal Styling Overrides for Help Modal (Fixing PDF Viewer dark collisions) */
+/* Modal Styling Overrides for Help Modal (Fixing PDF Viewer dark collisions & Top Edge Clipping) */
+.modal-backdrop#flowHelpModal {
+  padding: 32px 16px 24px !important;
+  overflow-y: auto !important;
+  display: none;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
 .flow-help-modal-container {
   background: #FFFFFF !important;
-  border: 1px solid #E2E8F0 !important;
-  border-radius: 12px !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 14px !important;
   width: 100% !important;
   max-width: 860px !important;
   height: auto !important;
-  max-height: 88vh !important;
+  max-height: calc(100vh - 64px) !important;
+  margin: 0 auto !important;
   display: flex !important;
   flex-direction: column !important;
-  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 25px 35px -5px rgba(15, 23, 42, 0.25), 0 10px 15px -5px rgba(15, 23, 42, 0.1) !important;
   overflow: hidden !important;
+  flex-shrink: 0 !important;
+}
+
+.flow-help-modal-container .modal-header {
+  padding: 16px 24px !important;
+  min-height: 58px !important;
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
 }
 
 .flow-help-modal-body {
   flex: 1 1 auto !important;
   height: auto !important;
-  max-height: calc(88vh - 130px) !important;
-  min-height: auto !important;
+  max-height: calc(100vh - 210px) !important;
+  min-height: 200px !important;
   background: #F8FAFC !important;
   overflow-y: auto !important;
   display: flex !important;
@@ -2568,6 +2591,235 @@ body.sidebar-collapsed .sidebar-resizer {
   color: #2563EB;
   transform: scale(1.05);
 }
+
+/* ==============================================================================
+   INTERACTIVE WORKFLOW REQUEST CHAT FORM & HELP MODAL TABS (CLEAN ENTERPRISE)
+   ============================================================================== */
+
+/* Help Modal Tabs Bar */
+.flow-help-tabs-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 24px 0;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  overflow-x: auto;
+}
+
+.flow-help-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.flow-help-tab-btn:hover {
+  color: #0F172A;
+  background: #F8FAFC;
+  border-radius: 6px 6px 0 0;
+}
+
+.flow-help-tab-btn.active {
+  color: #2563EB;
+  border-bottom-color: #2563EB;
+  font-weight: 700;
+}
+
+/* System Model Box */
+.help-model-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.help-model-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.help-model-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-model-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.help-model-card-desc {
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+/* Tool Policy Table */
+.help-policy-table-container {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.help-policy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.help-policy-table th {
+  background: #F8FAFC;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 1px solid #E2E8F0;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.help-policy-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #334155;
+  vertical-align: top;
+}
+
+.help-policy-table tr:last-child td {
+  border-bottom: none;
+}
+
+.badge-direct-access {
+  background: #DCFCE7;
+  color: #166534;
+  border: 1px solid #86EFAC;
+  font-weight: 700;
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.badge-workflow-guarded {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+  font-weight: 700;
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Inline Interactive Workflow Request Chat Form */
+.wf-request-form-card {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-left: 4px solid #2563EB;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 10px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wf-request-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
+  padding-bottom: 10px;
+}
+
+.wf-request-form-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.wf-request-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wf-form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.wf-form-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wf-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wf-form-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.wf-form-input,
+.wf-form-select,
+.wf-form-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: #0F172A;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.wf-form-input:focus,
+.wf-form-select:focus,
+.wf-form-textarea:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.wf-request-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 10px;
+}
+
 
 
 

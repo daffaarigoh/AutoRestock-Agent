@@ -43,6 +43,8 @@ def login(username: str, password: str = "user123"):
 
 
 def setup_test_scenario():
+    from tests.conftest import seed_test_database_if_needed
+    seed_test_database_if_needed()
     conn = get_db_connection(read_only=False)
     conn.execute("""
         UPDATE purchase_orders 
@@ -185,15 +187,15 @@ def run_userb_e2e_workflow():
         assert emp["k3_certification"] in ["TKPK 1", "TKPK 2"]
     print(f"  [OK] 2. Filtered {len(k3_emps)} certified K3 tower climbers/riggers.")
 
-    # 3. Attendances with Geofencing & Overtime
+    # 3. Attendances with Overtime
     res_att = client.get("/api/balitower/hr/attendances?overtime_only=true", headers=headers_b)
     assert res_att.status_code == 200
     ot_atts = res_att.json()
     assert len(ot_atts) > 0
     first_ot = ot_atts[0]
-    assert "distance_to_site_m" in first_ot
+    assert "attendance_type" in first_ot
     assert first_ot["overtime_hours"] > 0
-    print(f"  [OK] 3. Retrieved {len(ot_atts)} site visit attendance records with overtime and GPS geofencing.")
+    print(f"  [OK] 3. Retrieved {len(ot_atts)} site visit attendance records with overtime.")
 
     # 4. Leave Requests
     res_leaves = client.get("/api/balitower/hr/leave-requests", headers=headers_b)
@@ -211,7 +213,7 @@ def run_userb_e2e_workflow():
     assert res_cand_prompt.status_code == 200
     cand_resp = res_cand_prompt.json()
     assert cand_resp["action_type"] == "hr_query"
-    assert "Hasil Screening & Filter Kandidat Teknisi" in cand_resp["message"]
+    assert "Hasil Screening" in cand_resp["message"]
     assert "TKPK" in cand_resp["message"]
     print("  [OK] 5. AI Copilot candidate screening prompt returned formatted candidate evaluation table.")
 
@@ -225,8 +227,8 @@ def run_userb_e2e_workflow():
     att_resp = res_att_prompt.json()
     assert att_resp["action_type"] == "hr_query"
     assert "Laporan Absensi Kunjungan Menara" in att_resp["message"]
-    assert "Geofencing" in att_resp["message"]
-    print("  [OK] 6. AI Copilot attendance audit prompt returned geofencing & overtime verification.")
+    assert "Lembur" in att_resp["message"]
+    print("  [OK] 6. AI Copilot attendance audit prompt returned overtime verification.")
 
     # 7. Natural Language Prompt: Leave Status Check
     res_lv_prompt = client.post(

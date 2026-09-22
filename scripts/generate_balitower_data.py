@@ -35,25 +35,25 @@ random.seed(42)
 print(">>> [1/7] Menghasilkan Data Master Sites Menara Telekomunikasi...")
 
 SITES_RAW = [
-    ("JKS-MCP-001", "MCP Gatot Subroto Kav 18", "Microcell Pole", "DKI Jakarta", -6.2304, 106.8227, 20.0, "OPERATIONAL"),
-    ("JKS-MCP-002", "MCP Sudirman SCBD Lot 8", "Microcell Pole", "DKI Jakarta", -6.2255, 106.8098, 22.0, "OPERATIONAL"),
-    ("JKP-TWR-003", "Macro Tower Senayan Palmerah", "Macro 4-Legged", "DKI Jakarta", -6.2163, 106.7981, 45.0, "OPERATIONAL"),
-    ("JKB-MCP-004", "MCP Tomang Raya Barat", "Microcell Pole", "DKI Jakarta", -6.1754, 106.7912, 18.0, "OPERATIONAL"),
-    ("JKT-TWR-005", "Macro Tower Cawang Interchange", "Macro 4-Legged", "DKI Jakarta", -6.2482, 106.8673, 52.0, "OPERATIONAL"),
-    ("DPS-MCP-006", "MCP Teuku Umar Denpasar", "Microcell Pole", "Bali & Nusa Tenggara", -8.6782, 115.2078, 20.0, "OPERATIONAL"),
-    ("DPS-TWR-007", "Macro Tower Sanur Bypass", "Macro 4-Legged", "Bali & Nusa Tenggara", -8.6914, 115.2581, 42.0, "OPERATIONAL"),
-    ("BDG-TWR-008", "Macro Tower Dago Asri", "Monopole", "Jawa Barat", -6.8791, 107.6184, 36.0, "OPERATIONAL"),
-    ("BDG-MCP-009", "MCP Riau Junction Bandung", "Microcell Pole", "Jawa Barat", -6.9082, 107.6145, 18.0, "OPERATIONAL"),
-    ("SBY-TWR-010", "Macro Tower Darmo Surabaya", "Macro 4-Legged", "Jawa Timur", -7.2891, 112.7382, 48.0, "OPERATIONAL"),
-    ("SBY-MCP-011", "MCP Basuki Rahmat Surabaya", "Microcell Pole", "Jawa Timur", -7.2654, 112.7410, 20.0, "OPERATIONAL"),
-    ("JKS-MCP-012", "MCP Kemang Raya Selatan", "Microcell Pole", "DKI Jakarta", -6.2731, 106.8152, 20.0, "OPERATIONAL"),
-    ("JKP-TWR-013", "Rooftop Pole Cikini Menteng", "Rooftop Pole", "DKI Jakarta", -6.1925, 106.8398, 15.0, "OPERATIONAL"),
-    ("TGR-TWR-014", "Macro Tower BSD Green Office", "Monopole", "Banten", -6.3012, 106.6521, 38.0, "OPERATIONAL"),
-    ("DPS-MCP-015", "MCP Sunset Road Kuta", "Microcell Pole", "Bali & Nusa Tenggara", -8.7042, 115.1785, 22.0, "OPERATIONAL"),
+    ("JKS-MCP-001", "MCP Gatot Subroto Kav 18", "Microcell Pole", "DKI Jakarta", 20.0, "OPERATIONAL"),
+    ("JKS-MCP-002", "MCP Sudirman SCBD Lot 8", "Microcell Pole", "DKI Jakarta", 22.0, "OPERATIONAL"),
+    ("JKP-TWR-003", "Macro Tower Senayan Palmerah", "Macro 4-Legged", "DKI Jakarta", 45.0, "OPERATIONAL"),
+    ("JKB-MCP-004", "MCP Tomang Raya Barat", "Microcell Pole", "DKI Jakarta", 18.0, "OPERATIONAL"),
+    ("JKT-TWR-005", "Macro Tower Cawang Interchange", "Macro 4-Legged", "DKI Jakarta", 52.0, "OPERATIONAL"),
+    ("DPS-MCP-006", "MCP Teuku Umar Denpasar", "Microcell Pole", "Bali & Nusa Tenggara", 20.0, "OPERATIONAL"),
+    ("DPS-TWR-007", "Macro Tower Sanur Bypass", "Macro 4-Legged", "Bali & Nusa Tenggara", 42.0, "OPERATIONAL"),
+    ("BDG-TWR-008", "Macro Tower Dago Asri", "Monopole", "Jawa Barat", 36.0, "OPERATIONAL"),
+    ("BDG-MCP-009", "MCP Riau Junction Bandung", "Microcell Pole", "Jawa Barat", 18.0, "OPERATIONAL"),
+    ("SBY-TWR-010", "Macro Tower Darmo Surabaya", "Macro 4-Legged", "Jawa Timur", 48.0, "OPERATIONAL"),
+    ("SBY-MCP-011", "MCP Basuki Rahmat Surabaya", "Microcell Pole", "Jawa Timur", 20.0, "OPERATIONAL"),
+    ("JKS-MCP-012", "MCP Kemang Raya Selatan", "Microcell Pole", "DKI Jakarta", 20.0, "OPERATIONAL"),
+    ("JKP-TWR-013", "Rooftop Pole Cikini Menteng", "Rooftop Pole", "DKI Jakarta", 15.0, "OPERATIONAL"),
+    ("TGR-TWR-014", "Macro Tower BSD Green Office", "Monopole", "Banten", 38.0, "OPERATIONAL"),
+    ("DPS-MCP-015", "MCP Sunset Road Kuta", "Microcell Pole", "Bali & Nusa Tenggara", 22.0, "OPERATIONAL"),
 ]
 
 df_sites = pd.DataFrame(SITES_RAW, columns=[
-    "site_id", "site_name", "site_type", "region", "latitude", "longitude", "tower_height_m", "status"
+    "site_id", "site_name", "site_type", "region", "tower_height_m", "status"
 ])
 df_sites.to_csv(HR_DIR / "telecom_sites.csv", index=False)
 
@@ -343,11 +343,10 @@ for day_offset in range(25):
         for tech in ["EMP-BLT-001", "EMP-BLT-005"]:
             if random.random() < 0.4:
                 chosen_site = random.choice(sites_ids[:5])
-                dist = round(random.uniform(5.0, 45.0), 1)
                 ot_hours = round(random.choice([3.0, 4.5, 6.0]), 1)
                 attendance_records.append((
                     f"ATT-{att_id_counter}", tech, str(cur_date), "09:12:00", "15:45:00",
-                    chosen_site, dist, "EMERGENCY_REPAIR", ot_hours, "OVERTIME_VERIFIED"
+                    chosen_site, "EMERGENCY_REPAIR", ot_hours, "OVERTIME_VERIFIED"
                 ))
                 att_id_counter += 1
         continue
@@ -359,7 +358,6 @@ for day_offset in range(25):
         
         if dept == "Field Operations":
             chosen_site = random.choice(sites_ids)
-            dist = round(random.uniform(8.0, 75.0), 1)
             # Kadang ada lembur penarikan kabel atau perbaikan genset
             ot_hours = round(random.choice([0.0, 0.0, 1.5, 2.5, 3.0]), 1) if random.random() < 0.45 else 0.0
             clock_in = f"07:{random.randint(45, 59):02d}:00" if random.random() > 0.1 else f"08:{random.randint(15, 30):02d}:00"
@@ -370,7 +368,7 @@ for day_offset in range(25):
 
             attendance_records.append((
                 f"ATT-{att_id_counter}", emp_id, str(cur_date), clock_in, clock_out,
-                chosen_site, dist, "SITE_VISIT", ot_hours, status
+                chosen_site, "SITE_VISIT", ot_hours, status
             ))
             att_id_counter += 1
         else:
@@ -379,12 +377,12 @@ for day_offset in range(25):
             clock_out = "17:05:00"
             attendance_records.append((
                 f"ATT-{att_id_counter}", emp_id, str(cur_date), clock_in, clock_out,
-                None, 0.0, "OFFICE_REGULAR", 0.0, "ON_TIME"
+                None, "OFFICE_REGULAR", 0.0, "ON_TIME"
             ))
             att_id_counter += 1
 
 df_attendances = pd.DataFrame(attendance_records, columns=[
-    "attendance_id", "employee_id", "date", "clock_in", "clock_out", "site_id", "distance_to_site_m", "attendance_type", "overtime_hours", "status"
+    "attendance_id", "employee_id", "date", "clock_in", "clock_out", "site_id", "attendance_type", "overtime_hours", "status"
 ])
 df_attendances.to_csv(HR_DIR / "attendances.csv", index=False)
 
@@ -432,25 +430,7 @@ df_candidates.to_csv(HR_DIR / "candidates.csv", index=False)
 # ==============================================================================
 # SCOPE 3: FINANCE & LAPORAN KEUANGAN
 # ==============================================================================
-print(">>> [4/7] Menghasilkan Data Finance & Accounting (Invoices, Land Leases, PLN Utilities, Transaksi Kas)...")
-
-COA_RAW = [
-    ("1110", "Kas & Rekening Bank Operasional", "ASSET", "DEBIT"),
-    ("1120", "Piutang Usaha Sewa Menara (AR Operator)", "ASSET", "DEBIT"),
-    ("1510", "Aset Tetap - Struktur Menara Telekomunikasi", "ASSET", "DEBIT"),
-    ("1520", "Aset Tetap - Jaringan Transmisi Fiber Optic", "ASSET", "DEBIT"),
-    ("2110", "Hutang Usaha Pengadaan Vendor", "LIABILITY", "CREDIT"),
-    ("4110", "Pendapatan Sewa Menara & Kolokasi (MLA)", "REVENUE", "CREDIT"),
-    ("4120", "Pendapatan Transmisi Bandwidth & FO", "REVENUE", "CREDIT"),
-    ("5110", "Beban Sewa Lahan Menara (Land Lease)", "EXPENSE", "DEBIT"),
-    ("5120", "Beban Listrik PLN & Daya Shelter", "EXPENSE", "DEBIT"),
-    ("5130", "Beban Bahan Bakar Minyak Genset", "EXPENSE", "DEBIT"),
-    ("5210", "Beban Pemeliharaan & Material Restock", "EXPENSE", "DEBIT"),
-    ("5310", "Beban Gaji & Upah Karyawan", "EXPENSE", "DEBIT"),
-    ("5320", "Beban Lembur Teknisi Lapangan", "EXPENSE", "DEBIT"),
-]
-df_coa = pd.DataFrame(COA_RAW, columns=["account_code", "account_name", "account_type", "normal_balance"])
-df_coa.to_csv(FIN_DIR / "chart_of_accounts.csv", index=False)
+print(">>> [4/7] Menghasilkan Data Finance & Accounting (Invoices, Land Leases, PLN Utilities)...")
 
 CLIENTS_RAW = [
     ("CLI-001", "PT Telekomunikasi Selular (Telkomsel)", "OPERATOR_SELULER", "01.000.123.4-091.000", "billing@telkomsel.co.id", "Net 30"),
@@ -522,58 +502,7 @@ df_utilities = pd.DataFrame(UTILITIES_RAW, columns=[
 ])
 df_utilities.to_csv(FIN_DIR / "site_utilities_cost.csv", index=False)
 
-# List Transaksi / General Ledger (Kas Inflow & Outflow Terintegrasi)
-trx_records = []
-trx_id = 10001
-
-# 1. Pemasukan dari Invoices yang sudah PAID
-for inv in INVOICES_RAW:
-    if inv[10] == "PAID":
-        trx_records.append((
-            f"TRX-{trx_id}", inv[11], "4110", "Pendapatan Sewa Menara (MLA)", "INFLOW", inv[7],
-            "REVENUE_INVOICE", inv[0], f"Pelunasan {inv[1]} oleh {inv[3]} periode {inv[4]}"
-        ))
-        trx_id += 1
-
-# 2. Pengeluaran Utilitas Listrik & Genset
-for utl in UTILITIES_RAW:
-    trx_records.append((
-        f"TRX-{trx_id}", f"{utl[2]}-28", "5120", "Beban Listrik PLN & Daya Shelter", "OUTFLOW", utl[5],
-        "SITE_UTILITY_PLN", utl[0], f"Pembayaran tagihan listrik PLN Site {utl[1]} ({utl[2]})"
-    ))
-    trx_id += 1
-    if utl[7] > 0:
-        trx_records.append((
-            f"TRX-{trx_id}", f"{utl[2]}-28", "5130", "Beban Bahan Bakar Minyak Genset", "OUTFLOW", utl[7],
-            "SITE_UTILITY_GENSET", utl[0], f"Pengisian solar emergency genset {utl[6]}L Site {utl[1]}"
-        ))
-        trx_id += 1
-
-# 3. Pengeluaran Pengadaan PO Material yang COMPLETED
-for po in po_records:
-    if po[7] == "COMPLETED":
-        trx_records.append((
-            f"TRX-{trx_id}", po[10], "5210", "Beban Pemeliharaan & Material Restock", "OUTFLOW", po[6],
-            "PURCHASE_ORDER", po[0], f"Pembayaran PO pengadaan {po[3]} ke supplier {po[2]}"
-        ))
-        trx_id += 1
-
-# 4. Pengeluaran Lembur Teknisi (Terintegrasi dari Data Absensi Overtime)
-for att in attendance_records:
-    if att[8] > 0 and att[9] == "OVERTIME_VERIFIED":
-        emp_id = att[1]
-        rate = next(e[8] for e in EMPLOYEES_RAW if e[0] == emp_id)
-        ot_cost = int(att[8] * rate)
-        trx_records.append((
-            f"TRX-{trx_id}", att[2], "5320", "Beban Lembur Teknisi Lapangan", "OUTFLOW", ot_cost,
-            "ATTENDANCE_OVERTIME", att[0], f"Klaim lembur {att[8]} jam teknisi {emp_id} di Site {att[5]}"
-        ))
-        trx_id += 1
-
-df_trx = pd.DataFrame(trx_records, columns=[
-    "trx_id", "trx_date", "account_code", "account_name", "trx_type", "amount", "reference_source", "reference_id", "description"
-])
-df_trx.to_csv(FIN_DIR / "financial_transactions.csv", index=False)
+# Note: financial_transactions (general ledger) decommissioned to match active dashboard UI
 
 
 # ==============================================================================
@@ -605,13 +534,11 @@ conn.execute("CREATE OR REPLACE TABLE job_postings AS SELECT * FROM df_jobs;")
 conn.execute("CREATE OR REPLACE TABLE candidates AS SELECT * FROM df_candidates;")
 
 # Scope 3 Tables
-conn.execute("CREATE OR REPLACE TABLE chart_of_accounts AS SELECT * FROM df_coa;")
 conn.execute("CREATE OR REPLACE TABLE telecom_clients AS SELECT * FROM df_clients;")
 conn.execute("CREATE OR REPLACE TABLE mla_contracts AS SELECT * FROM df_mla;")
 conn.execute("CREATE OR REPLACE TABLE revenue_invoices AS SELECT * FROM df_invoices;")
 conn.execute("CREATE OR REPLACE TABLE site_land_leases AS SELECT * FROM df_land_leases;")
 conn.execute("CREATE OR REPLACE TABLE site_utilities_cost AS SELECT * FROM df_utilities;")
-conn.execute("CREATE OR REPLACE TABLE financial_transactions AS SELECT * FROM df_trx;")
 
 # System & Auth Tables (for Login & Workflow Engine)
 conn.execute("""
@@ -644,7 +571,7 @@ conn.execute("DELETE FROM system_settings;")
 default_prompt = (
     "Anda adalah Asisten AI Terpadu PT Bali Towerindo Sentra Tbk (Bali Tower).\n"
     "Anda memiliki akses ke 3 domain data operasional: "
-    "1) Logistik Material & Stok Tower/FO, 2) HR & Teknisi Lapangan (Absensi GPS, Cuti, Rekrutmen K3), 3) Keuangan (Sewa Menara, Listrik PLN, Sewa Lahan, Transaksi Kas).\n"
+    "1) Logistik Material & Stok Tower/FO, 2) HR & Teknisi Lapangan (Cuti, Rekrutmen K3), 3) Keuangan (Sewa Menara, Listrik PLN, Sewa Lahan).\n"
     "Berikan respon berbasis data yang akurat, terstruktur, dan profesional dalam Bahasa Indonesia."
 )
 conn.execute("INSERT INTO system_settings VALUES ('system_prompt', ?)", [default_prompt])
@@ -685,15 +612,16 @@ if workflows_file.exists():
 else:
     wf_list = [
         ("WF-A01", "Pipeline Pengadaan Material PR-to-PO End-to-End", "Alur pengadaan otomatis terintegrasi dari inspeksi stok, penerbitan PR draf, approval email, hingga penerbitan PO ke vendor.", "Periksa seluruh saldo stok material menara dan kabel fiber optic di gudang logistik usera yang berada di bawah ambang batas minimum. Hitung kuantitas reorder dan vendor rekanan terbaik, terbitkan dokumen resmi Purchase Requisition (PR) dan draf PO PENDING_APPROVAL, lalu kirim email notifikasi ke manajer.", json.dumps({"workflow": "pipeline_pengadaan_material_pr_to_po_end_to_end", "steps": [{"type": "tool", "tool": "inventory.get_low_stock_products"}, {"type": "agent", "task": "calculate_reorder_quantity"}, {"type": "tool", "tool": "docgen.compile"}, {"type": "tool", "tool": "notification.dispatch"}]}), "INVENTORY", json.dumps(["Periksa stok menara yang menipis dan buatkan draf PR"])),
-        ("WF-A02", "Penerimaan Barang Fisik PO & Update Saldo", "Verifikasi barang Purchase Order (PO) yang tiba di gudang logistik dan sinkronisasi penambahan stok fisik.", "Verifikasi kedatangan barang Purchase Order yang tiba di gudang, catat penerimaan aktual, update status DELIVERED, dan tambahkan stok ke saldo gudang.", json.dumps({"workflow": "usera_po_goods_receipt", "steps": [{"type": "tool", "tool": "inventory.check_specific_stock"}, {"type": "tool", "tool": "inventory.crud_record"}, {"type": "tool", "tool": "notification.dispatch"}]}), "INVENTORY", json.dumps(["Catat penerimaan barang untuk PO yang sudah tiba"])),
-        ("WF-002", "Cek Absensi & Lembur Teknisi", "Audit absensi kunjungan site menara dan rekap jam lembur teknisi.", "Tarik data absensi teknisi lapangan dengan validasi geofencing GPS dan kalkulasi biaya lembur.", json.dumps({"workflow": "hr_attendance_audit", "steps": [{"type": "tool", "tool": "hr.audit_attendance"}]}), "HR", json.dumps(["Periksa rekap absensi teknisi minggu ini"])),
-        ("WF-003", "Filter Pelamar Rigger K3", "Menyaring kandidat rigger tower dengan sertifikasi TKPK dan tes medis layak ketinggian.", "Filter kandidat rigger berdasarkan sertifikasi TKPK 1/2 dan tes kesehatan.", json.dumps({"workflow": "hr_filter_candidates", "steps": [{"type": "tool", "tool": "hr.filter_candidates"}]}), "HR", json.dumps(["Filter kandidat rigger dengan sertifikat TKPK"])),
-        ("WF-004", "Laporan Pendapatan Sewa Menara", "Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, XL, IOH).", "Tarik data invoice sewa menara per operator dan status pembayarannya.", json.dumps({"workflow": "finance_revenue_report", "steps": [{"type": "tool", "tool": "finance.revenue_report"}]}), "FINANCE", json.dumps(["Tampilkan rekap tagihan invoice sewa menara operator"])),
-        ("WF-005", "Audit Beban Listrik & Sewa Lahan", "Laporan pengeluaran operasional utilitas listrik PLN, BBM genset, dan sewa lahan tower.", "Analisis beban operasional per site mencakup tagihan PLN dan jatuh tempo sewa tanah.", json.dumps({"workflow": "finance_opex_audit", "steps": [{"type": "tool", "tool": "finance.opex_audit"}]}), "FINANCE", json.dumps(["Audit pengeluaran listrik PLN dan sewa lahan tower"])),
-        ("WF-006", "Ringkasan Arus Kas (Cash Flow)", "Laporan arus kas masuk vs keluar harian dan posisi saldo bersih.", "Hitung net cash flow dari transaksi inflow dan outflow.", json.dumps({"workflow": "finance_cashflow", "steps": [{"type": "tool", "tool": "finance.cashflow_summary"}]}), "FINANCE", json.dumps(["Tampilkan ringkasan arus kas operasional bulan ini"])),
-        ("WF-ALL-01", "Cek Profil Akun & Hak Akses", "Melihat informasi profil pengguna yang sedang login, role, divisi tenant, dan modul yang dapat diakses.", "Periksa akun yang sedang login dan tampilkan detail hak akses serta batasan divisi.", json.dumps({"workflow": "check_user_profile", "steps": [{"type": "tool", "tool": "system.check_profile"}]}), "ALL", json.dumps(["Cek profil akun saya", "Siapa saya"])),
-        ("WF-ALL-02", "Informasi Sistem & Status Layanan", "Melihat ringkasan status operasional server, versi aplikasi, database DuckDB, dan gateway AI.", "Cek status operasional seluruh modul sistem AutoRestock-Agent.", json.dumps({"workflow": "system_health_info", "steps": [{"type": "tool", "tool": "system.get_system_info"}]}), "ALL", json.dumps(["Cek status server dan sistem"])),
-        ("WF-ALL-03", "Panduan Operasional & Kontak Darurat", "Panduan SOP penggunaan sistem AutoRestock-Agent, navigasi modul, dan kontak darurat IT/Operasional.", "Tampilkan panduan operasional perusahaan dan kontak darurat lintas divisi.", json.dumps({"workflow": "company_guidelines", "steps": [{"type": "tool", "tool": "system.get_company_guidelines"}]}), "ALL", json.dumps(["Buka panduan operasional SOP"]))
+        ("WF-A02", "Penerimaan Barang Fisik PO & Update Saldo", "Verifikasi barang Purchase Order (PO) yang tiba di gudang logistik dan sinkronisasi penambahan stok fisik.", "Verifikasi kedatangan barang Purchase Order yang tiba di gudang, catat penerimaan aktual, update status DELIVERED, dan tambahkan stok ke saldo gudang.", json.dumps({"workflow": "usera_po_goods_receipt", "steps": [{"type": "tool", "tool": "inventory.check_specific_stock"}, {"type": "tool", "tool": "inventory.crud_record"}, {"type": "tool", "tool": "notification.dispatch"}]}), "INVENTORY", json.dumps(["Catat penerimaan PO/BLT/2026/09/031 untuk semua gudang"])),
+        ("WF-B02", "Filter & Screening Pelamar Teknisi K3", "Menyaring kandidat teknisi lapangan secara dinamis berdasarkan kualifikasi posisi dan sertifikasi K3 (TKPK Tingkat 1, TKPK Tingkat 2, K3 Umum, atau seluruh pelamar).", "Filter dan seleksi kandidat pelamar teknisi secara dinamis sesuai kriteria sertifikasi K3 (TKPK Tingkat 1, TKPK Tingkat 2, K3 Umum) atau seluruh kandidat sesuai permintaan pengguna.", json.dumps({"workflow": "hr_filter_candidates", "steps": [{"type": "tool", "tool": "hr.filter_candidates"}]}), "HR", json.dumps(["Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 2"])),
+        ("WF-B03", "Pengajuan Cuti Teknisi dan Penerbitan Dokumen PDF HR", "Mencatat permohonan cuti teknisi ke database DuckDB, mencetak formulir resmi PDF Typst, dan mendistribusikan notifikasi email ke HR.", "Catat permohonan cuti karyawan ke dalam database, cetak formulir resmi cuti format PDF dengan kop surat PT Bali Towerindo Sentra Tbk, lalu kirimkan notifikasi dan lampiran PDF ke email HR.", json.dumps({"workflow": "pengajuan-cuti-teknisi-dan-penerbitan-dokumen-pdf-hr", "steps": [{"type": "tool", "tool": "hr.submit_leave_request"}, {"type": "tool", "tool": "docgen.compile_leave_pdf"}, {"type": "tool", "tool": "notification.send_email"}]}), "HR", json.dumps(["Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok"])),
+        ("WF-B04", "Audit Cuti Pending & Kirim Email Otorisasi HR", "Memeriksa seluruh permohonan pengajuan cuti karyawan yang berstatus pending di database, menampilkan rincian berkas di chat, dan mengirimkan rekapitulasi ke email HR untuk otorisasi persetujuan.", "Audit seluruh data permohonan cuti karyawan yang masih berstatus pending approval di database. Tampilkan rincian daftar pengajuan cuti yang belum disetujui di chat, lalu kirimkan rekapitulasi ke email HR untuk otorisasi persetujuan.", json.dumps({"workflow": "audit_cuti_pending_kirim_email_otorisasi_hr", "steps": [{"type": "tool", "tool": "hr.query_pending_leaves"}, {"type": "tool", "tool": "notification.send_email"}]}), "HR", json.dumps(["Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR"])),
+        ("WF-C01", "Laporan Pendapatan Sewa Menara", "Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, XL, IOH).", "Tarik data invoice sewa menara per operator dan status pembayarannya.", json.dumps({"workflow": "finance_revenue_report", "steps": [{"type": "tool", "tool": "finance.revenue_report"}]}), "FINANCE", json.dumps(["Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya"])),
+        ("WF-C02", "Audit Beban Listrik & Sewa Lahan", "Laporan pengeluaran operasional utilitas listrik PLN, BBM genset, dan sewa lahan tower.", "Analisis beban operasional per site mencakup tagihan PLN dan jatuh tempo sewa tanah.", json.dumps({"workflow": "finance_opex_audit", "steps": [{"type": "tool", "tool": "finance.opex_audit"}]}), "FINANCE", json.dumps(["Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat"])),
+        ("WF-C04", "Pendaftaran Klien Operator & Kontrak Sewa Menara Baru (Otorisasi Email)", "Pendaftaran operator telekomunikasi baru dan penerbitan draf kontrak sewa menara (MLA). Sistem menyimpan draf ke basis data dengan status PENDING_APPROVAL dan mengklarifikasi atau mengirimkan berkas faktur serta tombol otorisasi persetujuan ke email Finance Manager.", "Susun draf pendaftaran operator klien baru dan kontrak sewa menara (MLA) ke dalam basis data dengan status PENDING_APPROVAL. Hitung estimasi tagihan invoice perdana. Jika pengguna menyertakan email tujuan, kirimkan faktur perdana dan tombol otorisasi persetujuan ke email tersebut. Jika tidak, berikan klarifikasi apakah berkas cukup disimpan di database atau dikirimkan ke email otorisasi.", json.dumps({"workflow": "pendaftaran-klien-operator-dan-kontrak-sewa-menara", "steps": [{"type": "tool", "tool": "finance.draft_client_onboarding"}, {"type": "agent", "task": "agent.reason_and_validate"}, {"type": "tool", "tool": "notification.send_email"}]}), "FINANCE", json.dumps(["Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan dan kirimkan ke email finance.mgr@balitower.co.id"])),
+        ("WF-ALL-01", "Cek Profil Akun & Hak Akses", "Melihat informasi profil pengguna yang sedang login, role, divisi tenant, dan modul yang dapat diakses.", "Periksa akun yang sedang login dan tampilkan detail hak akses serta batasan divisi.", json.dumps({"workflow": "check_user_profile", "steps": [{"type": "tool", "tool": "system.check_profile"}]}), "ALL", json.dumps(["Tampilkan informasi profil akun dan batasan hak akses divisi"])),
+        ("WF-ALL-02", "Informasi Sistem & Status Layanan", "Melihat ringkasan status operasional server, versi aplikasi, database DuckDB, dan gateway AI.", "Cek status operasional seluruh modul sistem AutoRestock-Agent.", json.dumps({"workflow": "system_health_info", "steps": [{"type": "tool", "tool": "system.get_system_info"}]}), "ALL", json.dumps(["status kesehatan sistem saat ini"])),
+        ("WF-ALL-03", "Panduan Operasional & Kontak Darurat", "Panduan SOP penggunaan sistem AutoRestock-Agent, navigasi modul, dan kontak darurat IT/Operasional.", "Tampilkan panduan operasional perusahaan dan kontak darurat lintas divisi.", json.dumps({"workflow": "company_guidelines", "steps": [{"type": "tool", "tool": "system.get_company_guidelines"}]}), "ALL", json.dumps(["Tampilkan panduan operasional perusahaan dan kontak darurat helpdesk"]))
     ]
 conn.executemany("INSERT INTO workflows VALUES (?, ?, ?, ?, ?, ?, ?);", wf_list)
 

@@ -1,7 +1,10 @@
+import logging
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+logger = logging.getLogger(__name__)
+
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +21,7 @@ from api.routers.auth_routes import router as auth_router
 from api.routers.balitower_routes import router as balitower_router
 from api.routers.stream_routes import router as stream_router
 from core.config import settings
+from core.security import TokenData, get_current_user
 from docgen.compiler import generate_pr_pdf
 from mcp_server.server import mcp
 
@@ -65,6 +69,21 @@ async def workflows_help_catalog_alias(tenant: str | None = None):
     return await get_help_catalog(tenant)
 
 
+@app.post("/api/workflows/request", tags=["Workflows"])
+async def workflows_request_alias(
+    req: dict, 
+    current_user: TokenData = Depends(get_current_user)
+):
+    from api.routers.auth_routes import submit_workflow_request, WorkflowRequestPayload
+    payload = WorkflowRequestPayload(
+        prompt=req.get("prompt", ""),
+        title=req.get("title"),
+        notes=req.get("notes"),
+        tenant_id=req.get("tenant_id")
+    )
+    return await submit_workflow_request(payload, current_user=current_user)
+
+
 @app.on_event("startup")
 async def startup_event():
     """
@@ -78,6 +97,17 @@ async def startup_event():
             generate_pr_pdf(sample_pr, output_path=DOCS_DIR / "PR_2026_0819_001.pdf")
         except Exception:
             pass
+
+    # Initialize DuckDB schema migrations safely at startup
+    try:
+        from database.db import get_db_connection
+        from api.routers.auth_routes import _ensure_workflow_tenant_column, _ensure_workflow_requests_table
+        conn = get_db_connection(read_only=False)
+        _ensure_workflow_tenant_column(conn)
+        _ensure_workflow_requests_table(conn)
+        conn.close()
+    except Exception:
+        pass
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -102,7 +132,7 @@ def root(request: Request):
         "service": "AutoRestock-Agent API",
         "status": "online",
         "version": "1.0.0",
-        "supported_models": ["nemotron-35"],
+        "supported_models": [settings.MODEL_NAME or "qwen-38"],
         "modules": [
             "Live Inventory & Dynamic Safety Stock",
             "Multi-Agent Procurement Orchestration",
@@ -130,15 +160,16 @@ async def health_check():
         base_url = (settings.MODEL_URL or "").rstrip("/")
         models_endpoint = base_url if base_url.endswith("/models") else f"{base_url}/models"
 
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             headers = {}
             if settings.MODEL_API_KEY and settings.MODEL_API_KEY.strip():
                 headers["Authorization"] = f"Bearer {settings.MODEL_API_KEY.strip()}"
             res = await client.get(models_endpoint, headers=headers)
             res.raise_for_status()
-        return {"status": "healthy", "llm_connected": True, "llm_url": settings.MODEL_URL}
+        return {"status": "healthy", "llm_connected": True}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"LLM Disconnected ({settings.MODEL_URL}): {e!s}")
+        logger.warning(f"LLM health check failed for {settings.MODEL_URL}: {e!s}")
+        raise HTTPException(status_code=503, detail="LLM Disconnected or unavailable")
 
 
 if __name__ == "__main__":

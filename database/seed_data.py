@@ -140,9 +140,9 @@ def seed_data(conn: duckdb.DuckDBPyConnection):
     if user_count == 0:
         users_data = [
             ("USR-001", "admin", admin_hash, "ADMIN", "ALL"),
-            ("USR-002", "usera", user_hash, "USER", "TENANT_A"),
-            ("USR-003", "userb", user_hash, "USER", "TENANT_B"),
-            ("USR-004", "userc", user_hash, "USER", "TENANT_C")
+            ("USR-002", "usera", user_hash, "USER", "INVENTORY"),
+            ("USR-003", "userb", user_hash, "USER", "HR"),
+            ("USR-004", "userc", user_hash, "USER", "FINANCE")
         ]
         conn.executemany("INSERT INTO users VALUES (?, ?, ?, ?, ?);", users_data)
         print("[OK] Users seeded.")
@@ -210,13 +210,10 @@ def seed_data(conn: duckdb.DuckDBPyConnection):
         ]
     }
     wf_b01_json = {
-        "workflow": "audit_stok_obat_kritis",
+        "workflow": "hr_attendance_audit",
         "version": 1,
         "steps": [
-            {"type": "tool", "tool": "inventory.get_low_stock_products"},
-            {"type": "agent", "task": "calculate_reorder_quantity"},
-            {"type": "tool", "tool": "purchase_order.create_draft"},
-            {"type": "tool", "tool": "notification.send_email"}
+            {"type": "tool", "tool": "hr.audit_attendance"}
         ]
     }
     wf_c01_json = {
@@ -238,9 +235,9 @@ def seed_data(conn: duckdb.DuckDBPyConnection):
         ("WF-005", "Cek Stok Barang Spesifik", "Menjawab pertanyaan user mengenai jumlah stok barang tertentu.", "Jika user menanyakan stok barang tertentu secara spesifik (misal: 'berapa stok kopi'), cek stok barang tersebut secara langsung dan kembalikan jawabannya.", json.dumps(wf_5_json), "ALL"),
         
         # Tenant Specific Workflows
-        ("WF-A01", "Restock Komponen Assembly Elektronik", "Memeriksa komponen SMD/IC pabrik di bawah safety reorder point, kalkulasi kebutuhan lead time, dan buatkan PR reel.", "Periksa komponen elektronika assembly line yang berada di bawah safety reorder point. Hitung kebutuhan restock pabrikan dan buatkan draft PR.", json.dumps(wf_a01_json), "TENANT_A"),
-        ("WF-B01", "Audit Stok Obat Kritis & Restock Farmasi", "Memeriksa stok obat gudang farmasi dengan shortage flag dan closing stock menipis, lalu buat PO farmasi.", "Tarik data persediaan obat dan kimia farmasi yang berstatus shortage atau stok penutupan menipis. Buatkan Purchase Order obat resmi.", json.dumps(wf_b01_json), "TENANT_B"),
-        ("WF-C01", "Pengadaan Suku Cadang Kritis Bengkel Armada", "Scan stok suku cadang armada komersial/alat berat yang berada di bawah critical threshold workshop.", "Periksa stok sparepart armada kendaraan dan alat berat bengkel yang di bawah ambang batas kritis. Buatkan draf pemesanan suku cadang darurat.", json.dumps(wf_c01_json), "TENANT_C"),
+        ("WF-A01", "Restock Komponen Assembly Elektronik", "Memeriksa komponen SMD/IC pabrik di bawah safety reorder point, kalkulasi kebutuhan lead time, dan buatkan PR reel.", "Periksa komponen elektronika assembly line yang berada di bawah safety reorder point. Hitung kebutuhan restock pabrikan dan buatkan draft PR.", json.dumps(wf_a01_json), "INVENTORY"),
+        ("WF-B01", "Audit Absensi & Lembur Teknisi Lapangan", "Pemeriksaan catatan absensi kehadiran teknisi di site menara dan rekapitulasi jam kerja lembur.", "Audit seluruh absensi teknisi lapangan dengan validasi geofencing GPS dan hitung akumulasi biaya lembur.", json.dumps(wf_b01_json), "HR"),
+        ("WF-C01", "Pengadaan Suku Cadang Kritis Bengkel Armada", "Scan stok suku cadang armada komersial/alat berat yang berada di bawah critical threshold workshop.", "Periksa stok sparepart armada kendaraan dan alat berat bengkel yang di bawah ambang batas kritis. Buatkan draf pemesanan suku cadang darurat.", json.dumps(wf_c01_json), "FINANCE"),
     ]
 
     existing_wf_ids = set([r[0] for r in conn.execute("SELECT id FROM workflows;").fetchall()])
@@ -262,14 +259,14 @@ def seed_data(conn: duckdb.DuckDBPyConnection):
             ("ITM-007", "Lithium Polymer Battery 3.7V 1200mAh", "Electronics", 85, 50, 150, 5.0, 10, "pcs", "TENANT_A"),
             ("ITM-008", "Stepper Motor NEMA 17", "Mechanical", 45, 30, 90, 3.0, 8, "pcs", "TENANT_A"),
             ("ITM-009", "Linear Rail MGN12H 300mm", "Mechanical", 22, 15, 45, 1.2, 12, "set", "TENANT_A"),
-            ("ITM-010", "PLA 3D Printer Filament 1kg", "Raw Materials", 60, 35, 105, 4.0, 4, "spool", "TENANT_B"),
-            ("ITM-011", "PETG Filament Black 1kg", "Raw Materials", 32, 20, 60, 2.5, 4, "spool", "TENANT_B"),
-            ("ITM-012", "Kapton Tape 20mm x 33m", "Consumables", 40, 25, 75, 2.0, 5, "roll", "TENANT_B"),
-            ("ITM-013", "Industrial Isopropyl Alcohol 99% 5L", "Chemicals", 18, 10, 30, 1.0, 3, "canister", "TENANT_B"),
-            ("ITM-014", "Anti-Static ESD Gloves (M)", "Safety", 120, 60, 180, 8.0, 3, "pair", "TENANT_B"),
-            ("ITM-015", "Heat Shrink Tubing Assortment Box", "Consumables", 55, 30, 90, 3.5, 6, "box", "TENANT_B"),
-            ("ITM-016", "USB-C to USB-A Cable 1m", "Cables", 90, 40, 120, 4.0, 5, "pcs", "TENANT_B"),
-            ("ITM-017", "Silica Gel Desiccant Packets 5g", "Packaging", 450, 200, 600, 30.0, 2, "pack", "TENANT_B"),
+            ("ITM-010", "PLA 3D Printer Filament 1kg", "Raw Materials", 60, 35, 105, 4.0, 4, "spool", "ALL"),
+            ("ITM-011", "PETG Filament Black 1kg", "Raw Materials", 32, 20, 60, 2.5, 4, "spool", "ALL"),
+            ("ITM-012", "Kapton Tape 20mm x 33m", "Consumables", 40, 25, 75, 2.0, 5, "roll", "ALL"),
+            ("ITM-013", "Industrial Isopropyl Alcohol 99% 5L", "Chemicals", 18, 10, 30, 1.0, 3, "canister", "ALL"),
+            ("ITM-014", "Anti-Static ESD Gloves (M)", "Safety", 120, 60, 180, 8.0, 3, "pair", "ALL"),
+            ("ITM-015", "Heat Shrink Tubing Assortment Box", "Consumables", 55, 30, 90, 3.5, 6, "box", "ALL"),
+            ("ITM-016", "USB-C to USB-A Cable 1m", "Cables", 90, 40, 120, 4.0, 5, "pcs", "ALL"),
+            ("ITM-017", "Silica Gel Desiccant Packets 5g", "Packaging", 450, 200, 600, 30.0, 2, "pack", "ALL"),
             ("ITM-018", "M3 Hex Socket Screws Kit 500pcs", "Hardware", 25, 15, 45, 1.5, 4, "kit", "TENANT_C"),
             ("ITM-019", "Aluminum Heat Sink 20x20x6mm", "Electronics", 210, 100, 300, 12.0, 7, "pcs", "TENANT_C"),
             ("ITM-020", "DC Brushless Cooling Fan 12V 4010", "Electronics", 65, 30, 90, 3.0, 6, "pcs", "TENANT_C"),

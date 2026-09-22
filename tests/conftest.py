@@ -7,11 +7,9 @@ WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 
-@pytest.fixture(scope="session", autouse=True)
-def ensure_test_database():
+def seed_test_database_if_needed():
     """
-    Session-wide autouse fixture that guarantees storage/balitower.db
-    exists and contains seeded tables before any test runs.
+    Guarantees storage/balitower.db exists and contains seeded tables with at least 8 purchase orders.
     """
     db_path = WORKSPACE_DIR / "storage" / "balitower.db"
     generator_script = WORKSPACE_DIR / "scripts" / "generate_balitower_data.py"
@@ -32,4 +30,13 @@ def ensure_test_database():
 
     if needs_seed and generator_script.exists():
         subprocess.run([sys.executable, str(generator_script)], check=True)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_test_database():
+    """
+    Session-wide autouse fixture that guarantees storage/balitower.db
+    exists and contains seeded tables before any test runs.
+    """
+    seed_test_database_if_needed()
 

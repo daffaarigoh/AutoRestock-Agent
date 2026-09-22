@@ -24,6 +24,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from agents.state import AgentState, PurchaseRequisition, RestockItem
+from core.config import settings
 from core.llm_client import gateway
 from database.db import execute_db_write, get_db_connection
 from docgen.compiler import generate_pr_pdf
@@ -147,10 +148,11 @@ def _run_sync(coro):
 
 def planner_node(state: AgentState) -> dict[str, Any]:
     """
-    Node 2: Planner Node (nemotron-35 Planner & Vendor Matcher)
+    Node 2: Planner Node (qwen-38 Planner & Vendor Matcher)
     Analyzes safety stock deficits, selects optimal vendors, and drafts line item justifications.
     """
-    print("[AGENT] [STEP 2: PLANNER] Running Planner Node (nemotron-35) - Vendor matching & budget calculation via LLM...")
+    active_model = settings.MODEL_NAME or "qwen-38"
+    print(f"[AGENT] [STEP 2: PLANNER] Running Planner Node ({active_model}) - Vendor matching & budget calculation via LLM...")
     low_stock_items = state.get("low_stock_items", [])
     tenant_id = state.get("tenant_id", "ALL")
     
@@ -202,7 +204,7 @@ Output format must be a JSON object with a key 'items' containing a list of obje
     is_llm_success = False
     try:
         response_str = _run_sync(
-            gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
+            gateway.chat_completion(settings.MODEL_NAME or "qwen-38", messages, temperature=0.1, response_format_json=True)
         )
         
         if response_str.startswith("```json"):
@@ -256,10 +258,11 @@ Output format must be a JSON object with a key 'items' containing a list of obje
 
 def audit_node(state: AgentState) -> dict[str, Any]:
     """
-    Node 3: Audit Node (nemotron-35 Compliance & Policy Enforcer)
+    Node 3: Audit Node (qwen-38 Compliance & Policy Enforcer)
     Validates budget threshold and vendor compliance.
     """
-    print("[AGENT] [STEP 3: AUDIT] Running Audit Node (nemotron-35) - Compliance & budget guardrail via LLM...")
+    active_model = settings.MODEL_NAME or "qwen-38"
+    print(f"[AGENT] [STEP 3: AUDIT] Running Audit Node ({active_model}) - Compliance & budget guardrail via LLM...")
     total_budget = state.get("total_budget", 0.0)
     planned_items = state.get("planned_items", [])
     
@@ -300,7 +303,7 @@ Output format must be a JSON object with:
     is_llm_audit = False
     try:
         response_str = _run_sync(
-            gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
+            gateway.chat_completion(settings.MODEL_NAME or "qwen-38", messages, temperature=0.1, response_format_json=True)
         )
         
         if response_str.startswith("```json"):

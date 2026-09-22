@@ -1,7 +1,8 @@
 import json
 import re
 
-from core.llm_client import ModelGateway
+from core.config import settings
+from core.llm_client import ModelGateway, gateway
 
 class WorkflowCompiler:
     @classmethod
@@ -28,8 +29,12 @@ You must build the execution pipeline using the official Agentic Building Blocks
    - {"type": "tool", "tool": "inventory.crud_record"} -> Generic database record operations.
    - {"type": "tool", "tool": "po.query_orders"} -> Queries Purchase Orders (PO) filtered by status ("ACTIVE", "IN_TRANSIT", "PENDING_APPROVAL", "APPROVED").
    - {"type": "tool", "tool": "po.approve"} -> Approves a Purchase Order and updates its status to "APPROVED".
+   - {"type": "tool", "tool": "hr.mutate_employee"} -> Updates an employee's department and job title/position in the DuckDB database.
+   - {"type": "tool", "tool": "hr.approve_leave"} -> Approves an employee leave application, sets status to APPROVED, and automatically deducts the employee's remaining leave balance.
    - {"type": "tool", "tool": "hr.submit_leave_request"} -> Records an employee leave application into the DuckDB database.
    - {"type": "tool", "tool": "hr.query_pending_leaves"} -> Queries all employee leave applications with PENDING_APPROVAL status from DuckDB for review and dispatch.
+   - {"type": "tool", "tool": "hr.audit_attendance"} -> Audits employee site attendance records and overtime hours.
+   - {"type": "tool", "tool": "hr.filter_candidates"} -> Filters tower rigger candidates by K3 TKPK certifications.
    - {"type": "tool", "tool": "finance.draft_client_onboarding"} -> Prepares a draft onboarding for a new telecom client operator and tower lease contract (MLA) with PENDING_APPROVAL status.
    - {"type": "tool", "tool": "finance.approve_client_onboarding"} -> Approves an onboarding request and activates client, contract, and invoice.
    - {"type": "tool", "tool": "finance.audit_client_onboardings"} -> Queries all pending client onboarding and lease contract requests.
@@ -73,7 +78,7 @@ Do not output any markdown formatting or extra commentary outside the JSON.
         ]
         
         try:
-            response_str = await gateway.chat_completion("nemotron-35", messages, temperature=0.1, response_format_json=True)
+            response_str = await gateway.chat_completion(settings.MODEL_NAME or "qwen-38", messages, temperature=0.1, response_format_json=True)
             json_match = re.search(r'\{.*\}', response_str, re.DOTALL)
             if json_match:
                 response_str = json_match.group(0)
@@ -121,8 +126,27 @@ Do not output any markdown formatting or extra commentary outside the JSON.
             steps.append({"type": "tool", "tool": "inventory.crud_record"})
             steps.append({"type": "tool", "tool": "notification.dispatch"})
 
+        # Case HR-1: Mutasi Karyawan / Pindah Jabatan & Departemen
+        elif any(k in text_lower for k in ["mutasi", "pindah departemen", "pindah divisi", "pindah jabatan", "rotasi karyawan", "posisi baru", "jabatan baru"]):
+            steps.append({"type": "agent", "task": "agent.reason_and_validate"})
+            steps.append({"type": "tool", "tool": "hr.mutate_employee"})
+
+        # Case HR-2: Otorisasi & Persetujuan Cuti Karyawan
+        elif ("cuti" in text_lower) and any(k in text_lower for k in ["setujui", "otorisasi", "approve", "pemotongan kuota", "potong kuota", "potong cuti"]):
+            steps.append({"type": "tool", "tool": "hr.approve_leave"})
+            if any(k in text_lower for k in ["email", "notifikasi", "kirim", "dispatch"]):
+                steps.append({"type": "tool", "tool": "notification.send_email"})
+
+        # Case HR-3: Screening & Filter Pelamar K3
+        elif any(k in text_lower for k in ["pelamar", "kandidat", "rigger", "tkpk", "screening pelamar"]):
+            steps.append({"type": "tool", "tool": "hr.filter_candidates"})
+
+        # Case HR-4: Audit Absensi & Lembur Teknisi
+        elif any(k in text_lower for k in ["absensi", "kehadiran", "lembur", "overtime", "geofencing", "kunjungan site"]):
+            steps.append({"type": "tool", "tool": "hr.audit_attendance"})
+
         # Case 6: Purchase Order (PO) Tracking, Approval, and PDF Document Generation
-        elif any(k in text_lower for k in ["purchase order", "po", "surat pesanan", "berkas po", "monitoring po", "cetak po"]):
+        elif any(k in text_lower for k in ["purchase order", "surat pesanan", "berkas po", "monitoring po", "cetak po"]) or bool(re.search(r'\bpo\b', text_lower)):
             if any(k in text_lower for k in ["setujui", "approve", "persetujuan"]):
                 steps.append({"type": "tool", "tool": "po.query_orders"})
                 steps.append({"type": "tool", "tool": "po.approve"})
@@ -182,53 +206,57 @@ Do not output any markdown formatting or extra commentary outside the JSON.
 
     @classmethod
     def generate_heuristic_examples(cls, name: str, instruction: str) -> list[str]:
-        """Generates 2 clean natural language prompt examples based on name and instruction."""
+        """Generates 1 clean natural language prompt example based on name and instruction."""
         clean_name = re.sub(r'^(?:alur|workflow|pipeline|proses)\s+', '', name, flags=re.IGNORECASE).strip()
         text_lower = f"{name} {instruction}".lower()
         
         # Domain specific prompt templates
         if any(k in text_lower for k in ["cuti", "leave"]):
             return [
-                "Ajukan permohonan cuti tahunan karyawan untuk teknisi lapangan",
-                "Audit daftar pengajuan cuti yang masih berstatus pending approval"
+                "Ajukan permohonan cuti tahunan karyawan untuk teknisi lapangan"
             ]
         elif any(k in text_lower for k in ["absensi", "presensi", "lembur"]):
             return [
-                "Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi",
-                "Cek validasi presensi geofencing teknisi lapangan minggu ini"
+                "Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi"
             ]
         elif any(k in text_lower for k in ["rigger", "pelamar", "kandidat", "rekrutmen"]):
             return [
-                "Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 1",
-                "Tampilkan pelamar yang lolos uji medis kelayakan bekerja di ketinggian"
+                "Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 1"
             ]
         elif any(k in text_lower for k in ["invoice", "tagihan", "sewa menara", "mla"]):
             return [
-                "Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya",
-                "Daftarkan kontrak sewa menara baru untuk operator telekomunikasi"
+                "Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya"
             ]
         elif any(k in text_lower for k in ["listrik", "pln", "genset", "lahan", "sewa tanah"]):
             return [
-                "Audit pengeluaran operasional listrik PLN dan sewa lahan menara",
-                "Tampilkan beban utilitas genset dan tagihan listrik site tertinggi"
+                "Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat"
             ]
         elif any(k in text_lower for k in ["arus kas", "cash flow", "kas"]):
             return [
-                "Tampilkan ringkasan arus kas masuk dan keluar beserta posisi saldo bersih terkini",
-                "Berapa saldo kas operasional saat ini?"
+                "Tampilkan ringkasan arus kas masuk dan keluar beserta posisi saldo bersih terkini"
             ]
         elif any(k in text_lower for k in ["penerimaan", "kedatangan", "tiba", "gudang", "po-"]):
             return [
-                "PO-2026-001 sudah sampai di gudang, tolong catat penerimaan barangnya"
+                "Catat penerimaan PO/BLT/2026/09/031 untuk semua gudang"
+            ]
+        elif any(k in text_lower for k in ["profil", "hak akses", "wewenang", "user"]):
+            return [
+                "Tampilkan informasi profil akun dan batasan hak akses divisi"
+            ]
+        elif any(k in text_lower for k in ["kesehatan", "status layanan", "status sistem", "gateway"]):
+            return [
+                "status kesehatan sistem saat ini"
+            ]
+        elif any(k in text_lower for k in ["panduan", "sop", "darurat", "kontak"]):
+            return [
+                "Tampilkan panduan operasional perusahaan dan kontak darurat helpdesk"
             ]
         elif any(k in text_lower for k in ["restock", "pengadaan", "pr-to-po", "kritis", "menipis"]):
             return [
-                f"Periksa kondisi stok untuk {clean_name} dan buat draft pengadaan barang",
-                f"Jalankan evaluasi alur kerja {clean_name}"
+                f"Periksa kondisi stok untuk {clean_name} dan buat draft pengadaan barang"
             ]
         else:
             return [
-                f"Jalankan alur kerja {clean_name}",
-                f"Periksa status operasional untuk {clean_name}"
+                f"Jalankan alur kerja {clean_name}"
             ]
 

@@ -487,7 +487,7 @@
     <nav class="tab-nav-container" aria-label="Navigasi Diagram Alur Operasional">
       <button class="tab-btn active" onclick="switchDiagramTab('coreAgentFlow')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>1. Alur Query &amp; Tools AI</span>
+        <span>1. Two-Tier &amp; Guardrail AI</span>
         <span class="tab-badge">react</span>
       </button>
 
@@ -511,7 +511,7 @@
 
       <button class="tab-btn" onclick="switchDiagramTab('adminOrch')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-        <span>5. Dynamic Orchestrator</span>
+        <span>5. Orchestrator &amp; Usulan Alur</span>
         <span class="tab-badge">admin</span>
       </button>
     </nav>
@@ -520,7 +520,7 @@
     <section id="tab-coreAgentFlow" class="flow-section active">
       <div class="diagram-display-card">
         <div class="diagram-top-bar">
-          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 1. Alur Pemrosesan Pertanyaan Pengguna, Penentuan Tools, dan Eksekusi (Autonomous ReAct Core)</div>
+          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 1. Arsitektur Two-Tier: Alur Kerja Admin (Tier 1) vs Kueri Langsung LLM &amp; Guarded Tools (Tier 2)</div>
           <div class="diagram-controls">
             <span class="zoom-hint-text">Klik &amp; Geser untuk memindahkan | Scroll untuk Zoom</span>
             <button class="zoom-btn" onclick="zoomDiagram('coreAgentFlow', 0.15)" title="Perbesar (+)">
@@ -648,7 +648,7 @@
     <section id="tab-adminOrch" class="flow-section">
       <div class="diagram-display-card">
         <div class="diagram-top-bar">
-          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 5. Dynamic Workflow Orchestrator (admin)</div>
+          <div class="diagram-tag"><span class="diagram-tag-dot"></span> 5. Siklus Pengajuan Alur Kerja (Chat Form) &amp; Dynamic Workflow Orchestrator (Admin)</div>
           <div class="diagram-controls">
             <span class="zoom-hint-text">Klik &amp; Geser untuk memindahkan | Scroll untuk Zoom</span>
             <button class="zoom-btn" onclick="zoomDiagram('adminOrch', 0.15)" title="Perbesar (+)">
@@ -687,76 +687,82 @@
   <script>
     const DIAGRAM_SOURCES = {
       coreAgentFlow: `flowchart TD
-    subgraph S1 ["Tahap 1: Ingress & Autentikasi"]
+    subgraph S1 ["Tahap 1: Ingress & Autentikasi Pengguna"]
         direction LR
         U1["Input Pertanyaan Pengguna<br/>di Web Copilot Chat"] --> API1["POST /api/agent/stream-prompt<br/>(Koneksi Streaming SSE)"]
-        API1 --> JWT1["JWT Security Guard:<br/>Validasi Token, Role & Tenant"]
+        API1 --> JWT1["JWT Security Guard:<br/>Validasi Token, Role & Tenant (RLS)"]
     end
 
-    subgraph S2 ["Tahap 2: Filter Keamanan & Guardrail"]
+    subgraph S2 ["Tahap 2: Filter Keamanan & Intent Khusus"]
         direction TB
         SEC1{"Pemeriksaan<br/>Keamanan &<br/>Intent"}
         ERR_SEC["Security Refusal:<br/>Blokir Perintah Destruktif"]
         CLARIF["Clarification Prompt:<br/>Minta Kelengkapan Data"]
-        REACT_IN["Lolos Filter Keamanan:<br/>Lanjut ke ReAct Loop"]
+        CHAT_FORM["Inline Chat Form:<br/>Formulir Pengajuan Workflow Baru"]
+        TIER_CHECK["Lolos Filter Keamanan:<br/>Lanjut ke Pengecekan Dua Tingkat"]
         
         SEC1 -->|Instruksi Terlarang| ERR_SEC
-        SEC1 -->|Data Kurang| CLARIF
-        SEC1 -->|Instruksi Valid| REACT_IN
+        SEC1 -->|Data Kurang atau Ambigu| CLARIF
+        SEC1 -->|Ajukan Alur Kerja Baru| CHAT_FORM
+        SEC1 -->|Instruksi Valid| TIER_CHECK
     end
 
-    subgraph S3 ["Tahap 3: Penalaran AI (ReAct Loop)"]
-        DYN_CTX["Injeksi Skema 18 Tabel DuckDB<br/>& Isolasi Data Tenant (RLS)"]
-        LLM_CORE["ModelGateway: Reasoning LLM<br/>Analisis Maksud & Rencana Thought"]
-        DECISION{"Perlu Tool<br/>atau Percakapan<br/>Langsung?"}
-        DIRECT_RESP["Respon Percakapan Langsung<br/>(tool = null / Tanya Jawab)"]
-        TOOL_ROUTER["Tool Determination Router:<br/>Ekstraksi Parameter JSON"]
+    subgraph S3 ["Tahap 3: Two-Tier Routing & Guardrail System"]
+        direction TB
+        ROUTER{"SemanticRouter:<br/>Apakah Alur Kerja<br/>Terdaftar di Admin?"}
+        WF_EXEC["Tier 1: Admin Workflow<br/>JSONExecutionEngine (Deterministik)<br/>Katalog DuckDB (WF-A01 s/d WF-ALL)"]
+        LLM_REACT["Tier 2: Ad-Hoc Reasoning<br/>LLM Qwen Core (ModelGateway)<br/>Penalaran Dinamis & Pemilihan Tool"]
         
-        DYN_CTX --> LLM_CORE --> DECISION
-        DECISION -->|Tanya Jawab / SOP| DIRECT_RESP
-        DECISION -->|Tindakan Operasional| TOOL_ROUTER
+        ROUTER -->|Cocok Alur Terdaftar| WF_EXEC
+        ROUTER -->|Kueri Ad-Hoc atau Bebas| LLM_REACT
     end
 
-    subgraph S4 ["Tahap 4: Penentuan Tools Multi-Domain"]
-        T_DB["Domain 1: Basis Data & Query<br/>tool_query_database<br/>(SELECT Aman DuckDB & RLS)"]
-        T_INV["Domain 2: Logistik & Inventaris (Schema A)<br/>tool_procurement_cycle &bull; tool_manage_po<br/>tool_view_po &bull; tool_update_threshold<br/>tool_register_product"]
-        T_HR["Domain 3: HR & Lapangan (Schema B)<br/>tool_process_leave_request<br/>tool_query_pending_leaves"]
-        T_FIN["Domain 4: Finance & Komersial (Schema C)<br/>tool_manage_telecom_invoice<br/>tool_finance_audit"]
+    subgraph S4 ["Tahap 4: Klasifikasi Akses Tools (Tier 2 Guardrail)"]
+        direction TB
+        TOOL_EVAL{"Evaluasi Sifat Tool<br/>(DIRECT vs GUARDED)"}
+        TOOL_DIRECT["Direct / Safe Tools (Akses Langsung):<br/>tool_query_database (SELECT DuckDB)<br/>tool_view_po &bull; Profil & Panduan SOP"]
+        TOOL_GUARDED{"Pengguna adalah<br/>Role: ADMIN?"}
+        GUARD_BLOCKED["Akses Ditolak - Tata Kelola Enterprise:<br/>Blokir Eksekusi & Tampilkan Rekomendasi<br/>Ajukan Alur Kerja ke Administrator"]
+        GUARD_EXEC["Otorisasi Admin Terverifikasi:<br/>Lanjut Eksekusi Tool Terproteksi"]
+
+        LLM_REACT --> TOOL_EVAL
+        TOOL_EVAL -->|Safe atau Read-Only Tool| TOOL_DIRECT
+        TOOL_EVAL -->|Guarded atau Restricted Tool| TOOL_GUARDED
+        TOOL_GUARDED -->|Bukan Admin atau Staff Biasa| GUARD_BLOCKED
+        TOOL_GUARDED -->|Role Administrator| GUARD_EXEC
     end
 
     subgraph S5 ["Tahap 5: Eksekusi Layanan & Database"]
-        EXEC_DUCK[("DuckDB OLAP Engine:<br/>Eksekusi Transaksi SQL & RLS")]
-        EXEC_TYPST["DocGen Typst Compiler:<br/>Penerbitan Dokumen PDF"]
+        EXEC_DUCK[("DuckDB OLAP Engine:<br/>Query Data & Transaksi RLS")]
+        EXEC_TYPST["DocGen Typst Compiler:<br/>Penerbitan Dokumen Resmi PDF"]
         EXEC_SMTP["SMTP Dispatcher:<br/>Notifikasi Email Otorisasi HITL"]
     end
 
     subgraph S6 ["Tahap 6: Sintesis & Egress SSE"]
         direction LR
-        SYNTH["Sintesis AI (nemotron-35):<br/>Formatting Tabel Markdown"] --> SSE_OUT["SSE Event Stream:<br/>Kirim Status Badge Real-Time"]
-        SSE_OUT --> UI_CARD["Web Copilot Dashboard:<br/>Tampilan Chat & Unduh PDF"]
+        SYNTH["Sintesis AI (qwen-38):<br/>Formatting Tabel Markdown"] --> SSE_OUT["SSE Event Stream:<br/>Kirim Status Badge & Token"]
+        SSE_OUT --> UI_CARD["Web Copilot Dashboard:<br/>Tampilan Chat, Unduh PDF & Form"]
     end
 
-    %% Relasi Antar-Tahap di Luar Subgraph (Mencegah Tabrakan Garis & Judul)
+    %% Relasi Antar-Tahap di Luar Subgraph
     JWT1 --> SEC1
-    REACT_IN --> DYN_CTX
+    TIER_CHECK --> ROUTER
     
-    TOOL_ROUTER --> T_DB
-    TOOL_ROUTER --> T_INV
-    TOOL_ROUTER --> T_HR
-    TOOL_ROUTER --> T_FIN
+    WF_EXEC --> EXEC_DUCK
+    WF_EXEC --> EXEC_TYPST
+    WF_EXEC --> EXEC_SMTP
 
-    T_DB --> EXEC_DUCK
-    T_INV --> EXEC_TYPST
-    T_INV --> EXEC_DUCK
-    T_HR --> EXEC_TYPST
-    T_HR --> EXEC_SMTP
-    T_FIN --> EXEC_TYPST
-    T_FIN --> EXEC_DUCK
+    TOOL_DIRECT --> EXEC_DUCK
+    GUARD_EXEC --> EXEC_TYPST
+    GUARD_EXEC --> EXEC_SMTP
+    GUARD_EXEC --> EXEC_DUCK
 
     EXEC_DUCK --> SYNTH
     EXEC_TYPST --> SYNTH
     EXEC_SMTP --> SYNTH
-    DIRECT_RESP --> SSE_OUT
+
+    GUARD_BLOCKED --> SSE_OUT
+    CHAT_FORM --> SSE_OUT
     CLARIF --> SSE_OUT
     ERR_SEC --> SSE_OUT
 
@@ -770,9 +776,9 @@
 
     class S1,S2,S3,S4,S5,S6 stageDef;
     class U1,API1,JWT1 ingressDef;
-    class SEC1,ERR_SEC,CLARIF guardDef;
-    class REACT_IN,DYN_CTX,LLM_CORE,DECISION,DIRECT_RESP,TOOL_ROUTER reactDef;
-    class T_DB,T_INV,T_HR,T_FIN toolDef;
+    class SEC1,ERR_SEC,CLARIF,TOOL_GUARDED,GUARD_BLOCKED guardDef;
+    class TIER_CHECK,ROUTER,WF_EXEC,LLM_REACT,TOOL_EVAL,GUARD_EXEC reactDef;
+    class TOOL_DIRECT,CHAT_FORM toolDef;
     class EXEC_DUCK,EXEC_TYPST,EXEC_SMTP execDef;
     class SYNTH,SSE_OUT,UI_CARD egressDef;`,
 
@@ -900,20 +906,29 @@
     class C3,C9,C11 dbDef;`,
 
       adminOrch: `flowchart TD
-    subgraph Tahap1 ["Tahap 1: Desain & Kompilasi Perintah"]
-        Admin["Administrator Sistem:<br/>Input Perintah Bahasa Alami"] --> Compiler["LLM Graph Compiler:<br/>agents/workflow_compiler.py"]
-        Compiler --> JSONGraph["Execution Graph JSON:<br/>Validasi Struktur & Dependensi"]
+    subgraph Tahap1 ["Tahap 1: Pengajuan Kebutuhan Alur Kerja Baru"]
+        UserChat["Pengguna Operasional (Chat):<br/>Ketik 'mau ajukan workflow'<br/>atau Terpicu Guarded Tool"] --> ReqEndpoint["API Endpoint:<br/>POST /api/workflows/request"]
+        ReqEndpoint --> ReqDB[("DuckDB: workflow_requests<br/>Penyimpanan Antrean Permintaan")]
     end
 
-    subgraph Tahap2 ["Tahap 2: Manajemen Katalog Alur"]
-        DB[("DuckDB: workflows<br/>Penyimpanan Katalog Alur")] --> Engine["JSONExecutionEngine:<br/>agents/json_executor.py"]
+    subgraph Tahap2 ["Tahap 2: Tinjauan & Kompilasi oleh Administrator"]
+        AdminPortal["Portal Administrator (admin.html):<br/>Review Antrean Usulan & Input Perintah"] --> Compiler["LLM Workflow Compiler:<br/>agents/workflow_compiler.py"]
+        ReqDB --> AdminPortal
+        Compiler --> JSONGraph["Execution Graph JSON:<br/>Validasi Struktur, Step & Dependensi"]
     end
 
-    subgraph Tahap3 ["Tahap 3: Eksekusi Tools Multi-Domain"]
-        ToolRegistry["Tool Registry Multi-Domain:<br/>Inventory, HR, Finance, Typst"] --> LiveUI["Web Dashboard & Streaming<br/>Chat Copilot (SSE Output)"]
+    subgraph Tahap3 ["Tahap 3: Manajemen Katalog Alur Resmi"]
+        JSONGraph --> DB[("DuckDB: workflows<br/>Katalog Alur Terdaftar (WF-A01 s/d WF-ALL)")]
+        DB --> Engine["JSONExecutionEngine:<br/>agents/json_executor.py (Tier 1)"]
     end
 
-    %% Relasi Antar-Tahap di Luar Subgraph (Mencegah Tabrakan Garis & Judul)
+    subgraph Tahap4 ["Tahap 4: Eksekusi Tools Multi-Domain Terkelola"]
+        Engine --> ToolRegistry["Tool Registry Multi-Domain:<br/>Inventory, HR, Finance, Typst, SMTP"]
+        ToolRegistry --> LiveUI["Web Dashboard & Streaming<br/>Chat Copilot (SSE Output)"]
+    end
+
+    %% Relasi Antar-Tahap di Luar Subgraph
+    ReqDB -.-> AdminPortal
     JSONGraph --> DB
     Engine --> ToolRegistry
 
@@ -925,11 +940,11 @@
     classDef execDef fill:#064E3B,stroke:#34D399,stroke-width:1.5px,color:#F8FAFC;
     classDef regDef fill:#0F172A,stroke:#38BDF8,stroke-width:1.5px,color:#F8FAFC;
 
-    class Tahap1,Tahap2,Tahap3 stageDef;
-    class Admin adminDef;
+    class Tahap1,Tahap2,Tahap3,Tahap4 stageDef;
+    class UserChat,ReqEndpoint,AdminPortal adminDef;
     class Compiler compDef;
     class JSONGraph jsonDef;
-    class DB dbDef;
+    class ReqDB,DB dbDef;
     class Engine execDef;
     class ToolRegistry,LiveUI regDef;`
     };

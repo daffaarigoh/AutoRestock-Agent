@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
+from core.config import settings
 from core.observability import tracer
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
 from core.security import TokenData, get_current_user
@@ -107,11 +108,12 @@ async def agent_thought_generator(tenant_id: str = "ALL") -> AsyncGenerator[str,
     vendor_str = " & ".join([f"'{v}'" for v in vendor_names]) if vendor_names else "supplier terverifikasi"
     total_budget_fmt = f"Rp {pr_doc.total_budget:,.0f}".replace(",", ".")
 
-    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 3, 'node': 'Procurement Planner Node', 'model': 'nemotron-35', 'message': f'nemotron-35 mencocokkan supplier: Memilih {vendor_str} berdasarkan harga termurah & lead time tercepat.', 'progress': 50})}\n\n"
+    active_model = settings.MODEL_NAME or "qwen-38"
+    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 3, 'node': 'Procurement Planner Node', 'model': active_model, 'message': f'{active_model} mencocokkan supplier: Memilih {vendor_str} berdasarkan harga termurah & lead time tercepat.', 'progress': 50})}\n\n"
     await asyncio.sleep(0.7)
 
     # Step 4: Compliance Auditor
-    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 4, 'node': 'Compliance Auditor Node', 'model': 'nemotron-35', 'message': f'nemotron-35 memverifikasi anggaran: Total PR {total_budget_fmt} dinyatakan PASSED ({pr_doc.auditor_notes}).', 'progress': 68})}\n\n"
+    yield f"data: {json.dumps({'timestamp': datetime.now().strftime('%H:%M:%S'), 'step': 4, 'node': 'Compliance Auditor Node', 'model': active_model, 'message': f'{active_model} memverifikasi anggaran: Total PR {total_budget_fmt} dinyatakan PASSED ({pr_doc.auditor_notes}).', 'progress': 68})}\n\n"
     await asyncio.sleep(0.6)
 
     # Step 5: Typst Engine

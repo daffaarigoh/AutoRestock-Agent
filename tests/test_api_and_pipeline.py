@@ -53,7 +53,7 @@ class TestAutoRestockPipeline(unittest.TestCase):
     def test_observability_tracer(self):
         """Verifies tracer span management and metrics recording."""
         trace = tracer.start_trace(trace_id="test-trace-01")
-        span = tracer.start_span("span-01", "Test-Planner-Node", "nemotron-35")
+        span = tracer.start_span("span-01", "Test-Planner-Node", "qwen-38")
         tracer.end_span(span, output_payload={"status": "ok"}, tokens=150)
         finished_trace = tracer.end_trace(trace, verdict="PASSED")
 

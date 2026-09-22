@@ -34,21 +34,35 @@ The following master diagram illustrates how natural language prompts and web in
 ```mermaid
 flowchart TD
     %% USER & CLIENT INGRESS
-    Client([Corporate User / Admin]) -->|Natural Language Prompt / Web Dashboard| Gateway["Enterprise AI Gateway & Semantic Router<br/>(agents/router.py)"]
+    Client([Corporate User / Admin]) -->|Natural Language Prompt / Web Dashboard| Gateway["Enterprise AI Gateway & Two-Tier Router<br/>(agents/router.py & agent_routes.py)"]
 
-    %% DISPATCH CHANNELS
-    Gateway -->|Tenant: INVENTORY / usera| EngineA["Schema A: Logistics & Procurement Engine<br/>(agents/planner.py & auditor.py)"]
-    Gateway -->|Tenant: HR / userb| EngineB["Schema B: Workforce & HR Management Engine<br/>(api/routers/balitower_routes.py)"]
-    Gateway -->|Tenant: FINANCE / userc| EngineC["Schema C: Finance & Commercial Leasing Engine<br/>(agents/json_executor.py)"]
-    Gateway -->|Role: ADMIN / admin| Orchestrator["Dynamic Workflow Orchestrator<br/>(Natural Language ➔ JSON Execution Graph)"]
+    %% TWO-TIER ROUTING
+    Gateway -->|Tier 1: Registered Admin Workflow| Tier1["Tier 1: Deterministic Workflow Engine<br/>(agents/json_executor.py)"]
+    Gateway -->|Tier 2: Ad-Hoc / Direct Prompt| Tier2["Tier 2: Autonomous AI Core (Qwen-38)<br/>(agents/autonomous_agent.py)"]
+    Gateway -->|'mau ajukan workflow' / Blocked Tool| WfReq["Interactive Chat Proposal Form<br/>(POST /api/workflows/request)"]
 
-    %% WORKFLOW ORCHESTRATOR LINK
-    Orchestrator -.->|Dispatches Dynamic Graph| EngineA & EngineB & EngineC
+    %% TIER 1 DIVISION DISPATCH
+    Tier1 -->|Schema A| EngineA["Logistics & Procurement<br/>(WF-A01 ➔ WF-A05)"]
+    Tier1 -->|Schema B| EngineB["Workforce & Field Operations<br/>(WF-B01 ➔ WF-B04)"]
+    Tier1 -->|Schema C| EngineC["Finance & Tower Leasing<br/>(WF-C01 ➔ WF-C04)"]
 
-    %% SHARED ENTERPRISE INFRASTRUCTURE
-    EngineA & EngineB & EngineC --> SharedDB[("DuckDB Enterprise OLAP Engine<br/>(Row-Level Security & Heterogeneous Schemas)")]
-    EngineA & EngineB & EngineC --> DocGen["DocGen Typst Engine<br/>(Vector PDFs: PR, PO, Leave Forms, MLA Invoices)"]
-    EngineA & EngineB & EngineC --> Dispatcher["SMTP Notification Engine<br/>(Interactive Email Authorization Buttons)"]
+    %% TIER 2 TOOL CLASSIFICATION
+    Tier2 -->|Direct / Safe Tools: tool_query_database| SafeExec["Instant Query Execution<br/>(Read-Only DuckDB & View PO)"]
+    Tier2 -->|Guarded Tools: Email/PO/Threshold| Guardrail{"Role: ADMIN?"}
+    Guardrail -->|Non-Admin| GuardBlocked["Tier-2 Guardrail: Block & Propose<br/>'Ajukan Alur Kerja ke Administrator'"]
+    Guardrail -->|Admin| AdminExec["Authorized Admin Tool Execution"]
+    GuardBlocked -.->|Propose Workflow| WfReq
+
+    %% WORKFLOW REQUEST LIFECYCLE
+    WfReq --> ReqDB[("DuckDB: workflow_requests<br/>Admin Request Queue")]
+    ReqDB --> AdminPortal["Admin Portal (admin.html)<br/>Review, Validate & Compile"]
+    AdminPortal --> Compiler["Workflow Compiler (workflow_compiler.py)<br/>Compiled JSON Graph ➔ DuckDB: workflows"]
+    Compiler -.->|Enriches Registered Workflows| Tier1
+
+    %% SHARED INFRASTRUCTURE
+    EngineA & EngineB & EngineC & SafeExec & AdminExec --> SharedDB[("DuckDB OLAP Engine (RLS)")]
+    EngineA & EngineB & EngineC & AdminExec --> DocGen["DocGen Typst Engine (PDFs)"]
+    EngineA & EngineB & EngineC & AdminExec --> Dispatcher["SMTP Notification Engine"]
 
     %% FEEDBACK LOOP
     SharedDB & DocGen & Dispatcher -.->|Real-Time SSE Stream| Client
@@ -56,10 +70,10 @@ flowchart TD
     %% STYLING
     style Client fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#fff
     style Gateway fill:#1e293b,stroke:#818cf8,stroke-width:2px,color:#fff
-    style EngineA fill:#0284c7,stroke:#0369a1,stroke-width:2px,color:#fff
-    style EngineB fill:#059669,stroke:#047857,stroke-width:2px,color:#fff
-    style EngineC fill:#d97706,stroke:#b45309,stroke-width:2px,color:#fff
-    style Orchestrator fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#fff
+    style Tier1 fill:#0284c7,stroke:#0369a1,stroke-width:2px,color:#fff
+    style Tier2 fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#fff
+    style WfReq fill:#0f766e,stroke:#14b8a6,stroke-width:2px,color:#fff
+    style GuardBlocked fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff
     style SharedDB fill:#e2e8f0,stroke:#334155,stroke-width:2px,color:#0f172a
     style DocGen fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a
     style Dispatcher fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
@@ -78,8 +92,8 @@ flowchart TD
     %% PHASE 1: DETECTION & PLANNING
     subgraph A_Phase1 ["1. Regional Stock Inspection & Multi-Agent Planning"]
         A1[("DuckDB: stock_balances<br/>(7 Regional Logistics Hubs)")] -->|Stock <= Reorder Point| A2("Trigger: Copilot Chat / Auto Scheduler")
-        A2 --> A3["Planner Agent (Nemotron-35)<br/>Calculate EOQ & Safety Stock, Match Best Suppliers"]
-        A3 --> A4["Auditor Agent (Nemotron-35)<br/>Audit Spending Caps & Budget Compliance"]
+        A2 --> A3["Planner Agent (Qwen-38)<br/>Calculate EOQ & Safety Stock, Match Best Suppliers"]
+        A3 --> A4["Auditor Agent (Qwen-38)<br/>Audit Spending Caps & Budget Compliance"]
         A4 --> A5{"DocGen Typst PR"}
         A5 --> A6["Official PR Document Draft<br/>(Status: PENDING)"]
     end
@@ -224,7 +238,7 @@ Administrators can design, update, and deploy automated multi-step workflows usi
 
 ```mermaid
 flowchart LR
-    Admin([Enterprise Admin]) -->|Writes Natural Language Instruction| LLM["LLM Graph Compiler<br/>(Gemini / Nemotron-35)"]
+    Admin([Enterprise Admin]) -->|Writes Natural Language Instruction| LLM["LLM Graph Compiler<br/>(Qwen-38)"]
     LLM -->|Compiles to Structured JSON| Graph["Execution Graph JSON<br/>(Tool Steps, Tasks, Conditions)"]
     Graph -->|Stored in DuckDB| DB[("workflows Table")]
     DB -->|Triggered by User Intent| Engine["JSONExecutionEngine<br/>(agents/json_executor.py)"]
@@ -254,7 +268,7 @@ flowchart LR
 | Architectural Layer | Technology Stack | Technical Specifications & Role |
 | :--- | :--- | :--- |
 | **Core API & Gateway** | **Python 3.10+**, **FastAPI**, **Pydantic v2** | High-performance asynchronous REST API, JWT authentication, and dependency-injected RBAC security. |
-| **Multi-Agent Orchestrator** | **LangGraph**, **NVIDIA Nemotron-35**, **Gemini 2.5** | Multi-agent state machine coordinating mathematical planners, compliance auditors, and semantic routers. |
+| **Multi-Agent Orchestrator** | **LangGraph**, **Qwen-38** | Multi-agent state machine coordinating mathematical planners, compliance auditors, and semantic routers. |
 | **Analytical OLAP Engine** | **DuckDB Embedded** | High-speed in-process columnar SQL database with automatic transactional CSV persistence. |
 | **Document Typesetting** | **Typst Compiler (Python Typst 0.11+)** | High-fidelity vector PDF typesetting engine (<50ms compilation) supporting multi-page layouts and corporate typography. |
 | **Notification Engine** | **Python smtplib** / **aiosmtplib** | Corporate HTML email dispatcher with cryptographic action URLs for one-click manager authorization. |

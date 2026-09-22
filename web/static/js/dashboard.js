@@ -61,8 +61,10 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTenantSecurityAndPersonalization();
   loadAllData();
   
-  // Real-time synchronization (10s interval + instant refresh on window focus)
-  setInterval(loadAllData, 10000);
+  // Real-time synchronization (optimized 20s interval when tab is active + instant refresh on window focus)
+  setInterval(() => {
+    if (!document.hidden) loadAllData();
+  }, 20000);
   window.addEventListener('focus', () => loadAllData());
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) loadAllData();
@@ -230,6 +232,12 @@ function restoreCopilotFeed() {
   const feed = document.getElementById('copilotFeed');
   const container = document.getElementById('geminiChatContainer');
   if (saved && feed && saved.trim().length > 0) {
+    // Sanitize any stale or legacy model names cached from previous sessions (e.g., Nemotron -> qwen-38)
+    if (/nemotron/i.test(saved)) {
+      saved = saved.replace(/LLM\s+Nemotron(?:-\w+)?/gi, 'LLM qwen-38')
+                   .replace(/Nemotron(?:-\w+)?/gi, 'qwen-38');
+      localStorage.setItem('ar_copilot_feed', saved);
+    }
     feed.innerHTML = saved;
     feed.scrollTop = feed.scrollHeight;
     if (container) container.classList.remove('is-empty-state');
@@ -950,24 +958,26 @@ async function loadHrData() {
       if (el4) el4.textContent = s.total_overtime_hours + ' Jam';
     }
 
-    // 2. Attendance & Geofencing Logs
-    const attRes = await fetch(`/api/balitower/hr/attendances?limit=30&t=${Date.now()}`, { cache: 'no-store' });
+    // 2. Attendance Logs (if table element is present)
     const tbodyAtt = document.getElementById('hrAttendanceTableBody');
-    if (attRes.ok && tbodyAtt) {
-      const atts = await attRes.json();
-      if (!atts || atts.length === 0) {
-        tbodyAtt.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada catatan absensi.</td></tr>`;
-      } else {
-        tbodyAtt.innerHTML = atts.map(a => `
-          <tr>
-            <td style="font-family: var(--font-mono); font-size: 11.5px;">${escapeHtml(a.date)}</td>
-            <td><strong>${escapeHtml(a.employee_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(a.job_title)}</span></td>
-            <td><span style="font-weight: 600;">${escapeHtml(a.site_name)}</span><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: #64748B;">${escapeHtml(a.site_id || '-')}</span></td>
-            <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${a.distance_to_site_m}m</span></td>
-            <td class="text-right" style="font-weight: 700; color: ${a.overtime_hours > 0 ? '#D97706' : '#64748B'}; font-family: var(--font-mono);">${a.overtime_hours > 0 ? a.overtime_hours + ' jam' : '-'}</td>
-            <td class="text-center"><span class="badge ${a.status.includes('OVERTIME') ? 'badge-approved' : 'badge-pending'}">${escapeHtml(a.status)}</span></td>
-          </tr>
-        `).join('');
+    if (tbodyAtt) {
+      const attRes = await fetch(`/api/balitower/hr/attendances?limit=30&t=${Date.now()}`, { cache: 'no-store' });
+      if (attRes.ok) {
+        const atts = await attRes.json();
+        if (!atts || atts.length === 0) {
+          tbodyAtt.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada catatan absensi.</td></tr>`;
+        } else {
+          tbodyAtt.innerHTML = atts.map(a => `
+            <tr>
+              <td style="font-family: var(--font-mono); font-size: 11.5px;">${escapeHtml(a.date)}</td>
+              <td><strong>${escapeHtml(a.employee_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(a.job_title)}</span></td>
+              <td><span style="font-weight: 600;">${escapeHtml(a.site_name)}</span><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: #64748B;">${escapeHtml(a.site_id || '-')}</span></td>
+              <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${escapeHtml(a.attendance_type || 'SITE_VISIT')}</span></td>
+              <td class="text-right" style="font-weight: 700; color: ${a.overtime_hours > 0 ? '#D97706' : '#64748B'}; font-family: var(--font-mono);">${a.overtime_hours > 0 ? a.overtime_hours + ' jam' : '-'}</td>
+              <td class="text-center"><span class="badge ${a.status && a.status.includes('OVERTIME') ? 'badge-approved' : 'badge-pending'}">${escapeHtml(a.status)}</span></td>
+            </tr>
+          `).join('');
+        }
       }
     }
 
@@ -1208,24 +1218,26 @@ async function loadFinanceData() {
       filterInvoicesTable();
     }
 
-    // 3. Transactions / General Ledger
-    const trxRes = await fetch(`/api/balitower/finance/transactions?limit=25&t=${Date.now()}`, { cache: 'no-store' });
+    // 3. Transactions / General Ledger (if table element is present)
     const tbodyTrx = document.getElementById('finTrxTableBody');
-    if (trxRes.ok && tbodyTrx) {
-      const trxs = await trxRes.json();
-      if (!trxs || trxs.length === 0) {
-        tbodyTrx.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada transaksi jurnal kas.</td></tr>`;
-      } else {
-        tbodyTrx.innerHTML = trxs.map(t => `
-          <tr>
-            <td style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(t.trx_id)}</td>
-            <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(t.trx_date)}</td>
-            <td><span style="font-weight: 600;">${escapeHtml(t.account_name)}</span></td>
-            <td class="text-center"><span class="${t.trx_type === 'INFLOW' ? 'badge-inflow' : 'badge-outflow'}">${t.trx_type === 'INFLOW' ? '+ INFLOW' : '- OUTFLOW'}</span></td>
-            <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: ${t.trx_type === 'INFLOW' ? '#059669' : '#DC2626'};">Rp ${Number(t.amount).toLocaleString('id-ID')}</td>
-            <td style="font-size: 11.5px; color: #334155;">${escapeHtml(t.description || '-')}</td>
-          </tr>
-        `).join('');
+    if (tbodyTrx) {
+      const trxRes = await fetch(`/api/balitower/finance/transactions?limit=25&t=${Date.now()}`, { cache: 'no-store' });
+      if (trxRes.ok) {
+        const trxs = await trxRes.json();
+        if (!trxs || trxs.length === 0) {
+          tbodyTrx.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada transaksi jurnal kas.</td></tr>`;
+        } else {
+          tbodyTrx.innerHTML = trxs.map(t => `
+            <tr>
+              <td style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(t.trx_id)}</td>
+              <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(t.trx_date)}</td>
+              <td><span style="font-weight: 600;">${escapeHtml(t.account_name)}</span></td>
+              <td class="text-center"><span class="${t.trx_type === 'INFLOW' ? 'badge-inflow' : 'badge-outflow'}">${t.trx_type === 'INFLOW' ? '+ INFLOW' : '- OUTFLOW'}</span></td>
+              <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: ${t.trx_type === 'INFLOW' ? '#059669' : '#DC2626'};">Rp ${Number(t.amount).toLocaleString('id-ID')}</td>
+              <td style="font-size: 11.5px; color: #334155;">${escapeHtml(t.description || '-')}</td>
+            </tr>
+          `).join('');
+        }
       }
     }
   } catch (e) {
@@ -1249,6 +1261,7 @@ function renderInvoicesTable(data) {
     const invNum = i.invoice_number || '';
     const clientName = i.client_name || '';
     const totalBilled = Number(i.total_billed || 0);
+    const cleanDueDate = i.due_date ? String(i.due_date).split(' ')[0].split('T')[0] : '-';
 
     return `
     <tr>
@@ -1256,7 +1269,7 @@ function renderInvoicesTable(data) {
       <td><strong>${escapeHtml(clientName)}</strong></td>
       <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(i.period_covered || '-')}</td>
       <td class="text-right" style="font-weight: 800; font-family: var(--font-mono);">Rp ${totalBilled.toLocaleString('id-ID')}</td>
-      <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(i.due_date || '-')}</td>
+      <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(cleanDueDate)}</td>
       <td class="text-center"><span class="badge ${badgeClass}">${displayStatus}</span></td>
       <td class="text-center">
         <button class="btn btn-secondary btn-sm" style="padding: 3px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openInvoicePdfModal('${escapeHtml(invId)}', '${escapeHtml(invNum)}', '${escapeHtml(clientName)}', ${totalBilled}, '${displayStatus}')" title="Buka Dokumen PDF Resmi">
@@ -1346,10 +1359,10 @@ function renderCatalogTable(items) {
     if (it.current_stock === 0) {
       badgeClass = 'badge-out_of_stock';
       statusLabel = 'Habis';
-    } else if (it.current_stock <= it.min_stock * 0.5) {
+    } else if (it.current_stock < it.min_stock) {
       badgeClass = 'badge-out_of_stock';
       statusLabel = 'Kritis';
-    } else if (it.current_stock <= it.min_stock) {
+    } else if (it.current_stock <= it.min_stock * 1.3) {
       badgeClass = 'badge-low_stock';
       statusLabel = 'Menipis';
     }
@@ -1871,6 +1884,7 @@ function getTenantTypewriterPrompts(tenant) {
   } else if (tenant === 'HR') {
     return [
       "What's on your mind? Tanyakan manajemen SDM & teknisi...",
+      "Mutasi divisi atau posisi jabatan karyawan (contoh: mutasi Dewi Lestari ke IT)...",
       "Ajukan permohonan cuti teknisi lapangan (cuti tahunan / sakit)...",
       "Cari teknisi rigger bersertifikat K3 TKPK aktif...",
       "Audit daftar pengajuan cuti yang masih pending persetujuan...",
@@ -2683,20 +2697,26 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
         </div>
       `;
     }
-  } else if (items.length > 0 && actionType !== 'general') {
+  } else if (items.length > 0 && (actionType === 'register_product' || actionType === 'update_threshold')) {
     const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
     if (artifactsSlot) {
       const isReg = actionType === 'register_product';
       const title = isReg ? 'PRODUK BARU BERHASIL DIDAFTARKAN' : 'PERUBAHAN AMBANG BATAS STOK';
       const badge = isReg ? '<span class="badge badge-approved">BERHASIL</span>' : '<span class="badge badge-updated">DIPERBARUI</span>';
       
-      const rows = items.map(it => `
+      const rows = items.map(it => {
+        const itemName = typeof it === 'string' ? it : (it.name || it.item_name || '-');
+        const curStock = typeof it === 'object' && it.current_stock !== undefined ? it.current_stock : '-';
+        const minStock = typeof it === 'object' && it.min_stock !== undefined ? it.min_stock : '-';
+        const unit = typeof it === 'object' && it.unit ? it.unit : '';
+        return `
         <tr>
-          <td><strong>${escapeHtml(it.name)}</strong></td>
-          <td>${it.current_stock !== undefined ? it.current_stock : '-'} ${it.unit || ''}</td>
-          <td><span style="color: #2563EB; font-weight: 600;">${it.min_stock !== undefined ? it.min_stock : '-'}</span> ${it.unit || ''}</td>
+          <td><strong>${escapeHtml(itemName)}</strong></td>
+          <td>${curStock} ${unit}</td>
+          <td><span style="color: #2563EB; font-weight: 600;">${minStock}</span> ${unit}</td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
 
       artifactsSlot.innerHTML = `
         <div class="action-card" style="border-left: 4px solid #2563EB; background: #F8FAFC; border: 1px solid #E2E8F0; margin-top: 10px; max-width: 100%; box-sizing: border-box; overflow: hidden; border-radius: 8px;">
@@ -2723,7 +2743,10 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
     }
   }
 
-  if (payload.po_id || payload.pdf_download_url) {
+  const currentTenant = (typeof getEffectiveTenant === 'function' ? getEffectiveTenant() : '') || '';
+  const isHrScope = (currentTenant === 'HR' || actionType === 'hr_mutation' || actionType === 'hr_leave' || actionType === 'hr_query');
+
+  if ((payload.po_id || payload.pdf_download_url) && !isHrScope) {
     const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
     if (artifactsSlot) {
       const poId = payload.po_id || (payload.parsed_intent && payload.parsed_intent.po_id);
@@ -2748,7 +2771,340 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
     }
   }
 
+  // Automatic real-time table sync for HR mutations & leave requests
+  if (actionType === 'hr_mutation' || payload.mutated_employee) {
+    if (typeof loadEmployees === 'function') loadEmployees();
+    if (typeof loadHrWorkforceData === 'function') loadHrWorkforceData();
+  } else if (actionType === 'hr_leave' || payload.leave_id) {
+    if (typeof loadHrData === 'function') loadHrData();
+    if (typeof loadHrWorkforceData === 'function') loadHrWorkforceData();
+  }
+
+  // Handle workflow creation / missing workflow request to Administrator
+  const isRefusalOrGreeting = (() => {
+    const rawP = (payload.prompt_text || '').toLowerCase().trim();
+    const rawMsg = (payload.message || '').toLowerCase().trim();
+    if (actionType === 'out_of_scope' || actionType === 'security_refusal') return true;
+    if (rawMsg.includes('hanya berwenang melayani pertanyaan') || rawMsg.includes('akses ditolak')) return true;
+    const pleasantries = ['halo', 'hai', 'hi', 'selamat pagi', 'selamat siang', 'selamat sore', 'selamat malam', 'terima kasih', 'terimakasih', 'makasih', 'thanks', 'thank you'];
+    const pClean = rawP.replace(/[^\w\s]/g, '').trim();
+    if (pleasantries.includes(pClean) || pleasantries.includes(rawP)) return true;
+    return false;
+  })();
+
+  if (actionType === 'render_workflow_request_form') {
+    const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
+    if (artifactsSlot) {
+      renderWorkflowRequestChatForm(artifactsSlot, { prompt: payload.prompt_text || '' });
+    }
+  } else if (!isRefusalOrGreeting && (actionType === 'workflow_not_found' || payload.is_tool_blocked || (payload.can_request_admin && (actionType === 'tool_blocked' || !actionType || actionType === 'general')))) {
+    const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
+    if (artifactsSlot) {
+      renderWorkflowRequestCard(artifactsSlot, payload.prompt_text || '');
+    }
+  }
+
   scrollChatToBottom();
+}
+
+function renderWorkflowRequestCard(container, promptText) {
+  if (!container) return;
+  const cardId = 'wf_req_' + Date.now();
+  const cleanPrompt = (promptText || '').trim();
+  const escapedPrompt = escapeHtml(cleanPrompt).replace(/'/g, "\\'");
+
+  const cardHtml = `
+    <div class="action-card" id="${cardId}" style="border-left: 4px solid #2563EB; background: #F8FAFC; border: 1px solid #E2E8F0; margin-top: 10px; border-radius: 8px; padding: 14px; box-shadow: var(--shadow-xs);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13px; color: #0F172A;">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span>Ajukan Alur Kerja ke Administrator</span>
+        </div>
+        <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em;">ADMINISTRATOR ONLY</span>
+      </div>
+      <div style="font-size: 12.5px; color: #475569; margin-bottom: 10px; line-height: 1.55;">
+        Alur kerja terstandar belum terdaftar untuk instruksi ini. Sesuai kebijakan tata kelola sistem, pembuatan alur kerja baru hanya dapat dilakukan oleh Administrator. Anda dapat mengajukan permintaan ini ke Administrator.
+      </div>
+      ${cleanPrompt ? `
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: #334155; font-family: var(--font-mono); line-height: 1.5;">
+        "${escapeHtml(cleanPrompt)}"
+      </div>
+      ` : ''}
+      <div id="btn-group-${cardId}" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="submitUserWorkflowRequest('${escapedPrompt}', '${cardId}')">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+          </svg>
+          <span>Kirim Cepat ke Admin</span>
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="triggerWorkflowRequestChatForm('${escapedPrompt}', '${cardId}')">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          <span>Isi Formulir Lengkap</span>
+        </button>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', cardHtml);
+  scrollChatToBottom();
+}
+
+function triggerWorkflowRequestChatForm(initialPrompt = '', cardToReplaceId = null) {
+  let targetContainer = null;
+  if (cardToReplaceId) {
+    const oldCard = document.getElementById(cardToReplaceId);
+    if (oldCard && oldCard.parentElement) {
+      targetContainer = oldCard.parentElement;
+      oldCard.remove();
+    }
+  }
+  renderWorkflowRequestChatForm(targetContainer, { prompt: initialPrompt });
+}
+
+function renderWorkflowRequestChatForm(targetContainer = null, initialData = {}) {
+  const container = document.getElementById('geminiChatContainer');
+  if (container) container.classList.remove('is-empty-state');
+
+  let parent = targetContainer;
+  if (!parent) {
+    const feed = document.getElementById('copilotFeed');
+    if (!feed) return;
+    const agentBox = document.createElement('div');
+    agentBox.className = 'agent-response-box';
+    agentBox.innerHTML = `
+      ${getAgentBubbleHeaderHtml('Workflow Governance')}
+      <div class="stream-text-content" style="margin-bottom: 8px;">
+        Silakan lengkapi formulir usulan alur kerja di bawah ini. Permohonan Anda akan langsung dikirimkan ke antrean Administrator untuk ditinjau dan dikompilasi ke sistem.
+      </div>
+      <div class="stream-artifacts-slot"></div>
+    `;
+    feed.appendChild(agentBox);
+    parent = agentBox.querySelector('.stream-artifacts-slot');
+  }
+
+  const effectiveTenant = (typeof getEffectiveTenant === 'function' ? getEffectiveTenant() : 'INVENTORY') || 'INVENTORY';
+  const formId = 'wfForm_' + Date.now();
+  const initPrompt = initialData.prompt || '';
+  const isGenericPrompt = /^(mau\s+ajukan|ajukan|request|buka\s+form|form)\s+(workflow|alur\s+kerja)/i.test(initPrompt.trim());
+  const prefillPrompt = isGenericPrompt ? '' : initPrompt;
+
+  const formHtml = `
+    <div class="wf-request-form-card" id="${formId}">
+      <div class="wf-request-form-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span class="wf-request-form-title">Formulir Pengajuan Alur Kerja Baru</span>
+        </div>
+        <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 10.5px; font-weight: 700;">USULAN WORKFLOW</span>
+      </div>
+      
+      <div class="wf-request-form-body">
+        <div class="wf-form-row">
+          <div class="wf-form-col">
+            <label class="wf-form-label">Nama / Judul Alur Kerja <span style="color: #DC2626;">*</span></label>
+            <input type="text" class="wf-form-input" id="${formId}_title" placeholder="Contoh: Audit Utilisasi Genset Bulanan">
+          </div>
+          <div class="wf-form-col">
+            <label class="wf-form-label">Divisi / Ranah Operasional <span style="color: #DC2626;">*</span></label>
+            <select class="wf-form-select" id="${formId}_tenant">
+              <option value="INVENTORY" ${effectiveTenant === 'INVENTORY' ? 'selected' : ''}>Divisi Logistik & Inventaris (Schema A)</option>
+              <option value="HR" ${effectiveTenant === 'HR' ? 'selected' : ''}>Divisi HR & Personalia Lapangan (Schema B)</option>
+              <option value="FINANCE" ${effectiveTenant === 'FINANCE' ? 'selected' : ''}>Divisi Keuangan & Billing (Schema C)</option>
+              <option value="ALL" ${effectiveTenant === 'ALL' ? 'selected' : ''}>Lintas Divisi / Universal (Schema ALL)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="wf-form-group">
+          <label class="wf-form-label">Contoh Kalimat Prompt / Instruksi <span style="color: #DC2626;">*</span></label>
+          <input type="text" class="wf-form-input" id="${formId}_prompt" placeholder="Contoh: Periksa seluruh data konsumsi solar genset site tiap akhir bulan dan catat laporannya" value="${escapeHtml(prefillPrompt)}">
+        </div>
+
+        <div class="wf-form-group">
+          <label class="wf-form-label">Deskripsi Kebutuhan Operasional & Urgensi (Opsional)</label>
+          <textarea class="wf-form-textarea" id="${formId}_notes" rows="2" placeholder="Jelaskan tujuan operasional atau alasan kebutuhan alur kerja ini..."></textarea>
+        </div>
+      </div>
+
+      <div class="wf-request-form-footer">
+        <span id="${formId}_error" style="color: #DC2626; font-size: 12px; display: none;"></span>
+        <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="cancelWorkflowRequestForm('${formId}')">
+            <span>Batal</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="${formId}_btn" onclick="submitInteractiveWorkflowForm('${formId}')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+            </svg>
+            <span>Kirim Usulan ke Admin</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  parent.insertAdjacentHTML('beforeend', formHtml);
+  scrollChatToBottom();
+}
+
+function cancelWorkflowRequestForm(formId) {
+  const el = document.getElementById(formId);
+  if (el) el.remove();
+}
+
+async function submitInteractiveWorkflowForm(formId) {
+  const titleEl = document.getElementById(`${formId}_title`);
+  const tenantEl = document.getElementById(`${formId}_tenant`);
+  const promptEl = document.getElementById(`${formId}_prompt`);
+  const notesEl = document.getElementById(`${formId}_notes`);
+  const btn = document.getElementById(`${formId}_btn`);
+  const errorEl = document.getElementById(`${formId}_error`);
+
+  if (!promptEl) return;
+  const title = titleEl ? titleEl.value.trim() : '';
+  const tenant = tenantEl ? tenantEl.value.trim() : 'INVENTORY';
+  const promptText = promptEl.value.trim();
+  const notes = notesEl ? notesEl.value.trim() : '';
+
+  if (errorEl) errorEl.style.display = 'none';
+
+  if (!promptText) {
+    if (errorEl) {
+      errorEl.textContent = 'Mohon isi kalimat prompt atau instruksi yang diinginkan.';
+      errorEl.style.display = 'block';
+    }
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 12px; height: 12px; border-width: 1.5px;"></span>
+      <span>Mengirim...</span>
+    `;
+  }
+
+  try {
+    const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token') || sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+    const res = await fetch('/api/workflows/request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        title: title || undefined,
+        prompt: promptText,
+        tenant_id: tenant,
+        notes: notes || undefined
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const formCard = document.getElementById(formId);
+      if (formCard) {
+        formCard.innerHTML = `
+          <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #166534;">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>Pengajuan Alur Kerja Berhasil Terkirim</span>
+              </div>
+              <span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700; font-size: 10.5px;">MENUNGGU REVIEW</span>
+            </div>
+            <div style="font-size: 12.5px; color: #14532D; line-height: 1.5;">
+              Permintaan alur kerja resmi <strong style="font-family: var(--font-mono);">${escapeHtml(data.request_id || 'REQ')}</strong> telah berhasil dicatat ke antrean tinjauan Administrator Enterprise.
+            </div>
+            <div style="font-size: 12px; color: #15803D; background: #FFFFFF; border: 1px solid #BBF7D0; border-radius: 6px; padding: 8px 12px; font-family: var(--font-mono);">
+              "${escapeHtml(promptText)}"
+            </div>
+          </div>
+        `;
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      if (errorEl) {
+        errorEl.textContent = `Gagal mengirim pengajuan: ${err.detail || 'Terjadi kesalahan pada server.'}`;
+        errorEl.style.display = 'block';
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Kirim Usulan ke Admin</span>`;
+      }
+    }
+  } catch (err) {
+    if (errorEl) {
+      errorEl.textContent = 'Gagal terhubung ke server. Periksa koneksi jaringan Anda.';
+      errorEl.style.display = 'block';
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>Kirim Usulan ke Admin</span>`;
+    }
+  }
+}
+
+async function submitUserWorkflowRequest(promptText, cardId) {
+  const btnGroup = document.getElementById(`btn-group-${cardId}`);
+  if (btnGroup) {
+    btnGroup.innerHTML = `
+      <span style="font-size: 12px; color: #64748B; display: inline-flex; align-items: center; gap: 6px;">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 12px; height: 12px; border-width: 1.5px;"></span>
+        Mengirim notifikasi ke Administrator...
+      </span>
+    `;
+  }
+  
+  try {
+    const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token') || sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+    const res = await fetch('/api/workflows/request', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ prompt: promptText })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (btnGroup) {
+        btnGroup.innerHTML = `
+          <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px; width: 100%;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>Permintaan (${data.request_id || 'REQ'}) berhasil dikirimkan ke Administrator. Status: Menunggu Review.</span>
+          </div>
+        `;
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      if (btnGroup) {
+        btnGroup.innerHTML = `
+          <div style="color: #DC2626; font-size: 12px;">
+            Gagal mengirim: ${escapeHtml(err.detail || 'Terjadi kesalahan.')}
+          </div>
+        `;
+      }
+    }
+  } catch (e) {
+    if (btnGroup) {
+      btnGroup.innerHTML = `
+        <div style="color: #DC2626; font-size: 12px;">
+          Gagal menghubungi server.
+        </div>
+      `;
+    }
+  }
 }
 
 // ==============================================================================
@@ -2904,19 +3260,14 @@ function formatMarkdownResponse(text) {
   for (let line of lines) {
     let trimmed = line.trim();
 
-    // Strip markdown table rows
+    // Skip code block fences if any
+    if (trimmed.startsWith('```')) continue;
+
+    // Parse markdown table rows
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       if (trimmed.includes('---')) continue; // skip header separator
       inTable = true;
-      const cells = trimmed.split('|').slice(1, -1).map(c => {
-        let val = cleanText(c);
-        if (val.toUpperCase() === 'PENDING_APPROVAL' || val.toUpperCase() === 'PENDING') {
-          return '<span class="badge badge-pending" style="font-weight: 700;">PENDING</span>';
-        } else if (val.toUpperCase() === 'APPROVED' || val.toUpperCase() === 'PAID' || val.toUpperCase() === 'ACTIVE_PAID') {
-          return '<span class="badge badge-paid" style="font-weight: 700;">PAID</span>';
-        }
-        return val;
-      });
+      const cells = trimmed.split('|').slice(1, -1).map(c => cleanText(c));
       tableRows.push(cells);
     } else {
       if (inTable && tableRows.length > 0) {
@@ -2978,13 +3329,20 @@ function appendAgentResponseCard(data) {
   const container = document.createElement('div');
   container.className = 'agent-response-box';
 
-  // Scenario 0: Safe Fallback / Anti-Halusinasi (Out of Scope / Unrecognized Intent)
-  if (actionType === 'unrecognized_intent' || actionType === 'out_of_scope') {
+  // Scenario 0: Safe Fallback / Security Guardrail / Out of Scope (Zero-Gap Hardening)
+  if (actionType === 'unrecognized_intent' || actionType === 'out_of_scope' || actionType === 'security_refusal') {
+    const isSecurity = actionType === 'security_refusal';
+    const borderColor = isSecurity ? '#DC2626' : '#F59E0B';
+    const bgColor = isSecurity ? '#FEF2F2' : '#FFFBEB';
+    const borderWrap = isSecurity ? '1px solid #FECACA' : '1px solid #FDE68A';
+    const textColor = isSecurity ? '#991B1B' : '#92400E';
+    const badgeTitle = isSecurity ? 'Keamanan Guardrail' : 'Di Luar Cakupan';
+
     container.innerHTML = `
-      ${getAgentBubbleHeaderHtml('Di Luar Cakupan', true)}
-      <div class="agent-plan-box" style="border-left: 4px solid #F59E0B; background: #FFFBEB; border: 1px solid #FDE68A;">
-        <div style="font-size: 13.5px; color: #92400E; line-height: 1.6;">
-          ${escapeHtml(data.message || 'Mohon maaf, instruksi yang Anda masukkan berada di luar cakupan wewenang operasional sistem PT Bali Towerindo Sentra Tbk.')}
+      ${getAgentBubbleHeaderHtml(badgeTitle, true)}
+      <div class="agent-plan-box" style="border-left: 4px solid ${borderColor}; background: ${bgColor}; border: ${borderWrap};">
+        <div style="font-size: 13.5px; color: ${textColor}; line-height: 1.6;">
+          ${formatMarkdownResponse(data.message || 'Mohon maaf, instruksi yang Anda masukkan berada di luar cakupan wewenang operasional sistem PT Bali Towerindo Sentra Tbk.')}
         </div>
       </div>
     `;
@@ -2994,7 +3352,7 @@ function appendAgentResponseCard(data) {
   }
 
   // Scenario 1: Bali Tower Domain queries (HR, Finance, Inventory) & General responses
-  if (['hr_query', 'finance_query', 'inventory_query', 'general'].includes(actionType) && prs.length === 0 && items.length === 0) {
+  if (['hr_query', 'hr_mutation', 'hr_leave', 'finance_query', 'inventory_query', 'general', 'workflow_execution'].includes(actionType) && prs.length === 0 && actionType !== 'update_threshold' && actionType !== 'register_product') {
     container.innerHTML = `
       ${getAgentBubbleHeaderHtml('Laporan')}
       <div class="agent-plan-box">
@@ -3398,7 +3756,9 @@ async function checkApiHealth() {
 }
 
 checkApiHealth();
-setInterval(checkApiHealth, 6000);
+setInterval(() => {
+  if (!document.hidden) checkApiHealth();
+}, 20000);
 
 function useCopilotSuggestion(promptText) {
   const input = document.getElementById('promptInput');
@@ -3432,7 +3792,7 @@ const FLOW_HELP_REGISTRY = {
         name: 'Penerimaan Barang Fisik PO & Update Saldo',
         desc: 'Verifikasi kedatangan barang PO di gudang regional dan sinkronisasi penambahan stok fisik.',
         examples: [
-          'PO-2026-001 sudah sampai di gudang, tolong catat penerimaan barangnya'
+          'Catat penerimaan PO/BLT/2026/09/031 untuk semua gudang'
         ]
       },
       {
@@ -3440,92 +3800,75 @@ const FLOW_HELP_REGISTRY = {
         name: 'Informasi Persediaan Gudang',
         desc: 'Pengecekan sisa stok SKU spesifik atau rekapitulasi status kesehatan barang regional.',
         examples: [
-          'Berapa sisa stok ODC 48 Port di Gudang Surabaya?',
-          'Tampilkan daftar item dengan status kesehatan persediaan menipis'
+          'Berapa sisa stok ODC 48 Port di Gudang Surabaya?'
         ]
       }
     ]
   },
   HR: {
     title: 'Divisi Human Resources & Operasional Lapangan (Schema B)',
-    description: 'Manajemen ketenagakerjaan teknisi lapangan, kualifikasi sertifikasi K3 TKPK rigger, presensi GPS, dan pengajuan cuti.',
+    description: 'Manajemen ketenagakerjaan teknisi lapangan, kualifikasi sertifikasi K3 TKPK rigger, mutasi karyawan, dan pengajuan cuti.',
     flows: [
       {
-        id: 'WF-08BEBD',
+        id: 'WF-6D8863',
+        name: 'Mutasi Posisi & Departemen Karyawan',
+        desc: 'Memperbarui penempatan divisi/departemen dan posisi jabatan karyawan aktif di basis data SDM PT Bali Towerindo Sentra Tbk.',
+        examples: [
+          'Mutasi Dewi Lestari ke departemen IT dengan jabatan Full Stack'
+        ]
+      },
+      {
+        id: 'WF-B02',
+        name: 'Filter & Screening Pelamar Teknisi K3',
+        desc: 'Menyaring kandidat teknisi lapangan secara dinamis berdasarkan kualifikasi posisi dan sertifikasi K3 (TKPK Tingkat 1, TKPK Tingkat 2, K3 Umum, atau seluruh pelamar).',
+        examples: [
+          'Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 2'
+        ]
+      },
+      {
+        id: 'WF-B03',
         name: 'Pengajuan Cuti Teknisi & Cetak Dokumen PDF',
         desc: 'Pencatatan permohonan cuti teknisi, kalkulasi saldo kuota, dan distribusi formulir resmi PDF ke HR.',
         examples: [
-          'Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok',
-          'Buat formulir permohonan cuti rigger dan terbitkan dokumen PDF resmi'
+          'Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok'
         ]
       },
       {
-        id: 'WF-847DA5',
+        id: 'WF-B04',
         name: 'Audit Cuti Pending & Email Otorisasi HR',
         desc: 'Pemeriksaan antrean permohonan cuti pending dan pengiriman rekapitulasi otorisasi ke email manajer.',
         examples: [
-          'Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR',
-          'Tampilkan seluruh permohonan cuti karyawan yang belum disetujui'
-        ]
-      },
-      {
-        id: 'WF-002',
-        name: 'Audit Absensi GPS & Jam Lembur Teknisi',
-        desc: 'Audit absensi kunjungan site menara dengan validasi geofencing dan rekapitulasi lembur.',
-        examples: [
-          'Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi bulan ini',
-          'Cek validasi geofencing presensi teknisi lapangan minggu ini'
-        ]
-      },
-      {
-        id: 'WF-003',
-        name: 'Filter Pelamar Rigger K3 Ketinggian',
-        desc: 'Penyaringan kandidat rigger tower dengan sertifikasi TKPK 1/2 dan tes medis layak ketinggian.',
-        examples: [
-          'Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 1',
-          'Tampilkan pelamar rigger yang lolos uji medis kelayakan bekerja di ketinggian'
+          'Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR'
         ]
       }
     ]
   },
   FINANCE: {
     title: 'Divisi Keuangan & Commercial Billing (Schema C)',
-    description: 'Manajemen kontrak sewa menara MLA dengan operator telekomunikasi, penagihan invoice, audit beban operasional, dan arus kas.',
+    description: 'Manajemen kontrak sewa menara MLA dengan operator telekomunikasi, penagihan invoice, dan audit beban operasional.',
     flows: [
       {
-        id: 'WF-3959D6',
-        name: 'Pendaftaran Klien Operator & Kontrak Sewa MLA',
-        desc: 'Draf pendaftaran operator telekomunikasi baru, kontrak sewa menara, dan otorisasi email manajer keuangan.',
-        examples: [
-          'Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan',
-          'Susun draft Master Lease Agreement operator Indosat dan kirim otorisasi ke email finance manager'
-        ]
-      },
-      {
-        id: 'WF-004',
+        id: 'WF-C01',
         name: 'Laporan Pendapatan & Invoice Sewa Menara',
         desc: 'Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, Indosat, XL, Smartfren).',
         examples: [
-          'Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya',
-          'Berapa total tagihan invoice operator yang jatuh tempo bulan ini?'
+          'Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya'
         ]
       },
       {
-        id: 'WF-005',
+        id: 'WF-C02',
         name: 'Audit Beban Listrik PLN & Sewa Lahan',
         desc: 'Laporan pengeluaran operasional utilitas listrik PLN, BBM genset cadangan, dan sewa lahan site.',
         examples: [
-          'Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat',
-          'Tampilkan beban utilitas genset dan tagihan listrik site tertinggi'
+          'Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat'
         ]
       },
       {
-        id: 'WF-006',
-        name: 'Ringkasan Arus Kas (Cash Flow)',
-        desc: 'Laporan transaksi arus kas masuk vs keluar operasional dan posisi saldo kas bersih.',
+        id: 'WF-C04',
+        name: 'Pendaftaran Klien Operator & Kontrak Sewa MLA',
+        desc: 'Pendaftaran operator telekomunikasi baru dan draf kontrak sewa menara (MLA). Sistem menyimpan draf ke database (PENDING_APPROVAL) dan mengklarifikasi atau mengirimkan berkas faktur ke email otorisasi.',
         examples: [
-          'Tampilkan ringkasan arus kas masuk dan keluar beserta posisi saldo bersih terkini',
-          'Berapa saldo kas operasional saat ini?'
+          'Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan dan kirimkan ke email finance.mgr@balitower.co.id'
         ]
       }
     ]
@@ -3539,8 +3882,7 @@ const FLOW_HELP_REGISTRY = {
         name: 'Kompilasi Alur Kerja Dinamis',
         desc: 'Penyusunan alur kerja baru secara otomatis berbasis bahasa alami.',
         examples: [
-          'Buat alur kerja baru untuk audit berkala genset dan kirim laporan ke email operasional',
-          'Tampilkan daftar seluruh alur kerja aktif lintas divisi dan status integrasinya'
+          'Buat alur kerja baru untuk audit berkala genset dan kirim laporan ke email operasional'
         ]
       },
       {
@@ -3548,8 +3890,7 @@ const FLOW_HELP_REGISTRY = {
         name: 'Tata Kelola 18 Basis Data DuckDB',
         desc: 'Pemeriksaan integritas skema data operasional DuckDB dan batasan hak akses tenant.',
         examples: [
-          'Tampilkan statistik integritas data pada 18 tabel basis data operasional DuckDB',
-          'Audit profil akun pengguna dan batasan wewenang divisi'
+          'Tampilkan statistik integritas data pada 18 tabel basis data operasional DuckDB'
         ]
       },
       {
@@ -3557,10 +3898,7 @@ const FLOW_HELP_REGISTRY = {
         name: 'Akses Komprehensif Lintas Divisi',
         desc: 'Eksekusi operasional terintegrasi lintas logistik gudang, HR, dan penagihan keuangan.',
         examples: [
-          'Periksa stok menara yang kritis dan buat draft PR pengadaan barang',
-          'Tampilkan rekap absensi kunjungan site menara dan jam lembur teknisi',
-          'Tampilkan rekapitulasi invoice sewa menara per operator',
-          'Cek status kesehatan seluruh modul sistem, server API, dan koneksi AI gateway'
+          'Periksa stok menara yang kritis dan buat draft PR pengadaan barang'
         ]
       }
     ]
@@ -3598,20 +3936,51 @@ function selectExamplePrompt(promptText) {
   useCopilotSuggestion(promptText);
 }
 
+let currentHelpModalTab = 'catalog';
+
+function switchHelpModalTab(tabName) {
+  currentHelpModalTab = tabName;
+  const btnCatalog = document.getElementById('helpTabBtnCatalog');
+  const btnModel = document.getElementById('helpTabBtnModel');
+  const btnPolicy = document.getElementById('helpTabBtnPolicy');
+
+  if (btnCatalog) btnCatalog.classList.toggle('active', tabName === 'catalog');
+  if (btnModel) btnModel.classList.toggle('active', tabName === 'model');
+  if (btnPolicy) btnPolicy.classList.toggle('active', tabName === 'policy');
+
+  const bodyEl = document.getElementById('flowHelpModalBody');
+  if (!bodyEl) return;
+
+  if (tabName === 'catalog') {
+    renderHelpCatalogTab(bodyEl);
+  } else if (tabName === 'model') {
+    renderHelpModelTab(bodyEl);
+  } else if (tabName === 'policy') {
+    renderHelpPolicyTab(bodyEl);
+  }
+}
+
 async function openFlowHelpModal() {
   const modal = document.getElementById('flowHelpModal');
   const titleEl = document.getElementById('helpModalTenantTitle');
   const bodyEl = document.getElementById('flowHelpModalBody');
   if (!modal || !bodyEl) return;
 
-  const tenant = getEffectiveTenant();
+  const tenant = (typeof getEffectiveTenant === 'function' ? getEffectiveTenant() : 'INVENTORY') || 'INVENTORY';
   const fallbackRegistry = FLOW_HELP_REGISTRY[tenant] || FLOW_HELP_REGISTRY.ALL;
 
   if (titleEl) {
-    titleEl.textContent = `Workflow Guide: ${fallbackRegistry.title}`;
+    titleEl.textContent = `Operational Workflow Guide: ${fallbackRegistry.title}`;
   }
 
   modal.style.display = 'flex';
+  modal.scrollTop = 0;
+  switchHelpModalTab(currentHelpModalTab || 'catalog');
+}
+
+async function renderHelpCatalogTab(bodyEl) {
+  const tenant = (typeof getEffectiveTenant === 'function' ? getEffectiveTenant() : 'INVENTORY') || 'INVENTORY';
+  const fallbackRegistry = FLOW_HELP_REGISTRY[tenant] || FLOW_HELP_REGISTRY.ALL;
 
   // Fetch dynamic workflows from backend
   let flowsToRender = [];
@@ -3624,7 +3993,7 @@ async function openFlowHelpModal() {
           id: wf.id,
           name: wf.name,
           desc: wf.description || wf.business_instruction,
-          examples: wf.example_prompts || []
+          examples: (wf.example_prompts || []).slice(0, 1)
         }));
       }
     }
@@ -3632,7 +4001,6 @@ async function openFlowHelpModal() {
     console.warn("[HELP MODAL] Could not fetch dynamic workflows, falling back to local registry", e);
   }
 
-  // Fallback to local registry if empty or error
   if (!flowsToRender || flowsToRender.length === 0) {
     flowsToRender = fallbackRegistry.flows;
   }
@@ -3658,7 +4026,7 @@ async function openFlowHelpModal() {
         <div class="flow-prompts-list">
     `;
 
-    (flow.examples || []).forEach(ex => {
+    (flow.examples || []).slice(0, 1).forEach(ex => {
       const safeEx = escapeHtml(ex).replace(/'/g, "\\'");
       html += `
         <button type="button" class="flow-prompt-item" onclick="selectExamplePromptAndClose('${safeEx}')" title="Click to insert prompt into chat">
@@ -3680,6 +4048,122 @@ async function openFlowHelpModal() {
   });
 
   bodyEl.innerHTML = html;
+}
+
+function renderHelpModelTab(bodyEl) {
+  bodyEl.innerHTML = `
+    <div class="help-model-section">
+      <div class="help-model-card" style="border-left: 4px solid #16A34A;">
+        <div class="help-model-card-header">
+          <span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700; font-size: 11px;">DIRECT SINGLE-TOOL</span>
+          <span class="help-model-card-title">1. Eksekusi Kueri Data Langsung (Instan)</span>
+        </div>
+        <div class="help-model-card-desc">
+          Untuk pertanyaan operasional harian satu langkah (misalnya memeriksa sisa stok barang spesifik di gudang tertentu, riwayat absensi teknisi menara, atau status tagihan kontrak sewa), AI langsung menjalankan kueri data terisolasi ke DuckDB tanpa harus menunggu Administrator membuat alur kerja baru. Hasil disajikan dalam hitungan detik secara rapi dalam tabel.
+        </div>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #334155; font-family: var(--font-mono);">
+          Contoh: "Berapa sisa stok ODC 48 Port di Gudang Surabaya?"
+        </div>
+      </div>
+
+      <div class="help-model-card" style="border-left: 4px solid #2563EB;">
+        <div class="help-model-card-header">
+          <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-weight: 700; font-size: 11px;">ADMIN WORKFLOW</span>
+          <span class="help-model-card-title">2. Alur Kerja Terkelola Administrator (Multi-Step & Guarded)</span>
+        </div>
+        <div class="help-model-card-desc">
+          Proses kerja yang kompleks dan berdampak luas (seperti siklus pengadaan material PR-to-PO, kalkulasi anggaran reorder, otorisasi persetujuan PO, dan distribusi surel resmi) dikendalikan secara ketat oleh Administrator melalui alur kerja terstandar. Hal ini menjamin kepatuhan audit internal dan mencegah risiko penyalahgunaan sistem.
+        </div>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #334155; font-family: var(--font-mono);">
+          Contoh: "Periksa seluruh stok material yang kritis dan buat draft PR pengadaan barang"
+        </div>
+      </div>
+
+      <div class="help-model-card" style="border-left: 4px solid #F59E0B;">
+        <div class="help-model-card-header">
+          <span class="badge" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; font-weight: 700; font-size: 11px;">WORKFLOW REQUEST</span>
+          <span class="help-model-card-title">3. Pengajuan Alur Kerja Baru Langsung di Chat</span>
+        </div>
+        <div class="help-model-card-desc">
+          Jika Anda memerlukan proses kerja baru yang belum terdaftar di sistem, Anda tidak perlu menunggu atau melapor secara manual. Cukup ketik perintah di chat seperti <strong>"mau ajukan workflow"</strong>, dan formulir pengajuan interaktif akan langsung muncul di jendela obrolan. Usulan Anda otomatis diteruskan ke antrean review Administrator.
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="selectExamplePromptAndClose('mau ajukan workflow')">
+            <span>Coba Sekarang: "mau ajukan workflow"</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderHelpPolicyTab(bodyEl) {
+  bodyEl.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 12.5px; color: #475569; line-height: 1.55;">
+        Sistem menerapkan kebijakan keamanan dua tahap (Two-Tier Tool Verification). Tools berisiko rendah diizinkan untuk eksekusi langsung, sedangkan tools berdampak operasional tinggi dilindungi oleh alur kerja Administrator:
+      </div>
+
+      <div class="help-policy-table-container">
+        <table class="help-policy-table">
+          <thead>
+            <tr>
+              <th style="width: 220px;">Nama Tool</th>
+              <th style="width: 140px;">Kategori Akses</th>
+              <th>Deskripsi & Pengamanan Enterprise</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>tool_query_database</code></td>
+              <td><span class="badge-direct-access">Direct Access</span></td>
+              <td>Kueri baca (read-only SELECT) dengan isolasi multi-tenant data gudang, teknisi, dan penagihan. Aman dieksekusi langsung.</td>
+            </tr>
+            <tr>
+              <td><code>tool_view_po</code></td>
+              <td><span class="badge-direct-access">Direct Access</span></td>
+              <td>Pratinjau berkas dokumen resmi Purchase Order yang sudah ada di sistem. Tidak mengubah saldo fisik.</td>
+            </tr>
+            <tr>
+              <td><code>system.check_profile</code></td>
+              <td><span class="badge-direct-access">Direct Access</span></td>
+              <td>Pemeriksaan sesi akun, wewenang peran, dan status kesehatan server internal.</td>
+            </tr>
+            <tr>
+              <td><code>tool_dispatch_pr_email</code></td>
+              <td><span class="badge-workflow-guarded">Workflow Required</span></td>
+              <td>Pengiriman surel resmi perusahaan. Wajib melalui template alur kerja admin untuk mencegah penyalahgunaan email keluar.</td>
+            </tr>
+            <tr>
+              <td><code>tool_procurement_cycle</code></td>
+              <td><span class="badge-workflow-guarded">Workflow Required</span></td>
+              <td>Penerbitan dokumen PR resmi dan komitmen anggaran pengadaan. Memerlukan pengawasan workflow WF-A01.</td>
+            </tr>
+            <tr>
+              <td><code>tool_manage_po</code></td>
+              <td><span class="badge-workflow-guarded">Workflow Required</span></td>
+              <td>Persetujuan status pesanan PO komersial. Memerlukan alur otorisasi berjenjang.</td>
+            </tr>
+            <tr>
+              <td><code>tool_update_threshold</code></td>
+              <td><span class="badge-workflow-guarded">Workflow Required</span></td>
+              <td>Perubahan batas minimum/maksimum saldo stok gudang yang memengaruhi algoritma pengadaan otomatis.</td>
+            </tr>
+            <tr>
+              <td><code>tool_register_product</code></td>
+              <td><span class="badge-workflow-guarded">Workflow Required</span></td>
+              <td>Penambahan SKU master barang material baru ke dalam katalog DuckDB.</td>
+            </tr>
+            <tr>
+              <td><code>tool_manage_telecom_invoice</code></td>
+              <td><span class="badge-workflow-guarded">Workflow Required</span></td>
+              <td>Penerbitan faktur tagihan sewa menara MLA komersial dan onboarding klien operator telekomunikasi.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
 
 function selectExamplePromptAndClose(promptText) {

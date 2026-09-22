@@ -66,8 +66,8 @@ def run_agent_cycle(current_user: TokenData = Depends(get_current_user)):
     """
     Triggers the LangGraph multi-agent workflow:
     1. Scan items below safety threshold.
-    2. Planner (nemotron-35) matches optimal vendors & calculates budget.
-    3. Auditor (nemotron-35) enforces compliance guardrails.
+    2. Planner (qwen-38) matches optimal vendors & calculates budget.
+    3. Auditor (qwen-38) enforces compliance guardrails.
     4. Typst compiles the formal Purchase Requisition PDF.
     5. Graph pauses before Wait Approval Node (HITL).
     """
@@ -393,6 +393,52 @@ class CustomPromptRequest(BaseModel):
     history: list[dict[str, Any]] | None = Field(None, description="Optional multi-turn conversation history: [{'role': 'user', 'content': '...'}, ...]")
 
 
+def classify_workflow_proposal_eligibility(prompt: str, agent_result: dict, user_role: str = "USER") -> bool:
+    """
+    Determines whether a user prompt should show the 'Ajukan Alur Kerja ke Administrator' proposal card.
+    
+    Enterprise Policy:
+    1. Admin user -> False (Admin can create workflows directly in admin portal).
+    2. Pure Greetings / Pleasantries / Out-of-Domain Refusal -> False.
+    3. Direct Single-Tool Execution (Safe Read Queries, Check Stock, View PO):
+       -> False (Task was successfully executed by the LLM single-tool capability; no workflow card needed).
+    4. Guarded Tool Blocked or Unregistered Multi-Step Workflow Required:
+       -> True (Action is blocked by enterprise governance, so system actively recommends proposing an admin workflow).
+    """
+    if str(user_role).upper() == "ADMIN":
+        return False
+
+    action_type = agent_result.get("action_type", "")
+    message = agent_result.get("message", "")
+
+    # Out of scope or domain refusal -> Never propose workflow
+    if action_type == "out_of_scope":
+        return False
+    if "hanya berwenang melayani pertanyaan dan instruksi seputar operasional Dashboard BaliTower" in message:
+        return False
+
+    # If action was blocked due to guarded tool policy or unregistered workflow
+    if action_type == "workflow_not_found" or agent_result.get("is_tool_blocked") or agent_result.get("guarded_tool"):
+        return True
+
+    # If the user explicitly asks to create/register a workflow
+    lower_prompt = prompt.lower()
+    is_create_workflow_request = (
+        bool(re.search(r'\b(buat|bikin|create|tambah|daftarkan|ajukan)\s+(alur\s+kerja|workflow)\b', lower_prompt))
+        or bool(re.search(r'\b(workflow|alur kerja)\s+(baru|belum ada)\b', lower_prompt))
+        or bool(re.search(r'\b(saya\s+butuh|perlu)\s+(alur\s+kerja|workflow)\b', lower_prompt))
+    )
+    if is_create_workflow_request:
+        return True
+
+    # Explicit flag from agent when an action requires admin workflow
+    if agent_result.get("can_request_admin") and action_type in ["workflow_not_found", "tool_blocked"]:
+        return True
+
+    # Safe direct queries and resolved actions should NOT propose workflow
+    return False
+
+
 async def execute_prompt_logic(
     request: CustomPromptRequest,
     current_user: TokenData,
@@ -436,6 +482,75 @@ async def execute_prompt_logic(
     if stage_callback:
         await stage_callback("analyze", "Menganalisis instruksi & hak akses wewenang...")
 
+    # 0. Security Guardrail: Pre-Execution Prompt Injection & Destructive Command Check
+    from agents.autonomous_agent import AutonomousAgent
+    is_safe, refusal_msg = AutonomousAgent.check_prompt_injection_guardrail(request.prompt)
+    if not is_safe:
+        return {
+            "parsed_intent": {"workflow_id": "security_guardrail_refusal"},
+            "action_type": "security_refusal",
+            "message": refusal_msg,
+            "generated_prs": [],
+            "affected_items": []
+        }
+
+    # 0.5 Domain Scope Guardrail: Pre-Execution Out-of-Domain Filter
+    is_out_of_domain, domain_refusal_msg = AutonomousAgent.check_domain_boundary(request.prompt)
+    if is_out_of_domain:
+        return {
+            "parsed_intent": {"workflow_id": "out_of_domain_refusal"},
+            "action_type": "out_of_scope",
+            "message": domain_refusal_msg,
+            "generated_prs": [],
+            "affected_items": [],
+            "can_request_admin": False,
+            "prompt_text": request.prompt
+        }
+
+    u_tenant = str(getattr(current_user, 'tenant_id', 'ALL')).upper()
+    u_role = str(getattr(current_user, 'role', 'USER')).upper()
+
+    # 0.7 Check if user directly requests to open/render the interactive workflow proposal form in chat
+    is_interactive_form_request = (
+        bool(re.search(r'\b(mau\s+ajukan|ingin\s+ajukan|ajukan|request|buka\s+form|form\s+pengajuan|formulir)\s+(alur\s+kerja|workflow)\b', lower_prompt))
+        and not any(task_kw in lower_prompt for task_kw in ["untuk", "rekap", "audit", "restock", "laporan", "otomatisasi", "vendor"])
+    ) or lower_prompt.strip() in [
+        "mau ajukan workflow", "ajukan workflow", "request workflow", "form workflow",
+        "form pengajuan workflow", "formulir workflow", "mau ajukan alur kerja",
+        "ajukan alur kerja", "request alur kerja", "buka form workflow", "workflow request",
+        "buka form pengajuan workflow", "tampilkan form workflow"
+    ]
+
+    if is_interactive_form_request:
+        return {
+            "parsed_intent": {"workflow_id": "render_workflow_request_form"},
+            "action_type": "render_workflow_request_form",
+            "message": "Silakan lengkapi formulir pengajuan alur kerja baru di bawah ini. Usulan Anda akan langsung diteruskan ke antrean Administrator untuk ditinjau dan dikompilasi.",
+            "prompt_text": request.prompt,
+            "can_request_admin": True,
+            "user_tenant": u_tenant,
+            "user_role": u_role,
+            "generated_prs": [],
+            "affected_items": []
+        }
+
+    # 0.8 Check if user is asking to create/register a new workflow but lacks admin authority
+    is_create_workflow_request = (
+        bool(re.search(r'\b(buat|bikin|create|tambah|daftarkan|ajukan)\s+(alur\s+kerja|workflow)\b', lower_prompt))
+        or bool(re.search(r'\b(workflow|alur kerja)\s+(baru|belum ada)\b', lower_prompt))
+        or bool(re.search(r'\b(saya\s+butuh|perlu)\s+(alur\s+kerja|workflow)\b', lower_prompt))
+    )
+    if is_create_workflow_request and u_role != "ADMIN":
+        return {
+            "parsed_intent": {"workflow_id": "workflow_not_found"},
+            "action_type": "workflow_not_found",
+            "message": "Pembuatan alur kerja baru merupakan wewenang khusus Administrator. Anda dapat mengajukan permohonan alur kerja ini langsung ke Administrator agar dapat ditinjau dan dikompilasi.",
+            "prompt_text": request.prompt,
+            "can_request_admin": True,
+            "generated_prs": [],
+            "affected_items": []
+        }
+
     # 1. Proactive Clarification Check
     clarif = check_clarification_needs(
         request.prompt,
@@ -446,6 +561,7 @@ async def execute_prompt_logic(
         return {
             "parsed_intent": {"workflow_id": "clarification_needed"},
             "action_type": "clarification_needed",
+            "needs_clarification": True,
             "message": clarif["message"],
             "clarification": clarif,
             "generated_prs": [],
@@ -462,7 +578,12 @@ async def execute_prompt_logic(
     u_role = str(getattr(current_user, 'role', 'USER')).upper()
     if u_role != "ADMIN" and u_tenant != "ALL":
         if u_tenant not in ["HR", "USERB", "TENANT_B"]:
-            hr_keywords = ["kandidat", "pelamar", "rigger", "tkpk", "screening", "rekrutmen"]
+            hr_keywords = [
+                "kandidat", "pelamar", "rigger", "tkpk", "screening", "rekrutmen",
+                "absensi", "kehadiran", "karyawan", "pegawai", "lembur", "overtime",
+                "cuti", "sakit", "izin kerja", "gaji", "payroll", "hourly_overtime_rate",
+                "leave_requests", "attendances"
+            ]
             if any(hk in lower_prompt for hk in hr_keywords):
                 return {
                     "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
@@ -472,7 +593,13 @@ async def execute_prompt_logic(
                     "affected_items": []
                 }
         if u_tenant not in ["FINANCE", "USERC", "TENANT_C"]:
-            fin_keywords = ["laporan pendapatan sewa menara", "pendapatan sewa menara", "arus kas perusahaan", "beban pengeluaran listrik pln", "audit pengeluaran beban listrik", "revenue", "tagihan operator"]
+            fin_keywords = [
+                "laporan pendapatan", "pendapatan sewa", "sewa menara", "arus kas",
+                "beban pengeluaran", "listrik pln", "beban listrik", "revenue",
+                "tagihan operator", "mla_contracts", "kontrak mla", "site_land_leases",
+                "sewa lahan", "faktur invoice", "revenue_invoices",
+                "onboarding klien", "billing"
+            ]
             if any(fk in lower_prompt for fk in fin_keywords):
                 return {
                     "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
@@ -482,7 +609,11 @@ async def execute_prompt_logic(
                     "affected_items": []
                 }
         if u_tenant not in ["INVENTORY", "USERA", "TENANT_A"]:
-            inv_keywords = ["stok", "material", "gudang", "restock", "buatkan pr", "bikin pr", "draf pr"]
+            inv_keywords = [
+                "stok", "material", "gudang", "restock", "buatkan pr", "bikin pr", "draf pr",
+                "purchase order", "po-", "safety stock", "stock_balances", "inventory_items",
+                "barang masuk", "goods receipt", "reorder"
+            ]
             if any(ik in lower_prompt for ik in inv_keywords):
                 return {
                     "parsed_intent": {"workflow_id": "tenant_boundary_restricted"},
@@ -570,14 +701,33 @@ async def execute_prompt_logic(
             target_po_id = exec_result.get("target_po_id") or custom_context.get("target_po_id")
             target_po_num = exec_result.get("target_po_number") or custom_context.get("target_po_number")
             
+            is_hr_tenant = u_tenant in ["HR", "TENANT_B", "userb"]
+            is_fin_tenant = u_tenant in ["FINANCE", "TENANT_C", "userc"]
+
             str_compiled = str(compiled_json).lower()
-            if "view_po" in str_compiled or target_po_id:
+            if is_hr_tenant:
+                if exec_result.get("mutated_employee") or "mutasi" in str_compiled or "mutate" in str_compiled:
+                    action_type = "hr_mutation"
+                elif exec_result.get("leave_id") or "leave" in str_compiled or "cuti" in str_compiled:
+                    action_type = "hr_leave"
+                else:
+                    action_type = "hr_query"
+                target_po_id = None
+                target_po_num = None
+            elif is_fin_tenant:
+                if exec_result.get("onboarding_id") or "onboard" in str_compiled:
+                    action_type = "finance_onboarding"
+                else:
+                    action_type = "finance_query"
+                target_po_id = None
+                target_po_num = None
+            elif "view_po" in str_compiled or target_po_id:
                 action_type = "view_po_document"
             elif exec_result.get("onboarding_id") or "onboard" in str_compiled:
                 action_type = "finance_onboarding"
-            elif wf_id in ["WF-004", "WF-005", "WF-006"] or "finance.revenue_report" in str_compiled or "finance.opex_audit" in str_compiled or "finance.cashflow_summary" in str_compiled:
+            elif wf_id in ["WF-C01", "WF-C02", "WF-C04", "WF-004", "WF-005"] or "finance.revenue_report" in str_compiled or "finance.opex_audit" in str_compiled or "finance.cashflow_summary" in str_compiled:
                 action_type = "finance_query"
-            elif wf_id in ["WF-002", "WF-003"] or "hr.filter_candidates" in str_compiled or "hr.audit_attendance" in str_compiled or "pending_leaves" in custom_context:
+            elif wf_id in ["WF-B02", "WF-B03", "WF-B04", "WF-003"] or "hr.filter_candidates" in str_compiled or "hr.audit_attendance" in str_compiled or "pending_leaves" in custom_context:
                 action_type = "hr_query"
             elif wf_id in ["WF-ALL-01", "WF-ALL-02", "WF-ALL-03"] or "system.check_profile" in str_compiled or "system.get_system_info" in str_compiled or "system.get_company_guidelines" in str_compiled:
                 action_type = "general"
@@ -590,19 +740,21 @@ async def execute_prompt_logic(
             else:
                 action_type = "workflow_execution"
 
-            prs_list = [exec_result["pr_number"]] if exec_result.get("pr_number") else []
-            if exec_result.get("pr_number"):
-                from api.routers.approval_routes import PR_STORE
-                pr_doc = PR_STORE.get(exec_result["pr_number"])
-                if pr_doc:
-                    prs_list = [{
-                        "pr_number": pr_doc.pr_number,
-                        "supplier_name": "Multiple Vendors" if len(set(it.vendor_name for it in pr_doc.items)) > 1 else (pr_doc.items[0].vendor_name if pr_doc.items else "Vendor"),
-                        "grand_total": pr_doc.total_budget,
-                        "status": pr_doc.status.lower(),
-                        "email_sent": exec_result.get("email_sent", False),
-                        "items": [{"item_name": it.name, "quantity": it.reorder_qty, "unit": it.unit} for it in pr_doc.items]
-                    }]
+            prs_list = []
+            if not is_hr_tenant and not is_fin_tenant:
+                prs_list = [exec_result["pr_number"]] if exec_result.get("pr_number") else []
+                if exec_result.get("pr_number"):
+                    from api.routers.approval_routes import PR_STORE
+                    pr_doc = PR_STORE.get(exec_result["pr_number"])
+                    if pr_doc:
+                        prs_list = [{
+                            "pr_number": pr_doc.pr_number,
+                            "supplier_name": "Multiple Vendors" if len(set(it.vendor_name for it in pr_doc.items)) > 1 else (pr_doc.items[0].vendor_name if pr_doc.items else "Vendor"),
+                            "grand_total": pr_doc.total_budget,
+                            "status": pr_doc.status.lower(),
+                            "email_sent": exec_result.get("email_sent", False),
+                            "items": [{"item_name": it.name, "quantity": it.reorder_qty, "unit": it.unit} for it in pr_doc.items]
+                        }]
 
             return {
                 "parsed_intent": {"workflow_id": wf_id, "workflow_name": wf_name},
@@ -614,7 +766,7 @@ async def execute_prompt_logic(
                 "affected_items": exec_result.get("affected_items", []),
                 "total_items_analyzed": exec_result.get("total_items_analyzed", len(exec_result.get("affected_items", []))),
                 "target_destinations": exec_result.get("target_destinations", ["database"]),
-                "pdf_download_url": exec_result.get("pdf_download_url"),
+                "pdf_download_url": exec_result.get("pdf_download_url") if not is_hr_tenant else (exec_result.get("pdf_download_url") if "leave" in str(exec_result.get("pdf_download_url", "")) else None),
                 "po_id": target_po_id,
                 "po_number": target_po_num,
                 "onboarding_id": exec_result.get("onboarding_id"),
@@ -625,6 +777,7 @@ async def execute_prompt_logic(
                 "applicant_name": exec_result.get("applicant_name"),
                 "leave_type": exec_result.get("leave_type"),
                 "days_requested": exec_result.get("days_requested"),
+                "mutated_employee": exec_result.get("mutated_employee"),
                 "execution_steps": exec_result.get("execution_steps", []),
                 "total_budget_formatted": exec_result.get("total_budget_formatted", "Rp 0")
             }
@@ -636,6 +789,12 @@ async def execute_prompt_logic(
         current_user=current_user,
         stage_callback=stage_callback,
         history=request.history
+    )
+
+    can_propose = classify_workflow_proposal_eligibility(
+        prompt=request.prompt,
+        agent_result=agent_result,
+        user_role=getattr(current_user, "role", "USER")
     )
 
     dashboard_response = {
@@ -660,7 +819,9 @@ async def execute_prompt_logic(
         "leave_type": agent_result.get("leave_type"),
         "days_requested": agent_result.get("days_requested"),
         "execution_steps": agent_result.get("execution_steps", []),
-        "total_budget_formatted": agent_result.get("total_budget_formatted", "Rp 0")
+        "total_budget_formatted": agent_result.get("total_budget_formatted", "Rp 0"),
+        "can_request_admin": can_propose,
+        "prompt_text": request.prompt
     }
 
     if agent_result.get("generated_prs") and not dashboard_response["prs"]:
@@ -834,6 +995,22 @@ def get_agent_tools():
             {
                 "tool_name": "purchase_order.create_draft",
                 "description": "Generates a draft Purchase Requisition (PR) document based on low stock data."
+            },
+            {
+                "tool_name": "hr.mutate_employee",
+                "description": "Melakukan mutasi posisi/jabatan dan departemen karyawan pada basis data master kepegawaian PT Bali Towerindo Sentra Tbk."
+            },
+            {
+                "tool_name": "hr.approve_leave",
+                "description": "Otorisasi permohonan cuti karyawan (APPROVED) dan pemotongan otomatis kuota saldo cuti tahunan."
+            },
+            {
+                "tool_name": "hr.audit_attendance",
+                "description": "Audit absensi GPS geofencing teknisi site tower dan perhitungan jam kerja lembur."
+            },
+            {
+                "tool_name": "hr.filter_candidates",
+                "description": "Penyaringan kandidat Rigger Menara berkualifikasi sertifikat K3 TKPK tingkat 1 atau tingkat 2."
             },
             {
                 "tool_name": "hr.submit_leave_request",
