@@ -316,7 +316,9 @@ python -m uvicorn api.main:app --host 0.0.0.0 --port 8050 --reload
 - **Interactive Swagger Docs**: [http://localhost:8050/docs](http://localhost:8050/docs)
 - **Admin Workflow Studio**: [http://localhost:8050/admin](http://localhost:8050/admin)
 
-### 5. Default Corporate Credentials
+### 5. Demo Credentials (Local Development Only)
+
+These seeded accounts are for local tests. Never expose a deployment using these passwords. Set `APP_ENV=production`, provide a random `SECRET_KEY` of at least 32 characters, and rotate seeded account passwords before opening port 8060. Production and staging reject the demo passwords at login. Set `PUBLIC_URL` to the actual URL used in email approval links. Generated documents require login; approval links are signed and require a confirmation click.
 | Username | Password | Role | Division / Access Scope |
 | :--- | :--- | :--- | :--- |
 | `admin` | `admin123` | `ADMIN` | Super Admin (Cross-Tenant Access & Workflow Orchestrator) |

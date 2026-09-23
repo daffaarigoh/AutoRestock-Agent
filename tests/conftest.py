@@ -21,9 +21,11 @@ def seed_test_database_if_needed():
         try:
             from database.db import get_db_connection
             conn = get_db_connection(read_only=True)
-            po_count = conn.execute("SELECT COUNT(*) FROM purchase_orders;").fetchone()[0]
+            po_count, target_count = conn.execute(
+                "SELECT COUNT(DISTINCT po_id), COUNT(*) FILTER (WHERE po_id = 'PO-2026-006') FROM purchase_orders;"
+            ).fetchone()
             conn.close()
-            if po_count < 8:
+            if po_count < 8 or target_count == 0:
                 needs_seed = True
         except Exception:
             needs_seed = True

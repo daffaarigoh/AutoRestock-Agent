@@ -4,11 +4,14 @@ from api.main import app
 from database.db import get_db_connection
 from docgen.compiler import generate_invoice_pdf
 from agents.router import extract_recipient_email, check_clarification_needs
+from core.action_links import build_action_url
 from pathlib import Path
 
 class TestInvoicePdfAndUiFlow(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
+        login = self.client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+        self.assertEqual(login.status_code, 200)
 
     def test_invoice_pdf_compilation(self):
         pdf_path = generate_invoice_pdf("INV-2026-001")
@@ -86,7 +89,10 @@ class TestInvoicePdfAndUiFlow(unittest.TestCase):
             conn.commit()
 
             # Trigger approval endpoint
-            res = self.client.get(f"/api/approval/client-onboarding-action?onboarding_id={test_onb_id}&action=APPROVE")
+            url = build_action_url("http://testserver", "onboarding", test_onb_id, "APPROVE")
+            confirm = self.client.get(url)
+            self.assertEqual(confirm.status_code, 200)
+            res = self.client.post(url)
             self.assertEqual(res.status_code, 200)
 
             # Check revenue_invoices: status MUST be PAID

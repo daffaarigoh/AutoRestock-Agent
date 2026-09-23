@@ -72,7 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Logout Helper
-function logoutSession() {
+async function logoutSession() {
+  await originalFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   sessionStorage.clear();
   localStorage.clear();
   window.location.href = '/static/login.html';

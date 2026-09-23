@@ -36,7 +36,7 @@ app = FastAPI(
 # Enable CORS for frontend dashboard (restricted to configured origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=getattr(settings, "ALLOWED_ORIGINS", ["http://localhost:8050", "http://127.0.0.1:8050"]),
+    allow_origins=getattr(settings, "ALLOWED_ORIGINS", ["http://localhost:8060", "http://127.0.0.1:8060", "http://localhost:8050", "http://127.0.0.1:8050"]),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,7 +49,7 @@ if STATIC_DIR.exists():
 
 STORAGE_DIR = WORKSPACE_DIR / "storage"
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
+# Generated documents contain tenant data and are served only by guarded API routes.
 
 
 
@@ -61,7 +61,8 @@ app.include_router(approval_router)
 app.include_router(auth_router)
 
 # Mount MCP Server SSE Endpoint
-app.mount("/mcp", mcp.sse_app())
+if settings.ENABLE_MCP:
+    app.mount("/mcp", mcp.sse_app())
 
 @app.get("/api/workflows/help-catalog", tags=["Workflows"])
 async def workflows_help_catalog_alias(tenant: str | None = None):
@@ -107,7 +108,8 @@ async def startup_event():
         _ensure_workflow_requests_table(conn)
         conn.close()
     except Exception:
-        pass
+        logger.exception("Database startup migration failed")
+        raise
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -116,6 +118,17 @@ def favicon():
     if icon_path.exists():
         return FileResponse(icon_path, media_type="image/svg+xml")
     return Response(status_code=204)
+
+
+@app.get("/admin", tags=["Admin Portal"])
+def admin_portal():
+    admin_file = WORKSPACE_DIR / "web" / "static" / "admin.html"
+    if admin_file.exists():
+        return FileResponse(admin_file)
+    index_file = WORKSPACE_DIR / "web" / "templates" / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return Response(content="Admin Portal", media_type="text/html")
 
 
 @app.get("/", tags=["Dashboard UI & Health"])

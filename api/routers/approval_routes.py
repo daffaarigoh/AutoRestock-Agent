@@ -1,13 +1,34 @@
 from datetime import datetime
+from html import escape
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
-from core.security import TokenData, get_current_user
+from core.action_links import verify_action_token
+from core.security import TokenData, get_current_admin, get_current_user
 
 router = APIRouter(prefix="/api/approval", tags=["Human-in-the-Loop Approval"])
+
+
+def _confirmation_page(request: Request, action: str, object_id: str) -> HTMLResponse:
+    """Require an intentional POST; email link scanners commonly follow GET links."""
+    verb = "Setujui" if action.startswith("APPROV") else "Tolak"
+    return HTMLResponse(
+        content=("<!doctype html><html lang='id'><meta charset='utf-8'>"
+                 "<title>Konfirmasi keputusan</title><body>"
+                 f"<h1>Konfirmasi {verb} {escape(object_id)}</h1>"
+                 f"<form method='post' action='{escape(str(request.url), quote=True)}'>"
+                 f"<button type='submit'>{verb}</button></form></body></html>"),
+        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
+    )
+
+
+def _require_approval_id(value: str) -> None:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,119}", value):
+        raise HTTPException(status_code=400, detail="Invalid approval identifier")
 
 
 # --- Default PR Data Factory (Single Source of Truth) ---
@@ -544,18 +565,28 @@ async def get_all_requisitions(response: Response, current_user: TokenData = Dep
     return [pr for pr in PR_STORE.values() if pr.tenant_id == current_user.tenant_id or pr.tenant_id == "ALL"]
 
 
+@router.post("/quick-action", response_class=HTMLResponse)
 @router.get("/quick-action", response_class=HTMLResponse)
 async def quick_approval_action(
     pr_number: str,
     action: str = "APPROVE",
     manager_name: str = "Manager",
-    notes: str | None = None
+    notes: str | None = None,
+    token: str | None = None,
+    request: Request = None,
 ):
     """
     Direct one-click approval/rejection endpoint used by Email interactive action buttons.
     Returns a responsive HTML confirmation landing page.
     """
     clean_action = action.strip().upper()
+    _require_approval_id(pr_number)
+    if clean_action not in {"APPROVE", "REJECT"} or not verify_action_token(token, "pr", pr_number, clean_action):
+        raise HTTPException(status_code=403, detail="Invalid or expired approval link")
+    if request.method == "GET":
+        return _confirmation_page(request, clean_action, pr_number)
+    manager_name = escape(manager_name)
+    notes = escape(notes) if notes else None
     pr = _ensure_pr_in_store(pr_number)
 
     items_updated_summary = []
@@ -564,7 +595,7 @@ async def quick_approval_action(
         if pr:
             pr.status = "APPROVED"
             items_updated_summary = [
-                f"<li><strong>{item.name}</strong>: {item.reorder_qty} {item.unit} (PO Diterbitkan ke Vendor &mdash; Menunggu Kedatangan Fisik Gudang)</li>"
+                f"<li><strong>{escape(item.name)}</strong>: {item.reorder_qty} {escape(item.unit)} (PO Diterbitkan ke Vendor &mdash; Menunggu Kedatangan Fisik Gudang)</li>"
                 for item in pr.items
             ]
         stock_delta_info = _update_db_status(pr_number, "APPROVED", pr)
@@ -788,12 +819,14 @@ async def quick_approval_action(
     return HTMLResponse(content=html_content)
 
 
+@router.post("/leave-quick-action", response_class=HTMLResponse)
 @router.get("/leave-quick-action", response_class=HTMLResponse)
 async def quick_leave_approval_action(
     leave_id: str,
     action: str = "APPROVE",
     manager_name: str = "Eko Prasetyo (HR & GA Lead)",
-    request: Request = None
+    request: Request = None,
+    token: str | None = None,
 ):
     """
     Direct one-click approval/rejection endpoint used by HR Leave Email interactive action buttons.
@@ -803,6 +836,13 @@ async def quick_leave_approval_action(
     from database.db import get_db_connection
     from core.config import settings, get_base_url
 
+    clean_action = action.strip().upper()
+    _require_approval_id(leave_id)
+    if clean_action not in {"APPROVE", "APPROVED", "REJECT", "REJECTED"} or not verify_action_token(token, "leave", leave_id, "APPROVE" if clean_action.startswith("APPROV") else "REJECT"):
+        raise HTTPException(status_code=403, detail="Invalid or expired approval link")
+    if request.method == "GET":
+        return _confirmation_page(request, clean_action, leave_id)
+    manager_name = escape(manager_name)
     base_url = get_base_url(request)
 
     clean_action = action.strip().upper()
@@ -887,6 +927,7 @@ async def quick_leave_approval_action(
         print(f"[WARN] Failed to re-compile leave PDF: {pdf_err}")
 
     # Render confirmation landing page
+    leave_info = {key: escape(value) if isinstance(value, str) else value for key, value in leave_info.items()}
     if is_approve:
         status_badge = '<span style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;">STATUS: DISETUJUI (APPROVED)</span>'
         heading_text = "Otorisasi Cuti Karyawan Berhasil Disahkan"
@@ -1100,12 +1141,14 @@ async def quick_leave_approval_action(
     return HTMLResponse(content=html_content, status_code=200)
 
 
+@router.post("/client-onboarding-action", response_class=HTMLResponse)
 @router.get("/client-onboarding-action", response_class=HTMLResponse)
 async def quick_client_onboarding_action(
     onboarding_id: str,
     action: str = "APPROVE",
     manager_name: str = "Finance & Commercial Lead",
-    request: Request = None
+    request: Request = None,
+    token: str | None = None,
 ):
     """
     Direct one-click approval/rejection endpoint for New Telecom Client Onboarding & MLA Lease Contract.
@@ -1119,6 +1162,12 @@ async def quick_client_onboarding_action(
     from database.db import get_db_connection
     from core.config import settings, get_base_url
 
+    clean_action = action.strip().upper()
+    _require_approval_id(onboarding_id)
+    if clean_action not in {"APPROVE", "APPROVED", "REJECT", "REJECTED"} or not verify_action_token(token, "onboarding", onboarding_id, "APPROVE" if clean_action.startswith("APPROV") else "REJECT"):
+        raise HTTPException(status_code=403, detail="Invalid or expired approval link")
+    if request.method == "GET":
+        return _confirmation_page(request, clean_action, onboarding_id)
     base_url = get_base_url(request)
 
     clean_action = action.strip().upper()
@@ -1264,6 +1313,8 @@ async def quick_client_onboarding_action(
         conn.close()
 
     # Confirmation HTML
+    ob_info = {key: escape(value) if isinstance(value, str) else value for key, value in ob_info.items()}
+    manager_name = escape(manager_name)
     if is_approve:
         status_badge = '<span style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;">STATUS: DISETUJUI (APPROVED)</span>'
         heading_text = "Kontrak Sewa Menara Resmi Disetujui & Database Terintegrasi"
@@ -1421,16 +1472,18 @@ async def quick_client_onboarding_action(
 
 
 @router.get("/{pr_number}", response_model=PurchaseRequisitionDoc)
-async def get_requisition_by_number(pr_number: str):
+async def get_requisition_by_number(pr_number: str, current_user: TokenData = Depends(get_current_user)):
     """Returns a single purchase requisition by PR Number."""
-    pr = PR_STORE.get(pr_number)
+    pr = _ensure_pr_in_store(pr_number)
     if not pr:
         raise HTTPException(status_code=404, detail="Purchase Requisition not found.")
+    if current_user.role != "ADMIN" and pr.tenant_id not in {current_user.tenant_id, "ALL"}:
+        raise HTTPException(status_code=403, detail="Access denied")
     return pr
 
 
 @router.post("/action")
-async def execute_approval_action(payload: ApprovalActionPayload):
+async def execute_approval_action(payload: ApprovalActionPayload, current_user: TokenData = Depends(get_current_user)):
     """
     Executes Human-In-The-Loop action (Approve or Reject) for a Purchase Requisition.
     Automatically regenerates the formal Typst PDF document with the updated status.
@@ -1439,7 +1492,12 @@ async def execute_approval_action(payload: ApprovalActionPayload):
     if not pr:
         raise HTTPException(status_code=404, detail="Purchase Requisition not found.")
 
+    if current_user.role != "ADMIN" and (current_user.tenant_id not in {"INVENTORY", "TENANT_A"} or pr.tenant_id not in {current_user.tenant_id, "ALL"}):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     action = payload.action.upper()
+    if action not in {"APPROVE", "REJECT"}:
+        raise HTTPException(status_code=400, detail="Invalid action")
     pr.status = "APPROVED" if action == "APPROVE" else "REJECTED"
     _update_db_status(pr.pr_number, pr.status, pr if action == "APPROVE" else None)
     _regenerate_pdf(pr)
@@ -1467,6 +1525,8 @@ async def dispatch_pr_email(payload: DispatchEmailPayload, current_user: TokenDa
     pr = _ensure_pr_in_store(payload.pr_number)
     if not pr:
         raise HTTPException(status_code=404, detail=f"Draf PR {payload.pr_number} tidak ditemukan.")
+    if current_user.role != "ADMIN" and (current_user.tenant_id not in {"INVENTORY", "TENANT_A"} or pr.tenant_id not in {current_user.tenant_id, "ALL"}):
+        raise HTTPException(status_code=403, detail="Access denied")
 
     target_email = payload.recipient_email or "manager.logistik@balitower.co.id"
 
@@ -1508,7 +1568,7 @@ async def dispatch_pr_email(payload: DispatchEmailPayload, current_user: TokenDa
 
 
 @router.post("/reset")
-async def reset_sample_data(seed: bool = False):
+async def reset_sample_data(seed: bool = False, admin: TokenData = Depends(get_current_admin)):
     """
     Resets PR_STORE to clean state, clears DuckDB orders, purchase_orders, and purchase_requests.
     If seed=True, seeds PR-2026-0819-001 for test suites.
@@ -1551,7 +1611,7 @@ async def reset_sample_data(seed: bool = False):
 
 
 @router.post("/clear-all")
-async def clear_all_prs_and_pos(current_user: TokenData = Depends(get_current_user)):
+async def clear_all_prs_and_pos(current_user: TokenData = Depends(get_current_admin)):
     """
     Membersihkan seluruh draf PR, mengosongkan PR_STORE, menghapus seluruh berkas PDF PR dan PO,
     serta mengosongkan tabel purchase_orders, purchase_requests, dan orders di DuckDB,

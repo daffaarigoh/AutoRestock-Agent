@@ -40,6 +40,7 @@ class TestPOPDFGeneration(unittest.TestCase):
                 self.assertEqual(header, b"%PDF-", f"Expected %PDF- magic bytes, got {header}")
 
     def test_po_pdf_download_endpoints(self):
+        login("usera", "user123")
         # 1. Inline Preview (for In-App Modal Iframe)
         res_inline = client.get("/api/documents/po/PO-2026-006/download?inline=true")
         self.assertEqual(res_inline.status_code, 200)

@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
 
 echo "🚀 Starting AutoRestock-Agent Deployment Process..."
 
@@ -10,7 +13,16 @@ fi
 
 # 2. Pull latest code from Git
 echo "⬇️ Pulling latest code..."
-git pull origin main
+if ! git diff --quiet -- . ':(exclude)data/**' || ! git diff --cached --quiet -- . ':(exclude)data/**'; then
+    echo "❌ Deployment aborted: local code changes must be committed or backed up first."
+    exit 1
+fi
+if [ -n "$(git ls-files --others --exclude-standard)" ]; then
+    echo "❌ Deployment aborted: untracked files are present."
+    exit 1
+fi
+git fetch origin main
+git merge --ff-only origin/main
 
 # 3. Setup Virtual Environment
 if [ ! -d ".venv" ]; then
@@ -21,14 +33,15 @@ fi
 # 4. Install dependencies including gunicorn for production
 echo "📥 Installing dependencies..."
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install gunicorn  # Recommended for production deployments
+python -m pip install -r requirements.txt
 
 # 5. Prepare and Install Systemd Service
 echo "⚙️ Configuring Systemd Service..."
 # Replace placeholders with actual username and directory path dynamically
-sed -e "s|{{USER}}|$USER|g" -e "s|{{PWD}}|$PWD|g" deployment/autorestock.service > /tmp/autorestock.service
-sudo mv /tmp/autorestock.service /etc/systemd/system/autorestock.service
+service_file="$(mktemp)"
+trap 'rm -f "$service_file"' EXIT
+sed -e "s|{{USER}}|$USER|g" -e "s|{{PWD}}|$PWD|g" deployment/autorestock.service > "$service_file"
+sudo install -m 0644 "$service_file" /etc/systemd/system/autorestock.service
 
 # 6. Enable and Restart the Service
 echo "🔄 Reloading and restarting service..."
@@ -37,6 +50,6 @@ sudo systemctl enable autorestock
 sudo systemctl restart autorestock
 
 echo "✅ Deployment completed successfully!"
-echo "🌐 Your app should now be running on port 8050."
+echo "🌐 Your app should now be running on port 8060."
 echo "📜 Recent logs:"
 sudo systemctl status autorestock --no-pager

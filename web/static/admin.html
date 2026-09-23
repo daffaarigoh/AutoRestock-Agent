@@ -5446,7 +5446,8 @@
         .replace(/'/g, '&#039;');
     }
 
-    function logout() {
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
       sessionStorage.clear();
       localStorage.clear();
       window.location.href = '/static/login.html';

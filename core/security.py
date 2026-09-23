@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import bcrypt
 import jwt
-from fastapi import HTTPException, Security
+from fastapi import HTTPException, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
@@ -45,18 +45,38 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return encoded_jwt
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)) -> TokenData:
-    token = credentials.credentials
+    return _decode_user(credentials.credentials)
+
+
+def _decode_user(token: str) -> TokenData:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         role: str = payload.get("role")
         tenant_id: str = payload.get("tenant_id")
-        if username is None or role is None or tenant_id is None:
+        if not all(isinstance(value, str) and value for value in (username, role, tenant_id)):
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=True)
+        try:
+            current = conn.execute("SELECT role, tenant_id FROM users WHERE username = ?", [username]).fetchone()
+        finally:
+            conn.close()
+        if current != (role, tenant_id):
+            raise HTTPException(status_code=401, detail="User session is no longer valid")
         token_data = TokenData(username=username, role=role, tenant_id=tenant_id)
         return token_data
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+def get_document_user(request: Request) -> TokenData:
+    """Allow bearer auth or the HTTP-only cookie for browser PDF navigation only."""
+    header = request.headers.get("authorization", "")
+    token = header[7:] if header.lower().startswith("bearer ") else request.cookies.get("document_session")
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return _decode_user(token)
 
 def get_current_admin(current_user: TokenData = Security(get_current_user)) -> TokenData:
     if current_user.role != "ADMIN":

@@ -27,7 +27,11 @@ class Settings(_BaseSettings):
     DEBUG: bool = True
     PUBLIC_URL: str | None = None
     SECRET_KEY: str = "super-secret-enterprise-key-for-autorestock-agent"
+    ENABLE_MCP: bool = False
     ALLOWED_ORIGINS: list[str] | str = [
+        "http://localhost:8060",
+        "http://127.0.0.1:8060",
+        "http://10.17.101.232:8060",
         "http://localhost:8050",
         "http://127.0.0.1:8050",
         "http://localhost:3000",
@@ -112,9 +116,11 @@ class Settings(_BaseSettings):
         self.DEFAULT_RECIPIENT_EMAIL = _clean(self.DEFAULT_RECIPIENT_EMAIL) or self.SMTP_EMAIL or ""
         self.PUBLIC_URL = _clean(self.PUBLIC_URL)
         self.SECRET_KEY = _clean(self.SECRET_KEY) or "super-secret-enterprise-key-for-autorestock-agent"
-        if self.APP_ENV in ["production", "staging"] and self.SECRET_KEY == "super-secret-enterprise-key-for-autorestock-agent":
-            import logging
-            logging.getLogger(__name__).warning("INSECURE CONFIG: Running in production/staging with default SECRET_KEY! Please override via environment variable.")
+        if self.APP_ENV.lower() in {"production", "staging"}:
+            self.DEBUG = False
+            if (len(self.SECRET_KEY) < 32 or self.SECRET_KEY == "super-secret-enterprise-key-for-autorestock-agent"
+                    or self.SECRET_KEY.startswith("change-this")):
+                raise ValueError("SECRET_KEY must be configured for production or staging")
 
         # Fallback for API_LLM / API_KEY_LLM alias
         if not self.LLM_URL and self.API_LLM:
@@ -150,33 +156,9 @@ def get_base_url(request: Any = None) -> str:
     Returns the reachable base URL for interactive email action buttons and PDF download links.
     Detects public/LAN IP or request Host, preventing unroutable 127.0.0.1 in emails.
     """
-    if request:
-        try:
-            r_url = str(request.base_url).rstrip("/")
-            if "localhost" not in r_url and "127.0.0.1" not in r_url:
-                return r_url
-        except Exception:
-            pass
-
-    if settings.PUBLIC_URL and settings.PUBLIC_URL.strip() not in ["", "http://localhost:8050", "http://127.0.0.1:8050"]:
+    # Email links must not be derived from the untrusted HTTP Host header.
+    if settings.PUBLIC_URL:
         return settings.PUBLIC_URL.rstrip("/")
-
-    # Detect active LAN IP via UDP socket
-    try:
-        import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(0.5)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        if ip and ip != "127.0.0.1":
-            return f"http://{ip}:{settings.API_PORT}"
-    except Exception:
-        pass
-
-    if settings.PUBLIC_URL and settings.PUBLIC_URL.strip():
-        return settings.PUBLIC_URL.rstrip("/")
-
     return f"http://{settings.API_HOST or '127.0.0.1'}:{settings.API_PORT}"
 
 

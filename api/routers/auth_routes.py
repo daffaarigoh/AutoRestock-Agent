@@ -1,11 +1,12 @@
 import asyncio
 import json
+import time
 import uuid
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from core.security import (
@@ -20,6 +21,9 @@ from core.security import (
 from database.db import execute_db_write, get_db_connection
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+_login_failures: dict[tuple[str, str], list[float]] = {}
+_login_lock = asyncio.Lock()
+_DEMO_HASH = "$2b$12$reziVbiqV1qNNnELI.rGjeE7dJOMBhtT3C6/J3oP4foGl8JaE7ujm"
 
 WORKFLOWS_JSON_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "balitower" / "workflows.json"
 
@@ -35,7 +39,17 @@ class Token(BaseModel):
 
 
 @router.post("/login", response_model=Token)
-async def login(req: LoginRequest):
+async def login(req: LoginRequest, response: Response, request: Request):
+    from core.config import settings
+
+    key = (request.client.host if request.client else "unknown", req.username.lower())
+    now = time.monotonic()
+    async with _login_lock:
+        recent = [timestamp for timestamp in _login_failures.get(key, []) if now - timestamp < 900]
+        _login_failures[key] = recent
+        if len(recent) >= 5:
+            raise HTTPException(status_code=429, detail="Too many login attempts. Try again later")
+
     conn = get_db_connection(read_only=True)
     row = conn.execute(
         "SELECT username, password_hash, role, tenant_id FROM users WHERE username = ?",
@@ -43,20 +57,35 @@ async def login(req: LoginRequest):
     ).fetchone()
     conn.close()
 
-    if not row:
+    username, password_hash, role, tenant_id = row if row else (None, _DEMO_HASH, None, None)
+    is_valid = await asyncio.to_thread(verify_password, req.password, password_hash)
+    if settings.APP_ENV.lower() in {"production", "staging"} and req.password in {"admin123", "user123"}:
+        is_valid = False
+    if not row or not is_valid:
+        async with _login_lock:
+            _login_failures.setdefault(key, []).append(now)
         raise HTTPException(status_code=401, detail="Incorrect username or password")
 
-    username, password_hash, role, tenant_id = row
-    is_valid = await asyncio.to_thread(verify_password, req.password, password_hash)
-    if not is_valid:
-        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    async with _login_lock:
+        _login_failures.pop(key, None)
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": username, "role": role, "tenant_id": tenant_id},
         expires_delta=access_token_expires
     )
+    response.set_cookie(
+        key="document_session", value=access_token, httponly=True,
+        secure=request.url.scheme == "https", samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60, path="/api/documents",
+    )
     return {"access_token": access_token, "token_type": "bearer", "role": role, "tenant_id": tenant_id}
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("document_session", path="/api/documents")
+    return {"status": "logged_out"}
 
 
 @router.get("/me")

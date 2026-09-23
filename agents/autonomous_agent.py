@@ -128,9 +128,12 @@ class AutonomousAgent:
 
         conn = get_db_connection(read_only=True)
         try:
+            # The model may propose SQL. A read-only database alone does not stop
+            # DuckDB table functions from reading local files or remote URLs.
+            conn.execute("SET enable_external_access = false")
             cursor = conn.execute(clean_sql)
             columns = [desc[0] for desc in cursor.description]
-            rows = cursor.fetchall()
+            rows = cursor.fetchmany(51)
             
             records = []
             for row in rows[:50]:  # Limit output rows for prompt safety
@@ -138,7 +141,8 @@ class AutonomousAgent:
 
             return {
                 "columns": columns,
-                "rows_count": len(rows),
+                "rows_count": len(records),
+                "truncated": len(rows) > 50,
                 "data": records
             }
         except Exception as e:
@@ -1260,6 +1264,8 @@ class AutonomousAgent:
             "FINANCE": "penagihan sewa menara MLA, invoice operator telekomunikasi, serta biaya operasional utilitas listrik & lahan site",
             "ALL": "manajemen stok & gudang, absensi teknisi, penagihan sewa menara, serta status sistem"
         }.get(tenant, "operasional divisi Anda")
+
+        active_model = settings.MODEL_NAME or "qwen-38"
 
         system_prompt = f"""You are the Autonomous Multi-Agent AI Core for PT Bali Towerindo Sentra Tbk (AutoRestock-Agent).
 You are currently powered by the active AI model '{active_model}'. If the user asks about what AI model, version, or engine is running (e.g., 'qwen versi berapa', 'model apa yang dipakai', 'versi AI'), state directly, concisely, and specifically in Indonesian that you are running on model '{active_model}'. Do NOT give generic evasive responses or tell users to check external websites.

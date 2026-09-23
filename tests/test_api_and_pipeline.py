@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from api.main import app
 from core.observability import tracer
 from core.schemas import PurchaseRequisitionDoc, RestockItem
-from core.security import TokenData, get_current_admin, get_current_user
+from core.security import TokenData, get_current_admin, get_current_user, get_document_user
 from database.db import get_db_connection
 from docgen.compiler import generate_pr_pdf
 
@@ -26,6 +26,7 @@ class TestAutoRestockPipeline(unittest.TestCase):
     def setUp(self):
         app.dependency_overrides[get_current_user] = override_get_current_user
         app.dependency_overrides[get_current_admin] = override_get_current_user
+        app.dependency_overrides[get_document_user] = override_get_current_user
         self.client = TestClient(app)
         self.client.post("/api/approval/reset")
         conn = get_db_connection(read_only=False)

@@ -14,7 +14,7 @@ except ImportError:
 
 from fastapi.testclient import TestClient
 from api.main import app
-from core.security import get_current_user, TokenData
+from core.security import get_current_user, get_document_user, TokenData
 
 import io
 import unittest
@@ -28,6 +28,7 @@ class TestPDFApprovalFlow(unittest.TestCase):
         
         # Override auth to ADMIN
         app.dependency_overrides[get_current_user] = lambda: TokenData(username="admin", role="ADMIN", tenant_id="ALL")
+        app.dependency_overrides[get_document_user] = lambda: TokenData(username="admin", role="ADMIN", tenant_id="ALL")
         
         # 1. Reset database & store
         res_reset = client.post("/api/approval/reset?seed=true")

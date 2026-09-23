@@ -108,7 +108,7 @@ class TestSchemaAllAndCWorkflows(unittest.TestCase):
         self.assertEqual(res3.status_code, 200)
         data3 = res3.json()
         self.assertEqual(data3["action_type"], "finance_query")
-        self.assertIn("Arus Kas Operasional", data3["message"])
+        self.assertIn("telah dinonaktifkan", data3["message"])
 
     def test_schema_c_allowed_for_admin(self):
         """Admin has full cross-tenant access to Schema C."""

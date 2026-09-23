@@ -6,6 +6,7 @@ import uuid
 
 logger = logging.getLogger(__name__)
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from agents.state import PurchaseRequisition, RestockItem
@@ -1080,12 +1081,93 @@ class JSONExecutionEngine:
                         default_subj = "Workflow Auto Restock"
                         default_recip = None
                     elif low_len > 0:
-                        msg = f"Laporan Stok Kritis: Ditemukan {low_len} barang menipis di bawah ambang batas minimum."
-                        default_subj = "Laporan Stok Kritis"
+                        l_items = context.get("low_stock_items") or []
+                        msg = f"Laporan Stok Kritis: Ditemukan **{low_len} material menipis** di bawah ambang batas minimum.\n\n"
+                        if l_items:
+                            sample = l_items[0]
+                            if isinstance(sample, dict):
+                                preferred_keys = ["item_id", "name", "category", "current_stock", "min_threshold", "unit"]
+                                actual_keys = [k for k in preferred_keys if k in sample] or list(sample.keys())[:6]
+                                label_map = {
+                                    "item_id": "SKU / ID",
+                                    "name": "Nama Material Menara",
+                                    "category": "Kategori",
+                                    "current_stock": "Stok Saat Ini",
+                                    "min_threshold": "Batas Minimum",
+                                    "unit": "Satuan"
+                                }
+                                headers = [label_map.get(k, k.replace('_', ' ').title()) for k in actual_keys]
+                                if "Status" not in headers:
+                                    headers.append("Status")
+
+                                report_rows = []
+                                msg += "| " + " | ".join(headers) + " |\n"
+                                msg += "| " + " | ".join([":---:" if any(x in h.lower() for x in ["sku", "id", "stok", "batas", "satuan", "status"]) else ":---" for h in headers]) + " |\n"
+
+                                for it in l_items:
+                                    row_vals = [str(it.get(k, "-")) for k in actual_keys]
+                                    if "Status" in headers:
+                                        row_vals.append("KRITIS")
+                                    report_rows.append(row_vals)
+                                    msg += "| " + " | ".join(f"`{v}`" if idx == 0 else (f"**{v}**" if "stok" in headers[idx].lower() or v == "KRITIS" else v) for idx, v in enumerate(row_vals)) + " |\n"
+
+                                msg += "\nDokumen resmi Laporan Stok Kritis berformat PDF terlampir. Silakan verifikasi dan tindak lanjuti melalui portal logistik."
+
+                                try:
+                                    from docgen.compiler import generate_dynamic_report_pdf
+                                    gen_pdf = generate_dynamic_report_pdf(
+                                        title="Laporan Stok Kritis Inventaris Menara",
+                                        subtitle="Audit Otomatis Ambang Batas Minimum Stok",
+                                        headers=headers,
+                                        rows=report_rows,
+                                        status="CRITICAL",
+                                        summary_text=f"Ditemukan {low_len} material infrastruktur menara berada pada status KRITIS di bawah safety stock."
+                                    )
+                                    context["pdf_path"] = gen_pdf
+                                except Exception as e:
+                                    logger.warning(f"Failed to compile dynamic critical stock PDF: {e}")
+
+                        default_subj = f"Laporan Stok Kritis: {low_len} Material Menipis"
                         default_recip = None
                     elif all_len > 0:
-                        msg = f"Audit Seluruh Gudang: Total {all_len} barang saat ini tercatat di sistem inventaris."
-                        default_subj = "Audit Seluruh Gudang"
+                        a_items = context.get("all_inventory_items") or []
+                        msg = f"Audit Seluruh Gudang: Total **{all_len} barang** saat ini tercatat di sistem inventaris.\n\n"
+                        if a_items:
+                            sample = a_items[0]
+                            if isinstance(sample, dict):
+                                preferred_keys = ["item_id", "name", "category", "current_stock", "unit"]
+                                actual_keys = [k for k in preferred_keys if k in sample] or list(sample.keys())[:5]
+                                label_map = {
+                                    "item_id": "SKU / ID",
+                                    "name": "Nama Material Menara",
+                                    "category": "Kategori",
+                                    "current_stock": "Stok Tersedia",
+                                    "unit": "Satuan"
+                                }
+                                headers = [label_map.get(k, k.replace('_', ' ').title()) for k in actual_keys]
+                                report_rows = []
+                                msg += "| " + " | ".join(headers) + " |\n"
+                                msg += "| " + " | ".join([":---:" if any(x in h.lower() for x in ["sku", "id", "stok", "satuan"]) else ":---" for h in headers]) + " |\n"
+                                for it in a_items:
+                                    row_vals = [str(it.get(k, "-")) for k in actual_keys]
+                                    report_rows.append(row_vals)
+                                    msg += "| " + " | ".join(f"`{v}`" if idx == 0 else v for idx, v in enumerate(row_vals)) + " |\n"
+
+                                try:
+                                    from docgen.compiler import generate_dynamic_report_pdf
+                                    gen_pdf = generate_dynamic_report_pdf(
+                                        title="Laporan Audit Inventaris Gudang",
+                                        subtitle="Rekapitulasi Saldo Stok Keseluruhan",
+                                        headers=headers,
+                                        rows=report_rows,
+                                        status="COMPLETED",
+                                        summary_text=f"Total {all_len} material infrastruktur dan persediaan terdaftar di DuckDB."
+                                    )
+                                    context["pdf_path"] = gen_pdf
+                                except Exception as e:
+                                    logger.warning(f"Failed to compile dynamic warehouse audit PDF: {e}")
+
+                        default_subj = f"Audit Seluruh Gudang: {all_len} Barang Terdaftar"
                         default_recip = None
                     else:
                         msg = "Workflow berhasil dijalankan (Tanpa data item spesifik)."
@@ -2104,6 +2186,9 @@ class JSONExecutionEngine:
             pdf_download_url = f"/api/documents/invoice/{context.get('onboarding_id')}/download"
         elif context.get("target_invoice_id"):
             pdf_download_url = f"/api/documents/invoice/{context.get('target_invoice_id')}/download"
+        elif context.get("pdf_path"):
+            pdf_name = Path(context.get("pdf_path")).name
+            pdf_download_url = f"/api/documents/reports/{pdf_name}/download"
 
         return {
             "workflow_title": compiled_json.get("workflow", "Dynamic Workflow"),

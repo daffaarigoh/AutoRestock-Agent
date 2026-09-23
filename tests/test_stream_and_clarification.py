@@ -93,7 +93,10 @@ class TestStreamAndClarification(unittest.TestCase):
         conn.close()
 
         # Call quick-action approval (simulating user clicking SETUJUI in their email)
-        res = self.client.get(f"/api/approval/quick-action?pr_number={pr_num}&action=APPROVE")
+        from core.action_links import build_action_url
+        url = build_action_url("http://testserver", "pr", pr_num, "APPROVE")
+        self.assertEqual(self.client.get(url).status_code, 200)
+        res = self.client.post(url)
         self.assertEqual(res.status_code, 200)
         self.assertIn("DISETUJUI (APPROVED)", res.text)
 

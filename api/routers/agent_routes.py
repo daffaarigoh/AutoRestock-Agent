@@ -18,7 +18,7 @@ if str(WORKSPACE_DIR) not in sys.path:
 
 from agents.state import PurchaseRequisition, RestockItem
 from agents.workflow import resume_approval, run_autorestock_cycle
-from core.security import TokenData, get_current_user
+from core.security import TokenData, get_current_user, get_document_user
 from api.routers.balitower_routes import require_inventory_access
 from database.db import get_db_connection
 from mcp_server.tools import get_all_inventory_items
@@ -26,6 +26,17 @@ from mcp_server.tools import get_all_inventory_items
 router = APIRouter(tags=["AutoRestock Agent"])
 
 STORAGE_DIR = WORKSPACE_DIR / "storage"
+
+
+def _safe_document_id(value: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,119}", value) or ".." in value:
+        raise HTTPException(status_code=400, detail="Invalid document identifier")
+    return value
+
+
+def _require_document_domain(user: TokenData, *tenants: str) -> None:
+    if user.role != "ADMIN" and user.tenant_id.upper() not in tenants:
+        raise HTTPException(status_code=403, detail="Access denied")
 
 
 class ApprovalRequest(BaseModel):
@@ -62,7 +73,7 @@ def get_inventory_items(response: Response, current_user: TokenData = Depends(re
 
 
 @router.post("/api/agent/run-cycle", response_model=PurchaseRequisition)
-def run_agent_cycle(current_user: TokenData = Depends(get_current_user)):
+def run_agent_cycle(current_user: TokenData = Depends(require_inventory_access)):
     """
     Triggers the LangGraph multi-agent workflow:
     1. Scan items below safety threshold.
@@ -91,18 +102,22 @@ def run_agent_cycle(current_user: TokenData = Depends(get_current_user)):
 
 
 @router.get("/api/documents/pr/{pr_number}/download")
-def download_pr_document(pr_number: str, inline: bool = False):
+def download_pr_document(pr_number: str, inline: bool = False, current_user: TokenData = Depends(get_document_user)):
     """
     Downloads or previews the generated Typst Purchase Requisition PDF.
     Use ?inline=true to display in-browser (for iframe previews).
     Checks status-specific folders first to ensure the served PDF matches true PR status.
     """
+    _safe_document_id(pr_number)
+    _require_document_domain(current_user, "INVENTORY", "TENANT_A")
     clean_pr_num = pr_number.replace("/", "_").replace("\\", "_")
     clean_filename = f"{pr_number.replace('-', '_')}.pdf"
     
     # Check DB/PR_STORE status first
     from api.routers.approval_routes import _ensure_pr_in_store, _regenerate_pdf
     pr_doc = _ensure_pr_in_store(pr_number)
+    if pr_doc and current_user.role != "ADMIN" and pr_doc.tenant_id not in {current_user.tenant_id, "ALL"}:
+        raise HTTPException(status_code=403, detail="Access denied")
     current_status = (pr_doc.status if pr_doc else "PENDING").upper()
     
     candidate_paths = []
@@ -146,12 +161,6 @@ def download_pr_document(pr_number: str, inline: bool = False):
         except Exception as e:
             print(f"[download_pr_document] Regeneration on-the-fly failed: {e}")
 
-    # Recursive wildcard search fallback
-    if found_path is None:
-        matches = list(STORAGE_DIR.rglob(f"*{clean_pr_num}*.pdf"))
-        if matches:
-            found_path = matches[0]
-
     if found_path is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -167,13 +176,14 @@ def download_pr_document(pr_number: str, inline: bool = False):
 
 
 @router.get("/api/documents/po/{po_id}/download")
-def download_po_document(po_id: str, inline: bool = False):
+def download_po_document(po_id: str, inline: bool = False, current_user: TokenData = Depends(get_document_user)):
     """
     Downloads or previews the official Typst Purchase Order (PO) PDF.
     Use ?inline=true to display in-browser (for iframe modal previews).
     Generates the PDF dynamically on-the-fly via Typst if not already compiled.
     """
-    clean_po_id = po_id.replace("/", "_").replace("\\", "_")
+    _require_document_domain(current_user, "INVENTORY", "TENANT_A")
+    clean_po_id = _safe_document_id(po_id)
     po_storage_dir = STORAGE_DIR / "purchase_orders"
     po_storage_dir.mkdir(parents=True, exist_ok=True)
     target_pdf = po_storage_dir / f"{clean_po_id}.pdf"
@@ -199,13 +209,14 @@ def download_po_document(po_id: str, inline: bool = False):
 
 
 @router.get("/api/documents/leave/{leave_id}/download")
-def download_leave_document(leave_id: str, inline: bool = False):
+def download_leave_document(leave_id: str, inline: bool = False, current_user: TokenData = Depends(get_document_user)):
     """
     Downloads or previews the official Typst Leave Request PDF.
     Use ?inline=true to display in-browser (for iframe modal previews).
     Generates the PDF dynamically on-the-fly via Typst if not already compiled.
     """
-    clean_leave_id = leave_id.replace("/", "_").replace("\\", "_")
+    _require_document_domain(current_user, "HR", "TENANT_B")
+    clean_leave_id = _safe_document_id(leave_id)
     leave_storage_dir = STORAGE_DIR / "leave_requests"
     leave_storage_dir.mkdir(parents=True, exist_ok=True)
     target_pdf = leave_storage_dir / f"{clean_leave_id}.pdf"
@@ -231,14 +242,15 @@ def download_leave_document(leave_id: str, inline: bool = False):
 
 
 @router.get("/api/documents/invoice/{invoice_id}/download")
-def download_invoice_document(invoice_id: str, inline: bool = False):
+def download_invoice_document(invoice_id: str, inline: bool = False, current_user: TokenData = Depends(get_document_user)):
     """
     Downloads or previews the official Typst Tower Lease Invoice / MLA Contract PDF.
     Use ?inline=true to display in-browser (for iframe modal previews).
     Generates the PDF dynamically on-the-fly via Typst if not already compiled.
     Supports both invoice IDs (e.g. INV-2026-001) and onboarding IDs (e.g. ONB-2026-001).
     """
-    clean_id = invoice_id.replace("/", "_").replace("\\", "_")
+    _require_document_domain(current_user, "FINANCE", "TENANT_C")
+    clean_id = _safe_document_id(invoice_id)
     invoice_storage_dir = STORAGE_DIR / "invoices"
     invoice_storage_dir.mkdir(parents=True, exist_ok=True)
     target_pdf = invoice_storage_dir / f"{clean_id}.pdf"
@@ -263,8 +275,36 @@ def download_invoice_document(invoice_id: str, inline: bool = False):
     )
 
 
+@router.get("/api/documents/reports/{report_name}/download")
+def download_dynamic_report_document(report_name: str, inline: bool = False, current_user: TokenData = Depends(get_document_user)):
+    """
+    Downloads or previews an official Typst Dynamic Report PDF.
+    Use ?inline=true to display in-browser / iframe modal previews.
+    """
+    clean_name = _safe_document_id(report_name)
+    if not clean_name.endswith(".pdf"):
+        clean_name = f"{clean_name}.pdf"
+
+    reports_dir = STORAGE_DIR / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    target_pdf = reports_dir / clean_name
+
+    if not target_pdf.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Laporan PDF '{report_name}' tidak ditemukan di penyimpanan."
+        )
+
+    return FileResponse(
+        path=str(target_pdf),
+        media_type="application/pdf",
+        filename=target_pdf.name,
+        content_disposition_type="inline" if inline else "attachment"
+    )
+
+
 @router.post("/api/agent/approve", response_model=ApprovalResponse)
-def approve_pr_requisition(request: ApprovalRequest):
+def approve_pr_requisition(request: ApprovalRequest, current_user: TokenData = Depends(require_inventory_access)):
     """
     Handles Human-In-The-Loop (HITL) approval for a Purchase Requisition:
     - If APPROVE: Updates DuckDB orders table status to 'APPROVED' and resumes the paused LangGraph workflow.
@@ -313,7 +353,7 @@ class UpdateItemThresholdRequest(BaseModel):
 
 
 @router.patch("/api/inventory/items/{item_id}")
-def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest, current_user: TokenData = Depends(get_current_user)):
+def update_item_threshold(item_id: str, payload: UpdateItemThresholdRequest, current_user: TokenData = Depends(require_inventory_access)):
     """
     Updates threshold and inventory parameters for a specific item in DuckDB.
     Supports real heterogeneous tenant tables and legacy items.
@@ -708,7 +748,9 @@ async def execute_prompt_logic(
             if is_hr_tenant:
                 if exec_result.get("mutated_employee") or "mutasi" in str_compiled or "mutate" in str_compiled:
                     action_type = "hr_mutation"
-                elif exec_result.get("leave_id") or "leave" in str_compiled or "cuti" in str_compiled:
+                elif exec_result.get("leave_id") or any(
+                    tool in str_compiled for tool in ("hr.submit_leave_request", "hr.approve_leave")
+                ):
                     action_type = "hr_leave"
                 else:
                     action_type = "hr_query"
