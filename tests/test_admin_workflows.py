@@ -18,9 +18,17 @@ class TestAdminWorkflows(unittest.TestCase):
         def _override_admin():
             return TokenData(username="admin", role="ADMIN", tenant_id="ALL")
         app.dependency_overrides[get_current_admin] = _override_admin
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=False)
+        conn.execute("DELETE FROM workflows WHERE name = 'Audit Seluruh Saldo Gudang Regional'")
+        conn.close()
 
     def tearDown(self):
         app.dependency_overrides.clear()
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=False)
+        conn.execute("DELETE FROM workflows WHERE name = 'Audit Seluruh Saldo Gudang Regional'")
+        conn.close()
 
     def test_get_all_workflows_schemas(self):
         """Ensure GET /api/auth/admin/workflows returns correctly scoped tenant IDs."""

@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 
 from core.config import settings
 
-LINK_LIFETIME_SECONDS = 7 * 24 * 60 * 60
+LINK_LIFETIME_SECONDS = 24 * 60 * 60
 
 
 def create_action_token(kind: str, object_id: str, action: str, *, now: int | None = None) -> str:
@@ -21,8 +21,63 @@ def create_action_token(kind: str, object_id: str, action: str, *, now: int | No
     return f"{body.decode()}.{signature}"
 
 
+def is_action_token_consumed(token: str | None) -> bool:
+    """Check if token signature has already been consumed."""
+    if not token or "." not in token:
+        return True
+    try:
+        _, signature = token.split(".", 1)
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=True)
+        try:
+            tables = [t[0] for t in conn.execute("SHOW TABLES;").fetchall()]
+            if "consumed_action_tokens" not in tables:
+                return False
+            row = conn.execute("SELECT 1 FROM consumed_action_tokens WHERE token_sig = ?", [signature]).fetchone()
+            return row is not None
+        finally:
+            conn.close()
+    except Exception:
+        return False
+
+
+def consume_action_token(token: str | None, kind: str, object_id: str, action: str) -> bool:
+    """Mark a token as consumed once used in a POST action. Returns False if already consumed."""
+    if not token or "." not in token:
+        return False
+    try:
+        _, signature = token.split(".", 1)
+        from database.db import get_db_connection
+        conn = get_db_connection(read_only=False)
+        try:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS consumed_action_tokens (
+                    token_sig VARCHAR PRIMARY KEY,
+                    kind VARCHAR NOT NULL,
+                    object_id VARCHAR NOT NULL,
+                    action VARCHAR NOT NULL,
+                    consumed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            existing = conn.execute("SELECT 1 FROM consumed_action_tokens WHERE token_sig = ?", [signature]).fetchone()
+            if existing:
+                return False
+            conn.execute(
+                "INSERT INTO consumed_action_tokens (token_sig, kind, object_id, action) VALUES (?, ?, ?, ?)",
+                [signature, kind, object_id, action.upper()]
+            )
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+    except Exception:
+        return False
+
+
 def verify_action_token(token: str | None, kind: str, object_id: str, action: str, *, now: int | None = None) -> bool:
     if not token:
+        return False
+    if is_action_token_consumed(token):
         return False
     try:
         body, signature = token.split(".", 1)

@@ -65,9 +65,12 @@ if settings.ENABLE_MCP:
     app.mount("/mcp", mcp.sse_app())
 
 @app.get("/api/workflows/help-catalog", tags=["Workflows"])
-async def workflows_help_catalog_alias(tenant: str | None = None):
+async def workflows_help_catalog_alias(
+    tenant: str | None = None,
+    current_user: TokenData = Depends(get_current_user)
+):
     from api.routers.auth_routes import get_help_catalog
-    return await get_help_catalog(tenant)
+    return await get_help_catalog(tenant, current_user=current_user)
 
 
 @app.post("/api/workflows/request", tags=["Workflows"])
@@ -102,10 +105,11 @@ async def startup_event():
     # Initialize DuckDB schema migrations safely at startup
     try:
         from database.db import get_db_connection
-        from api.routers.auth_routes import _ensure_workflow_tenant_column, _ensure_workflow_requests_table
+        from api.routers.auth_routes import _ensure_workflow_tenant_column, _ensure_workflow_requests_table, _ensure_users_token_version
         conn = get_db_connection(read_only=False)
         _ensure_workflow_tenant_column(conn)
         _ensure_workflow_requests_table(conn)
+        _ensure_users_token_version(conn)
         conn.close()
     except Exception:
         logger.exception("Database startup migration failed")

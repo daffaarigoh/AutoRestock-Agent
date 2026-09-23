@@ -31,8 +31,7 @@ def require_inventory_access(current_user: TokenData = Depends(get_current_user)
     """Memastikan user memiliki wewenang divisi Inventory atau Super Admin."""
     role = (current_user.role or "").upper()
     tenant = (current_user.tenant_id or "").upper()
-    username = (current_user.username or "").lower()
-    if role in ["ADMIN", "MANAGER"] or tenant in ["ALL", "INVENTORY", "TENANT_A"] or username in ["admin", "usera", "user_inventory"]:
+    if role in ["ADMIN", "SUPERADMIN"] or tenant in ["ALL", "INVENTORY", "TENANT_A"]:
         return current_user
     raise HTTPException(
         status_code=403,
@@ -44,8 +43,7 @@ def require_hr_access(current_user: TokenData = Depends(get_current_user)) -> To
     """Memastikan user memiliki wewenang divisi HR atau Super Admin."""
     role = (current_user.role or "").upper()
     tenant = (current_user.tenant_id or "").upper()
-    username = (current_user.username or "").lower()
-    if role in ["ADMIN", "MANAGER"] or tenant in ["ALL", "HR", "TENANT_B"] or username in ["admin", "userb", "user_hr"]:
+    if role in ["ADMIN", "SUPERADMIN"] or tenant in ["ALL", "HR", "TENANT_B"]:
         return current_user
     raise HTTPException(
         status_code=403,
@@ -57,13 +55,13 @@ def require_finance_access(current_user: TokenData = Depends(get_current_user)) 
     """Memastikan user memiliki wewenang divisi Finance atau Super Admin."""
     role = (current_user.role or "").upper()
     tenant = (current_user.tenant_id or "").upper()
-    username = (current_user.username or "").lower()
-    if role in ["ADMIN", "MANAGER"] or tenant in ["ALL", "FINANCE", "TENANT_C"] or username in ["admin", "userc", "user_finance"]:
+    if role in ["ADMIN", "SUPERADMIN"] or tenant in ["ALL", "FINANCE", "TENANT_C"]:
         return current_user
     raise HTTPException(
         status_code=403,
         detail=f"Akses ditolak: Akun Anda ({current_user.username} - Divisi {current_user.tenant_id}) tidak memiliki izin untuk mengakses modul Finance & Akuntansi."
     )
+
 
 
 # ==============================================================================
@@ -193,7 +191,7 @@ class UpdateStockBalancePayload(BaseModel):
 @router.put("/api/balitower/inventory/stock-balances")
 def update_stock_balance(
     payload: UpdateStockBalancePayload,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(require_inventory_access)
 ):
     """
     Memperbarui kuantitas fisik stok barang pada gudang tertentu secara bebas oleh Admin.
@@ -203,19 +201,6 @@ def update_stock_balance(
     - new_quantity <= reorder_point -> LOW_STOCK
     - new_quantity > reorder_point -> NORMAL
     """
-    u_role = str(getattr(current_user, 'role', 'USER')).upper()
-    u_tenant = str(getattr(current_user, 'tenant_id', 'ALL')).upper()
-    username = str(getattr(current_user, 'username', '')).lower()
-    is_authorized = (
-        u_role in ["ADMIN", "SUPERADMIN"] or 
-        u_tenant in ["ALL", "INVENTORY", "TENANT_A"] or 
-        username in ["admin", "usera"]
-    )
-    if not is_authorized:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Akses Ditolak: Hanya Admin atau Divisi Inventory yang berhak mengubah saldo stok fisik."
-        )
 
     now_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     today_str = datetime.now().strftime("%Y-%m-%d")

@@ -212,37 +212,161 @@ function restoreUiCustomizations() {
   }
 }
 
-// --- Chat History Persistence in LocalStorage ---
+// --- Chat History Persistence in LocalStorage (Structured & XSS-Safe) ---
 function saveCopilotFeed() {
   const feed = document.getElementById('copilotFeed');
   const container = document.getElementById('geminiChatContainer');
-  if (feed) {
-    localStorage.setItem('ar_copilot_feed', feed.innerHTML);
-    if (container) {
-      if (feed.children.length === 0) {
-        container.classList.add('is-empty-state');
-      } else {
-        container.classList.remove('is-empty-state');
+  if (!feed) return;
+
+  const items = [];
+  const children = feed.children;
+  for (let i = 0; i < children.length; i++) {
+    const el = children[i];
+    if (el.classList.contains('user-query-bubble')) {
+      const text = el.querySelector('.bubble-text')?.textContent?.trim() || '';
+      const time = el.querySelector('.bubble-time')?.textContent?.trim() || '';
+      if (text) {
+        items.push({ type: 'user', text, time });
       }
+    } else if (el.classList.contains('agent-response-box')) {
+      const streamTxt = el.querySelector('.stream-text-slot');
+      const clarifMsg = el.querySelector('.clarification-message');
+      const time = el.querySelector('.agent-time')?.textContent?.trim() || '';
+      const badge = el.querySelector('.agent-status-badge')?.textContent?.trim() || 'Selesai';
+      const isError = el.querySelector('.error-avatar') !== null;
+      let text = '';
+      if (clarifMsg) {
+        text = clarifMsg.textContent?.trim() || '';
+      } else if (streamTxt) {
+        text = streamTxt.innerText || streamTxt.textContent || '';
+      }
+      if (text) {
+        items.push({ type: 'agent', text, time, badge, isError });
+      }
+    }
+  }
+
+  try {
+    localStorage.setItem('ar_copilot_feed_v2', JSON.stringify(items));
+    localStorage.removeItem('ar_copilot_feed'); // Purge legacy raw HTML
+  } catch (e) {
+    console.error("Failed to save feed to localStorage:", e);
+  }
+
+  if (container) {
+    if (items.length === 0) {
+      container.classList.add('is-empty-state');
+    } else {
+      container.classList.remove('is-empty-state');
     }
   }
 }
 
 function restoreCopilotFeed() {
-  let saved = localStorage.getItem('ar_copilot_feed');
   const feed = document.getElementById('copilotFeed');
   const container = document.getElementById('geminiChatContainer');
-  if (saved && feed && saved.trim().length > 0) {
-    // Sanitize any stale or legacy model names cached from previous sessions (e.g., Nemotron -> qwen-38)
-    if (/nemotron/i.test(saved)) {
-      saved = saved.replace(/LLM\s+Nemotron(?:-\w+)?/gi, 'LLM qwen-38')
-                   .replace(/Nemotron(?:-\w+)?/gi, 'qwen-38');
-      localStorage.setItem('ar_copilot_feed', saved);
+  if (!feed) return;
+
+  // Purge legacy raw HTML to ensure no stored XSS execution
+  localStorage.removeItem('ar_copilot_feed');
+
+  const raw = localStorage.getItem('ar_copilot_feed_v2');
+  if (!raw) {
+    if (container) container.classList.add('is-empty-state');
+    return;
+  }
+
+  try {
+    const items = JSON.parse(raw);
+    if (!Array.isArray(items) || items.length === 0) {
+      if (container) container.classList.add('is-empty-state');
+      return;
     }
-    feed.innerHTML = saved;
+
+    feed.innerHTML = '';
+    for (const item of items) {
+      if (item.type === 'user') {
+        const userBox = document.createElement('div');
+        userBox.className = 'user-query-bubble';
+
+        const meta = document.createElement('div');
+        meta.className = 'bubble-meta';
+        const sender = document.createElement('span');
+        sender.className = 'bubble-sender';
+        sender.textContent = 'YOU';
+        const time = document.createElement('span');
+        time.className = 'bubble-time';
+        time.textContent = item.time || '';
+        meta.appendChild(sender);
+        meta.appendChild(time);
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'bubble-text';
+        textDiv.textContent = item.text || '';
+
+        userBox.appendChild(meta);
+        userBox.appendChild(textDiv);
+        feed.appendChild(userBox);
+      } else if (item.type === 'agent') {
+        const box = document.createElement('div');
+        box.className = 'agent-response-box';
+
+        const header = document.createElement('div');
+        header.className = 'agent-bubble-header';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'agent-avatar' + (item.isError ? ' error-avatar' : '');
+        avatar.innerHTML = `<svg width="15" height="15" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 5C10 1.2 22 1.2 26 5" stroke="#004B93" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M9.5 8C12.5 5 19.5 5 22.5 8" stroke="#004B93" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="16" cy="11" r="2.2" fill="#004B93"/>
+          <path d="M12.5 13H19.5V17C19.5 18.9 17.9 20.5 16 20.5C14.1 20.5 12.5 18.9 12.5 17V13Z" fill="#F26F21"/>
+          <path d="M16 20.5V27M13 27H19" stroke="#F26F21" stroke-width="2" stroke-linecap="round"/>
+        </svg>`;
+
+        const name = document.createElement('div');
+        name.className = 'agent-name';
+        name.textContent = 'BaliTower AI Agent';
+
+        const badge = document.createElement('div');
+        badge.className = 'agent-status-badge';
+        const dot = document.createElement('span');
+        dot.className = 'live-dot';
+        badge.appendChild(dot);
+        const badgeText = document.createTextNode(' ' + (item.badge || 'Selesai'));
+        badge.appendChild(badgeText);
+
+        const timeEl = document.createElement('div');
+        timeEl.className = 'agent-time';
+        timeEl.textContent = item.time || '';
+
+        header.appendChild(avatar);
+        header.appendChild(name);
+        header.appendChild(badge);
+        header.appendChild(timeEl);
+        box.appendChild(header);
+
+        const planBox = document.createElement('div');
+        planBox.className = 'agent-plan-box';
+
+        const textSlot = document.createElement('div');
+        textSlot.className = 'stream-text-slot';
+        if (typeof formatMarkdownResponse === 'function') {
+          textSlot.innerHTML = formatMarkdownResponse(item.text || '');
+        } else {
+          textSlot.textContent = item.text || '';
+        }
+        planBox.appendChild(textSlot);
+        box.appendChild(planBox);
+
+        feed.appendChild(box);
+      }
+    }
+
     feed.scrollTop = feed.scrollHeight;
     if (container) container.classList.remove('is-empty-state');
-  } else {
+  } catch (e) {
+    console.error("Failed to restore copilot feed:", e);
     if (container) container.classList.add('is-empty-state');
   }
 }
@@ -253,6 +377,7 @@ function clearCopilotFeed() {
   if (feed) {
     feed.innerHTML = '';
     localStorage.removeItem('ar_copilot_feed');
+    localStorage.removeItem('ar_copilot_feed_v2');
   }
   if (container) {
     container.classList.add('is-empty-state');
@@ -795,12 +920,12 @@ async function loadPurchaseOrders() {
             <td class="text-center"><span class="badge ${statusBadge}">${escapeHtml(po.po_status)}</span></td>
             <td class="text-center" style="white-space: nowrap;">
               ${po.po_status === 'ORDERED' ? `
-              <button class="btn btn-primary btn-xs" style="padding: 3px 8px; font-size: 11px; background: #16A34A; border-color: #15803D; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;" onclick="confirmGoodsReceiptQuick('${escapeHtml(po.po_id)}', '${escapeHtml(po.po_number)}')">
+              <button class="btn btn-primary btn-xs" data-action="receive-goods" data-po-id="${escapeHtml(po.po_id)}" data-po-num="${escapeHtml(po.po_number)}" style="padding: 3px 8px; font-size: 11px; background: #16A34A; border-color: #15803D; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;">
                 <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 <span>Receive Goods</span>
               </button>
               ` : ''}
-              <button class="btn btn-secondary btn-xs" style="padding: 3px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openPoPdfModal('${escapeHtml(po.po_id)}', '${escapeHtml(po.po_number)}', '${escapeHtml(po.supplier_name)}', ${po.total_amount}, '${escapeHtml(po.po_status)}')">
+              <button class="btn btn-secondary btn-xs" data-action="open-po-pdf" data-po-id="${escapeHtml(po.po_id)}" data-po-num="${escapeHtml(po.po_number)}" data-supplier="${escapeHtml(po.supplier_name)}" data-total="${po.total_amount}" data-status="${escapeHtml(po.po_status)}" style="padding: 3px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
                 <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 <span>PDF</span>
               </button>
@@ -1014,7 +1139,7 @@ async function loadHrData() {
           <td>${escapeHtml(l.substitute_name)}</td>
           <td class="text-center"><span class="badge ${l.approval_status === 'APPROVED' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(l.approval_status)}</span></td>
           <td class="text-center" style="white-space: nowrap;">
-            <button class="btn btn-secondary btn-sm" onclick="openLeavePdfModal('${l.leave_id}', '${escapeHtml(l.applicant_name)}', '${escapeHtml(l.leave_type)}', ${l.days_requested}, '${escapeHtml(l.approval_status)}')" style="padding: 3px 10px; font-size: 11.5px;" title="View PDF Document">
+            <button class="btn btn-secondary btn-sm" data-action="open-leave-pdf" data-leave-id="${escapeHtml(l.leave_id)}" data-applicant="${escapeHtml(l.applicant_name)}" data-leave-type="${escapeHtml(l.leave_type)}" data-days="${l.days_requested}" data-status="${escapeHtml(l.approval_status)}" style="padding: 3px 10px; font-size: 11.5px;" title="View PDF Document">
               PDF
             </button>
           </td>
@@ -1273,7 +1398,7 @@ function renderInvoicesTable(data) {
       <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(cleanDueDate)}</td>
       <td class="text-center"><span class="badge ${badgeClass}">${displayStatus}</span></td>
       <td class="text-center">
-        <button class="btn btn-secondary btn-sm" style="padding: 3px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="openInvoicePdfModal('${escapeHtml(invId)}', '${escapeHtml(invNum)}', '${escapeHtml(clientName)}', ${totalBilled}, '${displayStatus}')" title="Buka Dokumen PDF Resmi">
+        <button class="btn btn-secondary btn-sm" data-action="open-invoice-pdf" data-inv-id="${escapeHtml(invId)}" data-inv-num="${escapeHtml(invNum)}" data-client="${escapeHtml(clientName)}" data-total="${totalBilled}" data-status="${escapeHtml(displayStatus)}" style="padding: 3px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Buka Dokumen PDF Resmi">
           <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
@@ -1474,11 +1599,11 @@ function renderPrsTable(prs) {
         </td>
         <td class="text-center" style="white-space: nowrap;">
           <div style="display: inline-flex; gap: 4px;" id="actions-container-${pr.pr_number}">
-            <button class="btn btn-secondary btn-sm" onclick="openPdfModal('${pr.pr_number}', '${escapedSupplier}', ${grandTotal}, '${rawStatus}')">
+            <button class="btn btn-secondary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplierName)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
               View PDF
             </button>
             ${!isApproved && !isRejected && isAdmin ? `
-              <button class="btn btn-success btn-sm btn-approve-action" data-pr="${pr.pr_number}" onclick="approvePrQuick('${pr.pr_number}')">
+              <button class="btn btn-success btn-sm btn-approve-action" data-action="approve-pr" data-pr="${escapeHtml(pr.pr_number)}">
                 Approve
               </button>
             ` : ''}
@@ -2499,7 +2624,7 @@ function renderClarificationBox(streamBubble, clarification) {
       </div>
       <div class="clarification-message">${escapeHtml(clarification.message || '')}</div>
       ${hint ? `
-        <button type="button" class="clarification-hint-btn" onclick="useClarificationHint('${escapedHint}')">
+        <button type="button" class="clarification-hint-btn" data-action="clarification-hint" data-hint="${escapeHtml(hint)}">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
@@ -2586,15 +2711,15 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
                 Draf PR berhasil dibuat dan tersimpan di sistem. Anda dapat langsung mengirimkannya ke Manajer Logistik untuk otorisasi.
               </div>
               <div id="email-action-buttons-${pr.pr_number}" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-                <button type="button" class="btn btn-primary btn-sm" onclick="dispatchPrEmail('${pr.pr_number}', 'manager.logistik@balitower.co.id')">
+                <button type="button" class="btn btn-primary btn-sm" data-action="dispatch-pr-email" data-pr="${escapeHtml(pr.pr_number)}" data-email="manager.logistik@balitower.co.id">
                   <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                   <span>Kirim ke Manajer Logistik (manager.logistik@balitower.co.id)</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCustomEmailInput('${pr.pr_number}')">
+                <button type="button" class="btn btn-secondary btn-sm" data-action="toggle-custom-email" data-pr="${escapeHtml(pr.pr_number)}">
                   <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                   <span>Kirim ke Email Lain...</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" style="color: #64748B;" onclick="skipPrEmail('${pr.pr_number}')">
+                <button type="button" class="btn btn-secondary btn-sm" style="color: #64748B;" data-action="skip-pr-email" data-pr="${escapeHtml(pr.pr_number)}">
                   <span>Lewati (Hanya Simpan Draf)</span>
                 </button>
               </div>
@@ -2602,10 +2727,10 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
                 <div style="font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">Masukkan Alamat Email Tujuan:</div>
                 <div style="display: flex; gap: 6px; align-items: center;">
                   <input type="email" id="custom-email-input-${pr.pr_number}" placeholder="contoh: nama.manajer@balitower.co.id" class="form-input" style="flex: 1; padding: 6px 10px; font-size: 12px; border: 1px solid #CBD5E1; border-radius: 6px;" onkeydown="if(event.key === 'Enter') submitCustomEmail('${pr.pr_number}')" />
-                  <button type="button" class="btn btn-primary btn-sm" onclick="submitCustomEmail('${pr.pr_number}')">
+                  <button type="button" class="btn btn-primary btn-sm" data-action="submit-custom-email" data-pr="${escapeHtml(pr.pr_number)}">
                     <span>Kirim</span>
                   </button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCustomEmailInput('${pr.pr_number}')">
+                  <button type="button" class="btn btn-secondary btn-sm" data-action="toggle-custom-email" data-pr="${escapeHtml(pr.pr_number)}">
                     <span>Batal</span>
                   </button>
                 </div>
@@ -2613,7 +2738,7 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
             </div>
             `}
             <div style="display: flex; justify-content: flex-end;">
-              <button class="btn btn-secondary btn-sm" onclick="openPdfModal('${pr.pr_number}', '${escapedSupplier}', ${grandTotal}, '${rawStatus}')">
+              <button class="btn btn-secondary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplier)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 <span>Lihat Dokumen PDF</span>
               </button>
@@ -2663,7 +2788,7 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 <span>Unduh Faktur PDF</span>
               </a>
-              <button class="btn btn-primary btn-sm" onclick="openInvoicePdfModal('${escapeHtml(onbId)}', '${escapeHtml(onbId)}', '${escapeHtml(clientName)}', ${totalBilled}, 'PENDING')">
+              <button class="btn btn-primary btn-sm" data-action="open-invoice-pdf" data-inv-id="${escapeHtml(onbId)}" data-inv-num="${escapeHtml(onbId)}" data-client="${escapeHtml(clientName)}" data-total="${totalBilled}" data-status="PENDING">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 <span>Lihat Dokumen PDF</span>
               </button>
@@ -2691,7 +2816,7 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
             <span>Unduh PDF Cuti</span>
           </a>
-          <button class="btn btn-primary btn-sm" onclick="openLeavePdfModal('${escapeHtml(lId)}', '${escapeHtml(appName)}', '${escapeHtml(lType)}', ${days}, 'PENDING_APPROVAL')">
+          <button class="btn btn-primary btn-sm" data-action="open-leave-pdf" data-leave-id="${escapeHtml(lId)}" data-applicant="${escapeHtml(appName)}" data-leave-type="${escapeHtml(lType)}" data-days="${days}" data-status="PENDING_APPROVAL">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             <span>Lihat Dokumen PDF</span>
           </button>
@@ -2762,7 +2887,7 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span>Unduh PDF PO</span>
             </a>
-            <button class="btn btn-primary btn-sm" onclick="openPoPdfModal('${escapeHtml(poId)}', '${escapeHtml(poNum)}', '${escapeHtml(supplier)}', ${total}, '${escapeHtml(st)}')">
+            <button class="btn btn-primary btn-sm" data-action="open-po-pdf" data-po-id="${escapeHtml(poId)}" data-po-num="${escapeHtml(poNum)}" data-supplier="${escapeHtml(supplier)}" data-total="${total}" data-status="${escapeHtml(st)}">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
               <span>Lihat Dokumen PO (PDF)</span>
             </button>
@@ -2834,13 +2959,13 @@ function renderWorkflowRequestCard(container, promptText) {
       </div>
       ` : ''}
       <div id="btn-group-${cardId}" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <button type="button" class="btn btn-primary btn-sm" onclick="submitUserWorkflowRequest('${escapedPrompt}', '${cardId}')">
+        <button type="button" class="btn btn-primary btn-sm" data-action="submit-user-wf" data-card-id="${escapeHtml(cardId)}" data-prompt="${escapeHtml(cleanPrompt)}">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
           </svg>
           <span>Kirim Cepat ke Admin</span>
         </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="triggerWorkflowRequestChatForm('${escapedPrompt}', '${cardId}')">
+        <button type="button" class="btn btn-secondary btn-sm" data-action="trigger-user-wf-form" data-card-id="${escapeHtml(cardId)}" data-prompt="${escapeHtml(cleanPrompt)}">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
@@ -2935,10 +3060,10 @@ function renderWorkflowRequestChatForm(targetContainer = null, initialData = {})
       <div class="wf-request-form-footer">
         <span id="${formId}_error" style="color: #DC2626; font-size: 12px; display: none;"></span>
         <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="cancelWorkflowRequestForm('${formId}')">
+          <button type="button" class="btn btn-secondary btn-sm" data-action="cancel-wf-form" data-form-id="${escapeHtml(formId)}">
             <span>Batal</span>
           </button>
-          <button type="button" class="btn btn-primary btn-sm" id="${formId}_btn" onclick="submitInteractiveWorkflowForm('${formId}')">
+          <button type="button" class="btn btn-primary btn-sm" id="${formId}_btn" data-action="submit-wf-form" data-form-id="${escapeHtml(formId)}">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
             </svg>
@@ -3215,10 +3340,10 @@ window.dispatchPrEmail = async function(prNumber, email) {
           ⚠️ ${escapeHtml(err.message || "Gagal mengirimkan email.")}
         </div>
         <div style="display: flex; gap: 6px;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="dispatchPrEmail('${prNumber}', '${targetEmail}')">
+          <button type="button" class="btn btn-primary btn-sm" data-action="dispatch-pr-email" data-pr="${escapeHtml(prNumber)}" data-email="${escapeHtml(targetEmail)}">
             <span>Coba Lagi</span>
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="skipPrEmail('${prNumber}')">
+          <button type="button" class="btn btn-secondary btn-sm" data-action="skip-pr-email" data-pr="${escapeHtml(prNumber)}">
             <span>Lewati</span>
           </button>
         </div>
@@ -3406,7 +3531,7 @@ function appendAgentResponseCard(data) {
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           <span>Unduh PDF PO</span>
         </a>
-        <button class="btn btn-secondary btn-sm" onclick="openPoPdfModal('${escapeHtml(targetPoId)}', '${escapeHtml(data.po_number || intent.po_number || targetPoId)}')">
+        <button class="btn btn-secondary btn-sm" data-action="open-po-pdf" data-po-id="${escapeHtml(targetPoId)}" data-po-num="${escapeHtml(data.po_number || intent.po_number || targetPoId)}" data-supplier="Vendor" data-total="0" data-status="ORDERED">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           <span>Lihat Dokumen PO (PDF)</span>
         </button>
@@ -3459,7 +3584,7 @@ function appendAgentResponseCard(data) {
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 <span>Unduh PDF</span>
               </a>
-              <button class="btn btn-primary btn-sm" onclick="openPoPdfModal('${escapeHtml(poId)}', '${escapeHtml(poNum)}', '${escapeHtml(supplier)}', ${total}, '${escapeHtml(st)}')">
+              <button class="btn btn-primary btn-sm" data-action="open-po-pdf" data-po-id="${escapeHtml(poId)}" data-po-num="${escapeHtml(poNum)}" data-supplier="${escapeHtml(supplier)}" data-total="${total}" data-status="${escapeHtml(st)}">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 <span>Lihat Dokumen PDF</span>
               </button>
@@ -3498,7 +3623,7 @@ function appendAgentResponseCard(data) {
             <span>Dokumen PR resmi telah dikompilasi (PDF) dan notifikasi persetujuan telah otomatis dikirimkan ke email manajer.</span>
           </div>
           <div style="display: flex; justify-content: flex-end;">
-            <button class="btn btn-secondary btn-sm" onclick="openPdfModal('${pr.pr_number}', '${escapedSupplier}', ${grandTotal}, '${rawStatus}')">
+            <button class="btn btn-secondary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplier)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
               <span>Lihat Dokumen PDF</span>
             </button>
@@ -3919,7 +4044,7 @@ function renderTenantHelpExamples() {
       const exampleText = flow.examples[0];
       const safeEx = escapeHtml(exampleText).replace(/'/g, "\\'");
       cardsHtml += `
-        <div class="example-card" onclick="selectExamplePrompt('${safeEx}')" title="Klik untuk memasukkan ke chat">
+        <div class="example-card" data-prompt="${escapeHtml(exampleText)}" title="Klik untuk memasukkan ke chat">
           <div class="example-card-top">
             <span class="example-card-badge">${escapeHtml(flow.id)}</span>
             <span class="example-card-flow-name">${escapeHtml(flow.name)}</span>
@@ -4030,7 +4155,7 @@ async function renderHelpCatalogTab(bodyEl) {
     (flow.examples || []).slice(0, 1).forEach(ex => {
       const safeEx = escapeHtml(ex).replace(/'/g, "\\'");
       html += `
-        <button type="button" class="flow-prompt-item" onclick="selectExamplePromptAndClose('${safeEx}')" title="Click to insert prompt into chat">
+        <button type="button" class="flow-prompt-item" data-prompt="${escapeHtml(ex)}" title="Click to insert prompt into chat">
           <span class="prompt-text">"${escapeHtml(ex)}"</span>
           <span class="prompt-action-tag">
             <span>Use</span>
@@ -4089,7 +4214,7 @@ function renderHelpModelTab(bodyEl) {
           Jika Anda memerlukan proses kerja baru yang belum terdaftar di sistem, Anda tidak perlu menunggu atau melapor secara manual. Cukup ketik perintah di chat seperti <strong>"mau ajukan workflow"</strong>, dan formulir pengajuan interaktif akan langsung muncul di jendela obrolan. Usulan Anda otomatis diteruskan ke antrean review Administrator.
         </div>
         <div style="display: flex; gap: 8px; margin-top: 4px;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="selectExamplePromptAndClose('mau ajukan workflow')">
+          <button type="button" class="btn btn-primary btn-sm" data-action="try-prompt" data-prompt="mau ajukan workflow">
             <span>Coba Sekarang: "mau ajukan workflow"</span>
           </button>
         </div>
@@ -4285,7 +4410,7 @@ async function renderLeaveRequestChatForm(targetContainer = null) {
 
       <div class="leave-form-footer">
         <span id="${formId}_error" style="color: #DC2626; font-size: 12px; display: none;"></span>
-        <button class="btn btn-primary btn-sm" id="${formId}_btn" onclick="submitLeaveRequestForm('${formId}')">
+        <button class="btn btn-primary btn-sm" id="${formId}_btn" data-action="submit-leave-form" data-form-id="${escapeHtml(formId)}">
           <span>Submit Leave Application</span>
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -4425,7 +4550,7 @@ async function submitLeaveRequestForm(formId) {
             <span>Berkas permohonan resmi format PDF telah diterbitkan dan notifikasi telah dikirimkan ke HR.</span>
           </div>
           <div class="leave-action-row">
-            <button class="btn btn-primary btn-sm" onclick="openLeavePdfModal('${leaveId}', '${escapeHtml(d.applicant_name || '')}', '${escapeHtml(typeLabel)}', ${d.days_requested}, 'PENDING_APPROVAL')">
+            <button class="btn btn-primary btn-sm" data-action="open-leave-pdf" data-leave-id="${escapeHtml(leaveId)}" data-applicant="${escapeHtml(d.applicant_name || '')}" data-leave-type="${escapeHtml(typeLabel)}" data-days="${d.days_requested}" data-status="PENDING_APPROVAL">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
@@ -4477,3 +4602,96 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
+
+// --- Global DOM Event Delegation for Tables & Copilot Feed ---
+function initDashboardEventDelegation() {
+  // 1. POs Table Body
+  document.getElementById('posTableBody')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'receive-goods') {
+      confirmGoodsReceiptQuick(btn.dataset.poId, btn.dataset.poNum);
+    } else if (action === 'open-po-pdf') {
+      openPoPdfModal(btn.dataset.poId, btn.dataset.poNum, btn.dataset.supplier, Number(btn.dataset.total || 0), btn.dataset.status);
+    }
+  });
+
+  // 2. HR Leave Requests Table Body
+  document.getElementById('leaveRequestsTableBody')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action="open-leave-pdf"]');
+    if (!btn) return;
+    openLeavePdfModal(btn.dataset.leaveId, btn.dataset.applicant, btn.dataset.leaveType, Number(btn.dataset.days || 1), btn.dataset.status);
+  });
+
+  // 3. Finance Invoices Table Body
+  document.getElementById('invoicesTableBody')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action="open-invoice-pdf"]');
+    if (!btn) return;
+    openInvoicePdfModal(btn.dataset.invId, btn.dataset.invNum, btn.dataset.client, Number(btn.dataset.total || 0), btn.dataset.status);
+  });
+
+  // 4. PRs Table Body
+  document.getElementById('prsTableBody')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'open-pr-pdf') {
+      openPdfModal(btn.dataset.pr, btn.dataset.supplier, Number(btn.dataset.total || 0), btn.dataset.status);
+    } else if (action === 'approve-pr') {
+      approvePrQuick(btn.dataset.pr);
+    }
+  });
+
+  // 5. Copilot Chat Feed (interactive buttons inside chat)
+  document.getElementById('copilotFeed')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'clarification-hint') {
+      useClarificationHint(btn.dataset.hint || '');
+    } else if (action === 'dispatch-pr-email') {
+      dispatchPrEmail(btn.dataset.pr, btn.dataset.email);
+    } else if (action === 'toggle-custom-email') {
+      toggleCustomEmailInput(btn.dataset.pr);
+    } else if (action === 'skip-pr-email') {
+      skipPrEmail(btn.dataset.pr);
+    } else if (action === 'submit-custom-email') {
+      submitCustomEmail(btn.dataset.pr);
+    } else if (action === 'open-pr-pdf') {
+      openPdfModal(btn.dataset.pr, btn.dataset.supplier, Number(btn.dataset.total || 0), btn.dataset.status);
+    } else if (action === 'open-po-pdf') {
+      openPoPdfModal(btn.dataset.poId, btn.dataset.poNum, btn.dataset.supplier, Number(btn.dataset.total || 0), btn.dataset.status);
+    } else if (action === 'open-leave-pdf') {
+      openLeavePdfModal(btn.dataset.leaveId, btn.dataset.applicant, btn.dataset.leaveType, Number(btn.dataset.days || 1), btn.dataset.status);
+    } else if (action === 'open-invoice-pdf') {
+      openInvoicePdfModal(btn.dataset.invId, btn.dataset.invNum, btn.dataset.client, Number(btn.dataset.total || 0), btn.dataset.status);
+    } else if (action === 'submit-user-wf') {
+      submitUserWorkflowRequest(btn.dataset.prompt || '', btn.dataset.cardId);
+    } else if (action === 'trigger-user-wf-form') {
+      triggerWorkflowRequestChatForm(btn.dataset.prompt || '', btn.dataset.cardId);
+    } else if (action === 'cancel-wf-form') {
+      cancelWorkflowRequestForm(btn.dataset.formId);
+    } else if (action === 'submit-wf-form') {
+      submitInteractiveWorkflowForm(btn.dataset.formId);
+    } else if (action === 'submit-leave-form') {
+      submitLeaveRequestForm(btn.dataset.formId);
+    }
+  });
+
+  // 6. Examples prompt cards
+  document.getElementById('examplesContainer')?.addEventListener('click', (e) => {
+    const card = e.target.closest('.example-card');
+    if (card && card.dataset.prompt) {
+      selectExamplePrompt(card.dataset.prompt);
+    }
+  });
+
+  // 7. Help modal catalog flow prompts
+  document.getElementById('helpModalCatalogList')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.flow-prompt-item') || e.target.closest('button[data-action="try-prompt"]');
+    if (btn && btn.dataset.prompt) {
+      selectExamplePromptAndClose(btn.dataset.prompt);
+    }
+  });
+}

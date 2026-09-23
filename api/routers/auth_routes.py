@@ -23,7 +23,27 @@ from database.db import execute_db_write, get_db_connection
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 _login_failures: dict[tuple[str, str], list[float]] = {}
 _login_lock = asyncio.Lock()
+_MAX_LOGIN_FAILURES = 1000
 _DEMO_HASH = "$2b$12$reziVbiqV1qNNnELI.rGjeE7dJOMBhtT3C6/J3oP4foGl8JaE7ujm"
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP, inspecting X-Forwarded-For if present, otherwise direct peer."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+        if client_ip:
+            return client_ip
+    return request.client.host if request.client else "unknown"
+
+def _prune_login_failures(now: float):
+    """Enforce size and time limits on login failure tracking dictionary."""
+    expired_keys = [k for k, timestamps in _login_failures.items() if not timestamps or now - timestamps[-1] >= 900]
+    for k in expired_keys:
+        _login_failures.pop(k, None)
+    if len(_login_failures) > _MAX_LOGIN_FAILURES:
+        sorted_keys = sorted(_login_failures.keys(), key=lambda k: _login_failures[k][-1] if _login_failures[k] else 0)
+        for k in sorted_keys[: len(_login_failures) - _MAX_LOGIN_FAILURES]:
+            _login_failures.pop(k, None)
 
 WORKFLOWS_JSON_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "balitower" / "workflows.json"
 
@@ -42,24 +62,27 @@ class Token(BaseModel):
 async def login(req: LoginRequest, response: Response, request: Request):
     from core.config import settings
 
-    key = (request.client.host if request.client else "unknown", req.username.lower())
+    client_ip = _get_client_ip(request)
+    key = (client_ip, req.username.lower())
     now = time.monotonic()
     async with _login_lock:
+        _prune_login_failures(now)
         recent = [timestamp for timestamp in _login_failures.get(key, []) if now - timestamp < 900]
         _login_failures[key] = recent
         if len(recent) >= 5:
             raise HTTPException(status_code=429, detail="Too many login attempts. Try again later")
 
-    conn = get_db_connection(read_only=True)
+    conn = get_db_connection(read_only=False)
+    _ensure_users_token_version(conn)
     row = conn.execute(
-        "SELECT username, password_hash, role, tenant_id FROM users WHERE username = ?",
+        "SELECT username, password_hash, role, tenant_id, COALESCE(token_version, 1) FROM users WHERE username = ?",
         [req.username]
     ).fetchone()
     conn.close()
 
-    username, password_hash, role, tenant_id = row if row else (None, _DEMO_HASH, None, None)
+    username, password_hash, role, tenant_id, token_version = row if row else (None, _DEMO_HASH, None, None, 1)
     is_valid = await asyncio.to_thread(verify_password, req.password, password_hash)
-    if settings.APP_ENV.lower() in {"production", "staging"} and req.password in {"admin123", "user123"}:
+    if not settings.ALLOW_DEMO_PASSWORDS and settings.APP_ENV.lower() in {"production", "staging"} and req.password in {"admin123", "user123"}:
         is_valid = False
     if not row or not is_valid:
         async with _login_lock:
@@ -71,7 +94,7 @@ async def login(req: LoginRequest, response: Response, request: Request):
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": username, "role": role, "tenant_id": tenant_id},
+        data={"sub": username, "role": role, "tenant_id": tenant_id, "token_version": int(token_version)},
         expires_delta=access_token_expires
     )
     response.set_cookie(
@@ -83,8 +106,34 @@ async def login(req: LoginRequest, response: Response, request: Request):
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(response: Response, request: Request):
     response.delete_cookie("document_session", path="/api/documents")
+    response.delete_cookie("access_token", path="/")
+
+    # Invalidate session in DB if token is present in header or cookie
+    auth_header = request.headers.get("Authorization")
+    token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+    elif "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+    elif "document_session" in request.cookies:
+        token = request.cookies.get("document_session")
+
+    if token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+            username = payload.get("sub")
+            if username:
+                conn = get_db_connection(read_only=False)
+                try:
+                    conn.execute("UPDATE users SET token_version = COALESCE(token_version, 1) + 1 WHERE username = ?", [username])
+                    conn.commit()
+                finally:
+                    conn.close()
+        except Exception:
+            pass
+
     return {"status": "logged_out"}
 
 
@@ -169,6 +218,17 @@ def _ensure_workflow_tenant_column(conn):
                         WHERE id = ? AND (example_prompts IS NULL OR example_prompts = '[]' OR example_prompts = '')
                     """, [ex_str, wf["id"]])
     except Exception as e:
+        pass
+
+
+def _ensure_users_token_version(conn):
+    """Ensure the users table has the token_version column for session revocation."""
+    try:
+        cols = [r[0] for r in conn.execute("DESCRIBE users;").fetchall()]
+        if "token_version" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1;")
+            conn.execute("UPDATE users SET token_version = 1 WHERE token_version IS NULL;")
+    except Exception:
         pass
 
 
@@ -356,19 +416,35 @@ async def edit_workflow(wf_id: str, req: CreateWorkflowRequest, admin: TokenData
     }
 
 @router.get("/workflows/help-catalog")
-async def get_help_catalog(tenant: str | None = None):
-    """Endpoint to fetch active workflows with generated example prompts."""
+async def get_help_catalog(
+    tenant: str | None = None,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Endpoint to fetch active workflows with generated example prompts. Requires authentication and scopes to user tenant."""
     conn = get_db_connection(read_only=False)
     _ensure_workflow_tenant_column(conn)
-    rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
+    rows = conn.execute("SELECT id, name, description, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
     columns = [desc[0] for desc in conn.description]
     conn.close()
+    
+    user_tenant = (current_user.tenant_id or "").upper()
+    is_admin = (current_user.role or "").upper() in ["ADMIN", "SUPERADMIN"]
     
     workflows = []
     for r in rows:
         wf = dict(zip(columns, r))
         t = wf.get("tenant_id") or "ALL"
         wf["tenant_id"] = t
+        
+        # Enforce tenant isolation: non-admins can only see their tenant's workflows or global (ALL)
+        if not is_admin:
+            if t not in [user_tenant, "ALL"]:
+                continue
+        elif tenant:
+            norm_t = _normalize_tenant_id(tenant)
+            if norm_t != "ALL" and t not in [norm_t, "ALL"]:
+                continue
+                
         if isinstance(wf.get("example_prompts"), str):
             try:
                 wf["example_prompts"] = json.loads(wf["example_prompts"])
@@ -376,19 +452,26 @@ async def get_help_catalog(tenant: str | None = None):
                 wf["example_prompts"] = []
         elif not wf.get("example_prompts"):
             wf["example_prompts"] = []
+            
         if not wf["example_prompts"]:
             from agents.workflow_compiler import WorkflowCompiler
-            wf["example_prompts"] = WorkflowCompiler.generate_heuristic_examples(wf.get("name", ""), wf.get("business_instruction", "") or wf.get("description", ""))
+            wf["example_prompts"] = WorkflowCompiler.generate_heuristic_examples(
+                wf.get("name", ""), wf.get("description", "")
+            )
         
         # Enforce exactly one example prompt per workflow
         if wf.get("example_prompts"):
             wf["example_prompts"] = wf["example_prompts"][:1]
         
-        if tenant:
-            norm_t = _normalize_tenant_id(tenant)
-            if norm_t != "ALL" and wf["tenant_id"] not in [norm_t, "ALL"]:
-                continue
-        workflows.append(wf)
+        # Provide concise UI-only response (NO business_instruction, NO compiled_json)
+        safe_wf = {
+            "id": wf["id"],
+            "name": wf["name"],
+            "description": wf["description"],
+            "tenant_id": wf["tenant_id"],
+            "example_prompts": wf["example_prompts"]
+        }
+        workflows.append(safe_wf)
         
     return {"status": "success", "workflows": workflows}
 
@@ -840,6 +923,9 @@ async def update_user(user_id: str, req: AdminUpdateUserRequest, admin: TokenDat
         new_hash = await asyncio.to_thread(get_password_hash, req.password.strip())
         updates.append("password_hash = ?")
         vals.append(new_hash)
+        updates.append("token_version = COALESCE(token_version, 1) + 1")
+    elif req.role or req.tenant_id:
+        updates.append("token_version = COALESCE(token_version, 1) + 1")
 
     if updates:
         vals.append(user_id)
@@ -866,17 +952,45 @@ async def delete_user(user_id: str, admin: TokenData = Depends(get_current_admin
 
 
 # -------------------------------------------------------------------------
-# Generic DuckDB Table Explorer & CRUD Endpoints
+# Generic DuckDB Table Explorer & CRUD Endpoints (Hardened)
 # -------------------------------------------------------------------------
 
+ALLOWED_BUSINESS_TABLES = {
+    "inventory_items",
+    "stock_balances",
+    "warehouses",
+    "suppliers",
+    "purchase_orders",
+    "purchase_requests",
+    "items",
+    "orders",
+    "employees",
+    "attendances",
+    "leave_requests",
+    "candidates",
+    "job_postings",
+    "telecom_sites",
+    "mla_contracts",
+    "revenue_invoices",
+    "site_land_leases",
+    "site_utilities_cost",
+    "telecom_clients",
+    "workflows",
+    "workflow_requests",
+}
+
+DISALLOWED_COLUMNS = {"password_hash", "token_version"}
+
+
 def _get_allowed_tables(conn) -> list[str]:
-    """Retrieve all table names from database."""
-    return [t[0] for t in conn.execute("SHOW TABLES;").fetchall()]
+    """Retrieve allowed business table names that exist in the database."""
+    all_tables = {t[0] for t in conn.execute("SHOW TABLES;").fetchall()}
+    return sorted(list(ALLOWED_BUSINESS_TABLES & all_tables))
 
 
 @router.get("/admin/db/tables")
 async def list_database_tables(admin: TokenData = Depends(get_current_admin)):
-    """List all tables in storage/balitower.db with row counts and column schemas."""
+    """List all allowed business tables in storage/balitower.db with row counts and column schemas."""
     conn = get_db_connection(read_only=True)
     tables = _get_allowed_tables(conn)
     result = []
@@ -884,7 +998,7 @@ async def list_database_tables(admin: TokenData = Depends(get_current_admin)):
         try:
             cnt = conn.execute(f'SELECT COUNT(*) FROM "{t}";').fetchone()[0]
             desc_rows = conn.execute(f'DESCRIBE "{t}";').fetchall()
-            cols = [{"name": r[0], "type": r[1]} for r in desc_rows]
+            cols = [{"name": r[0], "type": r[1]} for r in desc_rows if r[0] not in DISALLOWED_COLUMNS]
             result.append({
                 "table_name": t,
                 "row_count": cnt,
@@ -904,34 +1018,40 @@ async def get_table_data(
     search: str = "",
     admin: TokenData = Depends(get_current_admin)
 ):
-    """Fetch paginated rows from any DuckDB table with search filtering."""
+    """Fetch paginated rows from approved business DuckDB tables with search filtering."""
     conn = get_db_connection(read_only=True)
     allowed = _get_allowed_tables(conn)
     if table_name not in allowed:
         conn.close()
-        raise HTTPException(status_code=404, detail=f"Tabel '{table_name}' tidak ditemukan di database.")
+        raise HTTPException(status_code=403, detail=f"Akses ke tabel '{table_name}' tidak diizinkan melalui CRUD generik. Gunakan API khusus.")
+
+    # Bound limit and offset to protect against memory exhaustion
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    clean_search = (search or "").strip()[:100]
 
     desc_rows = conn.execute(f'DESCRIBE "{table_name}";').fetchall()
-    columns = [r[0] for r in desc_rows]
-    col_defs = [{"name": r[0], "type": r[1]} for r in desc_rows]
+    columns = [r[0] for r in desc_rows if r[0] not in DISALLOWED_COLUMNS]
+    col_defs = [{"name": r[0], "type": r[1]} for r in desc_rows if r[0] not in DISALLOWED_COLUMNS]
 
     where_clause = ""
     params = []
-    if search and search.strip():
+    if clean_search:
         search_terms = []
         for c in columns:
             search_terms.append(f'CAST("{c}" AS VARCHAR) ILIKE ?')
-            params.append(f"%{search.strip()}%")
+            params.append(f"%{clean_search}%")
         where_clause = "WHERE " + " OR ".join(search_terms)
 
     total_cnt = conn.execute(f'SELECT COUNT(*) FROM "{table_name}" {where_clause};', params).fetchone()[0]
     
-    query = f'SELECT * FROM "{table_name}" {where_clause} LIMIT ? OFFSET ?;'
+    col_select = ", ".join([f'"{c}"' for c in columns])
+    query = f'SELECT {col_select} FROM "{table_name}" {where_clause} LIMIT ? OFFSET ?;'
     rows = conn.execute(query, params + [limit, offset]).fetchall()
     conn.close()
 
     data_rows = [dict(zip(columns, r)) for r in rows]
-    pk_col = next((r[0] for r in desc_rows if len(r) > 3 and r[3] == "PRI"), None)
+    pk_col = next((r[0] for r in desc_rows if len(r) > 3 and r[3] == "PRI" and r[0] not in DISALLOWED_COLUMNS), None)
     if not pk_col:
         # Fallback to id column if exists, otherwise first column
         pk_col = next((c for c in columns if c.lower() in ["id", f"{table_name}_id", f"{table_name[:-1]}_id"] or c.lower().endswith("_id")), (columns[0] if columns else None))
@@ -954,19 +1074,19 @@ async def insert_table_row(
     req: AdminDbInsertRequest,
     admin: TokenData = Depends(get_current_admin)
 ):
-    """Insert a new row into any DuckDB table."""
+    """Insert a new row into an allowed business DuckDB table."""
     conn = get_db_connection(read_only=False)
     allowed = _get_allowed_tables(conn)
     if table_name not in allowed:
         conn.close()
-        raise HTTPException(status_code=404, detail=f"Tabel '{table_name}' tidak ditemukan.")
+        raise HTTPException(status_code=403, detail=f"Akses ke tabel '{table_name}' tidak diizinkan melalui CRUD generik.")
 
     desc_rows = conn.execute(f'DESCRIBE "{table_name}";').fetchall()
-    valid_cols = {r[0]: r[1] for r in desc_rows}
+    valid_cols = {r[0]: r[1] for r in desc_rows if r[0] not in DISALLOWED_COLUMNS}
 
     clean_data = {}
     for k, v in req.data.items():
-        if k in valid_cols:
+        if k in valid_cols and k not in DISALLOWED_COLUMNS:
             clean_data[k] = v
 
     if not clean_data:
@@ -995,24 +1115,24 @@ async def update_table_row(
     req: AdminDbUpdateRequest,
     admin: TokenData = Depends(get_current_admin)
 ):
-    """Update a row in any DuckDB table by primary/key column."""
+    """Update a row in an allowed business DuckDB table by primary/key column."""
     conn = get_db_connection(read_only=False)
     allowed = _get_allowed_tables(conn)
     if table_name not in allowed:
         conn.close()
-        raise HTTPException(status_code=404, detail=f"Tabel '{table_name}' tidak ditemukan.")
+        raise HTTPException(status_code=403, detail=f"Akses ke tabel '{table_name}' tidak diizinkan melalui CRUD generik.")
 
     desc_rows = conn.execute(f'DESCRIBE "{table_name}";').fetchall()
-    valid_cols = {r[0]: r[1] for r in desc_rows}
+    valid_cols = {r[0]: r[1] for r in desc_rows if r[0] not in DISALLOWED_COLUMNS}
 
-    if req.pk_col not in valid_cols:
+    if req.pk_col not in valid_cols or req.pk_col in DISALLOWED_COLUMNS:
         conn.close()
         raise HTTPException(status_code=400, detail=f"Kolom identifikasi '{req.pk_col}' tidak valid di tabel {table_name}.")
 
     set_clauses = []
     vals = []
     for k, v in req.data.items():
-        if k in valid_cols and k != req.pk_col:
+        if k in valid_cols and k != req.pk_col and k not in DISALLOWED_COLUMNS:
             set_clauses.append(f'"{k}" = ?')
             vals.append(v)
 
@@ -1043,11 +1163,11 @@ async def delete_table_row(
     allowed = _get_allowed_tables(conn)
     if table_name not in allowed:
         conn.close()
-        raise HTTPException(status_code=404, detail=f"Tabel '{table_name}' tidak ditemukan.")
+        raise HTTPException(status_code=403, detail=f"Akses ke tabel '{table_name}' tidak diizinkan melalui CRUD generik.")
 
     desc_rows = conn.execute(f'DESCRIBE "{table_name}";').fetchall()
-    valid_cols = [r[0] for r in desc_rows]
-    if req.pk_col not in valid_cols:
+    valid_cols = [r[0] for r in desc_rows if r[0] not in DISALLOWED_COLUMNS]
+    if req.pk_col not in valid_cols or req.pk_col in DISALLOWED_COLUMNS:
         conn.close()
         raise HTTPException(status_code=400, detail=f"Kolom '{req.pk_col}' tidak ditemukan di tabel {table_name}.")
 

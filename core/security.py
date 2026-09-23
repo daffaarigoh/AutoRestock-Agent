@@ -24,6 +24,7 @@ class TokenData(BaseModel):
     username: str
     role: str
     tenant_id: str
+    token_version: int = 1
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
@@ -54,17 +55,25 @@ def _decode_user(token: str) -> TokenData:
         username: str = payload.get("sub")
         role: str = payload.get("role")
         tenant_id: str = payload.get("tenant_id")
+        token_version = payload.get("token_version", 1)
         if not all(isinstance(value, str) and value for value in (username, role, tenant_id)):
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
         from database.db import get_db_connection
         conn = get_db_connection(read_only=True)
         try:
-            current = conn.execute("SELECT role, tenant_id FROM users WHERE username = ?", [username]).fetchone()
+            cols = [desc[0] for desc in conn.execute("DESCRIBE users").fetchall()]
+            if "token_version" in cols:
+                current = conn.execute("SELECT role, tenant_id, COALESCE(token_version, 1) FROM users WHERE username = ?", [username]).fetchone()
+            else:
+                current = conn.execute("SELECT role, tenant_id, 1 FROM users WHERE username = ?", [username]).fetchone()
         finally:
             conn.close()
-        if current != (role, tenant_id):
+        if not current:
             raise HTTPException(status_code=401, detail="User session is no longer valid")
-        token_data = TokenData(username=username, role=role, tenant_id=tenant_id)
+        db_role, db_tenant, db_version = current
+        if db_role != role or db_tenant != tenant_id or int(db_version) != int(token_version):
+            raise HTTPException(status_code=401, detail="Token revoked or session expired")
+        token_data = TokenData(username=username, role=role, tenant_id=tenant_id, token_version=int(db_version))
         return token_data
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")

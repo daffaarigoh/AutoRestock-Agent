@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from core.schemas import PurchaseItemRequest, PurchaseRequisitionDoc
-from core.action_links import verify_action_token
+from core.action_links import verify_action_token, consume_action_token
 from core.security import TokenData, get_current_admin, get_current_user
 
 router = APIRouter(prefix="/api/approval", tags=["Human-in-the-Loop Approval"])
@@ -585,6 +585,8 @@ async def quick_approval_action(
         raise HTTPException(status_code=403, detail="Invalid or expired approval link")
     if request.method == "GET":
         return _confirmation_page(request, clean_action, pr_number)
+    if not consume_action_token(token, "pr", pr_number, clean_action):
+        raise HTTPException(status_code=409, detail="Tautan otorisasi ini sudah pernah digunakan sebelumnya.")
     manager_name = escape(manager_name)
     notes = escape(notes) if notes else None
     pr = _ensure_pr_in_store(pr_number)
@@ -842,6 +844,9 @@ async def quick_leave_approval_action(
         raise HTTPException(status_code=403, detail="Invalid or expired approval link")
     if request.method == "GET":
         return _confirmation_page(request, clean_action, leave_id)
+    canonical_action = "APPROVE" if clean_action.startswith("APPROV") else "REJECT"
+    if not consume_action_token(token, "leave", leave_id, canonical_action):
+        raise HTTPException(status_code=409, detail="Tautan otorisasi cuti ini sudah pernah digunakan sebelumnya.")
     manager_name = escape(manager_name)
     base_url = get_base_url(request)
 
@@ -1168,6 +1173,9 @@ async def quick_client_onboarding_action(
         raise HTTPException(status_code=403, detail="Invalid or expired approval link")
     if request.method == "GET":
         return _confirmation_page(request, clean_action, onboarding_id)
+    canonical_action = "APPROVE" if clean_action.startswith("APPROV") else "REJECT"
+    if not consume_action_token(token, "onboarding", onboarding_id, canonical_action):
+        raise HTTPException(status_code=409, detail="Tautan otorisasi registrasi klien ini sudah pernah digunakan sebelumnya.")
     base_url = get_base_url(request)
 
     clean_action = action.strip().upper()

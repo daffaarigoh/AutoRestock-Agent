@@ -3295,6 +3295,11 @@
     }
 
     let allLoadedItems = [];
+    let allLoadedUsers = [];
+    let allLoadedUsersMap = {};
+    let allLoadedItemsMap = {};
+    let allWorkflowRequestsMap = {};
+    let allHelpFlowsMap = {};
     let selectedTenantFilter = 'ALL';
     let currentAdminHelpSection = 'db';
 
@@ -3765,7 +3770,9 @@
 
       let dynamicFlows = [];
       try {
-        const res = await fetch(`/api/workflows/help-catalog?tenant=all&t=${Date.now()}`);
+        const res = await fetch(`/api/workflows/help-catalog?tenant=all&t=${Date.now()}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
         if (res.ok) {
           const data = await res.json();
           dynamicFlows = data.workflows || [];
@@ -3866,12 +3873,13 @@
           const safeDesc = escapeHtml(f.desc || '').replace(/'/g, "\\'");
           const safeInst = escapeHtml(f.instruction || '').replace(/'/g, "\\'");
 
+          allHelpFlowsMap[f.id] = f;
           html += `
             <div class="admin-flow-card">
               <div>
                 <div class="admin-flow-card-top">
                   <span class="admin-flow-badge">${escapeHtml(f.id)}</span>
-                  <button type="button" class="btn-use-builder" onclick="useHelpInBuilder('${safeName}', '${safeTenant}', '${safeDesc}', '${safeInst}')" title="Muat ke Workflow Builder">
+                  <button type="button" class="btn-use-builder" data-action="use-in-builder" data-flow-id="${escapeHtml(f.id)}" title="Muat ke Workflow Builder">
                     <span>Gunakan di Builder</span>
                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -3893,14 +3901,12 @@
           `;
 
           (f.examples || []).slice(0, 1).forEach(ex => {
-            const safeEx = escapeHtml(ex).replace(/'/g, "\\'");
-            const safeWfName = escapeHtml(f.name).replace(/'/g, "\\'");
             html += `
               <div class="admin-prompt-item" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                 <div style="flex: 1;">
                   <span style="font-weight: 700; color: #3B82F6; margin-right: 4px;">&ldquo;</span><span>${escapeHtml(ex)}</span><span style="font-weight: 700; color: #3B82F6; margin-left: 4px;">&rdquo;</span>
                 </div>
-                <button type="button" class="btn-test-prompt" onclick="testWorkflowPrompt('${safeEx}', '${safeWfName}', '${f.id}')" style="background: rgba(59, 130, 246, 0.12); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3B82F6'; this.style.color='#fff';" onmouseout="this.style.background='rgba(59, 130, 246, 0.12)'; this.style.color='#3B82F6';" title="Uji eksekusi alur kerja prompt ini">
+                <button type="button" class="btn-test-prompt" data-action="test-prompt" data-flow-id="${escapeHtml(f.id)}" data-prompt="${escapeHtml(ex)}" data-wf-name="${escapeHtml(f.name)}" style="background: rgba(59, 130, 246, 0.12); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3B82F6'; this.style.color='#fff';" onmouseout="this.style.background='rgba(59, 130, 246, 0.12)'; this.style.color='#3B82F6';" title="Uji eksekusi alur kerja prompt ini">
                   Uji Prompt &rarr;
                 </button>
               </div>
@@ -4209,13 +4215,13 @@
                 <p class="workflow-id">ID: ${escapeHtml(wf.id)}</p>
               </div>
               <div class="workflow-actions-group">
-                <button class="btn-action-edit" onclick="editWf('${escapeHtml(wf.id)}')">
+                <button class="btn-action-edit" data-action="edit-wf" data-wf-id="${escapeHtml(wf.id)}">
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                   </svg>
                   <span>Edit</span>
                 </button>
-                <button class="btn-action-delete" onclick="deleteWf('${escapeHtml(wf.id)}')">
+                <button class="btn-action-delete" data-action="delete-wf" data-wf-id="${escapeHtml(wf.id)}">
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -4337,13 +4343,13 @@
                 <p class="workflow-id">ID: ${escapeHtml(wf.id)}</p>
               </div>
               <div class="workflow-actions-group">
-                <button class="btn-action-edit" onclick="editWf('${escapeHtml(wf.id)}')">
+                <button class="btn-action-edit" data-action="edit-wf" data-wf-id="${escapeHtml(wf.id)}">
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                   </svg>
                   <span>Edit</span>
                 </button>
-                <button class="btn-action-delete" onclick="deleteWf('${escapeHtml(wf.id)}')">
+                <button class="btn-action-delete" data-action="delete-wf" data-wf-id="${escapeHtml(wf.id)}">
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -4539,19 +4545,19 @@
         if (req.status === 'PENDING') {
           actionHtml = `
             <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn btn-primary btn-sm" onclick="createWorkflowFromRequest('${req.id}')" title="Buat alur kerja dari usulan ini">
+              <button class="btn btn-primary btn-sm" data-action="create-wf" data-req-id="${escapeHtml(req.id)}" title="Buat alur kerja dari usulan ini">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 <span>Buat Workflow</span>
               </button>
-              <button class="btn btn-secondary btn-sm" onclick="updateWorkflowRequestStatus('${req.id}', 'REJECTED')" title="Tolak usulan">
+              <button class="btn btn-secondary btn-sm" data-action="status-wf" data-status="REJECTED" data-req-id="${escapeHtml(req.id)}" title="Tolak usulan">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
                 <span>Tolak</span>
               </button>
-              <button class="btn btn-sm" onclick="deleteSingleWorkflowRequest('${req.id}')" title="Hapus usulan ini" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
+              <button class="btn btn-sm" data-action="delete-req" data-req-id="${escapeHtml(req.id)}" title="Hapus usulan ini" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -4561,13 +4567,13 @@
         } else {
           actionHtml = `
             <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn btn-secondary btn-sm" onclick="updateWorkflowRequestStatus('${req.id}', 'PENDING')" title="Buka kembali permintaan">
+              <button class="btn btn-secondary btn-sm" data-action="status-wf" data-status="PENDING" data-req-id="${escapeHtml(req.id)}" title="Buka kembali permintaan">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
                 <span>Buka Kembali</span>
               </button>
-              <button class="btn btn-sm" onclick="deleteSingleWorkflowRequest('${req.id}')" title="Hapus usulan ini" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
+              <button class="btn btn-sm" data-action="delete-req" data-req-id="${escapeHtml(req.id)}" title="Hapus usulan ini" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -4944,7 +4950,7 @@
             </div>
 
             <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
-              <button class="btn btn-secondary" style="font-size: 11.5px; padding: 5px 10px;" onclick="useToolInWorkflow('${escapeHtml(name)}')">
+              <button class="btn btn-secondary" style="font-size: 11.5px; padding: 5px 10px;" data-action="use-tool" data-tool-name="${escapeHtml(name)}">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -5007,7 +5013,17 @@
         if (res.ok) {
           const data = await res.json();
           const users = data.users || [];
+          allLoadedUsers = users;
+          allLoadedUsersMap = {};
+          (users || []).forEach(u => {
+            if (u && u.user_id) allLoadedUsersMap[u.user_id] = u;
+          });
           allLoadedItems = data.items || [];
+          allLoadedItemsMap = {};
+          (allLoadedItems || []).forEach(it => {
+            const id = it.item_id || it.sku || it.employee_id || it.invoice_id;
+            if (id) allLoadedItemsMap[id] = it;
+          });
 
           const invItems = allLoadedItems.filter(i => i.domain === 'INVENTORY' || ['usera', 'TENANT_A'].includes(i.tenant_id));
           const hrItems = allLoadedItems.filter(i => i.domain === 'HR' || ['userb', 'TENANT_B'].includes(i.tenant_id));
@@ -5075,14 +5091,14 @@
                 <td><span class="badge-stock-safe">Active</span></td>
                 <td>
                   <div style="display: flex; gap: 6px; align-items: center;">
-                    <button class="btn-action-edit" onclick="filterItemsByTenant('${u.username === 'admin' ? 'ALL' : u.username}')" style="padding: 4px 8px; font-size: 11.5px;">
+                    <button class="btn-action-edit" data-action="filter-tenant" data-tenant="${u.username === 'admin' ? 'ALL' : escapeHtml(u.username)}" style="padding: 4px 8px; font-size: 11.5px;">
                       ${u.username === 'admin' ? 'View All' : 'Filter'}
                     </button>
-                    <button class="btn-action-edit" onclick="openEditUserModal('${u.user_id}', '${escapeHtml(u.username)}', '${escapeHtml(u.role)}', '${escapeHtml(u.tenant_id)}')" style="padding: 4px 8px; font-size: 11.5px; background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE;">
+                    <button class="btn-action-edit" data-action="edit-user" data-user-id="${escapeHtml(u.user_id)}" style="padding: 4px 8px; font-size: 11.5px; background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE;">
                       Edit
                     </button>
                     ${u.username !== 'admin' ? `
-                    <button class="btn-action-edit" onclick="deleteUserAccount('${u.user_id}', '${escapeHtml(u.username)}')" style="padding: 4px 8px; font-size: 11.5px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">
+                    <button class="btn-action-edit" data-action="delete-user" data-user-id="${escapeHtml(u.user_id)}" style="padding: 4px 8px; font-size: 11.5px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA;">
                       Delete
                     </button>` : ''}
                   </div>
@@ -5212,13 +5228,13 @@
               <td style="text-align: center;">${statusBadge}</td>
               <td style="text-align: center;">
                 <div style="display: flex; gap: 4px; justify-content: center;">
-                  <button class="btn-action-edit" onclick="openAdminStockModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.unit || 'pcs')}', ${Number(it.min_threshold || 0)})" style="padding: 3px 8px; font-size: 11px; background: #2563EB; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Adjust Stock">
+                  <button class="btn-action-edit" data-action="stock-item" data-item-id="${escapeHtml(it.item_id)}" style="padding: 3px 8px; font-size: 11px; background: #2563EB; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Adjust Stock">
                     Stock
                   </button>
-                  <button class="btn-action-edit" onclick="openEditMaterialModal('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}', '${escapeHtml(it.category || '')}', '${escapeHtml(it.unit || '')}', ${Number(it.unit_price || 0)}, ${Number(it.min_threshold || 0)})" style="padding: 3px 8px; font-size: 11px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Edit Material">
+                  <button class="btn-action-edit" data-action="edit-material" data-item-id="${escapeHtml(it.item_id)}" style="padding: 3px 8px; font-size: 11px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Edit Material">
                     Edit
                   </button>
-                  <button class="btn-action-edit" onclick="deleteInventoryItem('${escapeHtml(it.item_id)}', '${escapeHtml(it.name)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Delete Material">
+                  <button class="btn-action-edit" data-action="delete-material" data-item-id="${escapeHtml(it.item_id)}" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;" title="Delete Material">
                     Delete
                   </button>
                 </div>
@@ -5303,10 +5319,10 @@
               <td style="text-align: center;"><span class="badge-stock-safe">${escapeHtml(it.status || 'Active')}</span></td>
               <td style="text-align: center;">
                 <div style="display: flex; gap: 4px; justify-content: center;">
-                  <button class="btn-action-edit" onclick="openEditEmployeeModal('${escapeHtml(it.employee_id || it.item_id)}', '${escapeHtml(it.full_name || it.name)}', '${escapeHtml(it.department || '')}', '${escapeHtml(it.job_title || '')}', '${escapeHtml(it.employment_status || 'PERMANENT')}', '${escapeHtml(it.k3_certification || 'NON_CERTIFIED')}', ${Number(it.leave_balance || 0)})" style="padding: 3px 8px; font-size: 11px; background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                  <button class="btn-action-edit" data-action="edit-employee" data-emp-id="${escapeHtml(it.employee_id || it.item_id)}" style="padding: 3px 8px; font-size: 11px; background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; border-radius: 4px; font-weight: 600; cursor: pointer;">
                     Edit
                   </button>
-                  <button class="btn-action-edit" onclick="deleteEmployeeRecord('${escapeHtml(it.employee_id || it.item_id)}', '${escapeHtml(it.full_name || it.name)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                  <button class="btn-action-edit" data-action="delete-employee" data-emp-id="${escapeHtml(it.employee_id || it.item_id)}" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
                     Delete
                   </button>
                 </div>
@@ -5382,10 +5398,10 @@
               <td style="text-align: center;">${payBadge}</td>
               <td style="text-align: center;">
                 <div style="display: flex; gap: 4px; justify-content: center;">
-                  <button class="btn-action-edit" onclick="openEditInvoiceModal('${escapeHtml(it.invoice_id || it.item_id)}', '${escapeHtml(it.invoice_number || '')}', '${escapeHtml(it.client_id || '')}', '${escapeHtml(it.period_covered || '')}', '${escapeHtml(it.due_date || '')}', ${Number(it.total_billed || it.unit_price || 0)}, '${escapeHtml(it.payment_status || 'PENDING')}')" style="padding: 3px 8px; font-size: 11px; background: #FFF7ED; color: #C2410C; border: 1px solid #FFEDD5; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                  <button class="btn-action-edit" data-action="edit-invoice" data-inv-id="${escapeHtml(it.invoice_id || it.item_id)}" style="padding: 3px 8px; font-size: 11px; background: #FFF7ED; color: #C2410C; border: 1px solid #FFEDD5; border-radius: 4px; font-weight: 600; cursor: pointer;">
                     Edit
                   </button>
-                  <button class="btn-action-edit" onclick="deleteInvoiceRecord('${escapeHtml(it.invoice_id || it.item_id)}', '${escapeHtml(it.invoice_number || it.item_id)}')" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                  <button class="btn-action-edit" data-action="delete-invoice" data-inv-id="${escapeHtml(it.invoice_id || it.item_id)}" style="padding: 3px 8px; font-size: 11px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 4px; font-weight: 600; cursor: pointer;">
                     Delete
                   </button>
                 </div>
@@ -6191,7 +6207,118 @@
       requestAnimationFrame(renderSpotlight);
     }
 
+    function initAdminEventDelegation() {
+      // 1. Users table
+      const uTbody = document.getElementById('usersTableBody');
+      if (uTbody) {
+        uTbody.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const u = allLoadedUsersMap[btn.dataset.userId];
+          if (action === 'filter-tenant') {
+            filterItemsByTenant(btn.dataset.tenant || 'ALL');
+          } else if (action === 'edit-user' && u) {
+            openEditUserModal(u.user_id, u.username, u.role, u.tenant_id);
+          } else if (action === 'delete-user' && u) {
+            deleteUserAccount(u.user_id, u.username);
+          }
+        });
+      }
+
+      // 2. Master items container (inventory, hr, finance)
+      const mContainer = document.getElementById('masterTablesContainer');
+      if (mContainer) {
+        mContainer.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const id = btn.dataset.itemId || btn.dataset.empId || btn.dataset.invId;
+          const it = allLoadedItemsMap[id];
+          if (action === 'stock-item' && it) {
+            openAdminStockModal(it.item_id, it.name, it.unit || 'pcs', it.min_threshold || 0);
+          } else if (action === 'edit-material' && it) {
+            openEditMaterialModal(it.item_id, it.name, it.category || '', it.unit || '', Number(it.unit_price || 0), Number(it.min_threshold || 0));
+          } else if (action === 'delete-material' && it) {
+            deleteInventoryItem(it.item_id, it.name);
+          } else if (action === 'edit-employee' && it) {
+            openEditEmployeeModal(it.employee_id || it.item_id, it.full_name || it.name, it.department || '', it.job_title || '', it.employment_status || 'PERMANENT', it.k3_certification || 'NON_CERTIFIED', Number(it.leave_balance || 0));
+          } else if (action === 'delete-employee' && it) {
+            deleteEmployeeRecord(it.employee_id || it.item_id, it.full_name || it.name);
+          } else if (action === 'edit-invoice' && it) {
+            openEditInvoiceModal(it.invoice_id || it.item_id, it.invoice_number || '', it.client_id || '', it.period_covered || '', it.due_date || '', Number(it.total_billed || it.unit_price || 0), it.payment_status || 'PENDING');
+          } else if (action === 'delete-invoice' && it) {
+            deleteInvoiceRecord(it.invoice_id || it.item_id, it.invoice_number || it.item_id);
+          }
+        });
+      }
+
+      // 3. Workflows list
+      const wfList = document.getElementById('workflowList');
+      if (wfList) {
+        wfList.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const wfId = btn.dataset.wfId;
+          if (action === 'edit-wf' && wfId) {
+            editWf(wfId);
+          } else if (action === 'delete-wf' && wfId) {
+            deleteWf(wfId);
+          }
+        });
+      }
+
+      // 4. Workflow requests table
+      const reqTbody = document.getElementById('requestsTbody');
+      if (reqTbody) {
+        reqTbody.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const reqId = btn.dataset.reqId;
+          if (action === 'create-wf' && reqId) {
+            createWorkflowFromRequest(reqId);
+          } else if (action === 'status-wf' && reqId) {
+            updateWorkflowRequestStatus(reqId, btn.dataset.status);
+          } else if (action === 'delete-req' && reqId) {
+            deleteSingleWorkflowRequest(reqId);
+          }
+        });
+      }
+
+      // 5. Help / Flows catalog
+      const flowsContainer = document.getElementById('adminFlowsContainer');
+      if (flowsContainer) {
+        flowsContainer.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const flowId = btn.dataset.flowId;
+          const f = allHelpFlowsMap[flowId];
+          if (action === 'use-in-builder' && f) {
+            useHelpInBuilder(f.name, f.tenant, f.desc, f.instruction);
+          } else if (action === 'test-prompt') {
+            testWorkflowPrompt(btn.dataset.prompt, btn.dataset.wfName, flowId);
+          }
+        });
+      }
+
+      // 6. Tools list
+      const toolsContainer = document.getElementById('toolsList');
+      if (toolsContainer) {
+        toolsContainer.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          if (btn.dataset.action === 'use-tool') {
+            useToolInWorkflow(btn.dataset.toolName);
+          }
+        });
+      }
+    }
+
     // Default Load: Directly open Workflow Orchestrator as requested
+    initAdminEventDelegation();
     switchAdminTab('workflows');
     loadWorkflowRequests();
     setInterval(loadWorkflowRequests, 30000);

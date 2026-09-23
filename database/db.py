@@ -16,9 +16,11 @@ def get_db_connection(read_only: bool = False, max_retries: int = 15) -> duckdb.
     """Get a connection to the DuckDB inventory database with retry logic for file locks."""
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     
+    # In-process DuckDB cannot mix read_only=True and read_only=False connections to the same file.
+    # To prevent 'different configuration than existing connections' conflicts, we connect consistently.
     for attempt in range(max_retries):
         try:
-            return duckdb.connect(DB_PATH.as_posix(), read_only=read_only)
+            return duckdb.connect(DB_PATH.as_posix(), read_only=False)
         except duckdb.IOException as e:
             if attempt == max_retries - 1:
                 raise e
@@ -45,7 +47,7 @@ class DuckDBManager:
     @staticmethod
     def execute_read(query: str, params: list[Any] | None = None) -> list[Any]:
         """Executes read query safely and ensures connection closure."""
-        conn = get_db_connection(read_only=True)
+        conn = get_db_connection(read_only=False)
         try:
             return conn.execute(query, params or []).fetchall()
         finally:

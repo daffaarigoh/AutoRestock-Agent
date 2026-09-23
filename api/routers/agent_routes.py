@@ -990,10 +990,10 @@ def get_prompt_templates():
 
 
 @router.get("/api/agent/tools", tags=["Agent Configuration"])
-def get_agent_tools():
+def get_agent_tools(current_user: TokenData = Depends(get_current_user)):
     '''
     Returns the comprehensive list of tools (APIs) available to the AI model
-    for executing autonomous workflows.
+    for executing autonomous workflows. Requires authentication.
     '''
     return {
         "status": "success",
