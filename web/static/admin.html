@@ -5661,19 +5661,22 @@
       modal.style.display = 'none';
 
       try {
-        const res = await fetch('/api/approval/clear-all', {
+        const res = await fetch('/api/approval/clear-all?confirm=true', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`
+            'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`,
+            'X-Confirm-Reset': 'true'
           }
         });
         if (res.ok) {
           const data = await res.json();
-          showToast(data.message || 'Semua draf PR dan PO berhasil dibersihkan!');
+          const backupMsg = data.backup_created ? ` (Snapshot tersimpan di: ${data.backup_created})` : '';
+          showToast((data.message || 'Semua draf PR dan PO berhasil dibersihkan!') + backupMsg);
         } else {
           const err = await res.json().catch(() => ({}));
           alert('Gagal membersihkan data: ' + (err.detail || 'Terjadi kesalahan'));
         }
+
       } catch (e) {
         alert('Kesalahan jaringan: ' + e.message);
       }

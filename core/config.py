@@ -29,6 +29,7 @@ class Settings(_BaseSettings):
     SECRET_KEY: str = "super-secret-enterprise-key-for-autorestock-agent"
     ENABLE_MCP: bool = False
     ALLOW_DEMO_PASSWORDS: bool = False
+    ALLOW_DEMO_RESET: bool = False
     ALLOWED_ORIGINS: list[str] | str = [
         "http://localhost:8060",
         "http://127.0.0.1:8060",

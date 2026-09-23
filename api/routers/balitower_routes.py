@@ -742,9 +742,27 @@ async def create_leave_request(
     }
 
 
+from enum import Enum
+
+
+class LeaveActionEnum(str, Enum):
+    APPROVE = "APPROVE"
+    REJECT = "REJECT"
+
+
 class LeaveActionRequest(BaseModel):
-    action: str  # APPROVE / REJECT
+    action: LeaveActionEnum
     manager_name: str | None = "HR Manager"
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        if isinstance(v, dict) and "action" in v and isinstance(v["action"], str):
+            v["action"] = v["action"].strip().upper()
+        return v
 
 
 @router.post("/api/balitower/hr/leave-requests/{leave_id}/action")
@@ -753,30 +771,48 @@ def update_leave_status(
     payload: LeaveActionRequest,
     current_user: TokenData = Depends(require_hr_access)
 ):
-    """Menyetujui atau menolak pengajuan cuti."""
-    conn = get_db_connection()
+    """Menyetujui atau menolak pengajuan cuti secara transaksional dan aman."""
+    from database.db import execute_db_write
+
+    conn = get_db_connection(read_only=True)
     try:
-        new_status = "APPROVED" if payload.action.upper() == "APPROVE" else "REJECTED"
-        
         row = conn.execute(
             "SELECT employee_id, leave_type, days_requested, approval_status FROM leave_requests WHERE leave_id = ?",
             [leave_id]
         ).fetchone()
+    finally:
+        conn.close()
 
-        conn.execute(
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Pengajuan cuti '{leave_id}' tidak ditemukan di basis data."
+        )
+
+    emp_id, l_type, days, current_status = row
+    current_status_upper = (current_status or "").upper()
+    if current_status_upper in {"APPROVED", "REJECTED"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Pengajuan cuti '{leave_id}' sudah diproses sebelumnya dengan status '{current_status}'."
+        )
+
+    action_str = payload.action.value if hasattr(payload.action, "value") else str(payload.action)
+    new_status = "APPROVED" if action_str.upper() == "APPROVE" else "REJECTED"
+
+    def _update_leave_tx(write_conn):
+        write_conn.execute(
             "UPDATE leave_requests SET approval_status = ?, approved_by = 'EMP-BLT-005' WHERE leave_id = ?",
             [new_status, leave_id]
         )
-
-        if row and new_status == "APPROVED" and row[3] != "APPROVED":
-            emp_id, l_type, days, _ = row
-            conn.execute(
+        if new_status == "APPROVED":
+            deduct_days = max(1, int(days or 1))
+            write_conn.execute(
                 "UPDATE employees SET leave_balance = GREATEST(0, leave_balance - ?) WHERE employee_id = ?",
-                [max(1, int(days or 1)), emp_id]
+                [deduct_days, emp_id]
             )
-        conn.commit()
-    finally:
-        conn.close()
+
+    execute_db_write(_update_leave_tx)
 
     try:
         from docgen.compiler import generate_leave_pdf
@@ -784,10 +820,15 @@ def update_leave_status(
     except Exception as e:
         print(f"[WARN] Failed to regenerate leave PDF: {e}")
 
-    return {"leave_id": leave_id, "status": new_status, "message": f"Pengajuan cuti berhasil di-{new_status.lower()}"}
+    return {
+        "leave_id": leave_id,
+        "status": new_status,
+        "message": f"Pengajuan cuti berhasil di-{new_status.lower()}"
+    }
 
 
 @router.get("/api/balitower/hr/candidates")
+
 def get_candidates(
     job_id: str | None = None,
     fit_only: bool = False,

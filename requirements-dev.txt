@@ -1,0 +1,10 @@
+# ==============================================================================
+# AutoRestock-Agent Development & Testing Dependencies
+# ==============================================================================
+
+-r requirements.txt
+
+# Testing frameworks & coverage
+pytest>=8.0.0,<9.2.0
+pytest-asyncio>=0.23.0
+paramiko>=3.0.0,<5.1.0

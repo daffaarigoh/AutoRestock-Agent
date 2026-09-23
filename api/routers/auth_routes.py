@@ -347,14 +347,6 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
     try:
         rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
         columns = [desc[0] for desc in conn.description]
-    except Exception:
-        conn.close()
-        write_conn = get_db_connection(read_only=False)
-        _ensure_workflow_tenant_column(write_conn)
-        write_conn.close()
-        conn = get_db_connection(read_only=True)
-        rows = conn.execute("SELECT id, name, description, business_instruction, compiled_json, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
-        columns = [desc[0] for desc in conn.description]
     finally:
         conn.close()
     
@@ -527,22 +519,6 @@ async def get_workflow_requests(response: Response, admin: TokenData = Depends(g
 
     conn = get_db_connection(read_only=True)
     try:
-        rows = conn.execute("""
-            SELECT id, username, tenant_id, prompt, notes, status, 
-                   strftime(created_at, '%d %b %Y, %H:%M') as created_at_str,
-                   reviewed_by, resolved_workflow_id, title
-            FROM workflow_requests 
-            ORDER BY 
-                CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END,
-                created_at DESC
-            LIMIT 100
-        """).fetchall()
-    except Exception:
-        conn.close()
-        write_conn = get_db_connection(read_only=False)
-        _ensure_workflow_requests_table(write_conn)
-        write_conn.close()
-        conn = get_db_connection(read_only=True)
         rows = conn.execute("""
             SELECT id, username, tenant_id, prompt, notes, status, 
                    strftime(created_at, '%d %b %Y, %H:%M') as created_at_str,

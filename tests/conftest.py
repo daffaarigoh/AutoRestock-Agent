@@ -42,3 +42,24 @@ def ensure_test_database():
     """
     seed_test_database_if_needed()
 
+
+@pytest.fixture(autouse=True)
+def reset_test_auth_state():
+    """
+    Guarantees that each test starts with clean login rate-limit state
+    and demo passwords enabled for test suite execution.
+    """
+    from core.config import settings
+    from api.routers.auth_routes import _login_failures
+    _login_failures.clear()
+    orig_demo = settings.ALLOW_DEMO_PASSWORDS
+    orig_reset = settings.ALLOW_DEMO_RESET
+    orig_env = settings.APP_ENV
+    settings.ALLOW_DEMO_PASSWORDS = True
+    settings.ALLOW_DEMO_RESET = True
+    yield
+    _login_failures.clear()
+    settings.ALLOW_DEMO_PASSWORDS = orig_demo
+    settings.ALLOW_DEMO_RESET = orig_reset
+    settings.APP_ENV = orig_env
+

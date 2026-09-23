@@ -1,32 +1,30 @@
 # ==============================================================================
-# AutoRestock-Agent Dependencies (Pure Python / Local Environment)
+# AutoRestock-Agent Dependencies (Production Runtime)
+# Version constraints pinned to tested ranges
 # ==============================================================================
 
 # Web Framework & API Server
-fastapi>=0.110.0
-uvicorn[standard]>=0.28.0
-python-multipart>=0.0.9
-httpx>=0.27.0
+fastapi>=0.110.0,<0.142.0
+uvicorn[standard]>=0.28.0,<0.53.0
+python-multipart>=0.0.9,<0.0.33
+httpx>=0.27.0,<0.29.0
 
 # Data Models & Settings
-pydantic>=2.6.0
-pydantic-settings>=2.2.0
+pydantic>=2.6.0,<2.14.0
+pydantic-settings>=2.2.0,<2.16.0
 
 # Embedded Relational Database & Data Analysis
-duckdb>=1.0.0
-pandas>=2.0.0
+duckdb>=1.0.0,<1.6.0
+pandas>=2.0.0,<3.1.0
 
 # Multi-Agent Workflow Engine
-langgraph>=0.2.0
+langgraph>=0.2.0,<1.3.0
 
 # Document Typesetting & Image Processing
-typst>=0.11.0
-pillow>=10.2.0
-mcp>=2.1.0
+typst>=0.11.0,<0.16.0
+pillow>=10.2.0,<13.0.0
+mcp>=2.1.0,<2.2.0
 
 # Security & Authentication
-bcrypt>=4.1.2
-PyJWT>=2.8.0
-
-# Testing
-pytest>=8.0.0
+bcrypt>=4.1.2,<5.1.0
+PyJWT>=2.8.0,<2.14.0

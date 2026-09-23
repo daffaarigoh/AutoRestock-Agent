@@ -102,18 +102,14 @@ async def startup_event():
         except Exception:
             pass
 
-    # Initialize DuckDB schema migrations safely at startup
+    # Initialize versioned DuckDB schema migrations safely prior to handling traffic
     try:
-        from database.db import get_db_connection
-        from api.routers.auth_routes import _ensure_workflow_tenant_column, _ensure_workflow_requests_table, _ensure_users_token_version
-        conn = get_db_connection(read_only=False)
-        _ensure_workflow_tenant_column(conn)
-        _ensure_workflow_requests_table(conn)
-        _ensure_users_token_version(conn)
-        conn.close()
+        from database.migrations import run_migrations
+        run_migrations()
     except Exception:
         logger.exception("Database startup migration failed")
         raise
+
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -171,22 +167,67 @@ def root(request: Request):
 
 @app.get("/health", tags=["Health"])
 async def health_check():
+    """
+    Decoupled health check. Returns local service and DB status without failing
+    liveness if external LLM services are temporarily degraded or disconnected.
+    """
     import httpx
-    from fastapi import HTTPException
+    from database.db import get_db_connection
+
+    # 1. Local Database health check
+    db_connected = False
+    try:
+        conn = get_db_connection(read_only=True)
+        conn.execute("SELECT 1;").fetchone()
+        conn.close()
+        db_connected = True
+    except Exception as e:
+        logger.warning(f"Database health check failed: {e!s}")
+
+    # 2. External LLM connectivity check (bounded timeout)
+    llm_connected = False
+    llm_error = None
     try:
         base_url = (settings.MODEL_URL or "").rstrip("/")
-        models_endpoint = base_url if base_url.endswith("/models") else f"{base_url}/models"
-
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            headers = {}
-            if settings.MODEL_API_KEY and settings.MODEL_API_KEY.strip():
-                headers["Authorization"] = f"Bearer {settings.MODEL_API_KEY.strip()}"
-            res = await client.get(models_endpoint, headers=headers)
-            res.raise_for_status()
-        return {"status": "healthy", "llm_connected": True}
+        if base_url:
+            models_endpoint = base_url if base_url.endswith("/models") else f"{base_url}/models"
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                headers = {}
+                if settings.MODEL_API_KEY and settings.MODEL_API_KEY.strip():
+                    headers["Authorization"] = f"Bearer {settings.MODEL_API_KEY.strip()}"
+                res = await client.get(models_endpoint, headers=headers)
+                llm_connected = (res.status_code == 200)
     except Exception as e:
-        logger.warning(f"LLM health check failed for {settings.MODEL_URL}: {e!s}")
-        raise HTTPException(status_code=503, detail="LLM Disconnected or unavailable")
+        llm_error = str(e)
+        logger.debug(f"LLM health check note for {settings.MODEL_URL}: {e!s}")
+
+    return {
+        "status": "healthy" if db_connected else "degraded",
+        "local_service": "online",
+        "database": "connected" if db_connected else "error",
+        "llm_connected": llm_connected,
+        "llm_error": llm_error
+    }
+
+
+@app.get("/health/live", tags=["Health"])
+def liveness_check():
+    """Liveness probe: verifies only that the local server process is responsive."""
+    return {"status": "alive", "service": "AutoRestock-Agent"}
+
+
+@app.get("/health/ready", tags=["Health"])
+def readiness_check():
+    """Readiness probe: verifies that internal database connectivity is active."""
+    from database.db import get_db_connection
+    try:
+        conn = get_db_connection(read_only=True)
+        conn.execute("SELECT 1;").fetchone()
+        conn.close()
+        return {"status": "ready", "database": "connected"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database unready: {e!s}")
+
 
 
 if __name__ == "__main__":
