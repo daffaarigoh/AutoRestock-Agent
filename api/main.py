@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import logging
 from pathlib import Path
 
@@ -12,22 +13,40 @@ from fastapi.staticfiles import StaticFiles
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent
 
 from api.routers.agent_routes import router as agent_router
-from api.routers.approval_routes import PR_STORE
 from api.routers.approval_routes import router as approval_router
 from api.routers.auth_routes import router as auth_router
 from api.routers.balitower_routes import router as balitower_router
 from api.routers.stream_routes import router as stream_router
 from core.config import settings
 from core.security import TokenData, get_current_user
-from docgen.compiler import generate_pr_pdf
 from mcp_server.server import mcp
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Ensures storage directories and versioned DuckDB schema migrations are run safely.
+    """
+    STORAGE_DIR = WORKSPACE_DIR / "storage"
+    DOCS_DIR = STORAGE_DIR / "documents"
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
+
+    try:
+        from database.migrations import run_migrations
+        run_migrations()
+    except Exception:
+        logger.exception("Database startup migration failed")
+        raise
+    yield
+
 
 app = FastAPI(
     title="AutoRestock-Agent API",
     description="Autonomous Multi-Agent Inventory Replenishment & Procurement System",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Enable CORS for frontend dashboard (restricted to configured origins)
@@ -84,28 +103,6 @@ async def workflows_request_alias(
     )
     return await submit_workflow_request(payload, current_user=current_user)
 
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Ensures storage directories and initial sample PDF documents are generated.
-    """
-    DOCS_DIR = STORAGE_DIR / "documents"
-    DOCS_DIR.mkdir(parents=True, exist_ok=True)
-    sample_pr = PR_STORE.get("PR-2026-0819-001")
-    if sample_pr:
-        try:
-            generate_pr_pdf(sample_pr, output_path=DOCS_DIR / "PR_2026_0819_001.pdf")
-        except Exception:
-            pass
-
-    # Initialize versioned DuckDB schema migrations safely prior to handling traffic
-    try:
-        from database.migrations import run_migrations
-        run_migrations()
-    except Exception:
-        logger.exception("Database startup migration failed")
-        raise
 
 
 
