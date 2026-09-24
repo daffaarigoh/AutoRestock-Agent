@@ -1023,6 +1023,14 @@ def get_agent_tools(current_user: TokenData = Depends(get_current_user)):
                 "description": "Performs generic database record operations."
             },
             {
+                "tool_name": "agent.reason_and_validate",
+                "description": "Evaluates operational parameters, validates mandatory schema attributes, and enforces business rules before execution."
+            },
+            {
+                "tool_name": "agent.calculate_reorder_quantity",
+                "description": "Calculates optimal restock quantities and matches best registered supplier partners based on lead times and unit pricing."
+            },
+            {
                 "tool_name": "notification.dispatch",
                 "description": "Dispatches system alerts to configured notification channels."
             },
@@ -1040,55 +1048,55 @@ def get_agent_tools(current_user: TokenData = Depends(get_current_user)):
             },
             {
                 "tool_name": "hr.mutate_employee",
-                "description": "Melakukan mutasi posisi/jabatan dan departemen karyawan pada basis data master kepegawaian PT Bali Towerindo Sentra Tbk."
+                "description": "Executes employee position/job title and department transfers in PT Bali Towerindo Sentra Tbk HR master records."
             },
             {
                 "tool_name": "hr.approve_leave",
-                "description": "Otorisasi permohonan cuti karyawan (APPROVED) dan pemotongan otomatis kuota saldo cuti tahunan."
+                "description": "Authorizes employee leave requests (APPROVED) and automatically deducts remaining annual leave quota balances."
             },
             {
                 "tool_name": "hr.audit_attendance",
-                "description": "Audit absensi GPS geofencing teknisi site tower dan perhitungan jam kerja lembur."
+                "description": "Audits field technician GPS geofencing attendance records and calculates overtime hours."
             },
             {
                 "tool_name": "hr.filter_candidates",
-                "description": "Penyaringan kandidat Rigger Menara berkualifikasi sertifikat K3 TKPK tingkat 1 atau tingkat 2."
+                "description": "Screens field tower rigger candidates dynamically based on K3 certification levels (TKPK Level 1, Level 2, or General K3)."
             },
             {
                 "tool_name": "hr.submit_leave_request",
-                "description": "Merekam pengajuan cuti teknisi/karyawan baru ke dalam basis data DuckDB."
+                "description": "Records new technician/employee leave applications into DuckDB database."
             },
             {
                 "tool_name": "docgen.compile_leave_pdf",
-                "description": "Mengompilasi dokumen resmi Surat Pengajuan Cuti karyawan ke format PDF Typst dengan kop surat PT Bali Towerindo Sentra Tbk."
+                "description": "Compiles official employee leave request letters into Typst PDF format with PT Bali Towerindo Sentra Tbk letterhead."
             },
             {
                 "tool_name": "hr.query_pending_leaves",
-                "description": "Memeriksa dan merekap seluruh pengajuan cuti karyawan yang berstatus PENDING_APPROVAL."
+                "description": "Queries and aggregates all employee leave requests currently pending approval."
             },
             {
                 "tool_name": "finance.draft_client_onboarding",
-                "description": "Menyusun draft pendaftaran klien operator baru & kontrak sewa menara (MLA) serta estimasi tagihan perdana berstatus PENDING_APPROVAL untuk otorisasi email."
+                "description": "Drafts new telecom client registrations and MLA tower lease contracts with PENDING_APPROVAL status for email authorization."
             },
             {
                 "tool_name": "finance.approve_client_onboarding",
-                "description": "Mengesahkan otorisasi onboarding klien operator: mengaktifkan data klien, menerbitkan kontrak MLA aktif, dan menerbitkan invoice perdana di database."
+                "description": "Authorizes telecom client onboarding: activates client records, creates active MLA contracts, and generates initial invoices."
             },
             {
                 "tool_name": "finance.audit_client_onboardings",
-                "description": "Memeriksa daftar pengajuan sewa menara dan pendaftaran operator baru yang masih menunggu otorisasi persetujuan."
+                "description": "Audits the queue of new tower lease and operator onboarding applications pending approval."
             },
             {
                 "tool_name": "finance.revenue_report",
-                "description": "Menampilkan rekapitulasi pendapatan sewa menara per operator, total tagihan terbit, pembayaran lunas, dan piutang (AR)."
+                "description": "Generates consolidated tower lease revenue reports by operator, including total billed, collected payments, and accounts receivable (AR)."
             },
             {
                 "tool_name": "finance.opex_audit",
-                "description": "Audit transaksi beban operasional site (OPEX) termasuk listrik PLN, sewa lahan, dan bahan bakar genset."
+                "description": "Audits tower site operational expenses (OPEX) including PLN electricity, land leases, and generator fuel."
             },
             {
                 "tool_name": "finance.cashflow_summary",
-                "description": "Menghitung ringkasan arus kas operasional (Inflow vs Outflow) dan surplus kas bersih perusahaan."
+                "description": "Computes operational cash flow summaries (Inflows vs Outflows) and net corporate cash surplus."
             }
         ]
     }

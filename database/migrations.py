@@ -140,6 +140,26 @@ def _migration_007_normalize_consumed_action_token_columns(conn):
         )
     logger.info("[Migration 007] Normalized consumed_action_tokens columns while preserving records.")
 
+
+def _migration_008_orders_schema(conn):
+    """Ensure orders table exists with standard columns."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            order_id VARCHAR PRIMARY KEY,
+            pr_number VARCHAR NOT NULL,
+            item_id VARCHAR NOT NULL,
+            vendor_id VARCHAR NOT NULL,
+            quantity INTEGER NOT NULL,
+            unit_price FLOAT NOT NULL,
+            total_price FLOAT NOT NULL,
+            status VARCHAR NOT NULL,
+            tenant_id VARCHAR NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    logger.info("[Migration 008] Ensured orders table exists.")
+
+
 MIGRATIONS: list[tuple[int, str, Callable]] = [
     (1, "workflow_columns", _migration_001_workflow_columns),
     (2, "workflow_requests_table", _migration_002_workflow_requests_table),
@@ -148,6 +168,7 @@ MIGRATIONS: list[tuple[int, str, Callable]] = [
     (5, "purchase_requests_schema", _migration_005_purchase_requests_schema),
     (6, "purchase_orders_pr_number", _migration_006_purchase_orders_pr_number),
     (7, "normalize_consumed_action_token_columns", _migration_007_normalize_consumed_action_token_columns),
+    (8, "orders_schema", _migration_008_orders_schema),
 ]
 
 

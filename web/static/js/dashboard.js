@@ -683,7 +683,7 @@ function renderCategoryOptions() {
   if (!select) return;
   const currentVal = select.value;
 
-  select.innerHTML = `<option value="">Semua Kategori</option>` + (state.categories || []).map(c => {
+  select.innerHTML = `<option value="">All Categories</option>` + (state.categories || []).map(c => {
     return `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
   }).join('');
 
@@ -770,7 +770,7 @@ async function loadStockBalances() {
   } catch (e) {
     console.error("Failed to load stock balances:", e);
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: #DC2626;">Gagal memuat saldo gudang.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: #DC2626;">Failed to load stock balances.</td></tr>`;
     }
   }
 }
@@ -778,9 +778,9 @@ async function loadStockBalances() {
 function renderStockBalancesTable(data) {
   const tbody = document.getElementById('invBalancesTableBody');
   if (!tbody) return;
-  updateSidebarRowCount(data ? data.length : 0, 'Data Saldo Gudang');
+  updateSidebarRowCount(data ? data.length : 0, 'Stock Balances Data');
   if (!data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Tidak ada data saldo gudang yang cocok.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">No matching stock balance records found.</td></tr>`;
     return;
   }
   tbody.innerHTML = data.map(b => {
@@ -788,10 +788,10 @@ function renderStockBalancesTable(data) {
     let statusText = 'NORMAL';
     if (b.stock_status === 'CRITICAL') {
       statusBadge = 'badge-out_of_stock';
-      statusText = 'KRITIS';
+      statusText = 'CRITICAL';
     } else if (b.stock_status === 'LOW_STOCK') {
       statusBadge = 'badge-low_stock';
-      statusText = 'MENIPIS';
+      statusText = 'LOW STOCK';
     }
     return `
       <tr>
@@ -841,7 +841,7 @@ async function loadWarehouses() {
     if (res.ok) {
       const data = await res.json();
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">Belum ada data gudang logistik.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">No warehouse records found.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(w => `
@@ -869,7 +869,7 @@ async function loadSuppliers() {
     if (res.ok) {
       const data = await res.json();
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">Belum ada rekanan supplier.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">No supplier partner records found.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(s => `
@@ -942,7 +942,7 @@ function confirmGoodsReceiptQuick(poId, poNumber) {
   const input = document.getElementById('promptInput');
   if (input) {
     const targetPo = (poNumber && poNumber.trim()) ? poNumber : poId;
-    input.value = `Barang untuk ${targetPo} sudah sampai di gudang, tolong catat penerimaannya`;
+    input.value = `Goods for ${targetPo} have arrived at the warehouse, please record the receipt`;
     input.focus();
     submitPrompt();
   }
@@ -962,20 +962,20 @@ async function loadEmployees() {
       state.employees = data || [];
       filterEmployeesTable();
     } else {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Akses dibatasi atau data tidak tersedia untuk sesi ini.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Access restricted or data unavailable for this session.</td></tr>`;
     }
   } catch (e) {
     console.error("Failed to load employees:", e);
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Gagal mengambil data karyawan.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Failed to fetch employee data.</td></tr>`;
   }
 }
 
 function renderEmployeesTable(data) {
   const tbody = document.getElementById('hrEmployeesTableBody');
   if (!tbody) return;
-  updateSidebarRowCount(data ? data.length : 0, 'Data Karyawan');
+  updateSidebarRowCount(data ? data.length : 0, 'Employees Data');
   if (!data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Tidak ada data karyawan yang cocok.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">No matching employee records found.</td></tr>`;
     return;
   }
   tbody.innerHTML = data.map(e => `
@@ -986,7 +986,7 @@ function renderEmployeesTable(data) {
       <td>${escapeHtml(e.job_title)}</td>
       <td class="text-center"><span class="badge ${e.employment_status === 'PERMANENT' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(e.employment_status)}</span></td>
       <td class="text-center"><span class="badge ${e.k3_certification !== 'NON_CERTIFIED' ? 'badge-tkpk' : 'badge-pending'}">${escapeHtml(e.k3_certification)}</span></td>
-      <td class="text-center" style="font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${Number(e.leave_balance_days) || 0} hari</td>
+      <td class="text-center" style="font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${Number(e.leave_balance_days) || 0} days</td>
     </tr>
   `).join('');
 }
@@ -1012,7 +1012,7 @@ async function loadJobPostings() {
     if (res.ok) {
       const data = await res.json();
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada lowongan pekerjaan dibuka.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">No job vacancies currently open.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(j => `
@@ -1021,18 +1021,18 @@ async function loadJobPostings() {
           <td><strong>${escapeHtml(j.job_title)}</strong></td>
           <td>${escapeHtml(j.department)}</td>
           <td class="text-center"><span class="badge badge-tkpk">${escapeHtml(j.required_k3_cert)}</span></td>
-          <td class="text-center" style="font-family: var(--font-mono);">${Number(j.min_experience_years) || 0} th</td>
-          <td class="text-center" style="font-weight: 700; color: #2563EB;">${Number(j.open_positions) || 0} org</td>
+          <td class="text-center" style="font-family: var(--font-mono);">${Number(j.min_experience_years) || 0} yrs</td>
+          <td class="text-center" style="font-weight: 700; color: #2563EB;">${Number(j.open_positions) || 0} pos</td>
           <td>${escapeHtml(j.work_location)}</td>
           <td class="text-center"><span class="badge ${j.status === 'OPEN' ? 'badge-approved' : 'badge-rejected'}">${escapeHtml(j.status)}</span></td>
         </tr>
       `).join('');
     } else {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Akses dibatasi atau data tidak tersedia untuk sesi ini.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Access restricted or data unavailable for this session.</td></tr>`;
     }
   } catch (e) {
     console.error("Failed to load job postings:", e);
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Gagal mengambil data lowongan.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Failed to fetch job postings.</td></tr>`;
   }
 }
 
@@ -1044,7 +1044,7 @@ async function loadSites() {
     if (res.ok) {
       const data = await res.json();
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada titik site menara.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">No tower sites registered yet.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(s => `
@@ -1056,7 +1056,7 @@ async function loadSites() {
           <td class="text-center" style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${Number(s.latitude).toFixed(4)}, ${Number(s.longitude).toFixed(4)}</td>
           <td class="text-right" style="font-family: var(--font-mono); font-weight: 700;">${Number(s.height_meters) || 0} m</td>
           <td>${escapeHtml(s.structure_type)}</td>
-          <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${Number(s.tenant_count) || 0} Operator</span></td>
+          <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${Number(s.tenant_count) || 0} Operators</span></td>
         </tr>
       `).join('');
     }
@@ -1079,7 +1079,7 @@ async function loadHrData() {
       const el3 = document.getElementById('kpiHrK3Cert');
       if (el3) el3.textContent = s.certified_k3_tkpk;
       const el4 = document.getElementById('kpiHrOvertime');
-      if (el4) el4.textContent = s.total_overtime_hours + ' Jam';
+      if (el4) el4.textContent = s.total_overtime_hours + ' Hours';
     }
 
     // 2. Attendance Logs (if table element is present)
@@ -1089,7 +1089,7 @@ async function loadHrData() {
       if (attRes.ok) {
         const atts = await attRes.json();
         if (!atts || atts.length === 0) {
-          tbodyAtt.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada catatan absensi.</td></tr>`;
+          tbodyAtt.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">No attendance records found.</td></tr>`;
         } else {
           tbodyAtt.innerHTML = atts.map(a => `
             <tr>
@@ -1097,7 +1097,7 @@ async function loadHrData() {
               <td><strong>${escapeHtml(a.employee_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(a.job_title)}</span></td>
               <td><span style="font-weight: 600;">${escapeHtml(a.site_name)}</span><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: #64748B;">${escapeHtml(a.site_id || '-')}</span></td>
               <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${escapeHtml(a.attendance_type || 'SITE_VISIT')}</span></td>
-              <td class="text-right" style="font-weight: 700; color: ${a.overtime_hours > 0 ? '#D97706' : '#64748B'}; font-family: var(--font-mono);">${a.overtime_hours > 0 ? a.overtime_hours + ' jam' : '-'}</td>
+              <td class="text-right" style="font-weight: 700; color: ${a.overtime_hours > 0 ? '#D97706' : '#64748B'}; font-family: var(--font-mono);">${a.overtime_hours > 0 ? a.overtime_hours + ' hrs' : '-'}</td>
               <td class="text-center"><span class="badge ${a.status && a.status.includes('OVERTIME') ? 'badge-approved' : 'badge-pending'}">${escapeHtml(a.status)}</span></td>
             </tr>
           `).join('');
@@ -1180,7 +1180,7 @@ async function loadClients() {
     if (res.ok) {
       const data = await res.json();
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada data operator klien.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">No client operator records found.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(c => `
@@ -1190,9 +1190,9 @@ async function loadClients() {
           <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(c.client_type)}</span></td>
           <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(c.npwp || '-')}</td>
           <td style="font-size: 11px; color: var(--text-muted);">${escapeHtml(c.billing_email || '-')}<br>${escapeHtml(c.phone || '-')}</td>
-          <td class="text-center" style="font-weight: 700; font-family: var(--font-mono);">${Number(c.active_lease_sites) || 0} Site</td>
+          <td class="text-center" style="font-weight: 700; font-family: var(--font-mono);">${Number(c.active_lease_sites) || 0} Sites</td>
           <td class="text-right" style="font-weight: 700; font-family: var(--font-mono);">${formatCurrency(c.credit_limit_idr)}</td>
-          <td class="text-center" style="font-family: var(--font-mono);">${Number(c.payment_terms_days) || 0} hari</td>
+          <td class="text-center" style="font-family: var(--font-mono);">${Number(c.payment_terms_days) || 0} days</td>
         </tr>
       `).join('');
     }
@@ -1209,7 +1209,7 @@ async function loadMlaContracts() {
     if (res.ok) {
       const data = await res.json();
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada kontrak MLA.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">No MLA contracts found.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(m => `
@@ -1219,8 +1219,8 @@ async function loadMlaContracts() {
           <td><strong>${escapeHtml(m.site_name)}</strong><br><span style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${escapeHtml(m.site_id)}</span></td>
           <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #0F172A;">${formatCurrency(m.monthly_rate)}</td>
           <td class="text-center"><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(m.billing_frequency)}</span></td>
-          <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(m.start_date)} s/d ${escapeHtml(m.end_date)}</td>
-          <td class="text-center"><span class="badge ${m.electricity_included ? 'badge-approved' : 'badge-pending'}">${m.electricity_included ? 'Termasuk PLN' : 'Terpisah'}</span></td>
+          <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(m.start_date)} to ${escapeHtml(m.end_date)}</td>
+          <td class="text-center"><span class="badge ${m.electricity_included ? 'badge-approved' : 'badge-pending'}">${m.electricity_included ? 'PLN Included' : 'Separated'}</span></td>
           <td class="text-center"><span class="badge ${m.status === 'ACTIVE' ? 'badge-approved' : 'badge-rejected'}">${escapeHtml(m.status)}</span></td>
         </tr>
       `).join('');
@@ -1238,7 +1238,7 @@ async function loadLandLeases() {
     if (res.ok) {
       const data = await res.json();
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada data sewa lahan.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">No land lease records found.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(l => {
@@ -1250,7 +1250,7 @@ async function loadLandLeases() {
           <td>${escapeHtml(l.region)}</td>
           <td>${escapeHtml(l.landowner_name)}</td>
           <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #DC2626;">${formatCurrency(l.annual_lease_cost)}</td>
-          <td class="text-center" style="font-family: var(--font-mono);">${Number(l.lease_duration_years) || 0} th</td>
+          <td class="text-center" style="font-family: var(--font-mono);">${Number(l.lease_duration_years) || 0} yrs</td>
           <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(l.end_date)}</td>
           <td class="text-center"><span class="badge ${isPaidActive ? 'badge-active_paid' : 'badge-pending'}">${escapeHtml(l.status)}</span></td>
         </tr>
@@ -1270,7 +1270,7 @@ async function loadSiteUtilities() {
     if (res.ok) {
       const data = await res.json();
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada data utilitas site.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted);">No site utility records found.</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(u => `
@@ -1324,9 +1324,9 @@ async function loadFinanceData() {
 function renderInvoicesTable(data) {
   const tbodyInv = document.getElementById('finInvoicesTableBody');
   if (!tbodyInv) return;
-  updateSidebarRowCount(data ? data.length : 0, 'Data Invoice');
+  updateSidebarRowCount(data ? data.length : 0, 'Invoices Data');
   if (!data || data.length === 0) {
-    tbodyInv.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Tidak ada invoice yang sesuai.</td></tr>`;
+    tbodyInv.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">No matching invoices found.</td></tr>`;
     return;
   }
   tbodyInv.innerHTML = data.map(i => {
@@ -1348,7 +1348,7 @@ function renderInvoicesTable(data) {
       <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(cleanDueDate)}</td>
       <td class="text-center"><span class="badge ${badgeClass}">${displayStatus}</span></td>
       <td class="text-center">
-        <button class="btn btn-secondary btn-sm" data-action="open-invoice-pdf" data-inv-id="${escapeHtml(invId)}" data-inv-num="${escapeHtml(invNum)}" data-client="${escapeHtml(clientName)}" data-total="${totalBilled}" data-status="${escapeHtml(displayStatus)}" style="padding: 3px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Buka Dokumen PDF Resmi">
+        <button class="btn btn-secondary btn-sm" data-action="open-invoice-pdf" data-inv-id="${escapeHtml(invId)}" data-inv-num="${escapeHtml(invNum)}" data-client="${escapeHtml(clientName)}" data-total="${totalBilled}" data-status="${escapeHtml(displayStatus)}" style="padding: 3px 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Open Official PDF Document">
           <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
@@ -1408,13 +1408,13 @@ async function loadInventoryItems() {
     } else {
       const err = await res.json().catch(() => ({}));
       if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: #DC2626; font-weight: 500;">Gagal memuat data inventaris (${escapeHtml(err.detail || 'HTTP ' + res.status)}). Silakan login ulang.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: #DC2626; font-weight: 500;">Failed to load inventory data (${escapeHtml(err.detail || 'HTTP ' + res.status)}). Please sign in again.</td></tr>`;
       }
     }
   } catch (e) {
     console.error("Failed to load inventory:", e);
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: #DC2626; font-weight: 500;">Terjadi gangguan koneksi saat mengambil katalog.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 24px; color: #DC2626; font-weight: 500;">Connection error while fetching catalog.</td></tr>`;
     }
   }
 }
@@ -1422,10 +1422,10 @@ async function loadInventoryItems() {
 function renderCatalogTable(items) {
   const tbody = document.getElementById('catalogTableBody');
   if (!tbody) return;
-  updateSidebarRowCount(items ? items.length : 0, 'Item Katalog');
+  updateSidebarRowCount(items ? items.length : 0, 'Catalog Items');
 
   if (!items || items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Katalog kosong atau tidak ada data yang cocok.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">Catalog is empty or no matching records found.</td></tr>`;
     return;
   }
 
@@ -1434,13 +1434,13 @@ function renderCatalogTable(items) {
     let statusLabel = 'Normal';
     if (it.current_stock === 0) {
       badgeClass = 'badge-out_of_stock';
-      statusLabel = 'Habis';
+      statusLabel = 'Out of Stock';
     } else if (it.current_stock < it.min_stock) {
       badgeClass = 'badge-out_of_stock';
-      statusLabel = 'Kritis';
+      statusLabel = 'Critical';
     } else if (it.current_stock <= it.min_stock * 1.3) {
       badgeClass = 'badge-low_stock';
-      statusLabel = 'Menipis';
+      statusLabel = 'Low Stock';
     }
 
     return `
@@ -1517,7 +1517,7 @@ function renderPrsTable(prs) {
       if (vendors.length === 1) supplierName = vendors[0];
       else if (vendors.length > 1) supplierName = `Multi-Vendor (${vendors.length})`;
     }
-    supplierName = supplierName || 'Vendor Terdaftar';
+    supplierName = supplierName || 'Registered Vendor';
     const escapedSupplier = escapeHtml(supplierName).replace(/'/g, "\\'");
 
     const grandTotal = Number(pr.total_budget ?? pr.grand_total ?? 0);
@@ -1581,16 +1581,16 @@ function openPdfModal(prNumber, supplierName, grandTotal, status) {
 
   document.getElementById('modalPrNumber').textContent = prNumber;
   document.getElementById('modalSupplierName').textContent = supplierName ? `| ${supplierName}` : '';
-  document.getElementById('modalGrandTotal').textContent = `Total Anggaran: ${formatCurrency(grandTotal || 0)}`;
+  document.getElementById('modalGrandTotal').textContent = `Total Budget: ${formatCurrency(grandTotal || 0)}`;
 
   const statusBadge = document.getElementById('modalPrStatusBadge');
   if (statusBadge) {
     if (isApproved) {
       statusBadge.className = 'badge badge-approved';
-      statusBadge.textContent = 'DISETUJUI';
+      statusBadge.textContent = 'APPROVED';
     } else if (isRejected) {
       statusBadge.className = 'badge badge-rejected';
-      statusBadge.textContent = 'DITOLAK';
+      statusBadge.textContent = 'REJECTED';
     } else {
       statusBadge.className = 'badge badge-pending';
       statusBadge.textContent = 'PENDING APPROVAL';
@@ -1607,7 +1607,7 @@ function openPdfModal(prNumber, supplierName, grandTotal, status) {
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
         </svg>
-        <span>Setujui Dokumen PR</span>
+        <span>Approve PR Document</span>
       `;
     } else {
       modalApproveBtn.style.display = 'none';
@@ -1651,7 +1651,7 @@ function openPoPdfModal(poId, poNumber, supplierName, grandTotal, poStatus) {
   if (prNumberEl) prNumberEl.textContent = poNumber || poId;
 
   const supplierNameEl = document.getElementById('modalSupplierName');
-  if (supplierNameEl) supplierNameEl.textContent = supplierName || "Surat Pesanan Resmi";
+  if (supplierNameEl) supplierNameEl.textContent = supplierName || "Official Purchase Order";
 
   const statusBadge = document.getElementById('modalPrStatusBadge');
   if (statusBadge) {
@@ -1662,7 +1662,7 @@ function openPoPdfModal(poId, poNumber, supplierName, grandTotal, poStatus) {
   }
 
   const grandTotalEl = document.getElementById('modalGrandTotal');
-  if (grandTotalEl) grandTotalEl.textContent = grandTotal ? `Total Anggaran PO: ${formatCurrency(grandTotal)}` : "Surat Pesanan Resmi PT Bali Towerindo Sentra Tbk";
+  if (grandTotalEl) grandTotalEl.textContent = grandTotal ? `Total PO Budget: ${formatCurrency(grandTotal)}` : "Official Purchase Order PT Bali Towerindo Sentra Tbk";
 
   const modalApproveBtn = document.getElementById('modalApproveBtn');
   if (modalApproveBtn) modalApproveBtn.style.display = 'none';
@@ -1708,7 +1708,7 @@ function openLeavePdfModal(leaveId, applicantName, leaveType, daysRequested, sta
   }
 
   const grandTotalEl = document.getElementById('modalGrandTotal');
-  if (grandTotalEl) grandTotalEl.textContent = `Durasi Cuti: ${daysRequested} Hari Kerja`;
+  if (grandTotalEl) grandTotalEl.textContent = `Leave Duration: ${daysRequested} Working Days`;
 
   const modalApproveBtn = document.getElementById('modalApproveBtn');
   if (modalApproveBtn) modalApproveBtn.style.display = 'none';
@@ -1742,7 +1742,7 @@ function openInvoicePdfModal(invoiceId, invoiceNumber, clientName, totalBilled, 
   if (prNumberEl) prNumberEl.textContent = invoiceNumber || invoiceId;
 
   const supplierNameEl = document.getElementById('modalSupplierName');
-  if (supplierNameEl) supplierNameEl.textContent = clientName || "Surat Perjanjian Sewa & Tagihan Invoice";
+  if (supplierNameEl) supplierNameEl.textContent = clientName || "Lease Agreement & Billing Invoice";
 
   const statusBadge = document.getElementById('modalPrStatusBadge');
   if (statusBadge) {
@@ -1757,7 +1757,7 @@ function openInvoicePdfModal(invoiceId, invoiceNumber, clientName, totalBilled, 
   }
 
   const grandTotalEl = document.getElementById('modalGrandTotal');
-  if (grandTotalEl) grandTotalEl.textContent = totalBilled ? `Total Tagihan: ${formatCurrency(totalBilled)}` : "Surat Perjanjian Sewa & Tagihan Invoice PT Bali Towerindo Sentra Tbk";
+  if (grandTotalEl) grandTotalEl.textContent = totalBilled ? `Total Billed: ${formatCurrency(totalBilled)}` : "Lease Agreement & Billing Invoice PT Bali Towerindo Sentra Tbk";
 
   const modalApproveBtn = document.getElementById('modalApproveBtn');
   if (modalApproveBtn) modalApproveBtn.style.display = 'none';
@@ -1790,7 +1790,7 @@ async function approvePrFromModal() {
   const modalApproveBtn = document.getElementById('modalApproveBtn');
   if (modalApproveBtn) {
     modalApproveBtn.disabled = true;
-    modalApproveBtn.textContent = "Menyetujui...";
+    modalApproveBtn.textContent = "Approving...";
   }
 
   await approvePrQuick(prNumber);
@@ -1800,7 +1800,7 @@ async function approvePrFromModal() {
     const statusBadge = document.getElementById('modalPrStatusBadge');
     if (statusBadge) {
       statusBadge.className = 'badge badge-approved';
-      statusBadge.textContent = 'DISETUJUI';
+      statusBadge.textContent = 'APPROVED';
     }
     if (modalApproveBtn) {
       modalApproveBtn.style.display = 'none';
@@ -1950,37 +1950,37 @@ function handlePromptInputBlur() {
 function getTenantTypewriterPrompts(tenant) {
   if (tenant === 'INVENTORY') {
     return [
-      "What's on your mind? Tanyakan kebutuhan operasional...",
-      "Tanyakan stok material menara & kabel fiber optic...",
-      "Catat penerimaan PO tiba (contoh: PO-2026-006 sampai di Bandung)...",
-      "Buat draf Purchase Requisition (PR) untuk restock material menara...",
-      "Periksa safety stock material yang berada di bawah ambang batas...",
-      "Kirim dokumen resmi PR & PO format PDF ke email manajer logistik..."
+      "What's on your mind? Ask about operational inventory needs...",
+      "Inquire about tower materials & fiber optic cable stocks...",
+      "Record delivery receipt of arrived PO (e.g. PO-2026-006 arrived in Bandung)...",
+      "Draft Purchase Requisitions (PR) to restock tower materials...",
+      "Check safety stock for materials below minimum thresholds...",
+      "Dispatch official PR & PO documents in PDF format to logistics manager..."
     ];
   } else if (tenant === 'HR') {
     return [
-      "What's on your mind? Tanyakan manajemen SDM & teknisi...",
-      "Mutasi divisi atau posisi jabatan karyawan (contoh: mutasi Dewi Lestari ke IT)...",
-      "Ajukan permohonan cuti teknisi lapangan (cuti tahunan / sakit)...",
-      "Cari teknisi rigger bersertifikat K3 TKPK aktif...",
-      "Audit daftar pengajuan cuti yang masih pending persetujuan...",
-      "Cek absensi kehadiran dan jadwal lembur personil lapangan..."
+      "What's on your mind? Ask about workforce management & field technicians...",
+      "Transfer employee department or role (e.g. mutate Dewi Lestari to IT)...",
+      "Submit leave requests for field technicians (annual / sick leave)...",
+      "Find certified tower riggers with active K3 TKPK certifications...",
+      "Audit pending employee leave requests awaiting approval...",
+      "Check attendance logs and overtime schedules for field personnel..."
     ];
   } else if (tenant === 'FINANCE') {
     return [
-      "What's on your mind? Tanyakan billing & keuangan menara...",
-      "Cek daftar invoice sewa menara operator yang jatuh tempo...",
-      "Tampilkan rincian kontrak Master Lease Agreement (MLA) Indosat...",
-      "Audit biaya utilitas listrik PLN & sewa lahan site menara...",
-      "Kirim draf tagihan invoice perdana dan mutasi kas ke email finance..."
+      "What's on your mind? Ask about tower billing & commercial finance...",
+      "Check overdue telecom operator tower lease invoices...",
+      "Display Master Lease Agreement (MLA) contract details for Indosat...",
+      "Audit site utility costs for PLN electricity & land leases...",
+      "Dispatch initial billing invoices and cash statements to finance email..."
     ];
   } else {
     return [
-      "What's on your mind? Tanyakan kebutuhan operasional...",
-      "Tanyakan stok material menara telekomunikasi & kabel fiber optic...",
-      "Catat penerimaan PO tiba di gudang regional...",
-      "Buat draf Purchase Requisition (PR) restock material menara...",
-      "Ajukan permohonan cuti teknisi atau cek invoice jatuh tempo..."
+      "What's on your mind? Ask about operational needs...",
+      "Inquire about telecom tower materials & fiber optic cable stocks...",
+      "Record PO arrival receipts at regional warehouses...",
+      "Draft Purchase Requisition (PR) to restock depleted materials...",
+      "Submit technician leave request or check overdue invoices..."
     ];
   }
 }
@@ -2189,7 +2189,7 @@ function handleStreamAborted(streamBubble, accumulatedText = '') {
     stoppedChip.className = 'stage-chip stopped';
     stoppedChip.innerHTML = `
       <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="color: #64748B;"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-      <span>Dibatalkan oleh pengguna</span>
+      <span>Cancelled by user</span>
     `;
     stagesContainer.appendChild(stoppedChip);
   }
@@ -2200,7 +2200,7 @@ function handleStreamAborted(streamBubble, accumulatedText = '') {
       textSlot.innerHTML = formatMarkdownResponse(accumulatedText) + `
         <div class="stream-stopped-hint">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-          <span>Proses pembuatan respon dihentikan.</span>
+          <span>Response generation stopped.</span>
         </div>
       `;
     }
@@ -2273,7 +2273,7 @@ async function submitPrompt() {
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
       if (streamBubble) streamBubble.remove();
-      appendAgentErrorMessage(errJson.detail || "Gagal memproses instruksi.");
+      appendAgentErrorMessage(errJson.detail || "Failed to process instruction.");
       saveCopilotFeed();
       return;
     }
@@ -2348,7 +2348,7 @@ async function submitPrompt() {
           } else if (evt.type === 'complete') {
             completedPayload = evt.payload;
           } else if (evt.type === 'error') {
-            throw new Error(evt.message || "Error saat streaming respon.");
+            throw new Error(evt.message || "Error during response streaming.");
           }
         } catch (err) {
           console.warn('Error parsing stream event:', err, rawJson);
@@ -2388,7 +2388,7 @@ async function submitPrompt() {
     }
 
     if (streamBubble) streamBubble.remove();
-    appendAgentErrorMessage(e.message || "Terjadi kesalahan koneksi ke server backend.");
+    appendAgentErrorMessage(e.message || "Connection error to backend server.");
     saveCopilotFeed();
   } finally {
     setAgentPromptRunning(false);
@@ -2649,39 +2649,39 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
             ${prEmailSent ? `
             <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px;">
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-              <span>Dokumen PR resmi telah dikompilasi (PDF) dan notifikasi persetujuan telah otomatis dikirimkan ke email tujuan.</span>
+              <span>Official PR document compiled (PDF) and approval notification has been dispatched to recipient email.</span>
             </div>
             ` : `
             <div id="email-action-box-${pr.pr_number}" class="pr-email-action-box" style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
               <div style="font-weight: 700; font-size: 13px; color: #0F172A; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                <span>Kirimkan Notifikasi Persetujuan via Email?</span>
+                <span>Dispatch Approval Notification via Email?</span>
               </div>
               <div style="font-size: 12px; color: #64748B; margin-bottom: 10px; line-height: 1.5;">
-                Draf PR berhasil dibuat dan tersimpan di sistem. Anda dapat langsung mengirimkannya ke Manajer Logistik untuk otorisasi.
+                Draft PR created and saved in the system. You can dispatch it to the Logistics Manager for authorization.
               </div>
               <div id="email-action-buttons-${pr.pr_number}" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
                 <button type="button" class="btn btn-primary btn-sm" data-action="dispatch-pr-email" data-pr="${escapeHtml(pr.pr_number)}" data-email="manager.logistik@balitower.co.id">
                   <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                  <span>Kirim ke Manajer Logistik (manager.logistik@balitower.co.id)</span>
+                  <span>Send to Logistics Manager (manager.logistik@balitower.co.id)</span>
                 </button>
                 <button type="button" class="btn btn-secondary btn-sm" data-action="toggle-custom-email" data-pr="${escapeHtml(pr.pr_number)}">
                   <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                  <span>Kirim ke Email Lain...</span>
+                  <span>Send to Custom Email...</span>
                 </button>
                 <button type="button" class="btn btn-secondary btn-sm" style="color: #64748B;" data-action="skip-pr-email" data-pr="${escapeHtml(pr.pr_number)}">
-                  <span>Lewati (Hanya Simpan Draf)</span>
+                  <span>Skip (Save Draft Only)</span>
                 </button>
               </div>
               <div id="custom-email-form-${pr.pr_number}" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #CBD5E1;">
-                <div style="font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">Masukkan Alamat Email Tujuan:</div>
+                <div style="font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">Enter Destination Email Address:</div>
                 <div style="display: flex; gap: 6px; align-items: center;">
-                  <input type="email" id="custom-email-input-${pr.pr_number}" placeholder="contoh: nama.manajer@balitower.co.id" class="form-input" style="flex: 1; padding: 6px 10px; font-size: 12px; border: 1px solid #CBD5E1; border-radius: 6px;" onkeydown="if(event.key === 'Enter') submitCustomEmail('${pr.pr_number}')" />
+                  <input type="email" id="custom-email-input-${pr.pr_number}" placeholder="e.g. manager.name@balitower.co.id" class="form-input" style="flex: 1; padding: 6px 10px; font-size: 12px; border: 1px solid #CBD5E1; border-radius: 6px;" onkeydown="if(event.key === 'Enter') submitCustomEmail('${pr.pr_number}')" />
                   <button type="button" class="btn btn-primary btn-sm" data-action="submit-custom-email" data-pr="${escapeHtml(pr.pr_number)}">
-                    <span>Kirim</span>
+                    <span>Send</span>
                   </button>
                   <button type="button" class="btn btn-secondary btn-sm" data-action="toggle-custom-email" data-pr="${escapeHtml(pr.pr_number)}">
-                    <span>Batal</span>
+                    <span>Cancel</span>
                   </button>
                 </div>
               </div>
@@ -2690,7 +2690,7 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
             <div style="display: flex; justify-content: flex-end;">
               <button class="btn btn-secondary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplier)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                <span>Lihat Dokumen PDF</span>
+                <span>View PDF Document</span>
               </button>
             </div>
           </div>
@@ -2700,8 +2700,8 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
       artifactsSlot.innerHTML = `
         <div class="action-card" style="border-left: 4px solid ${isEmailSent ? '#16A34A' : '#2563EB'}; background: ${isEmailSent ? '#F0FDF4' : '#F8FAFC'}; border: 1px solid ${isEmailSent ? '#DCFCE7' : '#E2E8F0'}; margin-top: 10px;">
           <div class="action-card-header">
-            <span style="font-weight: 700; font-size: 12.5px; color: ${isEmailSent ? '#15803D' : '#1E40AF'};">${isEmailSent ? `DOKUMEN PR DITERBITKAN & TERKIRIM KE EMAIL (${prs.length})` : `DOKUMEN PR DITERBITKAN (DRAFT) (${prs.length})`}</span>
-            <span class="badge ${isEmailSent ? 'badge-approved' : 'badge-pending'}">${isEmailSent ? 'TERKIRIM KE EMAIL' : 'DRAFT TERSIMPAN'}</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: ${isEmailSent ? '#15803D' : '#1E40AF'};">${isEmailSent ? `PR DOCUMENT ISSUED & DISPATCHED TO EMAIL (${prs.length})` : `PR DOCUMENT ISSUED (DRAFT) (${prs.length})`}</span>
+            <span class="badge ${isEmailSent ? 'badge-approved' : 'badge-pending'}">${isEmailSent ? 'DISPATCHED TO EMAIL' : 'DRAFT SAVED'}</span>
           </div>
           <div class="action-card-body">
             ${prCards}
@@ -2716,31 +2716,31 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
     const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
     if (artifactsSlot) {
       const onbId = payload.onboarding_id;
-      const clientName = payload.client_name || 'Klien Operator';
+      const clientName = payload.client_name || 'Operator Client';
       const siteId = payload.site_id || '';
       const totalBilled = payload.total_billed || 0;
       artifactsSlot.innerHTML = `
         <div class="action-card" style="border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7; margin-top: 10px;">
           <div class="action-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">PENGAJUAN SEWA MENARA OPERATOR BARU (${escapeHtml(onbId)})</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">NEW OPERATOR TOWER LEASE PROPOSAL (${escapeHtml(onbId)})</span>
             <span class="badge badge-approved" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D;">PENDING APPROVAL</span>
           </div>
           <div class="action-card-body" style="padding-top: 8px;">
             <div style="font-size: 12.5px; color: #334155; margin-bottom: 8px;">
-              <strong>Klien:</strong> ${escapeHtml(clientName)} ${siteId ? `• <strong>Site:</strong> ${escapeHtml(siteId)}` : ''}
+              <strong>Client:</strong> ${escapeHtml(clientName)} ${siteId ? `• <strong>Site:</strong> ${escapeHtml(siteId)}` : ''}
             </div>
             <div style="background: #FFFFFF; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px;">
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-              <span>Faktur tagihan sewa menara & berkas perjanjian telah dikompilasi (PDF) dan dikirimkan ke email untuk persetujuan.</span>
+              <span>Tower lease invoice and contract document compiled (PDF) and dispatched to email for approval.</span>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 8px;">
               <a href="/api/documents/invoice/${encodeURIComponent(onbId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                <span>Unduh Faktur PDF</span>
+                <span>Download Invoice PDF</span>
               </a>
               <button class="btn btn-primary btn-sm" data-action="open-invoice-pdf" data-inv-id="${escapeHtml(onbId)}" data-inv-num="${escapeHtml(onbId)}" data-client="${escapeHtml(clientName)}" data-total="${totalBilled}" data-status="PENDING">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                <span>Lihat Dokumen PDF</span>
+                <span>View PDF Document</span>
               </button>
             </div>
           </div>
@@ -2757,18 +2757,18 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
     const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
     if (artifactsSlot) {
       const lId = payload.leave_id;
-      const appName = payload.applicant_name || 'Karyawan';
-      const lType = payload.leave_type || 'Cuti';
+      const appName = payload.applicant_name || 'Employee';
+      const lType = payload.leave_type || 'Leave';
       const days = payload.days_requested || 1;
       artifactsSlot.innerHTML = `
         <div style="display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px;">
           <a href="/api/documents/leave/${encodeURIComponent(lId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span>Unduh PDF Cuti</span>
+            <span>Download Leave PDF</span>
           </a>
           <button class="btn btn-primary btn-sm" data-action="open-leave-pdf" data-leave-id="${escapeHtml(lId)}" data-applicant="${escapeHtml(appName)}" data-leave-type="${escapeHtml(lType)}" data-days="${days}" data-status="PENDING_APPROVAL">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <span>Lihat Dokumen PDF</span>
+            <span>View PDF Document</span>
           </button>
         </div>
       `;
@@ -2777,8 +2777,8 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
     const artifactsSlot = streamBubble.querySelector('.stream-artifacts-slot');
     if (artifactsSlot) {
       const isReg = actionType === 'register_product';
-      const title = isReg ? 'PRODUK BARU BERHASIL DIDAFTARKAN' : 'PERUBAHAN AMBANG BATAS STOK';
-      const badge = isReg ? '<span class="badge badge-approved">BERHASIL</span>' : '<span class="badge badge-updated">DIPERBARUI</span>';
+      const title = isReg ? 'NEW PRODUCT REGISTERED SUCCESSFULLY' : 'STOCK THRESHOLD UPDATED';
+      const badge = isReg ? '<span class="badge badge-approved">SUCCESS</span>' : '<span class="badge badge-updated">UPDATED</span>';
       
       const rows = items.map(it => {
         const itemName = typeof it === 'string' ? it : (it.name || it.item_name || '-');
@@ -2804,9 +2804,9 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
             <table class="data-table" style="font-size: 12px; margin: 4px 0; width: 100%; table-layout: auto;">
               <thead>
                 <tr>
-                  <th style="white-space: normal; min-width: 180px;">Nama Barang</th>
-                  <th style="white-space: nowrap; text-align: center;">Stok Fisik</th>
-                  <th style="white-space: nowrap; text-align: center;">Batas Min</th>
+                  <th style="white-space: normal; min-width: 180px;">Item Name</th>
+                  <th style="white-space: nowrap; text-align: center;">Physical Stock</th>
+                  <th style="white-space: nowrap; text-align: center;">Min Threshold</th>
                 </tr>
               </thead>
               <tbody>
@@ -2828,18 +2828,18 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
       const poId = payload.po_id || (payload.parsed_intent && payload.parsed_intent.po_id);
       if (poId) {
         const poNum = payload.po_number || poId;
-        const supplier = payload.supplier_name || 'Vendor Terdaftar';
+        const supplier = payload.supplier_name || 'Registered Vendor';
         const total = payload.grand_total || 0;
         const st = payload.status || 'ORDERED';
         artifactsSlot.innerHTML = `
           <div style="display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px;">
             <a href="/api/documents/po/${encodeURIComponent(poId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span>Unduh PDF PO</span>
+              <span>Download PO PDF</span>
             </a>
             <button class="btn btn-primary btn-sm" data-action="open-po-pdf" data-po-id="${escapeHtml(poId)}" data-po-num="${escapeHtml(poNum)}" data-supplier="${escapeHtml(supplier)}" data-total="${total}" data-status="${escapeHtml(st)}">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-              <span>Lihat Dokumen PO (PDF)</span>
+              <span>View PO Document (PDF)</span>
             </button>
           </div>
         `;
@@ -2889,19 +2889,19 @@ function renderWorkflowRequestCard(container, promptText) {
   const cleanPrompt = (promptText || '').trim();
   const escapedPrompt = escapeHtml(cleanPrompt).replace(/'/g, "\\'");
 
-  const cardHtml = `
+    const cardHtml = `
     <div class="action-card" id="${cardId}" style="border-left: 4px solid #2563EB; background: #F8FAFC; border: 1px solid #E2E8F0; margin-top: 10px; border-radius: 8px; padding: 14px; box-shadow: var(--shadow-xs);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <div style="display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13px; color: #0F172A;">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
-          <span>Ajukan Alur Kerja ke Administrator</span>
+          <span>Request Workflow from Administrator</span>
         </div>
         <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em;">ADMINISTRATOR ONLY</span>
       </div>
       <div style="font-size: 12.5px; color: #475569; margin-bottom: 10px; line-height: 1.55;">
-        Alur kerja terstandar belum terdaftar untuk instruksi ini. Sesuai kebijakan tata kelola sistem, pembuatan alur kerja baru hanya dapat dilakukan oleh Administrator. Anda dapat mengajukan permintaan ini ke Administrator.
+        Standardized workflow is not registered for this instruction. Under system governance policy, new workflow authoring is restricted to Administrators. You may submit this request to an Administrator.
       </div>
       ${cleanPrompt ? `
       <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: #334155; font-family: var(--font-mono); line-height: 1.5;">
@@ -2913,13 +2913,13 @@ function renderWorkflowRequestCard(container, promptText) {
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
           </svg>
-          <span>Kirim Cepat ke Admin</span>
+          <span>Quick Send to Admin</span>
         </button>
         <button type="button" class="btn btn-secondary btn-sm" data-action="trigger-user-wf-form" data-card-id="${escapeHtml(cardId)}" data-prompt="${escapeHtml(cleanPrompt)}">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
-          <span>Isi Formulir Lengkap</span>
+          <span>Fill Detailed Form</span>
         </button>
       </div>
     </div>
@@ -2953,7 +2953,7 @@ function renderWorkflowRequestChatForm(targetContainer = null, initialData = {})
     agentBox.innerHTML = `
       ${getAgentBubbleHeaderHtml('Workflow Governance')}
       <div class="stream-text-content" style="margin-bottom: 8px;">
-        Silakan lengkapi formulir usulan alur kerja di bawah ini. Permohonan Anda akan langsung dikirimkan ke antrean Administrator untuk ditinjau dan dikompilasi ke sistem.
+        Please complete the workflow proposal form below. Your request will be directly submitted to the Administrator queue for review and system compilation.
       </div>
       <div class="stream-artifacts-slot"></div>
     `;
@@ -2974,36 +2974,36 @@ function renderWorkflowRequestChatForm(targetContainer = null, initialData = {})
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
-          <span class="wf-request-form-title">Formulir Pengajuan Alur Kerja Baru</span>
+          <span class="wf-request-form-title">New Workflow Proposal Form</span>
         </div>
-        <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 10.5px; font-weight: 700;">USULAN WORKFLOW</span>
+        <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 10.5px; font-weight: 700;">WORKFLOW PROPOSAL</span>
       </div>
       
       <div class="wf-request-form-body">
         <div class="wf-form-row">
           <div class="wf-form-col">
-            <label class="wf-form-label">Nama / Judul Alur Kerja <span style="color: #DC2626;">*</span></label>
-            <input type="text" class="wf-form-input" id="${formId}_title" placeholder="Contoh: Audit Utilisasi Genset Bulanan">
+            <label class="wf-form-label">Workflow Name / Title <span style="color: #DC2626;">*</span></label>
+            <input type="text" class="wf-form-input" id="${formId}_title" placeholder="Example: Monthly Genset Utilization Audit">
           </div>
           <div class="wf-form-col">
-            <label class="wf-form-label">Divisi / Ranah Operasional <span style="color: #DC2626;">*</span></label>
+            <label class="wf-form-label">Division / Operational Domain <span style="color: #DC2626;">*</span></label>
             <select class="wf-form-select" id="${formId}_tenant">
-              <option value="INVENTORY" ${effectiveTenant === 'INVENTORY' ? 'selected' : ''}>Divisi Logistik & Inventaris (Schema A)</option>
-              <option value="HR" ${effectiveTenant === 'HR' ? 'selected' : ''}>Divisi HR & Personalia Lapangan (Schema B)</option>
-              <option value="FINANCE" ${effectiveTenant === 'FINANCE' ? 'selected' : ''}>Divisi Keuangan & Billing (Schema C)</option>
-              <option value="ALL" ${effectiveTenant === 'ALL' ? 'selected' : ''}>Lintas Divisi / Universal (Schema ALL)</option>
+              <option value="INVENTORY" ${effectiveTenant === 'INVENTORY' ? 'selected' : ''}>Logistics & Inventory Division (Schema A)</option>
+              <option value="HR" ${effectiveTenant === 'HR' ? 'selected' : ''}>HR & Field Workforce Division (Schema B)</option>
+              <option value="FINANCE" ${effectiveTenant === 'FINANCE' ? 'selected' : ''}>Finance & Billing Division (Schema C)</option>
+              <option value="ALL" ${effectiveTenant === 'ALL' ? 'selected' : ''}>Cross-Divisional / Universal (Schema ALL)</option>
             </select>
           </div>
         </div>
 
         <div class="wf-form-group">
-          <label class="wf-form-label">Contoh Kalimat Prompt / Instruksi <span style="color: #DC2626;">*</span></label>
-          <input type="text" class="wf-form-input" id="${formId}_prompt" placeholder="Contoh: Periksa seluruh data konsumsi solar genset site tiap akhir bulan dan catat laporannya" value="${escapeHtml(prefillPrompt)}">
+          <label class="wf-form-label">Example Prompt / Instruction <span style="color: #DC2626;">*</span></label>
+          <input type="text" class="wf-form-input" id="${formId}_prompt" placeholder="Example: Inspect all site generator diesel fuel consumption at month-end and record report" value="${escapeHtml(prefillPrompt)}">
         </div>
 
         <div class="wf-form-group">
-          <label class="wf-form-label">Deskripsi Kebutuhan Operasional & Urgensi (Opsional)</label>
-          <textarea class="wf-form-textarea" id="${formId}_notes" rows="2" placeholder="Jelaskan tujuan operasional atau alasan kebutuhan alur kerja ini..."></textarea>
+          <label class="wf-form-label">Operational Requirement & Urgency (Optional)</label>
+          <textarea class="wf-form-textarea" id="${formId}_notes" rows="2" placeholder="Explain operational purpose or rationale for this workflow..."></textarea>
         </div>
       </div>
 
@@ -3011,13 +3011,13 @@ function renderWorkflowRequestChatForm(targetContainer = null, initialData = {})
         <span id="${formId}_error" style="color: #DC2626; font-size: 12px; display: none;"></span>
         <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
           <button type="button" class="btn btn-secondary btn-sm" data-action="cancel-wf-form" data-form-id="${escapeHtml(formId)}">
-            <span>Batal</span>
+            <span>Cancel</span>
           </button>
           <button type="button" class="btn btn-primary btn-sm" id="${formId}_btn" data-action="submit-wf-form" data-form-id="${escapeHtml(formId)}">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
             </svg>
-            <span>Kirim Usulan ke Admin</span>
+            <span>Submit Proposal to Admin</span>
           </button>
         </div>
       </div>
@@ -3051,7 +3051,7 @@ async function submitInteractiveWorkflowForm(formId) {
 
   if (!promptText) {
     if (errorEl) {
-      errorEl.textContent = 'Mohon isi kalimat prompt atau instruksi yang diinginkan.';
+      errorEl.textContent = 'Please provide the desired prompt sentence or instruction.';
       errorEl.style.display = 'block';
     }
     return;
@@ -3061,7 +3061,7 @@ async function submitInteractiveWorkflowForm(formId) {
     btn.disabled = true;
     btn.innerHTML = `
       <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 12px; height: 12px; border-width: 1.5px;"></span>
-      <span>Mengirim...</span>
+      <span>Submitting...</span>
     `;
   }
 
@@ -3092,12 +3092,12 @@ async function submitInteractiveWorkflowForm(formId) {
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
-                <span>Pengajuan Alur Kerja Berhasil Terkirim</span>
+                <span>Workflow Request Submitted Successfully</span>
               </div>
-              <span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700; font-size: 10.5px;">MENUNGGU REVIEW</span>
+              <span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700; font-size: 10.5px;">PENDING REVIEW</span>
             </div>
             <div style="font-size: 12.5px; color: #14532D; line-height: 1.5;">
-              Permintaan alur kerja resmi <strong style="font-family: var(--font-mono);">${escapeHtml(data.request_id || 'REQ')}</strong> telah berhasil dicatat ke antrean tinjauan Administrator Enterprise.
+              Official workflow request <strong style="font-family: var(--font-mono);">${escapeHtml(data.request_id || 'REQ')}</strong> has been logged to the Enterprise Administrator review queue.
             </div>
             <div style="font-size: 12px; color: #15803D; background: #FFFFFF; border: 1px solid #BBF7D0; border-radius: 6px; padding: 8px 12px; font-family: var(--font-mono);">
               "${escapeHtml(promptText)}"
@@ -3108,22 +3108,22 @@ async function submitInteractiveWorkflowForm(formId) {
     } else {
       const err = await res.json().catch(() => ({}));
       if (errorEl) {
-        errorEl.textContent = `Gagal mengirim pengajuan: ${err.detail || 'Terjadi kesalahan pada server.'}`;
+        errorEl.textContent = `Failed to submit request: ${err.detail || 'An error occurred on the server.'}`;
         errorEl.style.display = 'block';
       }
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<span>Kirim Usulan ke Admin</span>`;
+        btn.innerHTML = `<span>Submit Proposal to Admin</span>`;
       }
     }
   } catch (err) {
     if (errorEl) {
-      errorEl.textContent = 'Gagal terhubung ke server. Periksa koneksi jaringan Anda.';
+      errorEl.textContent = 'Failed to connect to server. Check your network connection.';
       errorEl.style.display = 'block';
     }
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = `<span>Kirim Usulan ke Admin</span>`;
+      btn.innerHTML = `<span>Submit Proposal to Admin</span>`;
     }
   }
 }
@@ -3134,7 +3134,7 @@ async function submitUserWorkflowRequest(promptText, cardId) {
     btnGroup.innerHTML = `
       <span style="font-size: 12px; color: #64748B; display: inline-flex; align-items: center; gap: 6px;">
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 12px; height: 12px; border-width: 1.5px;"></span>
-        Mengirim notifikasi ke Administrator...
+        Sending notification to Administrator...
       </span>
     `;
   }
@@ -3158,7 +3158,7 @@ async function submitUserWorkflowRequest(promptText, cardId) {
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
             </svg>
-            <span>Permintaan (${data.request_id || 'REQ'}) berhasil dikirimkan ke Administrator. Status: Menunggu Review.</span>
+            <span>Request (${data.request_id || 'REQ'}) submitted to Administrator. Status: Pending Review.</span>
           </div>
         `;
       }
@@ -3167,7 +3167,7 @@ async function submitUserWorkflowRequest(promptText, cardId) {
       if (btnGroup) {
         btnGroup.innerHTML = `
           <div style="color: #DC2626; font-size: 12px;">
-            Gagal mengirim: ${escapeHtml(err.detail || 'Terjadi kesalahan.')}
+            Failed to submit: ${escapeHtml(err.detail || 'An error occurred.')}
           </div>
         `;
       }
@@ -3176,7 +3176,7 @@ async function submitUserWorkflowRequest(promptText, cardId) {
     if (btnGroup) {
       btnGroup.innerHTML = `
         <div style="color: #DC2626; font-size: 12px;">
-          Gagal menghubungi server.
+          Failed to contact server.
         </div>
       `;
     }
@@ -3204,7 +3204,7 @@ window.submitCustomEmail = async function(prNumber) {
   if (!input) return;
   const email = (input.value || '').trim();
   if (!email || !email.includes('@')) {
-    showToast("Mohon masukkan alamat email tujuan yang valid.", "error");
+    showToast("Please enter a valid recipient email address.", "error");
     if (input) input.focus();
     return;
   }
@@ -3217,12 +3217,12 @@ window.skipPrEmail = function(prNumber) {
     box.outerHTML = `
       <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #475569; display: flex; align-items: center; gap: 8px;">
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        <span>Dokumen PR resmi telah dikompilasi (PDF) dan tersimpan sebagai draf di sistem inventaris.</span>
+        <span>Official PR document has been compiled (PDF) and saved as a draft in inventory.</span>
       </div>
     `;
   }
   saveCopilotFeed();
-  showToast(`Dokumen PR resmi telah dikompilasi (PDF) dan tersimpan sebagai draf di sistem inventaris.`, 'info');
+  showToast(`Official PR document has been compiled (PDF) and saved as a draft in inventory.`, 'info');
 };
 
 window.dispatchPrEmail = async function(prNumber, email) {
@@ -3233,7 +3233,7 @@ window.dispatchPrEmail = async function(prNumber, email) {
     box.innerHTML = `
       <div style="display: flex; align-items: center; gap: 10px; padding: 10px 6px; font-size: 12.5px; color: #2563EB;">
         <svg class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>
-        <span>Mengirimkan berkas permohonan persetujuan ${escapeHtml(prNumber)} ke ${escapeHtml(targetEmail)}...</span>
+        <span>Sending approval request document for ${escapeHtml(prNumber)} to ${escapeHtml(targetEmail)}...</span>
       </div>
     `;
   }
@@ -3254,14 +3254,14 @@ window.dispatchPrEmail = async function(prNumber, email) {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.detail || data.message || "Gagal mengirimkan email permohonan persetujuan.");
+      throw new Error(data.detail || data.message || "Failed to dispatch approval request email.");
     }
 
     if (box) {
       box.outerHTML = `
         <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px;">
           <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          <span>Dokumen PR resmi telah dikompilasi (PDF) dan permohonan persetujuan telah berhasil dikirimkan ke <strong>${escapeHtml(targetEmail)}</strong>.</span>
+          <span>Official PR document compiled (PDF) and approval request dispatched to <strong>${escapeHtml(targetEmail)}</strong>.</span>
         </div>
       `;
     }
@@ -3271,35 +3271,35 @@ window.dispatchPrEmail = async function(prNumber, email) {
       const headerTag = cardEl.querySelector('.action-card-header .badge');
       if (headerTag) {
         headerTag.className = 'badge badge-approved';
-        headerTag.textContent = 'TERKIRIM KE EMAIL';
+        headerTag.textContent = 'SENT TO EMAIL';
       }
       const titleSpan = cardEl.querySelector('.action-card-header span:first-child');
       if (titleSpan) {
         titleSpan.style.color = '#15803D';
-        titleSpan.textContent = titleSpan.textContent.replace('DRAFT', 'TERKIRIM KE EMAIL');
+        titleSpan.textContent = titleSpan.textContent.replace('DRAFT', 'SENT TO EMAIL');
       }
     }
 
     saveCopilotFeed();
-    showToast(`Dokumen PR resmi telah dikompilasi (PDF) dan permohonan persetujuan telah berhasil dikirimkan ke ${targetEmail}`, 'success');
+    showToast(`Official PR document compiled (PDF) and approval request dispatched to ${targetEmail}`, 'success');
   } catch (err) {
     console.error("dispatchPrEmail error:", err);
     if (box) {
       box.innerHTML = `
         <div style="color: #DC2626; font-size: 12px; margin-bottom: 8px;">
-          ⚠️ ${escapeHtml(err.message || "Gagal mengirimkan email.")}
+          ⚠️ ${escapeHtml(err.message || "Failed to send email.")}
         </div>
         <div style="display: flex; gap: 6px;">
           <button type="button" class="btn btn-primary btn-sm" data-action="dispatch-pr-email" data-pr="${escapeHtml(prNumber)}" data-email="${escapeHtml(targetEmail)}">
-            <span>Coba Lagi</span>
+            <span>Try Again</span>
           </button>
           <button type="button" class="btn btn-secondary btn-sm" data-action="skip-pr-email" data-pr="${escapeHtml(prNumber)}">
-            <span>Lewati</span>
+            <span>Skip</span>
           </button>
         </div>
       `;
     }
-    showToast(err.message || "Gagal mengirimkan email", 'error');
+    showToast(err.message || "Failed to send email", 'error');
   }
 };
 
@@ -3310,9 +3310,9 @@ function appendAgentErrorMessage(errorText) {
   const box = document.createElement('div');
   box.className = 'agent-response-box';
   box.innerHTML = `
-    ${getAgentBubbleHeaderHtml('Kendala Sistem', true)}
+    ${getAgentBubbleHeaderHtml('System Issue', true)}
     <div class="agent-plan-box" style="border-left: 4px solid #DC2626; background: #FEF2F2; border-color: #FECACA;">
-      <div class="agent-plan-title" style="color: #DC2626;">TERJADI KESALAHAN</div>
+      <div class="agent-plan-title" style="color: #DC2626;">ERROR OCCURRED</div>
       <div style="font-size: 13px; color: #991B1B; line-height: 1.5;">${escapeHtml(errorText)}</div>
     </div>
   `;
@@ -3339,13 +3339,13 @@ function appendAgentResponseCard(data) {
     const bgColor = isSecurity ? '#FEF2F2' : '#FFFBEB';
     const borderWrap = isSecurity ? '1px solid #FECACA' : '1px solid #FDE68A';
     const textColor = isSecurity ? '#991B1B' : '#92400E';
-    const badgeTitle = isSecurity ? 'Keamanan Guardrail' : 'Di Luar Cakupan';
+    const badgeTitle = isSecurity ? 'Security Guardrail' : 'Out of Scope';
 
     container.innerHTML = `
       ${getAgentBubbleHeaderHtml(badgeTitle, true)}
       <div class="agent-plan-box" style="border-left: 4px solid ${borderColor}; background: ${bgColor}; border: ${borderWrap};">
         <div style="font-size: 13.5px; color: ${textColor}; line-height: 1.6;">
-          ${formatMarkdownResponse(data.message || 'Mohon maaf, instruksi yang Anda masukkan berada di luar cakupan wewenang operasional sistem PT Bali Towerindo Sentra Tbk.')}
+          ${formatMarkdownResponse(data.message || 'We apologize, but your instruction is outside the operational scope of PT Bali Towerindo Sentra Tbk.')}
         </div>
       </div>
     `;
@@ -3357,10 +3357,10 @@ function appendAgentResponseCard(data) {
   // Scenario 1: Bali Tower Domain queries (HR, Finance, Inventory) & General responses
   if (['hr_query', 'hr_mutation', 'hr_leave', 'finance_query', 'inventory_query', 'general', 'workflow_execution'].includes(actionType) && prs.length === 0 && actionType !== 'update_threshold' && actionType !== 'register_product') {
     container.innerHTML = `
-      ${getAgentBubbleHeaderHtml('Laporan')}
+      ${getAgentBubbleHeaderHtml('Report')}
       <div class="agent-plan-box">
         <div style="font-size: 13px; color: #0F172A; line-height: 1.6;">
-          ${formatMarkdownResponse(data.message || intent.reasoning || 'Instruksi telah diproses.')}
+          ${formatMarkdownResponse(data.message || intent.reasoning || 'Instruction has been processed.')}
         </div>
       </div>
     `;
@@ -3375,27 +3375,27 @@ function appendAgentResponseCard(data) {
     const isClarification = intent.workflow_id === 'goods_receipt_clarification';
     const isNotFound = intent.workflow_id === 'goods_receipt_not_found';
     
-    let headerTitle = "PENERIMAAN BARANG FISIK BERHASIL DIBUKUKAN";
+    let headerTitle = "PHYSICAL GOODS RECEIPT RECORDED SUCCESSFULLY";
     let badgeText = "DELIVERED";
     let badgeClass = "badge-approved";
     let borderStyle = "border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7;";
     let headerColor = "#15803D";
     
     if (isAlreadyDelivered) {
-      headerTitle = "STATUS PENGIRIMAN: SUDAH PERNAH DITERIMA";
-      badgeText = "SELESAI";
+      headerTitle = "DELIVERY STATUS: ALREADY RECEIVED";
+      badgeText = "COMPLETED";
       badgeClass = "badge-approved";
       borderStyle = "border-left: 4px solid #2563EB; background: #EFF6FF; border: 1px solid #BFDBFE;";
       headerColor = "#1D4ED8";
     } else if (isClarification) {
-      headerTitle = "PURCHASE ORDER AKTIF (ORDERED)";
+      headerTitle = "ACTIVE PURCHASE ORDER (ORDERED)";
       badgeText = "ORDERED";
       badgeClass = "badge-low_stock";
       borderStyle = "border-left: 4px solid #D97706; background: #FFFBEB; border: 1px solid #FDE68A;";
       headerColor = "#B45309";
     } else if (isNotFound) {
-      headerTitle = "PURCHASE ORDER TIDAK DITEMUKAN";
-      badgeText = "PERIKSA KEMBALI";
+      headerTitle = "PURCHASE ORDER NOT FOUND";
+      badgeText = "CHECK AGAIN";
       badgeClass = "badge-rejected";
       borderStyle = "border-left: 4px solid #DC2626; background: #FEF2F2; border: 1px solid #FECACA;";
       headerColor = "#B91C1C";
@@ -3406,17 +3406,17 @@ function appendAgentResponseCard(data) {
       <div style="display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px;">
         <a href="/api/documents/po/${encodeURIComponent(targetPoId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          <span>Unduh PDF PO</span>
+          <span>Download PO PDF</span>
         </a>
         <button class="btn btn-secondary btn-sm" data-action="open-po-pdf" data-po-id="${escapeHtml(targetPoId)}" data-po-num="${escapeHtml(data.po_number || intent.po_number || targetPoId)}" data-supplier="Vendor" data-total="0" data-status="ORDERED">
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <span>Lihat Dokumen PO (PDF)</span>
+          <span>View PO Document (PDF)</span>
         </button>
       </div>
     ` : '';
 
     container.innerHTML = `
-      ${getAgentBubbleHeaderHtml('Penerimaan Logistik')}
+      ${getAgentBubbleHeaderHtml('Logistics Receiving')}
       <div class="agent-plan-box">
         <div class="action-card" style="${borderStyle} margin-top: 0;">
           <div class="action-card-header">
@@ -3447,11 +3447,11 @@ function appendAgentResponseCard(data) {
     const st = data.status || 'ORDERED';
 
     container.innerHTML = `
-      ${getAgentBubbleHeaderHtml('Dokumen PO (PDF)')}
+      ${getAgentBubbleHeaderHtml('PO Document (PDF)')}
       <div class="agent-plan-box">
         <div class="action-card" style="border-left: 4px solid #2563EB; background: #EFF6FF; border: 1px solid #BFDBFE; margin-top: 0;">
           <div class="action-card-header">
-            <span style="font-weight: 700; font-size: 12.5px; color: #1D4ED8;">DOKUMEN RESMI PURCHASE ORDER TERBIT (PDF)</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: #1D4ED8;">OFFICIAL PURCHASE ORDER ISSUED (PDF)</span>
             <span class="badge badge-approved">${escapeHtml(st)}</span>
           </div>
           <div class="action-card-body" style="font-size: 13px; color: #1E3A8A; line-height: 1.6;">
@@ -3459,11 +3459,11 @@ function appendAgentResponseCard(data) {
             <div style="display: flex; justify-content: flex-end; margin-top: 12px; gap: 8px;">
               <a href="/api/documents/po/${encodeURIComponent(poId)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                <span>Unduh PDF</span>
+                <span>Download PDF</span>
               </a>
               <button class="btn btn-primary btn-sm" data-action="open-po-pdf" data-po-id="${escapeHtml(poId)}" data-po-num="${escapeHtml(poNum)}" data-supplier="${escapeHtml(supplier)}" data-total="${total}" data-status="${escapeHtml(st)}">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                <span>Lihat Dokumen PDF</span>
+                <span>View PDF Document</span>
               </button>
             </div>
           </div>
@@ -3479,7 +3479,7 @@ function appendAgentResponseCard(data) {
   if (prs.length > 0) {
     const prCards = prs.map(pr => {
       const rawStatus = String(pr.status || '').toUpperCase();
-      const supplier = pr.supplier_name || 'Vendor Terdaftar';
+      const supplier = pr.supplier_name || 'Registered Vendor';
       const grandTotal = Number(pr.grand_total || pr.total_budget || 0);
       const escapedSupplier = escapeHtml(supplier).replace(/'/g, "\\'");
 
@@ -3497,12 +3497,12 @@ function appendAgentResponseCard(data) {
           </div>
           <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #166534; display: flex; align-items: center; gap: 8px;">
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            <span>Dokumen PR resmi telah dikompilasi (PDF) dan notifikasi persetujuan telah otomatis dikirimkan ke email manajer.</span>
+            <span>Official PR document has been compiled (PDF) and approval notification has been automatically dispatched to the manager's email.</span>
           </div>
           <div style="display: flex; justify-content: flex-end;">
             <button class="btn btn-secondary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplier)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-              <span>Lihat Dokumen PDF</span>
+              <span>View PDF Document</span>
             </button>
           </div>
         </div>
@@ -3510,16 +3510,16 @@ function appendAgentResponseCard(data) {
     }).join('');
 
     container.innerHTML = `
-      ${getAgentBubbleHeaderHtml('PR Diterbitkan')}
+      ${getAgentBubbleHeaderHtml('PR Issued')}
       <div class="agent-plan-box">
-        <div class="agent-plan-title">INFORMASI & STATUS PENGADAAN:</div>
+        <div class="agent-plan-title">PROCUREMENT INFORMATION & STATUS:</div>
         <div style="font-size: 13px; font-weight: 600; color: #0F172A; margin-bottom: 6px; line-height: 1.5;">
-          ${escapeHtml(intent.reasoning || data.message || 'Dokumen pengadaan berhasil diterbitkan dan diproses.')}
+          ${escapeHtml(intent.reasoning || data.message || 'Procurement document successfully issued and processed.')}
         </div>
         <div class="action-card" style="border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7;">
           <div class="action-card-header">
-            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">DOKUMEN PR DITERBITKAN & TERKIRIM KE EMAIL (${prs.length})</span>
-            <span class="badge badge-approved">TERKIRIM KE EMAIL</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">PR DOCUMENT ISSUED & SENT TO EMAIL (${prs.length})</span>
+            <span class="badge badge-approved">SENT TO EMAIL</span>
           </div>
           <div class="action-card-body">
             ${prCards}
@@ -3536,12 +3536,12 @@ function appendAgentResponseCard(data) {
   // Scenario 3: Threshold Updated
   if (actionType === 'update_threshold') {
     container.innerHTML = `
-      ${getAgentBubbleHeaderHtml('Ambang Batas')}
+      ${getAgentBubbleHeaderHtml('Stock Threshold')}
       <div class="agent-plan-box">
         <div class="action-card" style="border-left: 4px solid #2563EB; background: #EFF6FF; border: 1px solid #DBEAFE; margin-top: 0;">
           <div class="action-card-header">
-            <span style="font-weight: 700; font-size: 12.5px; color: #1D4ED8;">BATAS STOK DIPERBARUI</span>
-            <span class="badge badge-approved">TERSIMPAN</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: #1D4ED8;">STOCK THRESHOLDS UPDATED</span>
+            <span class="badge badge-approved">SAVED</span>
           </div>
           <div class="action-card-body" style="font-size: 13px; color: #1E3A8A; line-height: 1.5;">
             ${escapeHtml(data.message)}
@@ -3557,14 +3557,15 @@ function appendAgentResponseCard(data) {
 
   // Scenario 3b: Product Registration
   if (actionType === 'register_product') {
-    const isError = data.message && (data.message.includes('ditolak') || data.message.includes('kurang') || data.message.includes('gagal'));
+    const msgLower = (data.message || '').toLowerCase();
+    const isError = msgLower.includes('ditolak') || msgLower.includes('kurang') || msgLower.includes('gagal') || msgLower.includes('reject') || msgLower.includes('fail') || msgLower.includes('error');
     container.innerHTML = `
-      ${getAgentBubbleHeaderHtml(isError ? 'Pendaftaran Ditolak' : 'Barang Terdaftar', isError)}
+      ${getAgentBubbleHeaderHtml(isError ? 'Registration Rejected' : 'Item Registered', isError)}
       <div class="agent-plan-box">
         <div class="action-card" style="border-left: 4px solid ${isError ? '#DC2626' : '#16A34A'}; background: ${isError ? '#FEF2F2' : '#F0FDF4'}; border: 1px solid ${isError ? '#FECACA' : '#DCFCE7'}; margin-top: 0;">
           <div class="action-card-header">
-            <span style="font-weight: 700; font-size: 12.5px; color: ${isError ? '#B91C1C' : '#15803D'};">PENDAFTARAN BARANG BARU</span>
-            <span class="badge ${isError ? 'badge-rejected' : 'badge-approved'}">${isError ? 'DITOLAK' : 'TERDAFTAR'}</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: ${isError ? '#B91C1C' : '#15803D'};">NEW ITEM REGISTRATION</span>
+            <span class="badge ${isError ? 'badge-rejected' : 'badge-approved'}">${isError ? 'REJECTED' : 'REGISTERED'}</span>
           </div>
           <div class="action-card-body" style="font-size: 13px; color: ${isError ? '#991B1B' : '#166534'}; line-height: 1.5;">
             ${escapeHtml(data.message)}
@@ -3592,12 +3593,12 @@ function appendAgentResponseCard(data) {
   // Scenario 4: Email Notification
   if (actionType === 'notify_email') {
     container.innerHTML = `
-      ${getAgentBubbleHeaderHtml('Notifikasi Email')}
+      ${getAgentBubbleHeaderHtml('Email Notification')}
       <div class="agent-plan-box">
         <div class="action-card" style="border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7; margin-top: 0;">
           <div class="action-card-header">
-            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">OTOMATISASI & NOTIFIKASI</span>
-            <span class="badge badge-approved">TERKIRIM</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">AUTOMATION & NOTIFICATIONS</span>
+            <span class="badge badge-approved">SENT</span>
           </div>
           <div class="action-card-body" style="font-size: 13px; color: #166534;">
             ${escapeHtml(data.message)}
@@ -3621,15 +3622,15 @@ function appendAgentResponseCard(data) {
 
   // Scenario 5: General with affected items
   container.innerHTML = `
-    ${getAgentBubbleHeaderHtml('Laporan Inventaris')}
+    ${getAgentBubbleHeaderHtml('Inventory Report')}
     <div class="agent-plan-box">
       <div class="action-card" style="border-left: 4px solid #2563EB; background: #F8FAFC; border: 1px solid #E2E8F0; margin-top: 0;">
         <div class="action-card-header">
-          <span style="font-weight: 700; font-size: 12.5px; color: #2563EB;">INFORMASI & LAPORAN INVENTARIS</span>
-          <span class="badge badge-normal">STATUS REAL-TIME</span>
+          <span style="font-weight: 700; font-size: 12.5px; color: #2563EB;">INVENTORY INFORMATION & REPORT</span>
+          <span class="badge badge-normal">REAL-TIME STATUS</span>
         </div>
         <div class="action-card-body" style="font-size: 13px; color: #334155; line-height: 1.5;">
-          ${escapeHtml(data.message || 'Laporan inventaris berhasil disusun.')}
+          ${escapeHtml(data.message || 'Inventory report compiled successfully.')}
           ${items.length > 0 ? `
             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #E2E8F0; display: flex; flex-wrap: wrap; gap: 6px;">
               ${items.map(it => `
@@ -3768,129 +3769,129 @@ function useCopilotSuggestion(promptText) {
 
 const FLOW_HELP_REGISTRY = {
   INVENTORY: {
-    title: 'Divisi Logistik & Inventaris (Schema A)',
-    description: 'Manajemen persediaan material menara telekomunikasi, kabel fiber optic, draf pengadaan PR/PO, dan penerimaan fisik gudang.',
+    title: 'Logistics & Inventory Division (Schema A)',
+    description: 'Inventory management for telecommunication tower materials, fiber optic cables, PR/PO procurement drafts, and warehouse physical goods receipts.',
     flows: [
       {
         id: 'WF-A01',
-        name: 'Pipeline Pengadaan Material PR-to-PO',
-        desc: 'Inspeksi stok di bawah batas aman, kalkulasi reorder otomatis, dan kompilasi PR PDF.',
+        name: 'PR-to-PO Material Procurement Pipeline',
+        desc: 'Inspect stock below safety thresholds, calculate automated reorders, and compile official PR PDFs.',
         examples: [
-          'Periksa seluruh stok material yang menipis/kritis dan buat draft PR pengadaan barang dan kirimkan ke email .....@gmail.com'
+          'Check all depleted/critical materials, draft a purchase requisition, and send an email to manager@balitower.co.id'
         ]
       },
       {
         id: 'WF-A02',
-        name: 'Penerimaan Barang Fisik PO & Update Saldo',
-        desc: 'Verifikasi kedatangan barang PO di gudang regional dan sinkronisasi penambahan stok fisik.',
+        name: 'Physical Goods Receipt & Inventory Sync',
+        desc: 'Verify PO deliveries at regional warehouses and update physical stock balances.',
         examples: [
-          'Catat penerimaan PO/BLT/2026/09/031 untuk semua gudang'
+          'Record delivery receipt for PO/BLT/2026/09/031 across all warehouses'
         ]
       },
       {
         id: 'GENERAL',
-        name: 'Informasi Persediaan Gudang',
-        desc: 'Pengecekan sisa stok SKU spesifik atau rekapitulasi status kesehatan barang regional.',
+        name: 'Warehouse Inventory Inquiries',
+        desc: 'Check stock levels for specific SKUs or review regional inventory health.',
         examples: [
-          'Berapa sisa stok ODC 48 Port di Gudang Surabaya?'
+          'What is the current stock of ODC 48 Port in Surabaya Warehouse?'
         ]
       }
     ]
   },
   HR: {
-    title: 'Divisi Human Resources & Operasional Lapangan (Schema B)',
-    description: 'Manajemen ketenagakerjaan teknisi lapangan, kualifikasi sertifikasi K3 TKPK rigger, mutasi karyawan, dan pengajuan cuti.',
+    title: 'Human Resources & Field Operations (Schema B)',
+    description: 'Workforce management for field technicians, K3 TKPK rigger certifications, employee transfers, and leave requests.',
     flows: [
       {
         id: 'WF-6D8863',
-        name: 'Mutasi Posisi & Departemen Karyawan',
-        desc: 'Memperbarui penempatan divisi/departemen dan posisi jabatan karyawan aktif di basis data SDM PT Bali Towerindo Sentra Tbk.',
+        name: 'Employee Position & Department Mutation',
+        desc: 'Update division placement and job title for active employees in HR master records.',
         examples: [
-          'Mutasi Dewi Lestari ke departemen IT dengan jabatan Full Stack'
+          'Transfer Dewi Lestari to IT department as Full Stack Engineer'
         ]
       },
       {
         id: 'WF-B02',
-        name: 'Filter & Screening Pelamar Teknisi K3',
-        desc: 'Menyaring kandidat teknisi lapangan secara dinamis berdasarkan kualifikasi posisi dan sertifikasi K3 (TKPK Tingkat 1, TKPK Tingkat 2, K3 Umum, atau seluruh pelamar).',
+        name: 'K3 Field Technician Applicant Screening',
+        desc: 'Filter field technician candidates dynamically by job qualifications and K3 certifications (TKPK Level 1, Level 2, or General K3).',
         examples: [
-          'Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 2'
+          'Filter tower rigger candidates with TKPK Level 2 certification'
         ]
       },
       {
         id: 'WF-B03',
-        name: 'Pengajuan Cuti Teknisi & Cetak Dokumen PDF',
-        desc: 'Pencatatan permohonan cuti teknisi, kalkulasi saldo kuota, dan distribusi formulir resmi PDF ke HR.',
+        name: 'Technician Leave Request & PDF Generation',
+        desc: 'Record technician leave submissions, compute quota balances, and dispatch official PDF forms to HR.',
         examples: [
-          'Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok'
+          'Submit 3-day annual leave for technician Budi Santoso starting tomorrow'
         ]
       },
       {
         id: 'WF-B04',
-        name: 'Audit Cuti Pending & Email Otorisasi HR',
-        desc: 'Pemeriksaan antrean permohonan cuti pending dan pengiriman rekapitulasi otorisasi ke email manajer.',
+        name: 'Audit Pending Leaves & HR Email Authorization',
+        desc: 'Review pending leave queues and dispatch authorization summaries to the HR manager via email.',
         examples: [
-          'Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR'
+          'Audit all pending leave requests and email summary to the HR manager'
         ]
       }
     ]
   },
   FINANCE: {
-    title: 'Divisi Keuangan & Commercial Billing (Schema C)',
-    description: 'Manajemen kontrak sewa menara MLA dengan operator telekomunikasi, penagihan invoice, dan audit beban operasional.',
+    title: 'Finance & Commercial Billing Division (Schema C)',
+    description: 'Management of MLA tower lease contracts with telecom operators, invoice billing, and OPEX operational expense audits.',
     flows: [
       {
         id: 'WF-C01',
-        name: 'Laporan Pendapatan & Invoice Sewa Menara',
-        desc: 'Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, Indosat, XL, Smartfren).',
+        name: 'Revenue Report & Tower Lease Invoicing',
+        desc: 'Consolidated report on tower lease invoices to telecom operators (Telkomsel, Indosat, XL, Smartfren).',
         examples: [
-          'Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya'
+          'Show tower lease invoice breakdown by operator and payment status'
         ]
       },
       {
         id: 'WF-C02',
-        name: 'Audit Beban Listrik PLN & Sewa Lahan',
-        desc: 'Laporan pengeluaran operasional utilitas listrik PLN, BBM genset cadangan, dan sewa lahan site.',
+        name: 'PLN Electricity & Land Lease OPEX Audit',
+        desc: 'Operational expense audit of PLN electricity, generator fuel, and tower site land leases.',
         examples: [
-          'Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat'
+          'Audit PLN electricity expenses and site land leases for West Java region'
         ]
       },
       {
         id: 'WF-C04',
-        name: 'Pendaftaran Klien Operator & Kontrak Sewa MLA',
-        desc: 'Pendaftaran operator telekomunikasi baru dan draf kontrak sewa menara (MLA). Sistem menyimpan draf ke database (PENDING_APPROVAL) dan mengklarifikasi atau mengirimkan berkas faktur ke email otorisasi.',
+        name: 'Client Onboarding & MLA Lease Contract',
+        desc: 'Register new telecom client operators and draft MLA tower lease agreements with PENDING_APPROVAL status.',
         examples: [
-          'Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan dan kirimkan ke email finance.mgr@balitower.co.id'
+          'Register new 5-year tower lease contract for Telkomsel at 15 million IDR per month and send to finance.mgr@balitower.co.id'
         ]
       }
     ]
   },
   ALL: {
-    title: 'Superadministrator Enterprise',
-    description: 'Akses komprehensif ke seluruh alur kerja operasional, orkestrasi alur dinamis, dan tata kelola basis data multi-tenant.',
+    title: 'Enterprise Superadministrator',
+    description: 'Comprehensive access to all operational workflows, dynamic orchestration, and multi-tenant DuckDB governance.',
     flows: [
       {
         id: 'ORCHESTRATOR',
-        name: 'Kompilasi Alur Kerja Dinamis',
-        desc: 'Penyusunan alur kerja baru secara otomatis berbasis bahasa alami.',
+        name: 'Dynamic Workflow Compilation',
+        desc: 'Synthesize new automated workflows on the fly from natural language instructions.',
         examples: [
-          'Buat alur kerja baru untuk audit berkala genset dan kirim laporan ke email operasional'
+          'Create a new workflow for periodic generator audits and email the report'
         ]
       },
       {
         id: 'DATABASE',
-        name: 'Tata Kelola 18 Basis Data DuckDB',
-        desc: 'Pemeriksaan integritas skema data operasional DuckDB dan batasan hak akses tenant.',
+        name: 'Multi-Tenant DuckDB Governance',
+        desc: 'Review operational schema health, table integrity, and role-based access policies.',
         examples: [
-          'Tampilkan statistik integritas data pada 18 tabel basis data operasional DuckDB'
+          'Show data integrity statistics across operational DuckDB tables'
         ]
       },
       {
         id: 'CROSS_DOMAIN',
-        name: 'Akses Komprehensif Lintas Divisi',
-        desc: 'Eksekusi operasional terintegrasi lintas logistik gudang, HR, dan penagihan keuangan.',
+        name: 'Cross-Division Operations',
+        desc: 'Integrated cross-functional workflows spanning logistics, HR, and billing.',
         examples: [
-          'Periksa stok menara yang kritis dan buat draft PR pengadaan barang'
+          'Check critical tower materials and generate a draft purchase requisition'
         ]
       }
     ]
@@ -4048,40 +4049,40 @@ function renderHelpModelTab(bodyEl) {
       <div class="help-model-card" style="border-left: 4px solid #16A34A;">
         <div class="help-model-card-header">
           <span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700; font-size: 11px;">DIRECT SINGLE-TOOL</span>
-          <span class="help-model-card-title">1. Eksekusi Kueri Data Langsung (Instan)</span>
+          <span class="help-model-card-title">1. Direct Data Query Execution (Instant)</span>
         </div>
         <div class="help-model-card-desc">
-          Untuk pertanyaan operasional harian satu langkah (misalnya memeriksa sisa stok barang spesifik di gudang tertentu, riwayat absensi teknisi menara, atau status tagihan kontrak sewa), AI langsung menjalankan kueri data terisolasi ke DuckDB tanpa harus menunggu Administrator membuat alur kerja baru. Hasil disajikan dalam hitungan detik secara rapi dalam tabel.
+          For routine single-step operational questions (such as checking stock balances of specific items at regional warehouses, tower technician attendance logs, or lease contract billing status), the AI executes an isolated DuckDB query directly without requiring Administrators to configure a new workflow. Results are presented within seconds in clean tables.
         </div>
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #334155; font-family: var(--font-mono);">
-          Contoh: "Berapa sisa stok ODC 48 Port di Gudang Surabaya?"
+          Example: "What is the remaining stock of ODC 48 Port in Surabaya Warehouse?"
         </div>
       </div>
 
       <div class="help-model-card" style="border-left: 4px solid #2563EB;">
         <div class="help-model-card-header">
           <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-weight: 700; font-size: 11px;">ADMIN WORKFLOW</span>
-          <span class="help-model-card-title">2. Alur Kerja Terkelola Administrator (Multi-Step & Guarded)</span>
+          <span class="help-model-card-title">2. Administrator-Managed Workflows (Multi-Step & Guarded)</span>
         </div>
         <div class="help-model-card-desc">
-          Proses kerja yang kompleks dan berdampak luas (seperti siklus pengadaan material PR-to-PO, kalkulasi anggaran reorder, otorisasi persetujuan PO, dan distribusi surel resmi) dikendalikan secara ketat oleh Administrator melalui alur kerja terstandar. Hal ini menjamin kepatuhan audit internal dan mencegah risiko penyalahgunaan sistem.
+          High-impact, complex operational processes (such as the PR-to-PO procurement cycle, reorder budget calculations, PO approval authorization, and official PDF email dispatch) are strictly governed by Administrators via standardized workflows. This ensures internal audit compliance and prevents system misuse.
         </div>
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #334155; font-family: var(--font-mono);">
-          Contoh: "Periksa seluruh stok material yang kritis dan buat draft PR pengadaan barang"
+          Example: "Check all critical material stock levels and generate a draft purchase requisition"
         </div>
       </div>
 
       <div class="help-model-card" style="border-left: 4px solid #F59E0B;">
         <div class="help-model-card-header">
           <span class="badge" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; font-weight: 700; font-size: 11px;">WORKFLOW REQUEST</span>
-          <span class="help-model-card-title">3. Pengajuan Alur Kerja Baru Langsung di Chat</span>
+          <span class="help-model-card-title">3. In-Chat Workflow Proposal Requests</span>
         </div>
         <div class="help-model-card-desc">
-          Jika Anda memerlukan proses kerja baru yang belum terdaftar di sistem, Anda tidak perlu menunggu atau melapor secara manual. Cukup ketik perintah di chat seperti <strong>"mau ajukan workflow"</strong>, dan formulir pengajuan interaktif akan langsung muncul di jendela obrolan. Usulan Anda otomatis diteruskan ke antrean review Administrator.
+          If you require a new operational process not yet registered in the system, no manual ticketing is required. Simply type a request in chat such as <strong>"request workflow"</strong>, and an interactive proposal form will appear directly in the conversation window. Your proposal is automatically routed to the Administrator review queue.
         </div>
         <div style="display: flex; gap: 8px; margin-top: 4px;">
-          <button type="button" class="btn btn-primary btn-sm" data-action="try-prompt" data-prompt="mau ajukan workflow">
-            <span>Coba Sekarang: "mau ajukan workflow"</span>
+          <button type="button" class="btn btn-primary btn-sm" data-action="try-prompt" data-prompt="request workflow">
+            <span>Try Now: "request workflow"</span>
           </button>
         </div>
       </div>
@@ -4093,63 +4094,63 @@ function renderHelpPolicyTab(bodyEl) {
   bodyEl.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 12px;">
       <div style="font-size: 12.5px; color: #475569; line-height: 1.55;">
-        Sistem menerapkan kebijakan keamanan dua tahap (Two-Tier Tool Verification). Tools berisiko rendah diizinkan untuk eksekusi langsung, sedangkan tools berdampak operasional tinggi dilindungi oleh alur kerja Administrator:
+        The system enforces a Two-Tier Tool Verification security policy. Low-risk read tools are permitted for direct execution, while high-impact operational tools are strictly guarded behind Administrator workflows:
       </div>
 
       <div class="help-policy-table-container">
         <table class="help-policy-table">
           <thead>
             <tr>
-              <th style="width: 220px;">Nama Tool</th>
-              <th style="width: 140px;">Kategori Akses</th>
-              <th>Deskripsi & Pengamanan Enterprise</th>
+              <th style="width: 220px;">Tool Name</th>
+              <th style="width: 140px;">Access Category</th>
+              <th>Description & Enterprise Guardrails</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><code>tool_query_database</code></td>
               <td><span class="badge-direct-access">Direct Access</span></td>
-              <td>Kueri baca (read-only SELECT) dengan isolasi multi-tenant data gudang, teknisi, dan penagihan. Aman dieksekusi langsung.</td>
+              <td>Read-only queries (SELECT) with multi-tenant data isolation across warehouse inventory, field technicians, and telecom billing. Safe for direct execution.</td>
             </tr>
             <tr>
               <td><code>tool_view_po</code></td>
               <td><span class="badge-direct-access">Direct Access</span></td>
-              <td>Pratinjau berkas dokumen resmi Purchase Order yang sudah ada di sistem. Tidak mengubah saldo fisik.</td>
+              <td>In-app preview of existing official Purchase Order documents. Does not modify physical stock balances.</td>
             </tr>
             <tr>
               <td><code>system.check_profile</code></td>
               <td><span class="badge-direct-access">Direct Access</span></td>
-              <td>Pemeriksaan sesi akun, wewenang peran, dan status kesehatan server internal.</td>
+              <td>Inspects user session credentials, RBAC role permissions, and server health diagnostics.</td>
             </tr>
             <tr>
               <td><code>tool_dispatch_pr_email</code></td>
               <td><span class="badge-workflow-guarded">Workflow Required</span></td>
-              <td>Pengiriman surel resmi perusahaan. Wajib melalui template alur kerja admin untuk mencegah penyalahgunaan email keluar.</td>
+              <td>Official corporate email dispatch. Must pass through admin workflow templates to prevent unapproved outbound communications.</td>
             </tr>
             <tr>
               <td><code>tool_procurement_cycle</code></td>
               <td><span class="badge-workflow-guarded">Workflow Required</span></td>
-              <td>Penerbitan dokumen PR resmi dan komitmen anggaran pengadaan. Memerlukan pengawasan workflow WF-A01.</td>
+              <td>Issues official PR documents and commits procurement budgets. Requires WF-A01 workflow supervision.</td>
             </tr>
             <tr>
               <td><code>tool_manage_po</code></td>
               <td><span class="badge-workflow-guarded">Workflow Required</span></td>
-              <td>Persetujuan status pesanan PO komersial. Memerlukan alur otorisasi berjenjang.</td>
+              <td>Approves and modifies commercial PO order statuses. Requires multi-tier authorization.</td>
             </tr>
             <tr>
               <td><code>tool_update_threshold</code></td>
               <td><span class="badge-workflow-guarded">Workflow Required</span></td>
-              <td>Perubahan batas minimum/maksimum saldo stok gudang yang memengaruhi algoritma pengadaan otomatis.</td>
+              <td>Modifies minimum and maximum warehouse safety stock thresholds that influence automated reorder algorithms.</td>
             </tr>
             <tr>
               <td><code>tool_register_product</code></td>
               <td><span class="badge-workflow-guarded">Workflow Required</span></td>
-              <td>Penambahan SKU master barang material baru ke dalam katalog DuckDB.</td>
+              <td>Adds new material master SKU catalog items into DuckDB.</td>
             </tr>
             <tr>
               <td><code>tool_manage_telecom_invoice</code></td>
               <td><span class="badge-workflow-guarded">Workflow Required</span></td>
-              <td>Penerbitan faktur tagihan sewa menara MLA komersial dan onboarding klien operator telekomunikasi.</td>
+              <td>Issues commercial MLA tower lease billing invoices and manages telecom client onboarding.</td>
             </tr>
           </tbody>
         </table>
@@ -4185,7 +4186,7 @@ async function renderLeaveRequestChatForm(targetContainer = null) {
     agentBox.innerHTML = `
       ${getAgentBubbleHeaderHtml('HR Assistant')}
       <div class="stream-text-content" style="margin-bottom: 8px;">
-        Silakan lengkapi formulir permohonan cuti teknisi di bawah ini. Setelah dikonfirmasi dan dikirim, data akan langsung tersimpan di basis data DuckDB dan berkas resmi PDF akan dikirimkan ke HR.
+        Please complete the technician leave application form below. Upon confirmation and submission, the record will be stored in DuckDB and an official PDF request will be routed to HR.
       </div>
       <div class="stream-artifacts-slot"></div>
     `;
@@ -4210,7 +4211,7 @@ async function renderLeaveRequestChatForm(targetContainer = null) {
     <option value="${escapeHtml(e.employee_id)}">${escapeHtml(e.full_name)} (${escapeHtml(e.employee_id)}) - ${escapeHtml(e.job_title)}</option>
   `).join('');
 
-  const subOptions = `<option value="">-- Pilih Teknisi Pengganti (Opsional) --</option>` + emps.map(e => `
+  const subOptions = `<option value="">-- Select Substitute Technician (Optional) --</option>` + emps.map(e => `
     <option value="${escapeHtml(e.employee_id)}">${escapeHtml(e.full_name)} - ${escapeHtml(e.job_title)}</option>
   `).join('');
 
@@ -4224,43 +4225,43 @@ async function renderLeaveRequestChatForm(targetContainer = null) {
   parent.innerHTML = `
     <div class="leave-form-card" id="${formId}">
       <div class="leave-form-header">
-        <span class="leave-form-title">Formulir Permohonan Cuti Karyawan</span>
-        <span class="badge badge-pending">DRAF BARU</span>
+        <span class="leave-form-title">Employee Leave Application Form</span>
+        <span class="badge badge-pending">NEW DRAFT</span>
       </div>
       <div class="leave-form-body">
-        <!-- Field 1: Karyawan Pemohon (Full Width) -->
+        <!-- Field 1: Applicant Employee (Full Width) -->
         <div class="leave-form-group">
-          <label class="leave-form-label">Karyawan Pemohon <span style="color: #DC2626;">*</span></label>
+          <label class="leave-form-label">Applicant Employee <span style="color: #DC2626;">*</span></label>
           <select class="leave-form-select" id="${formId}_emp">
             ${empOptions}
           </select>
         </div>
 
-        <!-- Row 1: Jenis Cuti & Durasi Hari Kerja -->
+        <!-- Row 1: Leave Type & Duration -->
         <div class="leave-form-row">
           <div class="leave-form-col">
-            <label class="leave-form-label">Jenis Cuti <span style="color: #DC2626;">*</span></label>
+            <label class="leave-form-label">Leave Type <span style="color: #DC2626;">*</span></label>
             <select class="leave-form-select" id="${formId}_type">
-              <option value="ANNUAL_LEAVE">Cuti Tahunan</option>
-              <option value="SICK_LEAVE">Cuti Sakit</option>
-              <option value="SPECIAL_LEAVE">Cuti Khusus / Alasan Penting</option>
-              <option value="MATERNITY_LEAVE">Cuti Melahirkan</option>
+              <option value="ANNUAL_LEAVE">Annual Leave</option>
+              <option value="SICK_LEAVE">Sick Leave</option>
+              <option value="SPECIAL_LEAVE">Special / Compassionate Leave</option>
+              <option value="MATERNITY_LEAVE">Maternity Leave</option>
             </select>
           </div>
           <div class="leave-form-col">
-            <label class="leave-form-label">Durasi Hari Kerja <span style="color: #DC2626;">*</span></label>
-            <input type="number" class="leave-form-input" id="${formId}_days" value="1" min="1" max="30" placeholder="Jumlah hari...">
+            <label class="leave-form-label">Duration (Working Days) <span style="color: #DC2626;">*</span></label>
+            <input type="number" class="leave-form-input" id="${formId}_days" value="1" min="1" max="30" placeholder="Number of days...">
           </div>
         </div>
 
         <!-- Row 2: Tanggal Mulai Cuti & Teknisi Pengganti -->
         <div class="leave-form-row">
           <div class="leave-form-col">
-            <label class="leave-form-label">Tanggal Mulai Cuti <span style="color: #DC2626;">*</span></label>
+            <label class="leave-form-label">Start Date <span style="color: #DC2626;">*</span></label>
             <input type="date" class="leave-form-input" id="${formId}_start" value="${defaultDate}">
           </div>
           <div class="leave-form-col">
-            <label class="leave-form-label">Teknisi Pengganti / Backup</label>
+            <label class="leave-form-label">Substitute Technician / Backup</label>
             <select class="leave-form-select" id="${formId}_sub">
               ${subOptions}
             </select>
@@ -4269,8 +4270,8 @@ async function renderLeaveRequestChatForm(targetContainer = null) {
 
         <!-- Field 4: Alasan Pengajuan Cuti (Full Width) -->
         <div class="leave-form-group">
-          <label class="leave-form-label">Alasan Pengajuan Cuti <span style="color: #DC2626;">*</span></label>
-          <input type="text" class="leave-form-input" id="${formId}_reason" placeholder="Contoh: Keperluan keluarga mendesak ke luar kota..." value="">
+          <label class="leave-form-label">Reason for Leave <span style="color: #DC2626;">*</span></label>
+          <input type="text" class="leave-form-input" id="${formId}_reason" placeholder="Example: Urgent family matter out of town..." value="">
         </div>
       </div>
 
@@ -4317,19 +4318,19 @@ async function submitLeaveRequestForm(formId) {
   if (errorEl) errorEl.style.display = 'none';
 
   if (!employeeId) {
-    if (errorEl) { errorEl.textContent = 'Silakan pilih karyawan pemohon.'; errorEl.style.display = 'block'; }
+    if (errorEl) { errorEl.textContent = 'Please select the applicant employee.'; errorEl.style.display = 'block'; }
     return;
   }
   if (!startDate) {
-    if (errorEl) { errorEl.textContent = 'Silakan tentukan tanggal mulai cuti.'; errorEl.style.display = 'block'; }
+    if (errorEl) { errorEl.textContent = 'Please specify the leave start date.'; errorEl.style.display = 'block'; }
     return;
   }
   if (!daysRequested || daysRequested < 1) {
-    if (errorEl) { errorEl.textContent = 'Durasi hari cuti minimal 1 hari.'; errorEl.style.display = 'block'; }
+    if (errorEl) { errorEl.textContent = 'Leave duration must be at least 1 day.'; errorEl.style.display = 'block'; }
     return;
   }
   if (!reason) {
-    if (errorEl) { errorEl.textContent = 'Alasan pengajuan cuti wajib diisi.'; errorEl.style.display = 'block'; }
+    if (errorEl) { errorEl.textContent = 'Reason for leave is required.'; errorEl.style.display = 'block'; }
     return;
   }
 
@@ -4354,7 +4355,7 @@ async function submitLeaveRequestForm(formId) {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || "Gagal mencatat pengajuan cuti.");
+      throw new Error(err.detail || "Failed to record leave application.");
     }
 
     const respData = await res.json();
@@ -4368,44 +4369,44 @@ async function submitLeaveRequestForm(formId) {
       if (parentBox) {
         const streamText = parentBox.querySelector('.stream-text-content');
         if (streamText) {
-          streamText.textContent = 'Permohonan cuti telah berhasil dicatat dan diajukan ke Divisi HR:';
+          streamText.textContent = 'Leave application successfully recorded and submitted to HR Division:';
         }
       }
 
       const typeLabelMap = {
-        'ANNUAL_LEAVE': 'Cuti Tahunan',
-        'SICK_LEAVE': 'Cuti Sakit',
-        'SPECIAL_LEAVE': 'Cuti Khusus / Alasan Penting',
-        'MATERNITY_LEAVE': 'Cuti Melahirkan'
+        'ANNUAL_LEAVE': 'Annual Leave',
+        'SICK_LEAVE': 'Sick Leave',
+        'SPECIAL_LEAVE': 'Special / Compassionate Leave',
+        'MATERNITY_LEAVE': 'Maternity Leave'
       };
       const typeLabel = typeLabelMap[d.leave_type] || d.leave_type;
 
       formCard.className = 'leave-success-card';
       formCard.innerHTML = `
         <div class="leave-success-header">
-          <span class="leave-success-title">Pengajuan Cuti Berhasil Dicatat</span>
-          <span class="badge badge-approved">TERKIRIM KE HR</span>
+          <span class="leave-success-title">Leave Application Successfully Recorded</span>
+          <span class="badge badge-approved">SUBMITTED TO HR</span>
         </div>
         <div class="leave-success-body">
           <div class="leave-info-grid">
             <div class="leave-info-item">
-              <span class="leave-info-k">No. Pengajuan:</span>
+              <span class="leave-info-k">Application No:</span>
               <span class="badge" style="background:#EFF6FF; color:#2563EB; font-family:var(--font-mono); font-weight:700;">${escapeHtml(leaveId)}</span>
             </div>
             <div class="leave-info-item">
-              <span class="leave-info-k">Pemohon:</span>
+              <span class="leave-info-k">Applicant:</span>
               <span class="leave-info-v"><strong>${escapeHtml(d.applicant_name || '-')}</strong> (${escapeHtml(d.job_title || '-')})</span>
             </div>
             <div class="leave-info-item">
-              <span class="leave-info-k">Periode Cuti:</span>
-              <span class="leave-info-v">${escapeHtml(d.start_date)} s/d ${escapeHtml(d.end_date)} (<strong>${d.days_requested} hari kerja</strong>)</span>
+              <span class="leave-info-k">Leave Period:</span>
+              <span class="leave-info-v">${escapeHtml(d.start_date)} to ${escapeHtml(d.end_date)} (<strong>${d.days_requested} working days</strong>)</span>
             </div>
             <div class="leave-info-item">
-              <span class="leave-info-k">Jenis Cuti:</span>
+              <span class="leave-info-k">Leave Type:</span>
               <span class="leave-info-v">${escapeHtml(typeLabel)}</span>
             </div>
             <div class="leave-info-item" style="grid-column: 1 / -1;">
-              <span class="leave-info-k">Alasan:</span>
+              <span class="leave-info-k">Reason:</span>
               <span class="leave-info-v">${escapeHtml(d.reason || '-')}</span>
             </div>
           </div>
@@ -4413,7 +4414,7 @@ async function submitLeaveRequestForm(formId) {
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
-            <span>Berkas permohonan resmi format PDF telah diterbitkan dan notifikasi telah dikirimkan ke HR.</span>
+            <span>Official leave application PDF has been generated and notification dispatched to HR.</span>
           </div>
           <div class="leave-action-row">
             <button class="btn btn-primary btn-sm" data-action="open-leave-pdf" data-leave-id="${escapeHtml(leaveId)}" data-applicant="${escapeHtml(d.applicant_name || '')}" data-leave-type="${escapeHtml(typeLabel)}" data-days="${d.days_requested}" data-status="PENDING_APPROVAL">
@@ -4439,7 +4440,7 @@ async function submitLeaveRequestForm(formId) {
     saveCopilotFeed();
   } catch (err) {
     if (errorEl) {
-      errorEl.textContent = err.message || "Gagal menyimpan pengajuan cuti.";
+      errorEl.textContent = err.message || "Failed to save leave request.";
       errorEl.style.display = 'block';
     }
     if (btn) {

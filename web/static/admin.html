@@ -1978,7 +1978,7 @@
       </div>
 
       <div class="topbar-right">
-        <button class="topbar-notif-btn" id="adminNotifBtn" onclick="switchAdminTab('requests')" title="Permintaan Alur Kerja dari Pengguna">
+        <button class="topbar-notif-btn" id="adminNotifBtn" onclick="switchAdminTab('requests')" title="User Workflow Requests">
           <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
           </svg>
@@ -2012,23 +2012,23 @@
         <nav class="sidebar-nav">
           <div class="nav-group-label">MAIN CONTROL</div>
 
-          <button class="sidebar-nav-item tab-btn active" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')" title="Alur Kerja (Orchestrator)">
+          <button class="sidebar-nav-item tab-btn active" id="tabWorkflowsBtn" onclick="switchAdminTab('workflows')" title="Workflows (Orchestrator)">
             <span class="nav-icon">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </span>
-            <span class="nav-label">Alur Kerja (Orchestrator)</span>
+            <span class="nav-label">Workflows (Orchestrator)</span>
           </button>
 
-          <button class="sidebar-nav-item tab-btn" id="tabRequestsBtn" onclick="switchAdminTab('requests')" title="Permintaan Alur Kerja Pengguna">
+          <button class="sidebar-nav-item tab-btn" id="tabRequestsBtn" onclick="switchAdminTab('requests')" title="User Workflow Requests">
             <span class="nav-icon">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
               </svg>
             </span>
             <span class="nav-label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-              <span>Permintaan Alur Kerja</span>
+              <span>Workflow Requests</span>
               <span class="sidebar-badge" id="sidebarRequestBadge" style="display: none;">0</span>
             </span>
           </button>
@@ -2042,25 +2042,25 @@
             <span class="nav-label">Master Data & Multi-Tenant</span>
           </button>
 
-          <button class="sidebar-nav-item tab-btn" id="tabToolsBtn" onclick="switchAdminTab('tools')" title="Katalog Tools Agen">
+          <button class="sidebar-nav-item tab-btn" id="tabToolsBtn" onclick="switchAdminTab('tools')" title="Agent Tools Catalog">
             <span class="nav-icon">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
             </span>
-            <span class="nav-label">Katalog Tools Agen</span>
+            <span class="nav-label">Agent Tools Catalog</span>
           </button>
 
           <div class="nav-group-label" style="margin-top: 18px;">DOCUMENTATION & SYSTEM</div>
 
-          <button class="sidebar-nav-item tab-btn" id="tabHelpBtn" onclick="switchAdminTab('help')" title="Panduan & Bantuan Operasional">
+          <button class="sidebar-nav-item tab-btn" id="tabHelpBtn" onclick="switchAdminTab('help')" title="Guide & Operational Help">
             <span class="nav-icon">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
             </span>
-            <span class="nav-label">Panduan & Bantuan Operasional</span>
+            <span class="nav-label">Guide & Operational Help</span>
           </button>
         </nav>
 
@@ -2084,10 +2084,10 @@
           <div style="display: flex; align-items: center; gap: 10px;">
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#DC2626"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <div>
-              <strong style="font-weight: 700;">Peringatan AI Engine Offline:</strong> Gateway koneksi LLM saat ini tidak dapat dijangkau (kemungkinan kuota/budget API habis atau jaringan terputus). Fitur reasoning otonom dan penyusun alur kerja terdegradasi sementara.
+              <strong style="font-weight: 700;">AI Engine Offline Warning:</strong> The LLM connection gateway is currently unreachable (quota/budget exhausted or network issue). Autonomous reasoning and workflow compiler are temporarily degraded.
             </div>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="checkAdminAiHealth()" style="background: #FFFFFF; color: #991B1B; border-color: #FCA5A5; white-space: nowrap;">Cek Ulang</button>
+          <button class="btn btn-secondary btn-sm" onclick="checkAdminAiHealth()" style="background: #FFFFFF; color: #991B1B; border-color: #FCA5A5; white-space: nowrap;">Retry Check</button>
         </div>
 
         <!-- ========================================== -->
@@ -2204,11 +2204,11 @@
                   </svg>
                   <span>Refresh</span>
                 </button>
-                <button class="btn btn-sm" onclick="confirmResetWorkflowsToDefault()" style="background: #F0FDF4; color: #059669; border: 1px solid #BBFBCE; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#DCFCE7'" onmouseout="this.style.background='#F0FDF4'" title="Pulihkan workflow yang hilang dari berkas JSON referensi (TIDAK menghapus workflow yang sudah ada)">
+                <button class="btn btn-sm" onclick="confirmResetWorkflowsToDefault()" style="background: #F0FDF4; color: #059669; border: 1px solid #BBFBCE; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#DCFCE7'" onmouseout="this.style.background='#F0FDF4'" title="Restore missing workflows from reference JSON files (does NOT overwrite existing workflows)">
                   <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  <span>Pulihkan Workflow</span>
+                  <span>Restore Workflows</span>
                 </button>
               </div>
             </div>
@@ -2230,30 +2230,30 @@
         </div>
 
     <!-- ========================================== -->
-    <!-- TAB: PERMINTAAN ALUR KERJA (USER REQUESTS) -->
+    <!-- TAB: USER WORKFLOW REQUESTS                -->
     <!-- ========================================== -->
     <div id="sectionRequests" style="display: none;">
       <!-- KPI Stats -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-label">Total Permintaan</div>
+          <div class="kpi-label">Total Requests</div>
           <div class="kpi-value" id="kpiReqTotal">0</div>
-          <div class="kpi-sub">Dari seluruh pengguna</div>
+          <div class="kpi-sub">Across all users</div>
         </div>
         <div class="kpi-card" style="border-left: 3px solid #F59E0B;">
-          <div class="kpi-label">Menunggu Review</div>
+          <div class="kpi-label">Pending Review</div>
           <div class="kpi-value" id="kpiReqPending" style="color: #D97706;">0</div>
-          <div class="kpi-sub">Memerlukan tindakan Admin</div>
+          <div class="kpi-sub">Requires Admin action</div>
         </div>
         <div class="kpi-card" style="border-left: 3px solid #10B981;">
-          <div class="kpi-label">Selesai Dikompilasi</div>
+          <div class="kpi-label">Compiled / Resolved</div>
           <div class="kpi-value" id="kpiReqCompleted" style="color: #059669;">0</div>
-          <div class="kpi-sub">Alur kerja telah aktif</div>
+          <div class="kpi-sub">Workflow active</div>
         </div>
         <div class="kpi-card" style="border-left: 3px solid #94A3B8;">
-          <div class="kpi-label">Ditolak / Ditutup</div>
+          <div class="kpi-label">Rejected / Closed</div>
           <div class="kpi-value" id="kpiReqRejected" style="color: #64748B;">0</div>
-          <div class="kpi-sub">Tidak relevan / ditolak</div>
+          <div class="kpi-sub">Irrelevant or declined</div>
         </div>
       </div>
 
@@ -2261,31 +2261,31 @@
       <div class="admin-card" style="margin-top: 16px;">
         <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
-            <h2 style="font-size: 16px; font-weight: 800; color: #0F172A; margin: 0;">Daftar Usulan Alur Kerja (Workflow Requests)</h2>
+            <h2 style="font-size: 16px; font-weight: 800; color: #0F172A; margin: 0;">User Workflow Proposals & Requests</h2>
             <p style="font-size: 12.5px; color: #64748B; margin: 4px 0 0 0;">
-              Permintaan dari pengguna saat instruksi operasional belum memiliki alur kerja baku.
+              Requests submitted by users when operational instructions lack a pre-built workflow.
             </p>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <div class="filter-group">
               <select id="filterReqStatus" class="form-select" onchange="filterWorkflowRequests()" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFFFFF; font-weight: 600;">
-                <option value="ALL">Semua Status</option>
-                <option value="PENDING" selected>Menunggu Review</option>
-                <option value="COMPLETED">Selesai</option>
-                <option value="REJECTED">Ditolak</option>
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING" selected>Pending Review</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="REJECTED">Rejected</option>
               </select>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="loadWorkflowRequests()" title="Muat Ulang Data">
+            <button class="btn btn-secondary btn-sm" onclick="loadWorkflowRequests()" title="Refresh Data">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
               <span>Refresh</span>
             </button>
-            <button class="btn btn-sm" onclick="confirmClearAllWorkflowRequests()" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'" title="Bersihkan Seluruh Usulan Alur Kerja">
+            <button class="btn btn-sm" onclick="confirmClearAllWorkflowRequests()" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'" title="Clear All Workflow Requests">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-              <span>Bersihkan Semua</span>
+              <span>Clear All</span>
             </button>
           </div>
         </div>
@@ -2424,14 +2424,14 @@
       <!-- KPI Stats Tools -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-label">Total Tools Terdaftar</div>
+          <div class="kpi-label">Total Registered Tools</div>
           <div class="kpi-value" id="kpiTotalTools">10</div>
-          <div class="kpi-sub">Katalog Agen Otonom</div>
+          <div class="kpi-sub">Autonomous Agent Catalog</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Building Block Kategori</div>
-          <div class="kpi-value" id="kpiTotalCategories">5 Kategori</div>
-          <div class="kpi-sub">Komponen Alur Kerja</div>
+          <div class="kpi-label">Building Block Categories</div>
+          <div class="kpi-value" id="kpiTotalCategories">5 Categories</div>
+          <div class="kpi-sub">Workflow Components</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Execution Engine</div>
@@ -2457,7 +2457,7 @@
               <span>Agent Tools Registry (Building Blocks Explorer)</span>
             </h2>
             <p class="card-subtitle" style="margin-bottom: 0;">
-              Daftar fungsi resmi yang dapat digunakan LLM Compiler dalam alur kerja otonom. Setiap building block memiliki tanggung jawab spesifik dan skema input yang tervalidasi.
+              Official building blocks available for the autonomous LLM Compiler. Each building block has a dedicated operational purpose and validated parameter schema.
             </p>
           </div>
           <button class="btn btn-secondary" onclick="loadAgentTools()">
@@ -2470,12 +2470,12 @@
 
         <!-- Search and Filter Bar -->
         <div style="display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
-          <input type="text" id="toolSearchInput" class="form-input" placeholder="Cari nama tool atau deskripsi (misal: get_low_stock, email, compile)..." style="flex: 1; min-width: 250px;" oninput="filterTools()">
+          <input type="text" id="toolSearchInput" class="form-input" placeholder="Search tool name or description (e.g. get_low_stock, email, compile)..." style="flex: 1; min-width: 250px;" oninput="filterTools()">
         </div>
 
         <!-- Category Pills -->
         <div class="filter-pills" id="toolCategoryPills">
-          <button class="filter-pill active" onclick="setToolCategoryFilter('ALL')">Semua Building Blocks</button>
+          <button class="filter-pill active" onclick="setToolCategoryFilter('ALL')">All Building Blocks</button>
           <button class="filter-pill" onclick="setToolCategoryFilter('Inventory Operations')">Inventory Operations</button>
           <button class="filter-pill" onclick="setToolCategoryFilter('HR & Workforce')">HR & Workforce</button>
           <button class="filter-pill" onclick="setToolCategoryFilter('Reasoning & Validation')">Reasoning & Validation</button>
@@ -2485,7 +2485,7 @@
 
         <!-- Grid Container -->
         <div class="tools-grid" id="toolsListContainer">
-          <p style="color: var(--text-muted); font-size: 13px;">Memuat katalog tools...</p>
+          <p style="color: var(--text-muted); font-size: 13px;">Loading tools catalog...</p>
         </div>
       </div>
 
@@ -2567,40 +2567,40 @@
           <div class="doc-card">
             <div class="doc-card-title">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-              <span>Pembagian Skema Tenant Operasional</span>
+              <span>Operational Tenant Schema Distribution</span>
             </div>
             <p style="font-size: 12.5px; color: #64748B; margin-bottom: 12px; line-height: 1.5;">
-              Tiap pengguna dibatasi hanya dapat mengakses tabel dan entitas data sesuai perannya:
+              Each user is restricted to accessing tables and data entities matching their assigned operational role:
             </p>
 
             <table class="doc-table">
               <thead>
                 <tr>
-                  <th>Divisi Tenant</th>
-                  <th>Akun Pengguna</th>
-                  <th>Entitas Tabel Utama</th>
+                  <th>Tenant Division</th>
+                  <th>User Account</th>
+                  <th>Primary Table Entities</th>
                 </tr>
               </thead>
               <tbody id="helpTenantSchemaTbody">
                 <tr>
                   <td><span class="doc-badge-pill">INVENTORY</span></td>
-                  <td><strong>usera</strong> (Logistik)</td>
+                  <td><strong>usera</strong> (Logistics)</td>
                   <td><code>inventory_items</code>, <code>stock_balances</code>, <code>purchase_orders</code>, <code>purchase_requests</code>, <code>warehouses</code>, <code>suppliers</code></td>
                 </tr>
                 <tr>
                   <td><span class="doc-badge-pill">HR</span></td>
-                  <td><strong>userb</strong> (SDM & Field)</td>
-                  <td><code>employees</code>, <code>attendances</code> (GPS geofencing), <code>leave_requests</code>, <code>candidates</code> (Rigger K3), <code>job_postings</code></td>
+                  <td><strong>userb</strong> (HR & Field Operations)</td>
+                  <td><code>employees</code>, <code>attendances</code> (GPS geofencing), <code>leave_requests</code>, <code>candidates</code> (K3 Riggers), <code>job_postings</code></td>
                 </tr>
                 <tr>
                   <td><span class="doc-badge-pill">FINANCE</span></td>
-                  <td><strong>userc</strong> (Keuangan)</td>
-                  <td><code>mla_contracts</code> (Sewa menara), <code>revenue_invoices</code>, <code>site_utilities_cost</code> (PLN & genset)</td>
+                  <td><strong>userc</strong> (Finance)</td>
+                  <td><code>mla_contracts</code> (Tower leases), <code>revenue_invoices</code>, <code>site_utilities_cost</code> (PLN & generators)</td>
                 </tr>
                 <tr>
                   <td><span class="doc-badge-pill">ALL</span></td>
                   <td><strong>admin</strong> (Superadmin)</td>
-                  <td>Akses global ke seluruh tabel, audit log transaksi, dan eksekusi instruksi lintas divisi.</td>
+                  <td>Global access across all tables, transaction audit logs, and cross-divisional execution.</td>
                 </tr>
               </tbody>
             </table>
@@ -2610,38 +2610,38 @@
           <div class="doc-card">
             <div class="doc-card-title">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-              <span>Tata Cara Pengelolaan Master Database & Tenant</span>
+              <span>Master Database & Tenant Management Procedures</span>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">1</div>
               <div class="doc-step-body">
-                <h4>Pilih Domain Operasional</h4>
-                <p>Buka tab Master Database & Tenants, pilih filter divisi: Semua User, Logistik & Material, SDM & Lapangan, atau Keuangan.</p>
+                <h4>Select Operational Domain</h4>
+                <p>Open the Master Database & Tenants tab, select a division filter: All Users, Logistics & Materials, HR & Field, or Finance.</p>
               </div>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">2</div>
               <div class="doc-step-body">
-                <h4>Pencarian Data Real-Time</h4>
-                <p>Gunakan search bar di pojok kanan atas tabel untuk memfilter baris data instan berdasarkan kode item, NIK karyawan, atau nomor faktur.</p>
+                <h4>Real-Time Data Search</h4>
+                <p>Use the search bar in the top-right of the table to instantly filter rows by item code, employee ID, or invoice number.</p>
               </div>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">3</div>
               <div class="doc-step-body">
-                <h4>Penambahan Data Baru (Insert)</h4>
-                <p>Gunakan tombol "Add Material", "Add Employee", atau "Add Invoice" untuk menambahkan rekaman master secara terstruktur.</p>
+                <h4>Add New Records (Insert)</h4>
+                <p>Use the "Add Material", "Add Employee", or "Add Invoice" button to create structured master data entries.</p>
               </div>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">4</div>
               <div class="doc-step-body">
-                <h4>Penyesuaian Saldo Stok & Aksi CRUD</h4>
-                <p>Gunakan tombol "Stock" untuk override saldo rak gudang, atau gunakan tombol "Edit" dan "Delete" untuk mengelola rekaman data.</p>
+                <h4>Stock Balance Adjustments & CRUD Actions</h4>
+                <p>Use the "Stock" button to override warehouse shelf quantities, or use "Edit" and "Delete" to manage data records.</p>
               </div>
             </div>
           </div>
@@ -2651,15 +2651,15 @@
         <div class="doc-card" style="margin-bottom: 24px;">
           <div class="doc-card-title">
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-            <span>Mekanisme Penyesuaian Manual Saldo Stok (Admin Stock Override)</span>
+            <span>Manual Stock Balance Adjustment Mechanism (Admin Stock Override)</span>
           </div>
           <p style="font-size: 13px; color: #475569; line-height: 1.6; margin-bottom: 12px;">
-            Jika terjadi perbedaan fisik antara inventaris aktual di rak gudang dengan catatan DuckDB (akibat audit stock opname atau selisih penerimaan), Administrator dapat melakukan penyesuaian manual langsung melalui tombol aksi pada tabel inventaris di tab <strong>Database Master</strong>:
+            If discrepancies arise between actual warehouse shelf inventory and DuckDB records (due to stock opname audits or intake variance), Administrators can manually adjust quantities directly via action buttons on the inventory table in the <strong>Master Database</strong> tab:
           </p>
           <div style="display: flex; gap: 12px; flex-wrap: wrap; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 18px; font-size: 12.5px; color: #334155;">
-            <div><strong>1. Saldo Fisik Gudang</strong>: Mengubah nilai kuantitas pada tabel <code style="font-family: var(--font-mono);">stock_balances</code> per gudang (misal: WH-JKT-01, WH-BDG-01).</div>
-            <div><strong>2. Sinkronisasi Agregat</strong>: Kuantitas total pada tabel kompatibilitas <code style="font-family: var(--font-mono);">items.current_stock</code> otomatis terhitung ulang.</div>
-            <div><strong>3. Status Stok Otomatis</strong>: Sistem langsung mengategorikan item menjadi <span class="doc-badge-pill">NORMAL</span>, <span class="doc-badge-pill" style="color: #D97706; background: #FEF3C7; border-color: #FDE68A;">LOW_STOCK</span>, atau <span class="doc-badge-pill" style="color: #DC2626; background: #FEE2E2; border-color: #FECACA;">CRITICAL</span>.</div>
+            <div><strong>1. Physical Warehouse Balance</strong>: Modifies quantity values in the <code style="font-family: var(--font-mono);">stock_balances</code> table per warehouse (e.g., WH-JKT-01, WH-BDG-01).</div>
+            <div><strong>2. Aggregate Synchronization</strong>: Total quantities in the compatibility table <code style="font-family: var(--font-mono);">items.current_stock</code> are automatically recalculated.</div>
+            <div><strong>3. Automated Stock Status</strong>: The system immediately re-evaluates item status into <span class="doc-badge-pill">NORMAL</span>, <span class="doc-badge-pill" style="color: #D97706; background: #FEF3C7; border-color: #FDE68A;">LOW_STOCK</span>, or <span class="doc-badge-pill" style="color: #DC2626; background: #FEE2E2; border-color: #FECACA;">CRITICAL</span>.</div>
           </div>
         </div>
       </div>
@@ -2673,14 +2673,14 @@
           <div>
             <div class="doc-hero-title">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              <span>Panduan Penyusunan Alur Kerja (Workflow Orchestrator)</span>
+              <span>Workflow Orchestrator Guide</span>
             </div>
             <div class="doc-hero-desc">
-              Workflow Orchestrator memungkinkan Anda merancang proses bisnis baru tanpa menulis kode. Kompiler AI membaca instruksi bisnis bahasa alami dan mengubahnya menjadi sequence graph eksekusi terstruktur yang langsung aktif di sistem chat.
+              The Workflow Orchestrator allows you to design new business processes without writing code. The AI compiler parses natural language instructions and compiles them into a structured execution graph immediately active in the chat system.
             </div>
           </div>
           <button class="doc-shortcut-btn" onclick="switchAdminTab('workflows')">
-            <span>Buka Workflow Builder</span>
+            <span>Open Workflow Builder</span>
             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
           </button>
         </div>
@@ -2690,46 +2690,46 @@
           <div class="doc-card">
             <div class="doc-card-title">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-              <span>Langkah-Langkah Membuat Alur Kerja Baru</span>
+              <span>Steps to Create a New Workflow</span>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">1</div>
               <div class="doc-step-body">
-                <h4>Identitas & Nama Alur Kerja</h4>
-                <p>Isi Nama Alur yang jelas (contoh: <em>Penerimaan Barang Fisik PO & Update Saldo</em>) dan deskripsi tujuan alur.</p>
+                <h4>Workflow Identity & Name</h4>
+                <p>Enter a clear Workflow Name (e.g., <em>Physical PO Goods Receipt & Stock Update</em>) and describe its objective.</p>
               </div>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">2</div>
               <div class="doc-step-body">
-                <h4>Pilih Tenant Divisi Sasaran</h4>
-                <p>Pilih apakah alur diperuntukkan bagi <strong>usera (INVENTORY)</strong>, <strong>userb (HR)</strong>, <strong>userc (FINANCE)</strong>, atau <strong>all (SUPERADMIN)</strong>.</p>
+                <h4>Select Target Tenant Division</h4>
+                <p>Select whether the workflow targets <strong>usera (INVENTORY)</strong>, <strong>userb (HR)</strong>, <strong>userc (FINANCE)</strong>, or <strong>all (SUPERADMIN)</strong>.</p>
               </div>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">3</div>
               <div class="doc-step-body">
-                <h4>Tulis Aturan Bisnis (Business Instruction)</h4>
-                <p>Tulis prosedur operasional lengkap dalam bahasa Indonesia (kondisi pemicu, penghitungan, dokumen yang diterbitkan, dan email notifikasi).</p>
+                <h4>Write Business Rules (Instruction)</h4>
+                <p>Write complete operational procedures (trigger conditions, calculations, document generation, and notification emails).</p>
               </div>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">4</div>
               <div class="doc-step-body">
-                <h4>Compile & Simpan Workflow</h4>
-                <p>Klik tombol kompilasi. AI Compiler mem-parsing aturan menjadi langkah eksekusi JSON dan <strong>menghasilkan 2-3 contoh pertanyaan otomatis</strong>.</p>
+                <h4>Compile & Save Workflow</h4>
+                <p>Click the compile button. The AI Compiler parses the rules into JSON execution steps and <strong>automatically generates 2-3 example user prompts</strong>.</p>
               </div>
             </div>
 
             <div class="doc-step-item">
               <div class="doc-step-num">5</div>
               <div class="doc-step-body">
-                <h4>Aktivasi Instan & Sinkronisasi Bantuan</h4>
-                <p>Alur kerja langsung tersimpan di basis data DuckDB dan muncul pada modal Bantuan Chat pengguna seketika.</p>
+                <h4>Instant Activation & Help Sync</h4>
+                <p>The workflow is immediately persisted in DuckDB and instantly appears in the user chat help modal.</p>
               </div>
             </div>
           </div>
@@ -2738,10 +2738,10 @@
           <div class="doc-card">
             <div class="doc-card-title">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-              <span>Anatomi Graph JSON Alur Kerja</span>
+              <span>Workflow JSON Graph Anatomy</span>
             </div>
             <p style="font-size: 12.5px; color: #64748B; margin-bottom: 8px;">
-              Hasil kompilasi AI menghasilkan struktur eksekusi seperti berikut:
+              The AI compilation yields an execution structure like the following:
             </p>
             <div class="doc-code-block">{
   "workflow": "pipeline_pengadaan_material_pr_to_po",
@@ -2753,13 +2753,13 @@
     { "type": "tool", "tool": "notification.dispatch" }
   ],
   "example_prompts": [
-    "Periksa seluruh stok material yang menipis/kritis dan buat draft PR pengadaan barang dan kirimkan ke email .....@gmail.com"
+    "Check depleted/critical material stock, generate procurement PR draft, and send dispatch email to .....@gmail.com"
   ]
 }</div>
             <div style="font-size: 12px; color: #475569; line-height: 1.5; margin-top: 10px;">
-              <div>• <strong>type: "tool"</strong>: Menjalankan fungsi spesifik dari registry tools terdaftar.</div>
-              <div>• <strong>type: "agent"</strong>: Meminta evaluasi penalaran matematis atau validasi dari model AI.</div>
-              <div>• <strong>example_prompts</strong>: Kalimat pertanyaan otomatis untuk memandu pengguna di ruang obrolan.</div>
+              <div>• <strong>type: "tool"</strong>: Executes a specific function from the registered tools catalog.</div>
+              <div>• <strong>type: "agent"</strong>: Requests mathematical reasoning evaluation or validation from the AI model.</div>
+              <div>• <strong>example_prompts</strong>: Automated sample prompts to guide users in the chat interface.</div>
             </div>
           </div>
         </div>
@@ -2768,27 +2768,27 @@
         <div class="doc-card" style="margin-bottom: 24px;">
           <div class="doc-card-title">
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>Tips Menulis Instruksi Bisnis yang Efektif</span>
+            <span>Tips for Writing Effective Business Instructions</span>
           </div>
           <div class="doc-grid-3" style="margin-bottom: 0;">
             <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px;">
-              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">1. Gunakan Kata Kerja Aksi</h5>
-              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Gunakan instruksi terarah seperti: <em>"Periksa saldo stok"</em>, <em>"Tarik data absensi"</em>, <em>"Kalkulasi kuantitas"</em>, <em>"Terbitkan dokumen PDF"</em>, atau <em>"Kirim email otorisasi"</em>.</p>
+              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">1. Use Action Verbs</h5>
+              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Use clear imperative instructions such as: <em>"Check stock balances"</em>, <em>"Retrieve attendance records"</em>, <em>"Calculate reorder quantities"</em>, <em>"Generate PDF document"</em>, or <em>"Dispatch authorization email"</em>.</p>
             </div>
             <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px;">
-              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">2. Sebutkan Entitas Spesifik</h5>
-              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Sebutkan nama entitas yang terlibat: kabel fiber optic, modul rectifier, kontrak sewa menara MLA, surat pesanan PO, permohonan cuti, atau tagihan PLN.</p>
+              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">2. Specify Concrete Entities</h5>
+              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Explicitly reference entities involved: fiber optic cables, rectifier modules, MLA tower lease contracts, PO records, leave requests, or utility invoices.</p>
             </div>
             <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px;">
-              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">3. Definisikan Status Akhir</h5>
-              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Tentukan status data dokumen yang diharapkan, misalnya: <em>"Simpan draft dengan status PENDING_APPROVAL"</em> atau <em>"Ubah status menjadi DELIVERED"</em>.</p>
+              <h5 style="font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 6px;">3. Define Target Status</h5>
+              <p style="font-size: 12px; color: #64748B; line-height: 1.5;">Specify the target document and entity statuses, such as: <em>"Save draft with status PENDING_APPROVAL"</em> or <em>"Update status to DELIVERED"</em>.</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- ========================================== -->
-      <!-- SUB-SECTION 3: ARSITEKTUR & AGENT TOOLS    -->
+      <!-- SUB-SECTION 3: ARCHITECTURE & AGENT TOOLS  -->
       <!-- ========================================== -->
       <div id="helpSecTools" style="display: none;">
         <!-- Banner Intro -->
@@ -2796,14 +2796,14 @@
           <div>
             <div class="doc-hero-title">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              <span>Arsitektur & Mekanisme Kerja Agent Tools</span>
+              <span>Agent Tools Architecture & Execution Mechanism</span>
             </div>
             <div class="doc-hero-desc">
-              Agent Tools adalah blok fungsi modular (*building blocks*) yang menghubungkan kecerdasan agen LLM dengan basis data DuckDB, generator berkas PDF Typst, dan pengirim email SMTP. Setiap tool memiliki tanggung jawab unik dan validasi skema parameter yang ketat.
+              Agent Tools are modular building blocks connecting LLM reasoning with DuckDB storage, Typst PDF document generation, and SMTP email notifications. Each tool has a single responsibility and strict parameter schema validation.
             </div>
           </div>
           <button class="doc-shortcut-btn" onclick="switchAdminTab('tools')">
-            <span>Buka Tools Registry</span>
+            <span>Open Tools Registry</span>
             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
           </button>
         </div>
@@ -2812,10 +2812,10 @@
         <div class="doc-card" style="margin-bottom: 24px;">
           <div class="doc-card-title">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            <span>Alur Eksekusi Agen Cerdas (Execution Lifecycle)</span>
+            <span>Agent Execution Lifecycle</span>
           </div>
           <p style="font-size: 12.5px; color: #64748B; margin: 0 0 16px 0;">
-            Alur berurutan bagaimana sistem memproses setiap instruksi pengguna dari input awal hingga dokumen dan balasan selesai:
+            Sequential lifecycle showing how user instructions are routed, executed, and synthesized into documents and responses:
           </p>
 
           <div class="lifecycle-timeline-container" style="display: flex; flex-direction: column; gap: 0;">
@@ -2828,10 +2828,10 @@
               </div>
               <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
-                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #E2E8F0; color: #1E293B; padding: 2px 8px; border-radius: 4px;">Input Chat Pengguna</span>
-                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Penerimaan Permintaan / Trigger</span>
+                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #E2E8F0; color: #1E293B; padding: 2px 8px; border-radius: 4px;">User Chat Input</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Request Intake / Trigger</span>
                 </div>
-                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Pengguna mengirim instruksi melalui chat antarmuka atau trigger otomatis multi-tenant.</div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">User submits instructions through the chat interface or multi-tenant automated trigger.</div>
               </div>
             </div>
 
@@ -2844,9 +2844,9 @@
               <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
                   <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #DBEAFE; color: #1E40AF; padding: 2px 8px; border-radius: 4px;">Semantic Router</span>
-                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Klasifikasi Intent & Pembatasan Tenant</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Intent Classification & Tenant Boundary</span>
                 </div>
-                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Mendeteksi tujuan instruksi dan memvalidasi batasan cakupan tenant (<code style="font-size: 11px; color: #0A4D9C;">usera</code> / <code style="font-size: 11px; color: #0A4D9C;">userb</code> / <code style="font-size: 11px; color: #0A4D9C;">userc</code> / <code style="font-size: 11px; color: #0A4D9C;">admin</code>).</div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Identifies instruction intent and enforces tenant isolation boundary (<code style="font-size: 11px; color: #0A4D9C;">usera</code> / <code style="font-size: 11px; color: #0A4D9C;">userb</code> / <code style="font-size: 11px; color: #0A4D9C;">userc</code> / <code style="font-size: 11px; color: #0A4D9C;">admin</code>).</div>
               </div>
             </div>
 
@@ -2859,9 +2859,9 @@
               <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
                   <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #FEF3C7; color: #92400E; padding: 2px 8px; border-radius: 4px;">Workflow / Plan Resolver</span>
-                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Penyusunan Sequence Langkah & Tools</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Step & Tool Sequence Resolution</span>
                 </div>
-                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Menentukan urutan langkah kerja otomatis dan memilih tools spesifik yang harus dieksekusi oleh Agen.</div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Determines the step execution graph and selects specific tools to invoke.</div>
               </div>
             </div>
 
@@ -2874,9 +2874,9 @@
               <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
                   <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #EDE9FE; color: #6D28D9; padding: 2px 8px; border-radius: 4px;">JSON Execution Engine</span>
-                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Validasi Skema & Hak Akses Data</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Schema Validation & Access Control</span>
                 </div>
-                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Memvalidasi skema parameter input dan memeriksa izin akses data operasional untuk menjamin keamanan transaksi.</div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Validates parameter schemas and verifies tenant permissions to ensure transactional safety.</div>
               </div>
             </div>
 
@@ -2889,9 +2889,9 @@
               <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
                   <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 4px;">Tool Invocation</span>
-                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Eksekusi Pipeline Operasional Terpadu</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Integrated Operational Pipeline</span>
                 </div>
-                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Menjalankan aksi: Query/Update DuckDB ➔ Render berkas PDF Typst ➔ Dispatch Email SMTP notifikasi.</div>
+                <div style="font-size: 12px; color: #475569; line-height: 1.5;">Executes actions: Query/Update DuckDB ➔ Render Typst PDF ➔ Dispatch SMTP email notification.</div>
               </div>
             </div>
 
@@ -2902,10 +2902,10 @@
               </div>
               <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 12px 16px; flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
-                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 4px;">Sintesis Balasan AI</span>
-                  <span style="font-size: 13px; font-weight: 700; color: #15803D;">Respons Terstruktur & Tautan Unduh</span>
+                  <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 4px;">AI Response Synthesis</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #15803D;">Structured Response & Download Links</span>
                 </div>
-                <div style="font-size: 12px; color: #166534; line-height: 1.5;">Menyusun respons akhir terstruktur lengkap dengan tautan unduhan dokumen resmi yang siap di-review.</div>
+                <div style="font-size: 12px; color: #166534; line-height: 1.5;">Assembles structured final response with official document download and review links.</div>
               </div>
             </div>
 
@@ -2915,32 +2915,32 @@
         <!-- Dynamic Live Tools Section -->
         <div id="helpDynamicToolsContainer">
           <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
-            Memuat arsitektur tools real-time dari backend...
+            Loading real-time tools architecture from backend...
           </div>
         </div>
       </div>
 
       <!-- ========================================== -->
-      <!-- SUB-SECTION 4: KATALOG ALUR & CONTOH PROMPT-->
+      <!-- SUB-SECTION 4: WORKFLOW CATALOG & PROMPTS  -->
       <!-- ========================================== -->
       <div id="helpSecFlows" style="display: none;">
         <!-- Filter Card -->
         <div class="card" style="margin-bottom: 20px;">
           <div class="card-header" style="margin-bottom: 8px;">
             <div>
-              <h3 style="font-size: 14.5px; font-weight: 700; color: #0F172A; margin: 0;">Katalog Alur Kerja Aktif & Contoh Prompt Chat</h3>
+              <h3 style="font-size: 14.5px; font-weight: 700; color: #0F172A; margin: 0;">Active Workflow Catalog & Prompt Examples</h3>
               <p style="font-size: 12.5px; color: #64748B; margin: 4px 0 0 0;">
-                Daftar alur kerja terdaftar pada basis data DuckDB. Klik "Gunakan di Builder" untuk memuat parameter ke form penyusun alur, atau salin contoh pertanyaan untuk diuji langsung pada ruang obrolan.
+                Registered workflows in DuckDB. Click "Use in Builder" to populate parameters into the builder form, or copy example prompts to test directly in the chat interface.
               </p>
             </div>
           </div>
 
           <!-- Filter Per Tenant -->
           <div class="filter-pills" id="adminHelpFilterPills" style="margin-top: 10px;">
-            <button class="filter-pill active" onclick="filterAdminHelp('ALL')">Semua Divisi</button>
-            <button class="filter-pill" onclick="filterAdminHelp('INVENTORY')">Divisi Inventory (Schema A)</button>
-            <button class="filter-pill" onclick="filterAdminHelp('HR')">Divisi HR (Schema B)</button>
-            <button class="filter-pill" onclick="filterAdminHelp('FINANCE')">Divisi Finance (Schema C)</button>
+            <button class="filter-pill active" onclick="filterAdminHelp('ALL')">All Divisions</button>
+            <button class="filter-pill" onclick="filterAdminHelp('INVENTORY')">Inventory Division (Schema A)</button>
+            <button class="filter-pill" onclick="filterAdminHelp('HR')">HR Division (Schema B)</button>
+            <button class="filter-pill" onclick="filterAdminHelp('FINANCE')">Finance Division (Schema C)</button>
             <button class="filter-pill" onclick="filterAdminHelp('SUPERADMIN')">Superadmin (Schema ALL)</button>
           </div>
         </div>
@@ -3005,7 +3005,7 @@
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="closeAdminStockModal()">Batal</button>
+        <button class="btn btn-secondary" onclick="closeAdminStockModal()">Cancel</button>
         <button class="btn btn-primary" id="btnSaveAdminStock" onclick="saveAdminStockOverride()" style="display: inline-flex; align-items: center; gap: 6px;">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
           <span>Save Changes</span>
@@ -3014,7 +3014,7 @@
     </div>
   </div>
 
-  <!-- Modal Konfirmasi Hapus Semua PR & PO -->
+  <!-- Modal Confirmation Clear All PR & PO -->
   <div class="modal-overlay" id="modalClearAllPrPo" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
     <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 440px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #FCA5A5;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
@@ -3022,17 +3022,17 @@
           <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         <div>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Bersihkan Semua Dokumen PR & PO?</h3>
-          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">Tindakan ini mereset seluruh draf PR dan riwayat PO.</p>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #991B1B;">Clear All PR & PO Documents?</h3>
+          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748B;">This action resets all PR drafts and PO history.</p>
         </div>
       </div>
       <p style="font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 20px;">
-        Seluruh data antrean <strong>Purchase Requisition (PR)</strong>, <strong>Purchase Order (PO)</strong>, dan berkas PDF sementara akan dibersihkan dari database.
+        All queued <strong>Purchase Requisitions (PR)</strong>, <strong>Purchase Orders (PO)</strong>, and temporary generated PDF files will be purged from the database.
       </p>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalClearAllPrPo').style.display='none'">Batal</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalClearAllPrPo').style.display='none'">Cancel</button>
         <button class="btn" onclick="executeClearAllPrPo()" style="background: #DC2626; color: white; border: none; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-          <span>Ya, Bersihkan Sekarang</span>
+          <span>Yes, Clear All Now</span>
         </button>
       </div>
     </div>
@@ -3042,7 +3042,7 @@
   <div class="modal-overlay" id="modalUserCrud" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
     <div class="modal-container" style="background: #FFFFFF; border-radius: 12px; width: 460px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 id="modalUserTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Kelola Akun Pengguna</h3>
+        <h3 id="modalUserTitle" style="margin: 0; font-size: 16px; font-weight: 800; color: #0F172A;">Manage User Account</h3>
         <button onclick="document.getElementById('modalUserCrud').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94A3B8;">&times;</button>
       </div>
       <input type="hidden" id="userCrudUserId">
@@ -3073,8 +3073,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalUserCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="submitUserCrud()">Simpan Pengguna</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalUserCrud').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="submitUserCrud()">Save User</button>
       </div>
     </div>
   </div>
@@ -3090,11 +3090,11 @@
       <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div>
           <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">MATERIAL NAME</label>
-          <input type="text" id="matCrudName" class="form-input" style="width: 100%;" placeholder="e.g. Kabel Drop Core FO 1 Core">
+          <input type="text" id="matCrudName" class="form-input" style="width: 100%;" placeholder="e.g. Fiber Optic Drop Cable 1 Core">
         </div>
         <div>
           <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">CATEGORY</label>
-          <input type="text" id="matCrudCategory" class="form-input" style="width: 100%;" placeholder="Kabel Fiber Optik">
+          <input type="text" id="matCrudCategory" class="form-input" style="width: 100%;" placeholder="Fiber Optic Cables">
         </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
@@ -3119,15 +3119,15 @@
         <div>
           <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">SELECT WAREHOUSE</label>
           <select id="matCrudWarehouse" class="form-input" style="width: 100%;">
-            <option value="WH-JKT-01">Gudang Sentral Jakarta (WH-JKT-01)</option>
-            <option value="WH-BDG-01">Hub Regional Bandung (WH-BDG-01)</option>
-            <option value="WH-SBY-01">Pusat Distribusi Surabaya (WH-SBY-01)</option>
+            <option value="WH-JKT-01">Central Jakarta Warehouse (WH-JKT-01)</option>
+            <option value="WH-BDG-01">Regional Bandung Hub (WH-BDG-01)</option>
+            <option value="WH-SBY-01">Surabaya Distribution Center (WH-SBY-01)</option>
           </select>
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalMaterialCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="submitMaterialCrud()">Simpan Material</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalMaterialCrud').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="submitMaterialCrud()">Save Material</button>
       </div>
     </div>
   </div>
@@ -3183,8 +3183,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalEmployeeCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="submitEmployeeCrud()" style="background: #047857; border-color: #047857;">Simpan Karyawan</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalEmployeeCrud').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="submitEmployeeCrud()" style="background: #047857; border-color: #047857;">Save Employee</button>
       </div>
     </div>
   </div>
@@ -3239,8 +3239,8 @@
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalInvoiceCrud').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="submitInvoiceCrud()" style="background: #C2410C; border-color: #C2410C;">Simpan Invoice</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalInvoiceCrud').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="submitInvoiceCrud()" style="background: #C2410C; border-color: #C2410C;">Save Invoice</button>
       </div>
     </div>
   </div>
@@ -3261,9 +3261,9 @@
         Are you sure you want to permanently delete this record from the database?
       </p>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modalUniversalDelete').style.display='none'">Batal</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalUniversalDelete').style.display='none'">Cancel</button>
         <button class="btn" id="btnConfirmDeleteAction" style="background: #DC2626; color: white; border: none; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
-          Ya, Hapus Sekarang
+          Yes, Delete Now
         </button>
       </div>
     </div>
@@ -3273,7 +3273,7 @@
     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#10B981">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
     </svg>
-    <span id="toastMsg">Operasi berhasil</span>
+    <span id="toastMsg">Operation successful</span>
   </div>
 
   <script>
@@ -3377,7 +3377,7 @@
       } else if (tabName === 'requests') {
         if (btnRequests) btnRequests.classList.add('active');
         if (secRequests) secRequests.style.display = 'block';
-        if (topbarTitle) topbarTitle.textContent = 'Permintaan Alur Kerja';
+        if (topbarTitle) topbarTitle.textContent = 'Workflow Requests';
         loadWorkflowRequests();
       } else if (tabName === 'users') {
         if (btnUsers) btnUsers.classList.add('active');
@@ -3403,90 +3403,90 @@
     const ADMIN_HELP_REGISTRY = [
       {
         category: 'INVENTORY',
-        categoryLabel: 'Divisi Inventory (Schema A)',
+        categoryLabel: 'Inventory Division (Schema A)',
         flows: [
           {
             id: 'WF-A01',
-            name: 'Pipeline Pengadaan Material PR-to-PO',
-            desc: 'Pengecekan stok menara/FO di bawah safety stock, kalkulasi reorder otomatis, dan kompilasi PR PDF resmi.',
-            instruction: 'Periksa seluruh saldo stok material menara dan kabel fiber optic di gudang logistik usera yang berada di bawah ambang batas minimum. Hitung kuantitas reorder dan vendor rekanan terbaik, terbitkan dokumen resmi Purchase Requisition (PR) dan draf PO PENDING_APPROVAL, lalu kirim email notifikasi ke manajer.',
+            name: 'Material Procurement PR-to-PO Pipeline',
+            desc: 'Check depleted tower/fiber optic stock against safety threshold, automate reorder calculation, and compile official PR PDF.',
+            instruction: 'Check all tower material and fiber optic cable stock in usera logistics warehouse that fall below safety stock. Calculate reorder quantities and preferred suppliers, generate official Purchase Requisition (PR) and PENDING_APPROVAL PO draft, then dispatch notification email to manager.',
             examples: [
-              'Periksa seluruh stok material yang menipis/kritis dan buat draft PR pengadaan barang dan kirimkan ke email .....@gmail.com'
+              'Check all depleted/critical stock, create a procurement PR draft, and send email to .....@gmail.com'
             ]
           },
           {
             id: 'WF-A02',
-            name: 'Penerimaan Barang Fisik PO & Update Saldo',
-            desc: 'Verifikasi kedatangan barang PO di gudang regional dan sinkronisasi penambahan saldo fisik DuckDB.',
-            instruction: 'Verifikasi kedatangan barang Purchase Order yang tiba di gudang, catat penerimaan aktual, update status DELIVERED, dan tambahkan stok ke saldo gudang.',
+            name: 'Physical Goods PO Receipt & Stock Update',
+            desc: 'Verify arrival of PO items at regional warehouse and synchronize physical stock replenishment in DuckDB.',
+            instruction: 'Verify received Purchase Order goods arriving at warehouse, record actual receipt, update status to DELIVERED, and increment warehouse stock balances.',
             examples: [
-              'Catat penerimaan PO/BLT/2026/09/031 untuk semua gudang'
+              'Record goods receipt for PO/BLT/2026/09/031 across all warehouses'
             ]
           }
         ]
       },
       {
         category: 'HR',
-        categoryLabel: 'Divisi HR & Lapangan (Schema B)',
+        categoryLabel: 'HR & Field Division (Schema B)',
         flows: [
           {
             id: 'WF-B02',
-            name: 'Filter & Screening Pelamar Teknisi K3',
-            desc: 'Menyaring kandidat teknisi lapangan secara dinamis berdasarkan kualifikasi posisi dan sertifikasi K3 (TKPK Tingkat 1, TKPK Tingkat 2, K3 Umum, atau seluruh pelamar).',
-            instruction: 'Filter dan seleksi kandidat pelamar teknisi secara dinamis sesuai kriteria sertifikasi K3 (TKPK Tingkat 1, TKPK Tingkat 2, K3 Umum) atau seluruh kandidat sesuai permintaan pengguna.',
+            name: 'K3 Technician Candidate Filter & Screening',
+            desc: 'Dynamically filter field technician applicants based on role qualifications and K3 certifications (TKPK Level 1, TKPK Level 2, General K3, or all candidates).',
+            instruction: 'Filter and screen technician job applicants dynamically based on K3 certification criteria (TKPK Level 1, TKPK Level 2, General K3) or all candidates as requested by the user.',
             examples: [
-              'Filter kandidat rigger tower yang memiliki sertifikat TKPK tingkat 2'
+              'Filter tower rigger candidates with TKPK Level 2 certification'
             ]
           },
           {
             id: 'WF-B03',
-            name: 'Pengajuan Cuti Teknisi & Dokumen PDF HR',
-            desc: 'Pencatatan permohonan cuti teknisi, pemotongan kuota cuti tahunan, dan pengiriman notifikasi PDF.',
-            instruction: 'Catat permohonan cuti karyawan ke dalam database, cetak formulir resmi cuti format PDF dengan kop surat PT Bali Towerindo Sentra Tbk, lalu kirimkan notifikasi dan lampiran PDF ke email HR.',
+            name: 'Technician Leave Request & Official PDF Generation',
+            desc: 'Record technician leave request, deduct annual leave balance, and send official letter PDF notification.',
+            instruction: 'Record employee leave request into database, generate official leave request PDF document with PT Bali Towerindo Sentra Tbk letterhead, and dispatch notification email with PDF attachment to HR.',
             examples: [
-              'Ajukan cuti tahunan 3 hari untuk teknisi Budi Santoso mulai besok'
+              'Submit a 3-day annual leave request for technician Budi Santoso starting tomorrow'
             ]
           },
           {
             id: 'WF-B04',
-            name: 'Audit Cuti Pending & Email Otorisasi HR',
-            desc: 'Pemeriksaan pengajuan cuti berstatus pending dan pengiriman rekapitulasi ke email manajer.',
-            instruction: 'Audit seluruh data permohonan cuti karyawan yang masih berstatus pending approval di database. Tampilkan rincian daftar pengajuan cuti yang belum disetujui di chat, lalu kirimkan rekapitulasi ke email HR agar dapat diajukan persetujuan langsung.',
+            name: 'Pending Leave Audit & HR Authorization Email',
+            desc: 'Audit pending employee leave requests and dispatch summary recapitulation email to manager.',
+            instruction: 'Audit all employee leave requests with PENDING_APPROVAL status in database. Display unapproved leave list in chat, and send summary to HR manager for direct authorization.',
             examples: [
-              'Audit daftar pengajuan cuti yang masih pending dan kirim rekap ke email manajer HR'
+              'Audit pending leave requests and send summary email to HR manager'
             ]
           }
         ]
       },
       {
         category: 'FINANCE',
-        categoryLabel: 'Divisi Finance (Schema C)',
+        categoryLabel: 'Finance Division (Schema C)',
         flows: [
           {
             id: 'WF-C01',
-            name: 'Laporan Pendapatan Sewa Menara',
-            desc: 'Rekapitulasi tagihan invoice sewa menara ke operator telekomunikasi (Telkomsel, Indosat, XL, Smartfren).',
-            instruction: 'Tarik data invoice sewa menara per operator dan status pembayarannya.',
+            name: 'Tower Lease Revenue & Billing Report',
+            desc: 'Recapitulate tower lease invoice billing across telecom operators (Telkomsel, Indosat, XL, Smartfren).',
+            instruction: 'Retrieve tower lease invoice data grouped by operator and payment status.',
             examples: [
-              'Tampilkan rekapitulasi invoice sewa menara per operator dan status pembayarannya'
+              'Display tower lease invoice summary by operator and payment status'
             ]
           },
           {
             id: 'WF-C02',
-            name: 'Audit Beban Listrik PLN & Sewa Lahan',
-            desc: 'Laporan pengeluaran operasional utilitas listrik PLN, BBM genset, dan sewa lahan site tower.',
-            instruction: 'Analisis beban operasional per site mencakup tagihan PLN dan jatuh tempo sewa tanah.',
+            name: 'PLN Electricity & Land Lease Expense Audit',
+            desc: 'Audit operational expenses for PLN grid electricity, generator fuel, and tower site land lease.',
+            instruction: 'Analyze operational site expenses including PLN utility billing and land lease due dates.',
             examples: [
-              'Audit pengeluaran operasional listrik PLN dan sewa lahan menara regional Jawa Barat'
+              'Audit PLN electricity expenses and tower land leases for West Java region'
             ]
           },
           {
             id: 'WF-C04',
-            name: 'Pendaftaran Klien Operator & Kontrak Sewa MLA',
-            desc: 'Pendaftaran operator telekomunikasi baru dan draf kontrak sewa menara (MLA). Mendukung penyimpanan draf database status PENDING_APPROVAL serta otorisasi pengiriman berkas faktur via email.',
-            instruction: 'Susun draf pendaftaran operator klien baru dan kontrak sewa menara (MLA) ke dalam basis data dengan status PENDING_APPROVAL. Jika pengguna menyertakan alamat email, kirimkan dokumen faktur perdana dan tombol otorisasi persetujuan ke email tersebut. Jika tidak, berikan klarifikasi apakah berkas cukup disimpan atau dikirimkan ke email.',
+            name: 'Telecom Client & MLA Lease Contract Registration',
+            desc: 'Register new telecom client operator and draft master lease agreement (MLA). Supports saving draft as PENDING_APPROVAL and invoice dispatch via email.',
+            instruction: 'Draft new client operator registration and MLA tower lease contract into database with PENDING_APPROVAL status. If the user provides an email address, dispatch initial invoice and authorization link to that email. Otherwise, request confirmation whether to save draft or dispatch email.',
             examples: [
-              'Daftarkan kontrak sewa menara baru untuk operator Telkomsel selama 5 tahun dengan tarif 15 juta per bulan dan kirimkan ke email finance.mgr@balitower.co.id'
+              'Register a new tower lease contract for operator Telkomsel for 5 years at 15 million per month and send to finance.mgr@balitower.co.id'
             ]
           }
         ]
@@ -3497,29 +3497,29 @@
         flows: [
           {
             id: 'WF-ALL-01',
-            name: 'Cek Profil Akun & Hak Akses',
-            desc: 'Pemeriksaan akun pengguna, wewenang role, dan batasan tenant divisi.',
-            instruction: 'Periksa akun yang sedang login dan tampilkan detail hak akses serta batasan divisi.',
+            name: 'Account Profile & Permissions Verification',
+            desc: 'Inspect current user account, role permissions, and tenant divisional boundaries.',
+            instruction: 'Check logged-in user account profile and display permission details and tenant restrictions.',
             examples: [
-              'Tampilkan informasi profil akun dan batasan hak akses divisi'
+              'Display account profile information and divisional access privileges'
             ]
           },
           {
             id: 'WF-ALL-02',
-            name: 'Informasi Sistem & Status Layanan',
-            desc: 'Ringkasan status operasional server, versi aplikasi, DuckDB, dan koneksi AI gateway.',
-            instruction: 'Cek status operasional seluruh modul sistem BaliTower Ops.',
+            name: 'System Health & Service Status Overview',
+            desc: 'Summary of server operational health, application build version, DuckDB status, and AI gateway connection.',
+            instruction: 'Check operational status of all BaliTower Ops system modules.',
             examples: [
-              'status kesehatan sistem saat ini'
+              'Check current system health and service operational status'
             ]
           },
           {
             id: 'WF-ALL-03',
-            name: 'Panduan Operasional & Kontak Darurat',
-            desc: 'Panduan SOP operasional perusahaan, navigasi modul, dan kontak darurat NOC/IT.',
-            instruction: 'Tampilkan panduan operasional perusahaan dan kontak darurat lintas divisi.',
+            name: 'Operational Guide & Emergency IT/NOC Contacts',
+            desc: 'Enterprise SOP guidelines, module navigation, and NOC/IT emergency escalation contacts.',
+            instruction: 'Display operational standard operating procedures and cross-divisional emergency contacts.',
             examples: [
-              'Tampilkan panduan operasional perusahaan dan kontak darurat helpdesk'
+              'Display operational guidelines and helpdesk emergency escalation contacts'
             ]
           }
         ]
@@ -3603,31 +3603,32 @@
     }
 
     const TOOL_HELP_DESCRIPTIONS = {
-      'inventory.get_low_stock_products': 'Mengidentifikasi barang di bawah batas minimum (safety stock) untuk diajukan restock.',
-      'inventory.check_specific_stock': 'Memeriksa saldo fisik barang spesifik pada gudang Jakarta, Bandung, atau Surabaya.',
-      'inventory.crud_record': 'Melakukan penambahan stok fisik masuk atau pengeluaran barang material site.',
-      'inventory.register_product': 'Mendaftarkan SKU material baru ke dalam master katalog inventaris.',
-      'inventory.get_all_products': 'Mengambil seluruh data katalog master inventaris menara dan fiber optic.',
-      'inventory.update_threshold': 'Menyesuaikan batas minimum (safety stock) dan maksimum kuantitas barang.',
-      'po.query_orders': 'Melacak daftar purchase order aktif, nomor PO, vendor, dan status pengiriman.',
-      'po.approve': 'Mengubah status persetujuan dokumen pesanan menjadi APPROVED.',
-      'hr.audit_attendance': 'Audit absensi GPS geofencing teknisi site tower dan perhitungan jam lembur.',
-      'hr.filter_candidates': 'Penyaringan kandidat Rigger Menara berkualifikasi sertifikat TKPK tingkat 1.',
-      'hr.submit_leave_request': 'Mencatat formulir cuti teknisi ke basis data dengan status pengajuan pending.',
-      'hr.approve_leave': 'Otorisasi cuti karyawan dan pemotongan otomatis kuota saldo cuti tahunan.',
-      'hr.query_pending_leaves': 'Mengambil seluruh pengajuan cuti yang masih menunggu persetujuan HR.',
-      'finance.query_invoices': 'Rekapitulasi tagihan sewa menara per operator telekomunikasi (Telkomsel, Indosat, XL).',
-      'finance.audit_utility_expenses': 'Audit pengeluaran listrik PLN, bahan bakar genset, dan sewa lahan site tower.',
-      'finance.cashflow_summary': 'Menghitung selisih arus kas masuk vs keluar dan saldo kas bersih terkini.',
-      'finance.generate_invoice': 'Menerbitkan draf invoice penagihan sewa menara BTS baru ke operator.',
-      'docgen.compile': 'Mengompilasi berkas PDF resmi beresolusi tinggi menggunakan mesin Typst.',
-      'docgen.compile_po': 'Mengompilasi berkas resmi Purchase Order (PO) format PDF.',
-      'notification.dispatch': 'Mengirimkan notifikasi email SMTP dengan lampiran PDF resmi dan tombol otorisasi.',
-      'notification.send_email': 'Mengirimkan email notifikasi ke manajer operasional atau direksi.',
-      'agent.reason_and_validate': 'Inferensi pemikiran AI untuk memvalidasi kelayakan aturan bisnis sebelum commit ke basis data.',
-      'system.check_profile': 'Pemeriksaan kredensial akun login, role pengguna, dan batasan tenant.',
-      'system.get_system_info': 'Audit status kesehatan layanan sistem, DuckDB backend, dan gateway LLM.',
-      'system.get_company_guidelines': 'Menampilkan panduan SOP dan kontak darurat operasional PT Bali Towerindo Sentra Tbk.'
+      'inventory.get_low_stock_products': 'Identifies inventory items below safety stock threshold for procurement replenishment.',
+      'inventory.check_specific_stock': 'Checks physical stock levels of a specific item across Jakarta, Bandung, or Surabaya warehouses.',
+      'inventory.crud_record': 'Performs physical stock replenishment or goods issuance for site materials.',
+      'inventory.register_product': 'Registers a new material SKU into the master inventory catalog.',
+      'inventory.get_all_products': 'Retrieves the complete master catalog of tower materials and fiber optic cables.',
+      'inventory.update_threshold': 'Adjusts safety stock minimum threshold and maximum stock capacity for materials.',
+      'po.query_orders': 'Tracks active purchase orders, PO numbers, supplier vendors, and delivery statuses.',
+      'po.approve': 'Updates purchase order authorization status to APPROVED.',
+      'hr.audit_attendance': 'Audits technician tower site GPS attendance records and calculates overtime hours.',
+      'hr.filter_candidates': 'Screens field technician candidates and rigger applicants by K3 and TKPK certifications.',
+      'hr.submit_leave_request': 'Records employee leave request into database with PENDING status.',
+      'hr.approve_leave': 'Authorizes employee leave request and automatically deducts annual leave balance.',
+      'hr.query_pending_leaves': 'Retrieves all employee leave requests awaiting HR manager approval.',
+      'finance.query_invoices': 'Recapitulates telecom operator tower lease billing invoices (Telkomsel, Indosat, XL, Smartfren).',
+      'finance.audit_utility_expenses': 'Audits site operational expenses including PLN grid electricity, generator fuel, and land leases.',
+      'finance.cashflow_summary': 'Calculates cash inflows vs outflows and current net operating balance.',
+      'finance.generate_invoice': 'Generates official BTS tower lease billing invoice draft for telecom clients.',
+      'docgen.compile': 'Compiles official high-resolution PDF documents using the Typst typesetting engine.',
+      'docgen.compile_po': 'Compiles official Purchase Order (PO) documents in PDF format.',
+      'notification.dispatch': 'Dispatches SMTP email notifications with official PDF attachments and authorization links.',
+      'notification.send_email': 'Dispatches email notifications to operational managers or directors.',
+      'agent.reason_and_validate': 'Performs autonomous AI reasoning and business rule validation prior to database commit.',
+      'agent.calculate_reorder_quantity': 'Calculates dynamic material reorder quantities based on current stock, run rates, and safety thresholds.',
+      'system.check_profile': 'Verifies login credentials, user role permissions, and tenant divisional boundaries.',
+      'system.get_system_info': 'Audits health and operational status of server modules, DuckDB database, and AI gateway.',
+      'system.get_company_guidelines': 'Displays operational SOP guidelines and NOC/IT emergency contacts for PT Bali Towerindo Sentra Tbk.'
     };
 
     // Dynamic AI Agent Tools Architecture Loader for Help Section
@@ -3635,7 +3636,7 @@
       const container = document.getElementById('helpDynamicToolsContainer');
       if (!container) return;
 
-      container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">Memuat registry tools real-time dari backend...</div>';
+      container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">Loading real-time tools registry from backend...</div>';
 
       try {
         const res = await fetch(`/api/agent/tools?t=${Date.now()}`, {
@@ -3645,31 +3646,31 @@
           const data = await res.json();
           const tools = data.available_tools || [];
           if (tools.length === 0) {
-            container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">Belum ada tools terdaftar di registry.</div>';
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No tools registered in registry yet.</div>';
             return;
           }
 
           const groups = {
             'INVENTORY': {
-              title: 'Modul Logistik & Pengadaan Menara',
+              title: 'Tower Logistics & Procurement Module',
               badge: 'INVENTORY',
               color: '#1D4ED8',
               tools: []
             },
             'HR': {
-              title: 'Modul SDM Lapangan & Sertifikasi K3',
+              title: 'Field Workforce & K3 Safety Module',
               badge: 'HR',
               color: '#047857',
               tools: []
             },
             'FINANCE': {
-              title: 'Modul Keuangan & Billing Sewa Menara',
+              title: 'Finance & Tower Lease Billing Module',
               badge: 'FINANCE',
               color: '#B45309',
               tools: []
             },
             'SYSTEM': {
-              title: 'Modul Dokumen Typst, Notifikasi Email & Penalaran AI',
+              title: 'Typst Documents, Email Dispatch & AI Reasoning Module',
               badge: 'SYSTEM & DISPATCH',
               color: '#7C3AED',
               tools: []
@@ -3678,7 +3679,7 @@
 
           tools.forEach(t => {
             const name = typeof t === 'string' ? t : (t.tool_name || t.name || t.tool || '');
-            const desc = typeof t === 'string' ? (TOOL_HELP_DESCRIPTIONS[name] || 'Fungsi operasional otomatis AI Agent.') : (t.description || TOOL_HELP_DESCRIPTIONS[name] || 'Fungsi operasional otomatis AI Agent.');
+            const desc = typeof t === 'string' ? (TOOL_HELP_DESCRIPTIONS[name] || 'Automated AI Agent operational tool.') : (t.description || TOOL_HELP_DESCRIPTIONS[name] || 'Automated AI Agent operational tool.');
             const item = { name, desc };
 
             if (name.startsWith('inventory.')) {
@@ -3694,8 +3695,8 @@
 
           let html = `
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-              <span style="font-size: 13px; color: #64748B;">Menampilkan seluruh agent tools aktif yang terdaftar otomatis pada Python AI backend:</span>
-              <span class="doc-badge-pill" style="font-size: 11.5px; font-weight: 700; color: #2563EB; background: #EFF6FF; border-color: #BFDBFE;">${tools.length} Live Tools Terdaftar</span>
+              <span style="font-size: 13px; color: #64748B;">Displaying all active agent tools registered with Python AI backend:</span>
+              <span class="doc-badge-pill" style="font-size: 11.5px; font-weight: 700; color: #2563EB; background: #EFF6FF; border-color: #BFDBFE;">${tools.length} Live Tools Registered</span>
             </div>
             <div class="doc-grid-2">
           `;
@@ -3714,8 +3715,8 @@
                 <table class="doc-table">
                   <thead>
                     <tr>
-                      <th style="width: 40%;">Nama Tool</th>
-                      <th>Fungsi Operasional</th>
+                      <th style="width: 40%;">Tool Name</th>
+                      <th>Operational Description</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3741,8 +3742,8 @@
           container.innerHTML = html;
         }
       } catch (e) {
-        console.error("Gagal memuat dynamic tools help:", e);
-        container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--danger);">Gagal memuat registry tools dari backend.</div>';
+        console.error("Failed to load dynamic tools help:", e);
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--danger);">Failed to load tools registry from backend.</div>';
       }
     }
 
@@ -3766,7 +3767,7 @@
       const container = document.getElementById('adminHelpContainer');
       if (!container) return;
 
-      container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;"><div class="spinner" style="margin: 0 auto 8px;"></div>Memuat katalog alur kerja real-time...</div>';
+      container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;"><div class="spinner" style="margin: 0 auto 8px;"></div>Loading real-time workflow catalog...</div>';
 
       let dynamicFlows = [];
       try {
@@ -3799,17 +3800,17 @@
       const catConfigs = [
         {
           category: 'INVENTORY',
-          categoryLabel: 'Divisi Inventory (Schema A)',
+          categoryLabel: 'Inventory Division (Schema A)',
           matches: t => ['INVENTORY', 'TENANT_A', 'USERA', 'SCHEMA_A'].includes((t || '').toUpperCase())
         },
         {
           category: 'HR',
-          categoryLabel: 'Divisi HR (Schema B)',
+          categoryLabel: 'HR Division (Schema B)',
           matches: t => ['HR', 'TENANT_B', 'USERB', 'SCHEMA_B'].includes((t || '').toUpperCase())
         },
         {
           category: 'FINANCE',
-          categoryLabel: 'Divisi Finance (Schema C)',
+          categoryLabel: 'Finance Division (Schema C)',
           matches: t => ['FINANCE', 'TENANT_C', 'USERC', 'SCHEMA_C'].includes((t || '').toUpperCase())
         },
         {
@@ -3835,8 +3836,8 @@
             examples: Array.isArray(w.example_prompts) && w.example_prompts.length > 0
               ? w.example_prompts
               : (Array.isArray(w.examples) ? w.examples : [
-                  `Jalankan alur kerja ${w.name}`,
-                  `Tolong periksa status dan eksekusi instruksi: ${w.name}`
+                  `Execute workflow ${w.name}`,
+                  `Please check status and execute instruction: ${w.name}`
                 ])
           }));
         return {
@@ -3851,7 +3852,7 @@
         : groups.filter(g => g.category === selectedAdminHelpCategory);
 
       if (filtered.length === 0) {
-        container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">Tidak ada alur workflow yang ditemukan untuk kategori ini.</div>';
+        container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">No workflows found for this category.</div>';
         return;
       }
 
@@ -3862,7 +3863,7 @@
             <div class="admin-help-group-title">
               <span class="category-indicator-dot"></span>
               <span>${escapeHtml(group.categoryLabel)}</span>
-              <span class="category-count-badge">${group.flows.length} Alur</span>
+              <span class="category-count-badge">${group.flows.length} Flows</span>
             </div>
             <div class="admin-flow-grid">
         `;
@@ -3875,8 +3876,8 @@
               <div>
                 <div class="admin-flow-card-top">
                   <span class="admin-flow-badge">${escapeHtml(f.id)}</span>
-                  <button type="button" class="btn-use-builder" data-action="use-in-builder" data-flow-id="${escapeHtml(f.id)}" title="Muat ke Workflow Builder">
-                    <span>Gunakan di Builder</span>
+                  <button type="button" class="btn-use-builder" data-action="use-in-builder" data-flow-id="${escapeHtml(f.id)}" title="Load into Workflow Builder">
+                    <span>Use in Builder</span>
                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                     </svg>
@@ -3886,13 +3887,13 @@
                 <div class="admin-flow-desc">${escapeHtml(f.desc || '')}</div>
                 
                 <div class="admin-inst-box">
-                  <div class="admin-inst-label">Instruksi Bisnis:</div>
+                  <div class="admin-inst-label">Business Instruction:</div>
                   <div class="admin-inst-text">${escapeHtml(f.instruction || '')}</div>
                 </div>
               </div>
 
               <div>
-                <div class="admin-prompt-label">Contoh Prompt Chat:</div>
+                <div class="admin-prompt-label">Example Chat Prompt:</div>
                 <div class="admin-prompts-list">
           `;
 
@@ -3902,8 +3903,8 @@
                 <div style="flex: 1;">
                   <span style="font-weight: 700; color: #3B82F6; margin-right: 4px;">&ldquo;</span><span>${escapeHtml(ex)}</span><span style="font-weight: 700; color: #3B82F6; margin-left: 4px;">&rdquo;</span>
                 </div>
-                <button type="button" class="btn-test-prompt" data-action="test-prompt" data-flow-id="${escapeHtml(f.id)}" data-prompt="${escapeHtml(ex)}" data-wf-name="${escapeHtml(f.name)}" style="background: rgba(59, 130, 246, 0.12); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3B82F6'; this.style.color='#fff';" onmouseout="this.style.background='rgba(59, 130, 246, 0.12)'; this.style.color='#3B82F6';" title="Uji eksekusi alur kerja prompt ini">
-                  Uji Prompt &rarr;
+                <button type="button" class="btn-test-prompt" data-action="test-prompt" data-flow-id="${escapeHtml(f.id)}" data-prompt="${escapeHtml(ex)}" data-wf-name="${escapeHtml(f.name)}" style="background: rgba(59, 130, 246, 0.12); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.background='#3B82F6'; this.style.color='#fff';" onmouseout="this.style.background='rgba(59, 130, 246, 0.12)'; this.style.color='#3B82F6';" title="Test workflow execution with this prompt">
+                  Test Prompt &rarr;
                 </button>
               </div>
             `;
@@ -3952,7 +3953,7 @@
             <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between;">
               <div style="font-weight: 600; font-size: 15px; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
                 <span style="background: #3B82F6; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px;">TEST RUN</span>
-                <span id="testModalTitle">Pengujian Workflow</span>
+                <span id="testModalTitle">Workflow Test</span>
               </div>
               <button onclick="document.getElementById('adminPromptTestModal').style.display='none'" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">&times;</button>
             </div>
@@ -3960,7 +3961,7 @@
               Loading...
             </div>
             <div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; background: rgba(15,23,42,0.6);">
-              <button onclick="document.getElementById('adminPromptTestModal').style.display='none'" style="background: #334155; color: #f1f5f9; border: none; border-radius: 6px; padding: 6px 16px; font-size: 12px; cursor: pointer;">Tutup</button>
+              <button onclick="document.getElementById('adminPromptTestModal').style.display='none'" style="background: #334155; color: #f1f5f9; border: none; border-radius: 6px; padding: 6px 16px; font-size: 12px; cursor: pointer;">Close</button>
             </div>
           </div>
         `;
@@ -3969,17 +3970,17 @@
       modal.style.display = 'flex';
       const titleEl = document.getElementById('testModalTitle');
       const bodyEl = document.getElementById('testModalBody');
-      titleEl.textContent = `Uji Prompt: ${wfName} (${wfId})`;
+      titleEl.textContent = `Test Prompt: ${wfName} (${wfId})`;
       bodyEl.innerHTML = `
         <div style="margin-bottom: 12px; padding: 10px; background: rgba(15,23,42,0.8); border-radius: 6px; border-left: 3px solid #3B82F6;">
-          <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Prompt yang diuji:</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Tested Prompt:</div>
           <div style="font-style: italic; color: #f8fafc;">&ldquo;${escapeHtml(promptText)}&rdquo;</div>
         </div>
         <div style="text-align: center; padding: 24px 0; color: #94a3b8;">
           <svg style="animation: spin 1s linear infinite; display: inline-block; width: 24px; height: 24px; margin-bottom: 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="32" stroke-linecap="round"/>
           </svg>
-          <div>Sedang mengeksekusi routing & alur kerja...</div>
+          <div>Executing routing & workflow pipeline...</div>
         </div>
       `;
 
@@ -3999,10 +4000,10 @@
         if (Array.isArray(data.execution_steps) && data.execution_steps.length > 0) {
           stepsHtml = `
             <div style="margin-top: 14px; margin-bottom: 14px;">
-              <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 6px;">Tahapan Eksekusi:</div>
+              <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 6px;">Execution Steps:</div>
               ${data.execution_steps.map(s => `
                 <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; padding: 6px 10px; background: rgba(30,41,59,0.7); border-radius: 4px;">
-                  <span style="background: ${s.status === 'COMPLETED' ? '#10B981' : '#F59E0B'}; color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 600;">Langkah ${s.step_number}</span>
+                  <span style="background: ${s.status === 'COMPLETED' ? '#10B981' : '#F59E0B'}; color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 600;">Step ${s.step_number}</span>
                   <div style="flex: 1;">
                     <div style="font-weight: 500; color: #f1f5f9;">${escapeHtml(s.title || '')}</div>
                     <div style="font-size: 12px; color: #94a3b8;">${escapeHtml(s.details || '')}</div>
@@ -4025,18 +4026,18 @@
             <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px;">
               Action Type: <strong>${escapeHtml(data.action_type || 'general')}</strong>
             </span>
-            ${data.email_sent ? '<span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px;">Email: Terkirim</span>' : ''}
+            ${data.email_sent ? '<span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px;">Email: Dispatched</span>' : ''}
           </div>
           ${stepsHtml}
           <div style="margin-top: 10px;">
-            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Respons Sistem:</div>
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">System Response:</div>
             <div style="background: rgba(15,23,42,0.9); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); white-space: pre-wrap; font-family: inherit;">${escapeHtml(data.message || '')}</div>
           </div>
         `;
       } catch (err) {
         bodyEl.innerHTML = `
           <div style="padding: 16px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; color: #f87171;">
-            <strong>Gagal menguji prompt:</strong> ${escapeHtml(err.message || String(err))}
+            <strong>Failed to test prompt:</strong> ${escapeHtml(err.message || String(err))}
           </div>
         `;
       }
@@ -4107,22 +4108,22 @@
           window.activeResolvingRequestId = null;
           loadWorkflowRequests();
           const targetDisplay = (data.tenant_id || tenantId);
-          document.getElementById('toastMsg').textContent = `Workflow ${id ? 'berhasil diperbarui' : 'berhasil disusun'}: ${data.workflow_id || data.id || name} (${targetDisplay})`;
+          document.getElementById('toastMsg').textContent = `Workflow ${id ? 'successfully updated' : 'successfully created'}: ${data.workflow_id || data.id || name} (${targetDisplay})`;
           toast.classList.add('show');
           setTimeout(() => toast.classList.remove('show'), 3500);
           
           cancelEdit();
-          // Pertahankan tenant yang baru dipilih agar form tidak melompat ke ALL
+          // Keep newly selected tenant
           setSelectTenant(tenantId);
           loadWorkflows();
         } else {
           const errData = await res.json().catch(() => ({}));
-          alert("Gagal menyimpan workflow: " + (errData.detail || "Terjadi kesalahan server"));
+          alert("Failed to save workflow: " + (errData.detail || "Server error occurred"));
         }
       } catch (err) {
-        alert("Terjadi kesalahan kompilasi workflow: " + err.message);
+        alert("Workflow compilation error: " + err.message);
       } finally {
-        btnText.textContent = id ? 'Update Workflow' : 'Compile & Simpan Workflow';
+        btnText.textContent = id ? 'Update Workflow' : 'Compile & Save Workflow';
         btn.disabled = false;
       }
     }
@@ -4132,8 +4133,8 @@
       document.getElementById('wfName').value = '';
       document.getElementById('wfDesc').value = '';
       document.getElementById('wfInstruction').value = '';
-      document.getElementById('formTitleText').textContent = 'Buat Workflow Baru (Data-Driven Engine)';
-      document.getElementById('btnSubmitText').textContent = 'Compile & Simpan Workflow';
+      document.getElementById('formTitleText').textContent = 'Create New Workflow (Data-Driven Engine)';
+      document.getElementById('btnSubmitText').textContent = 'Compile & Save Workflow';
       document.getElementById('cancelEditBtn').style.display = 'none';
     }
 
@@ -4167,7 +4168,7 @@
       }
 
       if (filtered.length === 0) {
-        listDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; padding: 12px 0;">Tidak ada alur kerja pada kategori ini.</p>';
+        listDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; padding: 12px 0;">No workflows found in this category.</p>';
         return;
       }
 
@@ -4226,7 +4227,7 @@
                 <span class="badge-status-active">ACTIVE</span>
               </div>
             </div>
-            <p class="workflow-desc">${escapeHtml(wf.description || 'Tidak ada deskripsi.')}</p>
+            <p class="workflow-desc">${escapeHtml(wf.description || 'No description provided.')}</p>
             <details class="workflow-details">
               <summary>View JSON Execution Graph</summary>
               <pre>${escapeHtml(escapedJson)}</pre>
@@ -4354,7 +4355,7 @@
                 <span class="badge-status-active">ACTIVE</span>
               </div>
             </div>
-            <p class="workflow-desc">${escapeHtml(wf.description || 'Tidak ada deskripsi.')}</p>
+            <p class="workflow-desc">${escapeHtml(wf.description || 'No description provided.')}</p>
             <details class="workflow-details">
               <summary>View JSON Execution Graph</summary>
               <pre>${escapeHtml(escapedJson)}</pre>
@@ -4374,7 +4375,7 @@
       }
       if (!wf) {
         console.error("Workflow not found for edit:", param);
-        alert("Workflow tidak ditemukan: " + param);
+        alert("Workflow not found: " + param);
         return;
       }
 
@@ -4425,7 +4426,7 @@
     }
 
     async function deleteWf(id) {
-      if(!confirm(`Apakah Anda yakin ingin menghapus workflow ${id}?`)) return;
+      if(!confirm(`Are you sure you want to delete workflow ${id}?`)) return;
       try {
         const res = await fetch(`/api/auth/admin/workflows/${id}`, {
           method: 'DELETE',
@@ -4434,10 +4435,10 @@
         if(res.ok) {
           loadWorkflows();
         } else {
-          alert("Gagal menghapus workflow.");
+          alert("Failed to delete workflow.");
         }
       } catch (err) {
-        alert("Terjadi kesalahan.");
+        alert("An error occurred.");
       }
     }
 
@@ -4492,7 +4493,7 @@
 
         renderWorkflowRequestsList();
       } catch (err) {
-        console.error("Gagal memuat permintaan alur kerja:", err);
+        console.error("Failed to load workflow requests:", err);
       }
     }
 
@@ -4516,8 +4517,8 @@
             <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" style="margin: 0 auto 12px; display: block;">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            <div style="font-weight: 700; font-size: 14px; color: #334155; margin-bottom: 4px;">Tidak Ada Permintaan Alur Kerja</div>
-            <div style="font-size: 12.5px;">Tidak ditemukan usulan dengan kriteria status yang dipilih saat ini.</div>
+            <div style="font-weight: 700; font-size: 14px; color: #334155; margin-bottom: 4px;">No Workflow Requests Found</div>
+            <div style="font-size: 12.5px;">No requests match the selected status filter.</div>
           </div>
         `;
         return;
@@ -4526,11 +4527,11 @@
       const rows = filtered.map(req => {
         let statusBadge = '';
         if (req.status === 'PENDING') {
-          statusBadge = '<span class="badge" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; font-weight: 700;">Menunggu Review</span>';
+          statusBadge = '<span class="badge" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; font-weight: 700;">Pending Review</span>';
         } else if (req.status === 'COMPLETED') {
-          statusBadge = '<span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700;">Selesai</span>';
+          statusBadge = '<span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 700;">Completed</span>';
         } else {
-          statusBadge = '<span class="badge" style="background: #F1F5F9; color: #64748B; border: 1px solid #CBD5E1; font-weight: 700;">Ditolak</span>';
+          statusBadge = '<span class="badge" style="background: #F1F5F9; color: #64748B; border: 1px solid #CBD5E1; font-weight: 700;">Rejected</span>';
         }
 
         let tenantBadgeClass = 'badge-primary';
@@ -4541,19 +4542,19 @@
         if (req.status === 'PENDING') {
           actionHtml = `
             <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn btn-primary btn-sm" data-action="create-wf" data-req-id="${escapeHtml(req.id)}" title="Buat alur kerja dari usulan ini">
+              <button class="btn btn-primary btn-sm" data-action="create-wf" data-req-id="${escapeHtml(req.id)}" title="Create workflow from this request">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                <span>Buat Workflow</span>
+                <span>Create Workflow</span>
               </button>
-              <button class="btn btn-secondary btn-sm" data-action="status-wf" data-status="REJECTED" data-req-id="${escapeHtml(req.id)}" title="Tolak usulan">
+              <button class="btn btn-secondary btn-sm" data-action="status-wf" data-status="REJECTED" data-req-id="${escapeHtml(req.id)}" title="Reject request">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
-                <span>Tolak</span>
+                <span>Reject</span>
               </button>
-              <button class="btn btn-sm" data-action="delete-req" data-req-id="${escapeHtml(req.id)}" title="Hapus usulan ini" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
+              <button class="btn btn-sm" data-action="delete-req" data-req-id="${escapeHtml(req.id)}" title="Delete this request" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -4563,13 +4564,13 @@
         } else {
           actionHtml = `
             <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn btn-secondary btn-sm" data-action="status-wf" data-status="PENDING" data-req-id="${escapeHtml(req.id)}" title="Buka kembali permintaan">
+              <button class="btn btn-secondary btn-sm" data-action="status-wf" data-status="PENDING" data-req-id="${escapeHtml(req.id)}" title="Reopen request">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                <span>Buka Kembali</span>
+                <span>Reopen</span>
               </button>
-              <button class="btn btn-sm" data-action="delete-req" data-req-id="${escapeHtml(req.id)}" title="Hapus usulan ini" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
+              <button class="btn btn-sm" data-action="delete-req" data-req-id="${escapeHtml(req.id)}" title="Delete this request" style="background: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#FFE4E6'" onmouseout="this.style.background='#FFF1F2'">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -4591,8 +4592,8 @@
             <td style="padding: 14px 16px; vertical-align: top;">
               ${req.title ? `<div style="font-size: 13.5px; font-weight: 700; color: #0F172A; margin-bottom: 3px;">${escapeHtml(req.title)}</div>` : ''}
               <div style="font-size: 12.5px; font-weight: 500; color: #334155; line-height: 1.5;">${escapeHtml(req.prompt)}</div>
-              ${req.notes ? `<div style="font-size: 11.5px; color: #64748B; margin-top: 4px; background: #F8FAFC; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0;">Catatan Pengguna: ${escapeHtml(req.notes)}</div>` : ''}
-              ${req.resolved_workflow_id ? `<div style="font-size: 11.5px; color: #059669; font-weight: 600; margin-top: 4px;">Workflow Aktif: ${escapeHtml(req.resolved_workflow_id)}</div>` : ''}
+              ${req.notes ? `<div style="font-size: 11.5px; color: #64748B; margin-top: 4px; background: #F8FAFC; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0;">User Notes: ${escapeHtml(req.notes)}</div>` : ''}
+              ${req.resolved_workflow_id ? `<div style="font-size: 11.5px; color: #059669; font-weight: 600; margin-top: 4px;">Active Workflow: ${escapeHtml(req.resolved_workflow_id)}</div>` : ''}
             </td>
             <td style="padding: 14px 16px; vertical-align: top; width: 130px; text-align: center;">
               ${statusBadge}
@@ -4608,11 +4609,11 @@
         <table class="data-table" style="width: 100%; border-collapse: collapse; margin: 0;">
           <thead>
             <tr style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0; text-align: left;">
-              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">ID & Waktu</th>
-              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Pemohon</th>
-              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Instruksi yang Diminta</th>
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">ID & Time</th>
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Requester</th>
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Requested Instruction</th>
               <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; text-align: center;">Status</th>
-              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Aksi Cepat</th>
+              <th style="padding: 10px 16px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Quick Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -4643,8 +4644,8 @@
       
       const promptClean = (req.prompt || '').trim();
       const shortTitle = promptClean.length > 40 ? promptClean.substring(0, 37) + '...' : promptClean;
-      if (elWfName) elWfName.value = 'Alur Kerja: ' + shortTitle;
-      if (elWfDesc) elWfDesc.value = `Disusun berdasarkan permohonan ${req.username} (${req.tenant_id}).`;
+      if (elWfName) elWfName.value = 'Workflow: ' + shortTitle;
+      if (elWfDesc) elWfDesc.value = `Created based on request by ${req.username} (${req.tenant_id}).`;
       if (elWfInstruction) elWfInstruction.value = promptClean;
 
       const tid = (req.tenant_id || 'ALL').toUpperCase();
@@ -4660,8 +4661,8 @@
         }
       }
 
-      if (elFormTitle) elFormTitle.textContent = `Penyusunan Alur Kerja (Dari Permintaan ${req.id})`;
-      if (elBtnSubmit) elBtnSubmit.textContent = 'Kompilasi & Simpan Workflow';
+      if (elFormTitle) elFormTitle.textContent = `Create Workflow (From Request ${req.id})`;
+      if (elBtnSubmit) elBtnSubmit.textContent = 'Compile & Save Workflow';
       if (elCancelBtn) elCancelBtn.style.display = 'inline-flex';
 
       window.activeResolvingRequestId = req.id;
@@ -4689,18 +4690,18 @@
           await loadWorkflowRequests();
         } else {
           const err = await res.json().catch(() => ({}));
-          alert("Gagal memperbarui status: " + (err.detail || "Kesalahan server"));
+          alert("Failed to update status: " + (err.detail || "Server error"));
         }
       } catch (e) {
-        alert("Gagal menghubungi server: " + e.message);
+        alert("Failed to connect to server: " + e.message);
       }
     }
 
     function confirmClearAllWorkflowRequests() {
       triggerUniversalDelete(
-        'Bersihkan Semua Usulan Alur Kerja',
-        'Tindakan ini akan mengosongkan seluruh antrean usulan alur kerja.',
-        'Apakah Anda yakin ingin menghapus seluruh usulan alur kerja dari pengguna? Data usulan dan statusnya akan dibersihkan agar Anda dapat menguji kembali alur pengajuan dari sisi pengguna dari kondisi awal.',
+        'Clear All Workflow Requests',
+        'This action will clear all submitted workflow requests.',
+        'Are you sure you want to delete all workflow proposals? All request records will be cleared, resetting the user proposal flow to initial state.',
         async () => {
           const token = getAdminToken();
           if (!token) return;
@@ -4711,14 +4712,14 @@
             });
             if (res.ok) {
               const data = await res.json();
-              showToast(data.message || 'Semua usulan alur kerja berhasil dibersihkan!');
+              showToast(data.message || 'All workflow requests successfully cleared!');
               await loadWorkflowRequests();
             } else {
               const err = await res.json().catch(() => ({}));
-              alert('Gagal membersihkan usulan: ' + (err.detail || 'Terjadi kesalahan'));
+              alert('Failed to clear requests: ' + (err.detail || 'An error occurred'));
             }
           } catch (e) {
-            alert('Kesalahan jaringan: ' + e.message);
+            alert('Network error: ' + e.message);
           }
         }
       );
@@ -4726,9 +4727,9 @@
 
     function deleteSingleWorkflowRequest(reqId) {
       triggerUniversalDelete(
-        `Hapus Usulan ${reqId}`,
-        'Usulan alur kerja ini akan dihapus secara permanen.',
-        `Apakah Anda yakin ingin menghapus usulan ${reqId}?`,
+        `Delete Request ${reqId}`,
+        'This workflow request will be permanently deleted.',
+        `Are you sure you want to delete request ${reqId}?`,
         async () => {
           const token = getAdminToken();
           if (!token) return;
@@ -4739,14 +4740,14 @@
             });
             if (res.ok) {
               const data = await res.json();
-              showToast(data.message || `Usulan ${reqId} berhasil dihapus!`);
+              showToast(data.message || `Request ${reqId} successfully deleted!`);
               await loadWorkflowRequests();
             } else {
               const err = await res.json().catch(() => ({}));
-              alert('Gagal menghapus usulan: ' + (err.detail || 'Terjadi kesalahan'));
+              alert('Failed to delete request: ' + (err.detail || 'An error occurred'));
             }
           } catch (e) {
-            alert('Kesalahan jaringan: ' + e.message);
+            alert('Network error: ' + e.message);
           }
         }
       );
@@ -4754,9 +4755,9 @@
 
     function confirmResetWorkflowsToDefault() {
       triggerUniversalDelete(
-        'Pulihkan Alur Kerja dari File Referensi',
-        'Tindakan ini akan menambahkan kembali alur kerja yang hilang dari berkas workflows.json.',
-        'Alur kerja yang hilang dari database akan dipulihkan dari berkas JSON referensi. <strong>Alur kerja yang sudah ada tidak akan diubah atau dihapus.</strong>',
+        'Restore Workflows from Reference File',
+        'This action will re-add any missing workflows from workflows.json.',
+        'Missing workflows will be restored from the reference JSON file into the database. <strong>Existing workflows will not be modified or deleted.</strong>',
         async () => {
           const token = getAdminToken();
           if (!token) return;
@@ -4767,14 +4768,14 @@
             });
             if (res.ok) {
               const data = await res.json();
-              showToast(data.message || 'Alur kerja berhasil dikembalikan ke standar awal!');
+              showToast(data.message || 'Workflows successfully restored from defaults!');
               await loadWorkflows();
             } else {
               const err = await res.json().catch(() => ({}));
-              alert('Gagal me-reset alur kerja: ' + (err.detail || 'Terjadi kesalahan'));
+              alert('Failed to reset workflows: ' + (err.detail || 'An error occurred'));
             }
           } catch (e) {
-            alert('Kesalahan jaringan: ' + e.message);
+            alert('Network error: ' + e.message);
           }
         }
       );
@@ -4796,12 +4797,12 @@
         }
         const categories = new Set(allLoadedTools.map(t => getToolCategory(typeof t === 'string' ? t : (t.tool_name || t.name || t.tool || ''))));
         if (document.getElementById('kpiTotalCategories')) {
-          document.getElementById('kpiTotalCategories').textContent = `${categories.size} Kategori`;
+          document.getElementById('kpiTotalCategories').textContent = `${categories.size} Categories`;
         }
         renderToolsGrid(allLoadedTools);
       } catch (err) {
-        console.error("Gagal memuat tools:", err);
-        container.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Gagal memuat katalog tools dari backend.</p>';
+        console.error("Failed to load tools:", err);
+        container.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Failed to load tools catalog from backend.</p>';
       }
     }
 
@@ -4895,6 +4896,14 @@
           params: 'template: "purchase_requisition", data: PurchaseRequisitionDoc',
           example: '{"type": "tool", "tool": "docgen.compile"}'
         },
+        'agent.reason_and_validate': {
+          params: 'instruction: string, params: object, mandatory_fields?: list[string]',
+          example: '{"type": "agent", "task": "agent.reason_and_validate"}'
+        },
+        'agent.calculate_reorder_quantity': {
+          params: 'low_stock_items: list[object], tenant_id: string = "INVENTORY"',
+          example: '{"type": "agent", "task": "calculate_reorder_quantity"}'
+        },
         'notification.send_email': {
           params: 'recipient_email?: string, pr_number?: string, content_text: string',
           example: '{"type": "tool", "tool": "notification.send_email"}'
@@ -4913,14 +4922,14 @@
     function renderToolsGrid(tools) {
       const container = document.getElementById('toolsListContainer');
       if (!tools || tools.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">Tidak ada tools yang cocok dengan filter pencarian.</p>';
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">No tools match the selected search or filter.</p>';
         return;
       }
 
       let html = '';
       tools.forEach(tool => {
         const name = tool.tool_name || '';
-        const desc = tool.description || 'Tidak ada deskripsi.';
+        const desc = tool.description || 'No description provided.';
         const category = getToolCategory(name);
         const catBadgeClass = getCategoryBadgeClass(category);
         const meta = getToolMetadata(name);
@@ -4935,12 +4944,12 @@
               <p class="tool-desc-text">${escapeHtml(desc)}</p>
               
               <div class="tool-meta-box">
-                <div class="tool-meta-label">Parameter Input (Schema):</div>
+                <div class="tool-meta-label">Input Parameters (Schema):</div>
                 <code class="tool-meta-code">${escapeHtml(meta.params)}</code>
               </div>
 
               <div class="tool-meta-box" style="margin-bottom: 0;">
-                <div class="tool-meta-label">Contoh Format Workflow:</div>
+                <div class="tool-meta-label">Workflow Format Example:</div>
                 <code class="tool-meta-code">${escapeHtml(meta.example)}</code>
               </div>
             </div>
@@ -4950,7 +4959,7 @@
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                <span>Gunakan di Form</span>
+                <span>Use in Form</span>
               </button>
             </div>
           </div>
@@ -4963,7 +4972,7 @@
       currentToolCategoryFilter = category;
       const pills = document.querySelectorAll('#toolCategoryPills .filter-pill');
       pills.forEach(p => {
-        if (p.textContent.includes(category) || (category === 'ALL' && p.textContent.includes('Semua'))) {
+        if (p.textContent.includes(category) || (category === 'ALL' && p.textContent.includes('All'))) {
           p.classList.add('active');
         } else {
           p.classList.remove('active');
@@ -4990,7 +4999,7 @@
       switchAdminTab('workflows');
       const textarea = document.getElementById('wfInstruction');
       const currentVal = textarea.value.trim();
-      const addition = `Gunakan tool '${toolName}'.`;
+      const addition = `Use tool '${toolName}'.`;
       textarea.value = currentVal ? `${currentVal}\n${addition}` : addition;
       textarea.focus();
     }
@@ -5027,13 +5036,13 @@
 
           // KPI Updates
           const elUsers = document.getElementById('kpiTotalUsers');
-          if (elUsers) elUsers.textContent = users.length + ' Akun';
+          if (elUsers) elUsers.textContent = users.length + ' Accounts';
 
           const elInv = document.getElementById('kpiInvCount');
-          if (elInv) elInv.textContent = invItems.length + ' SKU';
+          if (elInv) elInv.textContent = invItems.length + ' SKUs';
 
           const elHr = document.getElementById('kpiHrCount');
-          if (elHr) elHr.textContent = hrItems.length + ' Personel';
+          if (elHr) elHr.textContent = hrItems.length + ' Personnel';
 
           const elFin = document.getElementById('kpiFinCount');
           if (elFin) elFin.textContent = finItems.length + ' Invoices';
@@ -5047,28 +5056,28 @@
               : `<span class="badge-role-user">USER</span>`;
             
             let tenantBadge = `<span class="badge-tenant tenant-all">ALL (Global)</span>`;
-            let metricLabel = `${u.stats ? Number(u.stats.total_stock).toLocaleString('id-ID') : 0} Unit`;
-            let skuLabel = `${u.stats ? u.stats.total_items : 0} SKU`;
+            let metricLabel = `${u.stats ? Number(u.stats.total_stock).toLocaleString('en-US') : 0} Units`;
+            let skuLabel = `${u.stats ? u.stats.total_items : 0} SKUs`;
 
             if (['TENANT_A', 'INVENTORY'].includes(u.tenant_id) || u.username === 'usera') {
               tenantBadge = `<span class="badge-tenant tenant-a">usera (Inventory)</span>`;
               const invStockSum = invItems.reduce((acc, it) => acc + (Number(it.current_stock || it.stock || 0)), 0);
-              metricLabel = `${invStockSum > 0 ? invStockSum.toLocaleString('id-ID') : '23.681'} Unit Fisik`;
-              skuLabel = `${invItems.length} SKU Material`;
+              metricLabel = `${invStockSum > 0 ? invStockSum.toLocaleString('en-US') : '23,681'} Physical Units`;
+              skuLabel = `${invItems.length} Material SKUs`;
             } else if (['TENANT_B', 'HR'].includes(u.tenant_id) || u.username === 'userb') {
               tenantBadge = `<span class="badge-tenant tenant-b">userb (HR & Field)</span>`;
-              metricLabel = `${hrItems.length} Personel Aktif`;
-              skuLabel = `${hrItems.length} Karyawan`;
+              metricLabel = `${hrItems.length} Active Personnel`;
+              skuLabel = `${hrItems.length} Employees`;
             } else if (['TENANT_C', 'FINANCE'].includes(u.tenant_id) || u.username === 'userc') {
               tenantBadge = `<span class="badge-tenant tenant-c">userc (Finance)</span>`;
               const finTotalBilled = finItems.reduce((acc, it) => acc + (Number(it.total_billed || it.amount || 0)), 0);
-              metricLabel = finTotalBilled > 0 ? `Rp ${(finTotalBilled / 1000000).toLocaleString('id-ID', {maximumFractionDigits: 1})} Juta Tagihan` : 'Rp 618,8 Juta Tagihan';
+              metricLabel = finTotalBilled > 0 ? `IDR ${(finTotalBilled / 1000000).toLocaleString('en-US', {maximumFractionDigits: 1})}M Billed` : 'IDR 618.8M Billed';
               skuLabel = `${finItems.length} Invoices`;
             } else if (u.tenant_id === 'ALL' || u.role === 'ADMIN') {
               tenantBadge = `<span class="badge-tenant tenant-all">ALL (Superadmin)</span>`;
               const totalMasterCount = invItems.length + hrItems.length + finItems.length;
-              metricLabel = `Semua Modul (${invItems.length} SKU, ${hrItems.length} HR, ${finItems.length} Fin)`;
-              skuLabel = `${totalMasterCount} Master Data`;
+              metricLabel = `All Modules (${invItems.length} SKUs, ${hrItems.length} HR, ${finItems.length} Fin)`;
+              skuLabel = `${totalMasterCount} Master Records`;
             }
 
             usersHtml += `
@@ -5569,7 +5578,7 @@
           } else {
             selWh.innerHTML = currentMaterialBalances.map((b, idx) => `
               <option value="${escapeHtml(b.warehouse_id)}" ${idx === 0 ? 'selected' : ''}>
-                ${escapeHtml(b.warehouse_name)} (Stok: ${Number(b.quantity_on_hand).toLocaleString('id-ID')} ${escapeHtml(b.unit)}, ROP: ${Number(b.reorder_point) || 0})
+                ${escapeHtml(b.warehouse_name)} (Stock: ${Number(b.quantity_on_hand).toLocaleString('en-US')} ${escapeHtml(b.unit)}, ROP: ${Number(b.reorder_point) || 0})
               </option>
             `).join('');
             onAdminStockWarehouseChange();
@@ -5577,7 +5586,7 @@
         }
       } catch (e) {
         console.error('Error fetching stock balances:', e);
-        selWh.innerHTML = '<option value="">Gagal memuat gudang</option>';
+        selWh.innerHTML = '<option value="">Failed to load warehouses</option>';
       }
     }
 
@@ -5602,11 +5611,11 @@
       const ropVal = document.getElementById('editStockRopInput').value;
 
       if (!warehouseId) {
-        alert('Pilih gudang terlebih dahulu.');
+        alert('Please select a warehouse first.');
         return;
       }
       if (newQtyVal === '' || Number(newQtyVal) < 0) {
-        alert('Masukkan jumlah stok yang valid (minimal 0).');
+        alert('Please enter a valid stock quantity (minimum 0).');
         return;
       }
 
@@ -5619,7 +5628,7 @@
 
       const btn = document.getElementById('btnSaveAdminStock');
       btn.disabled = true;
-      btn.innerHTML = '<span>Menyimpan...</span>';
+      btn.innerHTML = '<span>Saving...</span>';
 
       try {
         const res = await fetch('/api/balitower/inventory/stock-balances', {
@@ -5634,17 +5643,17 @@
         if (res.ok) {
           const data = await res.json();
           closeAdminStockModal();
-          showToast(data.message || 'Stok berhasil diperbarui!');
+          showToast(data.message || 'Stock successfully updated!');
           await loadUsersDatabase();
         } else {
           const err = await res.json().catch(() => ({}));
-          alert('Gagal menyimpan stok: ' + (err.detail || 'Terjadi kesalahan server'));
+          alert('Failed to save stock: ' + (err.detail || 'Server error occurred'));
         }
       } catch (e) {
-        alert('Kesalahan jaringan: ' + e.message);
+        alert('Network error: ' + e.message);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Simpan Perubahan</span>';
+        btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Save Changes</span>';
       }
     }
 
@@ -5666,15 +5675,15 @@
         });
         if (res.ok) {
           const data = await res.json();
-          const backupMsg = data.backup_created ? ` (Snapshot tersimpan di: ${data.backup_created})` : '';
-          showToast((data.message || 'Semua draf PR dan PO berhasil dibersihkan!') + backupMsg);
+          const backupMsg = data.backup_created ? ` (Snapshot saved at: ${data.backup_created})` : '';
+          showToast((data.message || 'All PR and PO drafts successfully cleared!') + backupMsg);
         } else {
           const err = await res.json().catch(() => ({}));
-          alert('Gagal membersihkan data: ' + (err.detail || 'Terjadi kesalahan'));
+          alert('Failed to clear data: ' + (err.detail || 'An error occurred'));
         }
 
       } catch (e) {
-        alert('Kesalahan jaringan: ' + e.message);
+        alert('Network error: ' + e.message);
       }
     }
 
@@ -5683,9 +5692,9 @@
     // ==========================================
     let pendingDeleteAction = null;
     function triggerUniversalDelete(title, sub, msg, onConfirm) {
-      document.getElementById('delConfirmTitle').textContent = title || 'Konfirmasi Hapus Data';
-      document.getElementById('delConfirmSub').textContent = sub || 'Tindakan ini tidak dapat dibatalkan.';
-      document.getElementById('delConfirmMsg').textContent = (msg || 'Apakah Anda yakin ingin menghapus data ini dari basis data?').replace(/<[^>]*>/g, '');
+      document.getElementById('delConfirmTitle').textContent = title || 'Confirm Delete Data';
+      document.getElementById('delConfirmSub').textContent = sub || 'This action cannot be undone.';
+      document.getElementById('delConfirmMsg').textContent = (msg || 'Are you sure you want to delete this record from the database?').replace(/<[^>]*>/g, '');
       pendingDeleteAction = onConfirm;
       document.getElementById('modalUniversalDelete').style.display = 'flex';
     }
@@ -5702,7 +5711,7 @@
     // USER ACCOUNT CRUD
     // ==========================================
     function openCreateUserModal() {
-      document.getElementById('modalUserTitle').textContent = 'Tambah Pengguna Baru';
+      document.getElementById('modalUserTitle').textContent = 'Add New User';
       document.getElementById('userCrudUserId').value = '';
       const un = document.getElementById('userCrudUsername');
       un.value = '';
@@ -5715,13 +5724,13 @@
     }
 
     function openEditUserModal(userId, username, role, tenantId) {
-      document.getElementById('modalUserTitle').textContent = `Edit Pengguna: ${username}`;
+      document.getElementById('modalUserTitle').textContent = `Edit User: ${username}`;
       document.getElementById('userCrudUserId').value = userId;
       const un = document.getElementById('userCrudUsername');
       un.value = username;
       un.disabled = true;
       document.getElementById('userCrudPassword').value = '';
-      document.getElementById('userCrudPwdLabel').textContent = 'PASSWORD BARU (Kosongkan jika tidak diubah)';
+      document.getElementById('userCrudPwdLabel').textContent = 'NEW PASSWORD (Leave blank if unchanged)';
       document.getElementById('userCrudRole').value = role || 'USER';
       document.getElementById('userCrudTenant').value = tenantId || 'ALL';
       document.getElementById('modalUserCrud').style.display = 'flex';
@@ -5735,11 +5744,11 @@
       const tenantId = document.getElementById('userCrudTenant').value;
 
       if (!userId && (!username || !password)) {
-        showToast('Username dan password wajib diisi.', 'warning');
+        showToast('Username and password are required.', 'warning');
         return;
       }
       if (password && password.length < 6) {
-        showToast('Password minimal harus 6 karakter.', 'warning');
+        showToast('Password must be at least 6 characters.', 'warning');
         return;
       }
 
@@ -5775,22 +5784,22 @@
         if (res.ok) {
           const data = await res.json();
           document.getElementById('modalUserCrud').style.display = 'none';
-          showToast(data.message || 'Data pengguna berhasil disimpan!');
+          showToast(data.message || 'User data successfully saved!');
           loadUsersDatabase();
         } else {
           const err = await res.json().catch(() => ({}));
-          alert('Gagal menyimpan pengguna: ' + (err.detail || 'Terjadi kesalahan'));
+          alert('Failed to save user: ' + (err.detail || 'An error occurred'));
         }
       } catch (e) {
-        alert('Kesalahan jaringan: ' + e.message);
+        alert('Network error: ' + e.message);
       }
     }
 
     function deleteUserAccount(userId, username) {
       triggerUniversalDelete(
-        'Hapus Akun Pengguna',
-        'Akun tidak akan dapat login lagi',
-        `Apakah Anda yakin ingin menghapus akun pengguna ${username} (${userId})?`,
+        'Delete User Account',
+        'The account will no longer be able to log in',
+        `Are you sure you want to delete user account ${username} (${userId})?`,
         async () => {
           try {
             const res = await fetch(`/api/auth/admin/users/${userId}`, {
@@ -5799,14 +5808,14 @@
             });
             if (res.ok) {
               const data = await res.json();
-              showToast(data.message || 'Pengguna berhasil dihapus!');
+              showToast(data.message || 'User successfully deleted!');
               loadUsersDatabase();
             } else {
               const err = await res.json().catch(() => ({}));
-              alert('Gagal menghapus pengguna: ' + (err.detail || 'Terjadi kesalahan'));
+              alert('Failed to delete user: ' + (err.detail || 'An error occurred'));
             }
           } catch (e) {
-            alert('Kesalahan jaringan: ' + e.message);
+            alert('Network error: ' + e.message);
           }
         }
       );
@@ -5816,10 +5825,10 @@
     // MATERIAL CRUD (INVENTORY)
     // ==========================================
     function openCreateMaterialModal() {
-      document.getElementById('modalMaterialTitle').textContent = 'Tambah Material Baru';
+      document.getElementById('modalMaterialTitle').textContent = 'Add New Material';
       document.getElementById('matCrudItemId').value = '';
       document.getElementById('matCrudName').value = '';
-      document.getElementById('matCrudCategory').value = 'Kabel Fiber Optik';
+      document.getElementById('matCrudCategory').value = 'Fiber Optic Cable';
       document.getElementById('matCrudUnit').value = 'meter';
       document.getElementById('matCrudPrice').value = '15000';
       document.getElementById('matCrudMinStock').value = '50';
@@ -5849,7 +5858,7 @@
       const min_threshold = parseInt(document.getElementById('matCrudMinStock').value, 10) || 10;
 
       if (!name) {
-        alert('Nama material wajib diisi.');
+        alert('Material name is required.');
         return;
       }
 
@@ -5895,22 +5904,22 @@
         if (res.ok) {
           const data = await res.json();
           document.getElementById('modalMaterialCrud').style.display = 'none';
-          showToast(data.message || 'Material berhasil disimpan!');
+          showToast(data.message || 'Material successfully saved!');
           loadUsersDatabase();
         } else {
           const err = await res.json().catch(() => ({}));
-          alert('Gagal menyimpan material: ' + (err.detail || 'Terjadi kesalahan'));
+          alert('Failed to save material: ' + (err.detail || 'An error occurred'));
         }
       } catch (e) {
-        alert('Kesalahan jaringan: ' + e.message);
+        alert('Network error: ' + e.message);
       }
     }
 
     function deleteInventoryItem(itemId, name) {
       triggerUniversalDelete(
-        'Hapus Data Material',
-        'Data master material dan saldo stok gudangnya akan dihapus',
-        `Apakah Anda yakin ingin menghapus material ${name} (${itemId})?`,
+        'Delete Material Record',
+        'Master material data and warehouse stock balances will be deleted',
+        `Are you sure you want to delete material ${name} (${itemId})?`,
         async () => {
           try {
             const res = await fetch(`/api/auth/admin/inventory/items?item_id=${encodeURIComponent(itemId)}`, {
@@ -5919,14 +5928,14 @@
             });
             if (res.ok) {
               const data = await res.json();
-              showToast(data.message || 'Material berhasil dihapus!');
+              showToast(data.message || 'Material successfully deleted!');
               loadUsersDatabase();
             } else {
               const err = await res.json().catch(() => ({}));
-              alert('Gagal menghapus material: ' + (err.detail || 'Terjadi kesalahan'));
+              alert('Failed to delete material: ' + (err.detail || 'An error occurred'));
             }
           } catch (e) {
-            alert('Kesalahan jaringan: ' + e.message);
+            alert('Network error: ' + e.message);
           }
         }
       );
@@ -5936,7 +5945,7 @@
     // EMPLOYEE CRUD (HR)
     // ==========================================
     function openCreateEmployeeModal() {
-      document.getElementById('modalEmployeeTitle').textContent = 'Tambah Karyawan Baru';
+      document.getElementById('modalEmployeeTitle').textContent = 'Add New Employee';
       document.getElementById('empCrudId').value = '';
       document.getElementById('empCrudFullName').value = '';
       document.getElementById('empCrudDept').value = 'Tower Operations';
@@ -5948,7 +5957,7 @@
     }
 
     function openEditEmployeeModal(empId, fullName, dept, job, status, k3, leaveBal) {
-      document.getElementById('modalEmployeeTitle').textContent = `Edit Karyawan: ${fullName}`;
+      document.getElementById('modalEmployeeTitle').textContent = `Edit Employee: ${fullName}`;
       document.getElementById('empCrudId').value = empId;
       document.getElementById('empCrudFullName').value = fullName;
       document.getElementById('empCrudDept').value = dept || 'Tower Operations';
@@ -5969,7 +5978,7 @@
       const leave_balance = parseInt(document.getElementById('empCrudLeaveBal').value, 10) || 0;
 
       if (!full_name) {
-        alert('Nama karyawan wajib diisi.');
+        alert('Employee name is required.');
         return;
       }
 
@@ -6013,22 +6022,22 @@
         if (res.ok) {
           const data = await res.json();
           document.getElementById('modalEmployeeCrud').style.display = 'none';
-          showToast(data.message || 'Karyawan berhasil disimpan!');
+          showToast(data.message || 'Employee successfully saved!');
           loadUsersDatabase();
         } else {
           const err = await res.json().catch(() => ({}));
-          alert('Gagal menyimpan karyawan: ' + (err.detail || 'Terjadi kesalahan'));
+          alert('Failed to save employee: ' + (err.detail || 'An error occurred'));
         }
       } catch (e) {
-        alert('Kesalahan jaringan: ' + e.message);
+        alert('Network error: ' + e.message);
       }
     }
 
     function deleteEmployeeRecord(empId, fullName) {
       triggerUniversalDelete(
-        'Hapus Data Karyawan',
-        'Data personel dan riwayat cuti terkait akan dihapus',
-        `Apakah Anda yakin ingin menghapus data karyawan ${fullName} (${empId})?`,
+        'Delete Employee Record',
+        'Personnel data and associated leave history will be deleted',
+        `Are you sure you want to delete employee ${fullName} (${empId})?`,
         async () => {
           try {
             const res = await fetch(`/api/auth/admin/hr/employees?employee_id=${encodeURIComponent(empId)}`, {
@@ -6037,14 +6046,14 @@
             });
             if (res.ok) {
               const data = await res.json();
-              showToast(data.message || 'Data karyawan berhasil dihapus!');
+              showToast(data.message || 'Employee successfully deleted!');
               loadUsersDatabase();
             } else {
               const err = await res.json().catch(() => ({}));
-              alert('Gagal menghapus karyawan: ' + (err.detail || 'Terjadi kesalahan'));
+              alert('Failed to delete employee: ' + (err.detail || 'An error occurred'));
             }
           } catch (e) {
-            alert('Kesalahan jaringan: ' + e.message);
+            alert('Network error: ' + e.message);
           }
         }
       );
@@ -6054,7 +6063,7 @@
     // INVOICE CRUD (FINANCE)
     // ==========================================
     function openCreateInvoiceModal() {
-      document.getElementById('modalInvoiceTitle').textContent = 'Tambah Invoice Tagihan';
+      document.getElementById('modalInvoiceTitle').textContent = 'Add New Invoice';
       document.getElementById('invCrudInvoiceId').value = '';
       document.getElementById('invCrudNumber').value = '';
       document.getElementById('invCrudPeriod').value = '2026-Q2';
@@ -6126,22 +6135,22 @@
         if (res.ok) {
           const data = await res.json();
           document.getElementById('modalInvoiceCrud').style.display = 'none';
-          showToast(data.message || 'Invoice berhasil disimpan!');
+          showToast(data.message || 'Invoice successfully saved!');
           loadUsersDatabase();
         } else {
           const err = await res.json().catch(() => ({}));
-          alert('Gagal menyimpan invoice: ' + (err.detail || 'Terjadi kesalahan'));
+          alert('Failed to save invoice: ' + (err.detail || 'An error occurred'));
         }
       } catch (e) {
-        alert('Kesalahan jaringan: ' + e.message);
+        alert('Network error: ' + e.message);
       }
     }
 
     function deleteInvoiceRecord(invId, invNumber) {
       triggerUniversalDelete(
-        'Hapus Data Invoice',
-        'Data tagihan sewa menara ini akan dihapus dari sistem keuangan',
-        `Apakah Anda yakin ingin menghapus invoice ${invNumber}?`,
+        'Delete Invoice Record',
+        'Tower lease invoice data will be deleted from the finance system',
+        `Are you sure you want to delete invoice ${invNumber}?`,
         async () => {
           try {
             const res = await fetch(`/api/auth/admin/finance/invoices?invoice_id=${encodeURIComponent(invId)}`, {
@@ -6150,14 +6159,14 @@
             });
             if (res.ok) {
               const data = await res.json();
-              showToast(data.message || 'Invoice berhasil dihapus!');
+              showToast(data.message || 'Invoice successfully deleted!');
               loadUsersDatabase();
             } else {
               const err = await res.json().catch(() => ({}));
-              alert('Gagal menghapus invoice: ' + (err.detail || 'Terjadi kesalahan'));
+              alert('Failed to delete invoice: ' + (err.detail || 'An error occurred'));
             }
           } catch (e) {
-            alert('Kesalahan jaringan: ' + e.message);
+            alert('Network error: ' + e.message);
           }
         }
       );

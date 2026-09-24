@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -698,7 +698,7 @@
           </div>
         </div>
         <h1 class="hero-title" id="heroTitle"><span style="color: #004B93;">Bali</span><span style="color: #F26F21;">Tower</span> Operations Center</h1>
-        <p class="hero-subtitle" id="heroSubtitle">Pusat komando terpadu PT Bali Towerindo Sentra Tbk. Analisis persediaan material tower/FO, monitoring absensi GPS & jam lembur teknisi, atau rekapitulasi laporan keuangan & invoice operator.</p>
+        <p class="hero-subtitle" id="heroSubtitle">Integrated Operations Command Center for PT Bali Towerindo Sentra Tbk. Analyze tower/FO material inventory, monitor field technician GPS attendance & overtime, or audit financial records & operator client billing.</p>
       </div>
 
       <!-- Conversational Stream (Visible when chat history exists) -->
@@ -715,7 +715,7 @@
           <!-- Main Input Bar -->
           <div class="input-bar-container" id="inputBarContainer">
             <div class="prompt-typewriter-overlay" id="promptTypewriterOverlay" aria-hidden="true">
-              <span class="typewriter-text" id="typewriterText">What's on your mind? Tanyakan kebutuhan operasional...</span><span class="typewriter-cursor"></span>
+              <span class="typewriter-text" id="typewriterText">What's on your mind? Ask operational questions or execute automated workflows...</span><span class="typewriter-cursor"></span>
             </div>
             <textarea id="promptInput" class="prompt-textarea" placeholder="" rows="1" onkeydown="handleKey(event)" oninput="autoResizePromptInput(); handlePromptInputChange();" onfocus="handlePromptInputFocus();" onblur="handlePromptInputBlur();"></textarea>
 
@@ -807,19 +807,19 @@
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
           </svg>
-          <span>Katalog Workflow & Contoh Prompt</span>
+          <span>Workflow Catalog & Example Prompts</span>
         </button>
         <button type="button" class="flow-help-tab-btn" id="helpTabBtnModel" onclick="switchHelpModalTab('model')">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
           </svg>
-          <span>Panduan & Model Kerja</span>
+          <span>Operating Guidelines & Model</span>
         </button>
         <button type="button" class="flow-help-tab-btn" id="helpTabBtnPolicy" onclick="switchHelpModalTab('policy')">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
           </svg>
-          <span>Kebijakan Hak Akses Tools</span>
+          <span>Tool Access & RBAC Policy</span>
         </button>
       </div>
       <div class="flow-help-modal-body" id="flowHelpModalBody">
@@ -835,7 +835,6 @@
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="/static/js/safe_rendering.js"></script>
   <script src="/static/js/safe_rendering.js"></script>
   <script src="/static/js/dashboard.js"></script>
 </body>

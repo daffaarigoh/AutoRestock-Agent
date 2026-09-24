@@ -819,6 +819,27 @@ class JSONExecutionEngine:
                     from agents.router import extract_recipient_email
                     step_recip = step.get("params", {}).get("recipient_email")
                     extracted_recip = step_recip or context.get("recipient_email") or extract_recipient_email(p_src)
+
+                    # Fail-closed guard: if earlier step failed or PR drafting errored, abort email dispatch
+                    if context.get("pr_generation_error") or any(r.get("status") == "ERROR" for r in execution_results):
+                        context["email_sent"] = False
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Send Notification / Email",
+                            "status": "SKIPPED",
+                            "details": "Notification dispatch skipped: Previous document generation or database step encountered an error."
+                        })
+                        continue
+
+                    if context.get("planned_items") and not context.get("pr_number"):
+                        context["email_sent"] = False
+                        execution_results.append({
+                            "step_number": i,
+                            "title": "Send Notification / Email",
+                            "status": "SKIPPED",
+                            "details": "Notification dispatch skipped: Purchase Requisition draft was not generated."
+                        })
+                        continue
                     
                     wants_email = any(k in p_lower for k in [
                         "kirim ke email", "kirim email", "kirimkan email", "kirimkan ke email",
@@ -833,9 +854,9 @@ class JSONExecutionEngine:
                         context["email_clarification_type"] = "MISSING_RECIPIENT"
                         execution_results.append({
                             "step_number": i,
-                            "title": "Klarifikasi Alamat Email Tujuan",
+                            "title": "Clarify Recipient Email Address",
                             "status": "WAITING_INPUT",
-                            "details": "Pengiriman email ditangguhkan karena pengguna belum menyertakan alamat email tujuan pengiriman."
+                            "details": "Email dispatch suspended: Recipient email address not provided by user."
                         })
                         continue
 
@@ -846,9 +867,9 @@ class JSONExecutionEngine:
                         context["email_clarification_type"] = "UNSPECIFIED_ACTION"
                         execution_results.append({
                             "step_number": i,
-                            "title": "Distribusi & Otorisasi Email",
+                            "title": "Email Distribution & Authorization",
                             "status": "SKIPPED",
-                            "details": "Data berhasil dicatat ke sistem. Pengiriman email dilewati karena tidak ada instruksi kirim email dari pengguna."
+                            "details": "Data recorded into system. Email dispatch skipped: No user instruction to send email."
                         })
                         continue
 
@@ -1253,6 +1274,15 @@ class JSONExecutionEngine:
                                 "details": f"Berkas PO ({target_po}) siap dipratinjau."
                             })
                     else:
+                        if context.get("pr_number"):
+                            execution_results.append({
+                                "step_number": i,
+                                "title": "Generate Document / PR Draft",
+                                "status": "COMPLETED",
+                                "details": f"Purchase Requisition {context.get('pr_number')} already generated."
+                            })
+                            continue
+
                         planned_items = context.get("planned_items", [])
                         if not planned_items:
                             execution_results.append({
@@ -1274,15 +1304,41 @@ class JSONExecutionEngine:
                             status="PENDING"
                         )
                         
-                        # Sync DB First (Before PDF generation to avoid Uvicorn reload wiping it)
+                        # Sync DB First (Ensure tables exist so missing table never silently fails)
                         conn = get_db_connection()
-                        for it in planned_items:
-                            order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-                            conn.execute("INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', ?);", 
-                                         [order_id, pr_number, it.item_id, it.vendor_id, it.reorder_qty, it.unit_price, it.total_price, tenant_id])
-
-                        # Record into purchase_requests table with status 'PENDING'
                         try:
+                            conn.execute("""
+                                CREATE TABLE IF NOT EXISTS orders (
+                                    order_id VARCHAR PRIMARY KEY,
+                                    pr_number VARCHAR NOT NULL,
+                                    item_id VARCHAR NOT NULL,
+                                    vendor_id VARCHAR NOT NULL,
+                                    quantity INTEGER NOT NULL,
+                                    unit_price FLOAT NOT NULL,
+                                    total_price FLOAT NOT NULL,
+                                    status VARCHAR NOT NULL,
+                                    tenant_id VARCHAR NOT NULL,
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                            conn.execute("""
+                                CREATE TABLE IF NOT EXISTS purchase_requests (
+                                    pr_number VARCHAR PRIMARY KEY,
+                                    created_at TIMESTAMP,
+                                    status VARCHAR,
+                                    total_amount BIGINT,
+                                    items_json TEXT,
+                                    tenant_id VARCHAR,
+                                    auditor_status VARCHAR DEFAULT 'PASSED',
+                                    auditor_notes TEXT,
+                                    pdf_path VARCHAR
+                                );
+                            """)
+                            for it in planned_items:
+                                order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+                                conn.execute("INSERT INTO orders (order_id, pr_number, item_id, vendor_id, quantity, unit_price, total_price, status, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', ?);", 
+                                             [order_id, pr_number, it.item_id, it.vendor_id, it.reorder_qty, it.unit_price, it.total_price, tenant_id])
+
                             items_summary = json.dumps([{
                                 "item_id": it.item_id,
                                 "name": it.name,
@@ -1294,8 +1350,21 @@ class JSONExecutionEngine:
                                 INSERT INTO purchase_requests (pr_number, created_at, status, total_amount, items_json, tenant_id)
                                 VALUES (?, CURRENT_TIMESTAMP, 'PENDING', ?, ?, ?);
                             """, [pr_number, int(context.get("total_budget", 0.0)), items_summary, tenant_id or 'INVENTORY'])
+                            conn.commit()
                         except Exception as po_ins_err:
-                            print(f"[JSON EXECUTOR] Recording PR in purchase_requests: {po_ins_err}")
+                            conn.close()
+                            logger.error(f"[JSON EXECUTOR] Recording PR in database failed: {po_ins_err}")
+                            context["pr_generation_error"] = str(po_ins_err)
+                            execution_results.append({
+                                "step_number": i,
+                                "title": "Generate Document / PR Draft",
+                                "status": "ERROR",
+                                "details": f"Database recording failed: {po_ins_err}"
+                            })
+                            continue
+                        finally:
+                            if not conn.closed:
+                                conn.close()
                         
                         # Sync to PR_STORE for web dashboard preview
                         from api.routers.approval_routes import PR_STORE
@@ -1326,23 +1395,29 @@ class JSONExecutionEngine:
                                 tenant_id=tenant_id
                             )
                         except Exception as e:
-                            print(f"Error saving to PR_STORE: {e}")
-
-                        conn.commit()
-                        conn.close()
+                            logger.warning(f"Error saving to PR_STORE: {e}")
 
                         # Now generate PDF
-                        from docgen.compiler import generate_pr_pdf
-                        pdf_path = generate_pr_pdf(pr_doc)
-                        context["pr_number"] = pr_number
-                        context["pdf_path"] = str(pdf_path)
-                        
-                        execution_results.append({
-                            "step_number": i,
-                            "title": "Generate Document / PR Draft",
-                            "status": "COMPLETED",
-                            "details": f"Draft {pr_number} created and saved to orders."
-                        })
+                        try:
+                            from docgen.compiler import generate_pr_pdf
+                            pdf_path = generate_pr_pdf(pr_doc)
+                            context["pr_number"] = pr_number
+                            context["pdf_path"] = str(pdf_path)
+                            execution_results.append({
+                                "step_number": i,
+                                "title": "Generate Document / PR Draft",
+                                "status": "COMPLETED",
+                                "details": f"Draft {pr_number} created and saved to orders with official PDF."
+                            })
+                        except Exception as pdf_err:
+                            logger.error(f"[JSON EXECUTOR] PDF compilation failed for {pr_number}: {pdf_err}")
+                            context["pr_generation_error"] = str(pdf_err)
+                            execution_results.append({
+                                "step_number": i,
+                                "title": "Generate Document / PR Draft",
+                                "status": "ERROR",
+                                "details": f"PDF compilation failed: {pdf_err}"
+                            })
 
                 # ----------------------------------------------------
                 # BLOCK 5: PURCHASE ORDER OPERATIONS (PO Query, Approval, & PDF)
@@ -2051,21 +2126,54 @@ class JSONExecutionEngine:
         planned = context.get("planned_items") or []
         total_analyzed = len(low_items) or len(thresh_items) or len(all_items) or len(spec_items) or len(planned)
 
-        
+        def _build_materials_markdown_table(items_list):
+            if not items_list:
+                return ""
+            md = "\n\n| SKU | Material Name | Category | Current Stock | Reorder Qty | Unit | Supplier | Est. Cost |\n"
+            md += "| :--- | :--- | :---: | :---: | :---: | :---: | :--- | :---: |\n"
+            for it in items_list:
+                sku = getattr(it, "item_id", "") if hasattr(it, "item_id") else it.get("item_id", "-")
+                name = getattr(it, "name", "") if hasattr(it, "name") else it.get("name", "-")
+                cat = getattr(it, "category", "") if hasattr(it, "category") else it.get("category", "Tower Material")
+                stock = getattr(it, "current_stock", 0) if hasattr(it, "current_stock") else it.get("current_stock", 0)
+                qty = getattr(it, "reorder_qty", 0) if hasattr(it, "reorder_qty") else it.get("reorder_qty", 0)
+                unit = getattr(it, "unit", "pcs") if hasattr(it, "unit") else it.get("unit", "pcs")
+                supplier = getattr(it, "vendor_name", "") if hasattr(it, "vendor_name") else it.get("vendor_name", "Registered Vendor")
+                cost = getattr(it, "total_price", 0.0) if hasattr(it, "total_price") else it.get("total_price", 0.0)
+                if not cost and hasattr(it, "unit_price"):
+                    cost = float(it.unit_price) * float(qty)
+                md += f"| `{sku}` | {name} | {cat} | **{stock:,}** | **{qty:,}** | {unit} | {supplier} | Rp {cost:,.2f} |\n"
+            return md
+
+        failed_steps = [r for r in execution_results if r.get("status") == "ERROR"]
+        materials_table_md = _build_materials_markdown_table(planned or low_items)
+
         # Determine overall summary message
-        if context.get("pr_number") and context.get("email_sent"):
-            summary = f"Ditemukan {len(low_items) or len(planned)} barang yang stoknya menipis/habis. Dokumen {context.get('pr_number')} telah berhasil diterbitkan dan notifikasi persetujuan telah otomatis dikirimkan via email ke manajer."
+        if failed_steps:
+            f_step = failed_steps[0]
+            summary = f"Workflow execution stopped at step '{f_step.get('title')}': {f_step.get('details')}. No Purchase Requisition or notification email was dispatched."
+        elif context.get("pr_number") and context.get("email_sent"):
+            recip = context.get("recipient_email") or "Operations Manager"
+            summary = (
+                f"Found {len(planned or low_items)} depleted materials below the safety threshold. "
+                f"Official Purchase Requisition **{context.get('pr_number')}** has been created with total budget **Rp {context.get('total_budget', 0.0):,.2f}**, "
+                f"and an approval authorization request has been dispatched via email to `{recip}`.{materials_table_md}"
+            )
         elif context.get("pr_number"):
-            summary = f"Ditemukan {len(low_items) or len(planned)} barang yang stoknya menipis/habis. Dokumen {context.get('pr_number')} telah berhasil diterbitkan sebagai draf di sistem inventaris. Anda dapat meninjau rincian barang dan berkas PDF di dashboard."
+            summary = (
+                f"Found {len(planned or low_items)} depleted materials below the safety threshold. "
+                f"Official Purchase Requisition **{context.get('pr_number')}** has been created as a draft in the inventory system with total budget **Rp {context.get('total_budget', 0.0):,.2f}**. "
+                f"You can review items and inspect the official PDF document on the dashboard.{materials_table_md}"
+            )
         elif context.get("registered_item"):
             reg = context["registered_item"]
-            summary = f"Barang '{reg.get('name')}' (SKU: {reg.get('item_id')}) berhasil didaftarkan secara eksklusif ke inventaris {reg.get('tenant_id')}."
+            summary = f"Product '{reg.get('name')}' (SKU: {reg.get('item_id')}) successfully registered exclusively into {reg.get('tenant_id')} inventory."
         elif "hr_message" in context:
             summary = context["hr_message"]
         elif context.get("leave_id"):
             lv_ref = context.get("leave_id")
-            emp_n = context.get("applicant_name", "Karyawan")
-            summary = f"Pengajuan cuti {lv_ref} untuk {emp_n} berhasil dicatat ke database dan berkas resmi PDF telah dikirimkan ke HR."
+            emp_n = context.get("applicant_name", "Employee")
+            summary = f"Leave application {lv_ref} for {emp_n} successfully recorded in the database and official PDF compiled for HR."
         elif "hr_leave_pending_message" in context:
             summary = context["hr_leave_pending_message"]
         elif "profile_message" in context:
@@ -2078,38 +2186,29 @@ class JSONExecutionEngine:
             summary = context["finance_message"]
         elif context.get("validation_passed") is False:
             missing_str = ", ".join(context.get("missing_fields") or [])
-            summary = f"Pendaftaran barang baru ditolak karena data belum lengkap. Field wajib yang masih kurang: {missing_str}."
+            summary = f"Product registration rejected due to missing mandatory attributes: {missing_str}."
         elif spec_items:
             item_msgs = [f"{it['name']} ({it['current_stock']} {it['unit']})" for it in spec_items]
-            summary = "Stok saat ini: " + ", ".join(item_msgs)
+            summary = "Current stock: " + ", ".join(item_msgs)
         elif "specific_items" in context and len(spec_items) == 0:
-            summary = "Barang tersebut tidak ditemukan di gudang."
+            summary = "Requested material not found in warehouse inventory."
         elif low_items:
-            summary = f"Ditemukan {len(low_items)} barang yang stoknya menipis/habis."
+            summary = f"Found {len(low_items)} depleted materials below minimum safety thresholds.{materials_table_md}"
         elif all_items:
-            summary = f"Audit selesai. Terdapat {len(all_items)} macam barang di dalam inventaris Anda saat ini."
-        elif "finance_message" in context:
-            summary = context["finance_message"]
-        elif "profile_message" in context:
-            summary = context["profile_message"]
-        elif "system_info_message" in context:
-            summary = context["system_info_message"]
-        elif "guidelines_message" in context:
-            summary = context["guidelines_message"]
+            summary = f"Audit complete. Total {len(all_items)} material types currently registered in inventory."
         elif (context.get("target_po_number") or context.get("target_po_id")) and tenant_id not in ["HR", "TENANT_B", "userb"]:
             po_ref = context.get("target_po_number") or context.get("target_po_id")
             if context.get("po_approved"):
-                summary = f"Purchase Order {po_ref} telah disetujui (APPROVED) dan berkas PDF resmi telah dikompilasi."
+                summary = f"Purchase Order {po_ref} approved (status: ORDERED) and official PDF compiled."
             else:
-                summary = f"Purchase Order {po_ref} berhasil diproses dan berkas PDF resmi telah dikompilasi."
+                summary = f"Purchase Order {po_ref} processed and official PDF compiled."
         elif "pipeline" in compiled_json.get("workflow", "") or "restock" in compiled_json.get("workflow", ""):
-            summary = "Pemeriksaan stok selesai. Seluruh saldo material di gudang saat ini berada dalam kondisi aman di atas ambang batas minimum, sehingga tidak ada Purchase Requisition (PR) baru yang perlu diterbitkan."
-
+            summary = "Stock inspection complete. All warehouse inventory levels are currently safe above minimum reorder thresholds. No Purchase Requisition (PR) required."
         else:
-            summary = "Alur kerja berhasil diproses."
+            summary = "Workflow executed successfully."
 
         # If user explicitly requested email notification and it hasn't been sent yet in steps
-        if context.get("send_email") and not context.get("email_sent"):
+        if context.get("send_email") and not context.get("email_sent") and not failed_steps:
             target_recip = context.get("recipient_email")
             if not target_recip:
                 logger.warning("User requested email dispatch, but recipient_email is missing. Halting email dispatch.")
@@ -2118,26 +2217,26 @@ class JSONExecutionEngine:
                 context["email_clarification_type"] = "MISSING_RECIPIENT"
                 execution_results.append({
                     "step_number": len(steps) + 1,
-                    "title": "Send Notification / Email (Permintaan Pengguna)",
+                    "title": "Send Notification / Email",
                     "status": "WAITING_INPUT",
-                    "details": "Langkah pengiriman email ditangguhkan karena alamat email penerima belum ditentukan oleh pengguna."
+                    "details": "Email dispatch suspended: Recipient email address not provided by user."
                 })
             else:
                 pr_num = context.get("pr_number")
                 lv_id = context.get("leave_id")
                 ob_id = context.get("onboarding_id")
-                msg = f"Laporan eksekusi alur kerja '{compiled_json.get('workflow', 'Pengadaan')}' telah selesai."
+                msg = f"Operational workflow '{compiled_json.get('workflow', 'Procurement')}' report completed."
                 if lv_id:
-                    msg = f"Surat Pengajuan Cuti {lv_id} telah diterbitkan dan dikirimkan ke Divisi HR."
+                    msg = f"Employee leave application {lv_id} has been issued and dispatched to HR."
                 elif ob_id:
-                    msg = f"Permohonan otorisasi sewa menara {ob_id} telah diterbitkan dan menunggu persetujuan otorisasi."
+                    msg = f"Tower lease authorization request {ob_id} has been issued and is awaiting approval."
                 elif pr_num:
-                    msg = f"Dokumen PR #{pr_num} telah diterbitkan dan menunggu persetujuan Anda."
+                    msg = f"Purchase Requisition #{pr_num} has been issued and is awaiting approval."
                 from core.config import settings
                 default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "manager@balitower.co.id"
                 dispatch_res = await dispatcher.dispatch_email(
                     recipient_email=target_recip or (default_env_recip if (lv_id or ob_id) else None),
-                    subject=f"Pengajuan Cuti Karyawan: {lv_id}" if lv_id else (f"Permohonan Otorisasi Sewa Menara: {ob_id}" if ob_id else (f"Permintaan Persetujuan Restock: {pr_num}" if pr_num else "Notifikasi Operasional")),
+                    subject=f"Employee Leave Request: {lv_id}" if lv_id else (f"Tower Lease Authorization: {ob_id}" if ob_id else (f"Restock Approval Request: {pr_num}" if pr_num else "Operations Notification")),
                     content_text=msg,
                     attachment_path=context.get("pdf_path"),
                     pr_number=pr_num,
@@ -2148,7 +2247,7 @@ class JSONExecutionEngine:
                 context["email_dispatch_res"] = dispatch_res
                 execution_results.append({
                     "step_number": len(steps) + 1,
-                    "title": "Send Notification / Email (Permintaan Pengguna)",
+                    "title": "Send Notification / Email",
                     "status": "COMPLETED",
                     "details": f"Notification dispatched to {dispatch_res.get('recipient', target_recip or 'manager')}. Status: {dispatch_res.get('status')}."
                 })
@@ -2156,21 +2255,21 @@ class JSONExecutionEngine:
         # Append email status or clarification request to final summary (excluding Schema A PRs)
         if not context.get("pr_number"):
             if context.get("email_sent"):
-                recip_dsp = context.get("recipient_email") or "pihak otorisasi"
-                summary += f"\n\n✅ **Notifikasi Email Terkirim:**\nSalinan dokumen resmi dan tautan otorisasi persetujuan (Approve/Reject) telah berhasil dikirimkan ke email `{recip_dsp}`."
+                recip_dsp = context.get("recipient_email") or "authorizer"
+                summary += f"\n\n✅ **Email Notification Dispatched:**\nOfficial document copy and authorization links (Approve/Reject) have been sent to `{recip_dsp}`."
             elif context.get("email_clarification_needed"):
                 if context.get("email_clarification_type") == "MISSING_RECIPIENT":
                     summary += (
-                        f"\n\n⚠️ **Klarifikasi Diperlukan (Alamat Email Tujuan):**\n"
-                        f"Anda menginstruksikan untuk mengirimkan dokumen melalui email, namun belum menyertakan alamat email tujuan pengiriman. "
-                        f"Mohon sebutkan alamat email tujuan (contoh: `finance.mgr@balitower.co.id`) agar berkas dapat segera kami kirimkan."
+                        f"\n\n⚠️ **Clarification Required (Recipient Email):**\n"
+                        f"You requested to send the document via email, but have not specified the recipient email address. "
+                        f"Please provide the destination email address (e.g. `finance.mgr@balitower.co.id`) so we can dispatch the files."
                     )
                 elif context.get("email_clarification_type") == "UNSPECIFIED_ACTION":
                     summary += (
-                        f"\n\nℹ️ **Klarifikasi Tindakan Pengiriman:**\n"
-                        f"Seluruh berkas pendaftaran telah berhasil disimpan dan dicatat ke dalam database sistem dengan status `PENDING_APPROVAL`. "
-                        f"Apakah berkas ini cukup **disimpan di database saja**, atau **ingin dikirimkan ke email otorisasi**? "
-                        f"Jika ingin dikirimkan ke email, mohon informasikan alamat email tujuannya."
+                        f"\n\nℹ️ **Dispatch Confirmation:**\n"
+                        f"All registration documents have been saved to the database with `PENDING_APPROVAL` status. "
+                        f"Would you like to **keep them in database only**, or **dispatch via email** for authorization? "
+                        f"If via email, please provide the recipient email address."
                     )
 
         has_email = any(s.get("tool") in ["notification.send_email", "notification.dispatch"] for s in steps) or bool(context.get("send_email")) or bool(context.get("email_sent"))
@@ -2190,6 +2289,21 @@ class JSONExecutionEngine:
             pdf_name = Path(context.get("pdf_path")).name
             pdf_download_url = f"/api/documents/reports/{pdf_name}/download"
 
+        affected_items = [
+            {
+                "item_id": getattr(it, "item_id", "") if hasattr(it, "item_id") else it.get("item_id", ""),
+                "name": getattr(it, "name", "") if hasattr(it, "name") else it.get("name", ""),
+                "category": getattr(it, "category", "") if hasattr(it, "category") else it.get("category", ""),
+                "current_stock": getattr(it, "current_stock", 0) if hasattr(it, "current_stock") else it.get("current_stock", 0),
+                "reorder_qty": getattr(it, "reorder_qty", 0) if hasattr(it, "reorder_qty") else it.get("reorder_qty", 0),
+                "unit": getattr(it, "unit", "pcs") if hasattr(it, "unit") else it.get("unit", "pcs"),
+                "vendor_name": getattr(it, "vendor_name", "") if hasattr(it, "vendor_name") else it.get("vendor_name", ""),
+                "unit_price": float(getattr(it, "unit_price", 0.0) if hasattr(it, "unit_price") else it.get("unit_price", 0.0)),
+                "total_price": float(getattr(it, "total_price", 0.0) if hasattr(it, "total_price") else it.get("total_price", 0.0)),
+            }
+            for it in (planned or low_items)
+        ]
+
         return {
             "workflow_title": compiled_json.get("workflow", "Dynamic Workflow"),
             "target_destinations": ["database"] + (["email"] if has_email else []),
@@ -2207,5 +2321,6 @@ class JSONExecutionEngine:
             "execution_steps": execution_results,
             "dispatch_results": context.get("email_dispatch_res", {}),
             "duration_ms": 100,
-            "summary": summary
+            "summary": summary,
+            "affected_items": affected_items
         }

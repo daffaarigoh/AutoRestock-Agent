@@ -353,26 +353,38 @@ def get_suppliers(current_user: TokenData = Depends(require_inventory_access)):
 
 @router.get("/api/balitower/inventory/purchase-orders")
 def get_purchase_orders(current_user: TokenData = Depends(require_inventory_access)):
-    """Tabel 5: purchase_orders - Riwayat pesanan pembelian resmi pengadaan."""
+    """Table 5: purchase_orders - Official procurement purchase order history."""
     conn = get_db_connection(read_only=True)
     try:
-        query = """
+        existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
+        pr_unions = []
+        if "orders" in existing_tables:
+            pr_unions.append("SELECT pr_number FROM orders WHERE status IN ('APPROVED', 'DISETUJUI')")
+        if "purchase_requests" in existing_tables:
+            pr_unions.append("SELECT pr_number FROM purchase_requests WHERE status IN ('APPROVED', 'DISETUJUI')")
+        
+        if pr_unions:
+            pr_filter = "po.pr_number IN (" + " UNION ".join(pr_unions) + ")"
+        else:
+            pr_filter = "1=0"
+
+        query = f"""
             SELECT 
                 po.po_id,
                 po.po_number,
                 MIN(po.supplier_id) AS supplier_id,
                 CASE 
-                    WHEN COUNT(DISTINCT s.supplier_name) > 1 THEN 'Multi-Vendor Rekanan (' || COUNT(DISTINCT s.supplier_name) || ' Vendor)'
+                    WHEN COUNT(DISTINCT s.supplier_name) > 1 THEN 'Multi-Vendor Partner (' || COUNT(DISTINCT s.supplier_name) || ' Vendors)'
                     ELSE COALESCE(MIN(s.supplier_name), MIN(po.supplier_id))
                 END AS supplier_name,
                 MIN(po.item_id) AS item_id,
                 CASE 
-                    WHEN COUNT(po.item_id) > 1 THEN COUNT(po.item_id) || ' Material Pengadaan (' || STRING_AGG(DISTINCT i.item_name, ', ')[:55] || '...)'
+                    WHEN COUNT(po.item_id) > 1 THEN COUNT(po.item_id) || ' Procurement Items (' || STRING_AGG(DISTINCT i.item_name, ', ')[:55] || '...)'
                     ELSE COALESCE(MIN(i.item_name), MIN(po.item_id))
                 END AS item_name,
                 MIN(po.warehouse_id) AS warehouse_id,
                 CASE 
-                    WHEN COUNT(DISTINCT w.warehouse_name) > 1 THEN 'Multi-Gudang Regional (' || COUNT(DISTINCT w.warehouse_name) || ' Gudang)'
+                    WHEN COUNT(DISTINCT w.warehouse_name) > 1 THEN 'Multi-Regional Warehouse (' || COUNT(DISTINCT w.warehouse_name) || ' Warehouses)'
                     ELSE COALESCE(MIN(w.warehouse_name), MIN(po.warehouse_id))
                 END AS warehouse_name,
                 SUM(po.order_quantity) AS order_quantity,
@@ -388,11 +400,7 @@ def get_purchase_orders(current_user: TokenData = Depends(require_inventory_acce
             LEFT JOIN warehouses w ON po.warehouse_id = w.warehouse_id
             WHERE (
                 po.pr_number IS NULL 
-                OR po.pr_number IN (
-                    SELECT pr_number FROM orders WHERE status IN ('APPROVED', 'DISETUJUI')
-                    UNION
-                    SELECT pr_number FROM purchase_requests WHERE status IN ('APPROVED', 'DISETUJUI')
-                )
+                OR {pr_filter}
                 OR po.status = 'DELIVERED'
             )
             AND po.status != 'PENDING_APPROVAL'
