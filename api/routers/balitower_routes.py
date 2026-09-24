@@ -359,9 +359,9 @@ def get_purchase_orders(current_user: TokenData = Depends(require_inventory_acce
         existing_tables = set(r[0] for r in conn.execute("SHOW TABLES;").fetchall())
         pr_unions = []
         if "orders" in existing_tables:
-            pr_unions.append("SELECT pr_number FROM orders WHERE status IN ('APPROVED', 'DISETUJUI')")
+            pr_unions.append("SELECT pr_number FROM orders WHERE status IN ('APPROVED', 'ACCEPTED', 'DISETUJUI')")
         if "purchase_requests" in existing_tables:
-            pr_unions.append("SELECT pr_number FROM purchase_requests WHERE status IN ('APPROVED', 'DISETUJUI')")
+            pr_unions.append("SELECT pr_number FROM purchase_requests WHERE status IN ('APPROVED', 'ACCEPTED', 'DISETUJUI')")
         
         if pr_unions:
             pr_filter = "po.pr_number IN (" + " UNION ".join(pr_unions) + ")"
@@ -401,9 +401,9 @@ def get_purchase_orders(current_user: TokenData = Depends(require_inventory_acce
             WHERE (
                 po.pr_number IS NULL 
                 OR {pr_filter}
-                OR po.status = 'DELIVERED'
+                OR po.status IN ('DELIVERED', 'ACCEPTED')
             )
-            AND po.status != 'PENDING_APPROVAL'
+            AND po.status NOT IN ('PENDING_APPROVAL', 'REJECTED')
             GROUP BY po.po_id, po.po_number
             ORDER BY MIN(po.order_date) DESC, po.po_id DESC;
         """

@@ -24,12 +24,13 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
         "terima barang", "penerimaan barang", "catat penerimaan", "konfirmasi penerimaan",
         "konfirmasi kedatangan", "barang tiba", "barang sampai", "barang masuk",
         "barang datang", "catat barang", "terima po", "po sampai", "po tiba",
-        "pesanan sampai", "pesanan tiba"
+        "pesanan sampai", "pesanan tiba", "wf-a02", "wf a02", "wfa02", "penerimaan po",
+        "penerimaan barang fisik"
     ]
     has_explicit_receipt_intent = any(k in lower_prompt for k in receipt_action_keywords)
     
     if not has_explicit_receipt_intent:
-        has_arrival_word = any(w in lower_prompt for w in ["sampai", "tiba", "terima", "diterima", "masuk", "mendarat"])
+        has_arrival_word = any(w in lower_prompt for w in ["sampai", "tiba", "terima", "diterima", "masuk", "mendarat", "wf-a02", "wf a02", "wfa02"])
         has_po_or_wh = any(w in lower_prompt for w in ["po-", "po ", "po/", "purchase order", "gudang", "wh-"])
         if has_arrival_word and has_po_or_wh:
             has_explicit_receipt_intent = True
@@ -143,7 +144,7 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                 JOIN suppliers s ON po.supplier_id = s.supplier_id
                 JOIN inventory_items i ON po.item_id = i.item_id
                 JOIN warehouses w ON po.warehouse_id = w.warehouse_id
-                WHERE po.status = 'ORDERED';
+                WHERE po.status IN ('ORDERED', 'PENDING');
             """, [po_num_str, po_num_str]).fetchall() if m_po_num else conn.execute("""
                 SELECT po.po_id, po.po_number, po.supplier_id, s.supplier_name, po.item_id, 
                        i.item_name, i.item_code, i.category, i.unit, po.order_quantity, 
@@ -153,7 +154,7 @@ def process_goods_receipt(prompt: str, current_user: TokenData) -> dict | None:
                 JOIN suppliers s ON po.supplier_id = s.supplier_id
                 JOIN inventory_items i ON po.item_id = i.item_id
                 JOIN warehouses w ON po.warehouse_id = w.warehouse_id
-                WHERE po.status = 'ORDERED';
+                WHERE po.status IN ('ORDERED', 'PENDING');
             """).fetchall()
             
             matched_pos = []

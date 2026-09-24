@@ -15,13 +15,44 @@ router = APIRouter(prefix="/api/approval", tags=["Human-in-the-Loop Approval"])
 
 def _confirmation_page(request: Request, action: str, object_id: str) -> HTMLResponse:
     """Require an intentional POST; email link scanners commonly follow GET links."""
-    verb = "Setujui" if action.startswith("APPROV") else "Tolak"
+    is_approve = action.startswith("APPROV") or action.startswith("ACCEPT")
+    verb = "Setujui (Accept)" if is_approve else "Tolak (Reject)"
+    btn_color = "#15803D" if is_approve else "#B91C1C"
+    btn_border = "#166534" if is_approve else "#991B1B"
     return HTMLResponse(
-        content=("<!doctype html><html lang='id'><meta charset='utf-8'>"
-                 "<title>Konfirmasi keputusan</title><body>"
-                 f"<h1>Konfirmasi {verb} {escape(object_id)}</h1>"
-                 f"<form method='post' action='{escape(str(request.url), quote=True)}'>"
-                 f"<button type='submit'>{verb}</button></form></body></html>"),
+        content=(f"""<!doctype html><html lang='id'><head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Konfirmasi Otorisasi | {escape(object_id)}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F1F5F9; color: #0F172A; margin: 0; padding: 32px 16px; display: flex; align-items: center; justify-content: center; min-height: 100vh; }}
+  .card {{ background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px; max-width: 520px; width: 100%; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; }}
+  .card-header {{ background: #0F172A; color: #FFFFFF; padding: 20px 24px; border-bottom: 3px solid #2563EB; }}
+  .card-title {{ font-size: 14px; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.06em; color: #F8FAFC; }}
+  .card-subtitle {{ font-size: 12px; color: #94A3B8; margin: 4px 0 0 0; }}
+  .card-body {{ padding: 28px 24px; text-align: center; }}
+  .doc-badge {{ display: inline-block; font-family: monospace; font-size: 13px; font-weight: 700; color: #1D4ED8; background: #EFF6FF; padding: 4px 10px; border-radius: 6px; border: 1px solid #BFDBFE; margin: 12px 0; }}
+  .btn-submit {{ display: inline-block; width: 100%; padding: 13px; font-size: 14px; font-weight: 700; color: #FFFFFF; background-color: {btn_color}; border: 1px solid {btn_border}; border-radius: 6px; cursor: pointer; transition: opacity 0.15s; }}
+  .btn-submit:hover {{ opacity: 0.92; }}
+  .card-footer {{ background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 14px 24px; font-size: 11px; color: #64748B; text-align: center; }}
+</style></head><body>
+<div class='card'>
+  <div class='card-header'>
+    <div class='card-title'>PT Bali Towerindo Sentra Tbk</div>
+    <div class='card-subtitle'>Enterprise Operations Command Center & Logistics</div>
+  </div>
+  <div class='card-body'>
+    <h2 style='font-size: 17px; font-weight: 700; margin: 0 0 6px 0;'>Konfirmasi Keputusan Otorisasi</h2>
+    <p style='font-size: 13px; color: #475569; margin: 0 0 10px 0;'>Apakah Anda yakin ingin melakukan otorisasi pengesahan untuk dokumen pengajuan berikut?</p>
+    <div class='doc-badge'>{escape(object_id)}</div>
+    <form method='post' action='{escape(str(request.url), quote=True)}' style='margin-top: 20px;'>
+      <button type='submit' class='btn-submit'>Konfirmasi {verb}</button>
+    </form>
+  </div>
+  <div class='card-footer'>
+    Pemberitahuan resmi terverifikasi melalui tautan bertanda tangan aman.
+  </div>
+</div>
+</body></html>"""),
         headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
     )
 

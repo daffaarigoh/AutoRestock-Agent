@@ -903,9 +903,11 @@ async function loadPurchaseOrders() {
         return;
       }
       const rowsHtml = data.map(po => {
-        let statusBadge = 'badge-pending';
-        if (po.po_status === 'DELIVERED') statusBadge = 'badge-approved';
-        else statusBadge = 'badge-pending';
+        const rawStatus = String(po.po_status || po.status || '').toUpperCase();
+        const isDelivered = rawStatus === 'DELIVERED' || rawStatus === 'ACCEPTED' || rawStatus === 'COMPLETED';
+        let statusBadge = isDelivered ? 'badge-approved' : 'badge-pending';
+        let displayStatus = isDelivered ? 'Accepted' : 'Pending';
+
         return `
           <tr>
             <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: #2563EB;">${escapeHtml(po.po_number)}</td>
@@ -915,15 +917,15 @@ async function loadPurchaseOrders() {
             <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #0F172A;">${formatCurrency(po.total_amount)}</td>
             <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(po.order_date)}</td>
             <td class="text-center" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(po.expected_delivery || '-')}</td>
-            <td class="text-center"><span class="badge ${statusBadge}">${escapeHtml(po.po_status)}</span></td>
+            <td class="text-center"><span class="badge ${statusBadge}">${escapeHtml(displayStatus)}</span></td>
             <td class="text-center" style="white-space: nowrap;">
-              ${po.po_status === 'ORDERED' ? `
+              ${!isDelivered ? `
               <button class="btn btn-primary btn-xs" data-action="receive-goods" data-po-id="${escapeHtml(po.po_id)}" data-po-num="${escapeHtml(po.po_number)}" style="padding: 3px 8px; font-size: 11px; background: #16A34A; border-color: #15803D; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;">
                 <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 <span>Receive Goods</span>
               </button>
               ` : ''}
-              <button class="btn btn-secondary btn-xs" data-action="open-po-pdf" data-po-id="${escapeHtml(po.po_id)}" data-po-num="${escapeHtml(po.po_number)}" data-supplier="${escapeHtml(po.supplier_name)}" data-total="${po.total_amount}" data-status="${escapeHtml(po.po_status)}" style="padding: 3px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+              <button class="btn btn-secondary btn-xs" data-action="open-po-pdf" data-po-id="${escapeHtml(po.po_id)}" data-po-num="${escapeHtml(po.po_number)}" data-supplier="${escapeHtml(po.supplier_name)}" data-total="${po.total_amount}" data-status="${escapeHtml(rawStatus)}" style="padding: 3px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
                 <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 <span>PDF</span>
               </button>
@@ -942,7 +944,7 @@ function confirmGoodsReceiptQuick(poId, poNumber) {
   const input = document.getElementById('promptInput');
   if (input) {
     const targetPo = (poNumber && poNumber.trim()) ? poNumber : poId;
-    input.value = `Goods for ${targetPo} have arrived at the warehouse, please record the receipt`;
+    input.value = `Gunakan WF-A02 untuk mencatat penerimaan fisik barang ${targetPo} yang telah tiba di gudang. Update status menjadi DELIVERED dan sinkronkan stok fisik gudang.`;
     input.focus();
     submitPrompt();
   }
@@ -1508,8 +1510,8 @@ function renderPrsTable(prs) {
 
   tbody.innerHTML = prs.map(pr => {
     const rawStatus = String(pr.status || '').toUpperCase();
-    const isApproved = rawStatus === 'APPROVED';
-    const isRejected = rawStatus === 'REJECTED';
+    const isApproved = rawStatus === 'APPROVED' || rawStatus === 'ACCEPTED' || rawStatus === 'DISETUJUI';
+    const isRejected = rawStatus === 'REJECTED' || rawStatus === 'DITOLAK';
 
     let supplierName = pr.supplier_name;
     if (!supplierName && pr.items && pr.items.length > 0) {
@@ -1523,13 +1525,13 @@ function renderPrsTable(prs) {
     const grandTotal = Number(pr.total_budget ?? pr.grand_total ?? 0);
 
     let badgeClass = 'badge-pending';
-    let statusLabel = 'PENDING';
+    let statusLabel = 'Pending';
     if (isApproved) {
       badgeClass = 'badge-approved';
-      statusLabel = 'APPROVED';
+      statusLabel = 'Accepted';
     } else if (isRejected) {
       badgeClass = 'badge-rejected';
-      statusLabel = 'REJECTED';
+      statusLabel = 'Rejected';
     }
 
     const isAdmin = sessionStorage.getItem('role') === 'ADMIN';
@@ -3536,12 +3538,12 @@ function appendAgentResponseCard(data) {
       <div class="agent-plan-box">
         <div class="agent-plan-title">PROCUREMENT INFORMATION & STATUS:</div>
         <div style="font-size: 13px; font-weight: 600; color: #0F172A; margin-bottom: 6px; line-height: 1.5;">
-          ${escapeHtml(intent.reasoning || data.message || 'Procurement document successfully issued and processed.')}
+          ${typeof formatMarkdownResponse === 'function' ? formatMarkdownResponse(data.message || intent.reasoning || '') : escapeHtml(data.message || intent.reasoning || '')}
         </div>
-        <div class="action-card" style="border-left: 4px solid #16A34A; background: #F0FDF4; border: 1px solid #DCFCE7;">
+        <div class="action-card" style="border-left: 4px solid ${data.email_sent ? '#16A34A' : '#2563EB'}; background: ${data.email_sent ? '#F0FDF4' : '#F8FAFC'}; border: 1px solid ${data.email_sent ? '#DCFCE7' : '#E2E8F0'};">
           <div class="action-card-header">
-            <span style="font-weight: 700; font-size: 12.5px; color: #15803D;">PR DOCUMENT ISSUED & SENT TO EMAIL (${prs.length})</span>
-            <span class="badge badge-approved">SENT TO EMAIL</span>
+            <span style="font-weight: 700; font-size: 12.5px; color: ${data.email_sent ? '#15803D' : '#1E40AF'};">${data.email_sent ? `PR DOCUMENT ISSUED & DISPATCHED TO EMAIL (${prs.length})` : `PR DOCUMENT ISSUED (DRAFT) (${prs.length})`}</span>
+            <span class="badge ${data.email_sent ? 'badge-approved' : 'badge-pending'}">${data.email_sent ? 'SENT TO EMAIL' : 'DRAFT SAVED'}</span>
           </div>
           <div class="action-card-body">
             ${prCards}

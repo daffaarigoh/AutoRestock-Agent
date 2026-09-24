@@ -1379,8 +1379,10 @@ class JSONExecutionEngine:
                             })
                             continue
                         finally:
-                            if not conn.closed:
+                            try:
                                 conn.close()
+                            except Exception:
+                                pass
                         
                         # Sync to PR_STORE for web dashboard preview
                         from api.routers.approval_routes import PR_STORE
@@ -2167,23 +2169,41 @@ class JSONExecutionEngine:
         failed_steps = [r for r in execution_results if r.get("status") == "ERROR"]
         materials_table_md = _build_materials_markdown_table(planned or low_items)
 
+        user_p = str(context.get("prompt") or "").lower()
+        is_id = any(k in user_p for k in ["periksa", "stok", "buat", "draf", "draft", "kirim", "tolong", "pengadaan", "material", "gudang", "barang"])
+
         # Determine overall summary message
         if failed_steps:
             f_step = failed_steps[0]
             summary = f"Workflow execution stopped at step '{f_step.get('title')}': {f_step.get('details')}. No Purchase Requisition or notification email was dispatched."
         elif context.get("pr_number") and context.get("email_sent"):
             recip = context.get("recipient_email") or "Operations Manager"
-            summary = (
-                f"Found {len(planned or low_items)} depleted materials below the safety threshold. "
-                f"Official Purchase Requisition **{context.get('pr_number')}** has been created with total budget **Rp {context.get('total_budget', 0.0):,.2f}**, "
-                f"and an approval authorization request has been dispatched via email to `{recip}`.{materials_table_md}"
-            )
+            if is_id:
+                summary = (
+                    f"Ditemukan {len(planned or low_items)} material kritis/menipis di bawah ambang batas minimum. "
+                    f"Dokumen resmi Purchase Requisition **{context.get('pr_number')}** berhasil diterbitkan dengan status **PENDING** dan total anggaran **Rp {context.get('total_budget', 0.0):,.2f}**, "
+                    f"serta permohonan otorisasi persetujuan telah dikirimkan via email ke `{recip}` beserta dokumen PDF Typst terlampir.{materials_table_md}"
+                )
+            else:
+                summary = (
+                    f"Found {len(planned or low_items)} depleted materials below the safety threshold. "
+                    f"Official Purchase Requisition **{context.get('pr_number')}** has been created with total budget **Rp {context.get('total_budget', 0.0):,.2f}**, "
+                    f"and an approval authorization request has been dispatched via email to `{recip}`.{materials_table_md}"
+                )
         elif context.get("pr_number"):
-            summary = (
-                f"Found {len(planned or low_items)} depleted materials below the safety threshold. "
-                f"Official Purchase Requisition **{context.get('pr_number')}** has been created as a draft in the inventory system with total budget **Rp {context.get('total_budget', 0.0):,.2f}**. "
-                f"You can review items and inspect the official PDF document on the dashboard.{materials_table_md}"
-            )
+            if is_id:
+                summary = (
+                    f"Ditemukan {len(planned or low_items)} material kritis/menipis di bawah ambang batas minimum. "
+                    f"Dokumen resmi Purchase Requisition **{context.get('pr_number')}** berhasil diterbitkan dan tersimpan di database sistem (Menu PR) dengan status **PENDING** dan total anggaran **Rp {context.get('total_budget', 0.0):,.2f}**.{materials_table_md}\n\n"
+                    f"ℹ️ **Informasi Menu PR:** Berkas telah masuk ke Menu PR dengan status **Pending**. Anda dapat meninjau item dan mengunduh berkas PDF resmi di tab Purchase Requisitions (PR). "
+                    f"Jika ingin mengirimkan berkas pengajuan ini ke email otorisasi manajer, silakan instruksikan alamat email tujuannya (contoh: *Kirimkan ke email manajer@balitower.co.id*)."
+                )
+            else:
+                summary = (
+                    f"Found {len(planned or low_items)} depleted materials below the safety threshold. "
+                    f"Official Purchase Requisition **{context.get('pr_number')}** has been created as a draft in the inventory system with total budget **Rp {context.get('total_budget', 0.0):,.2f}**. "
+                    f"You can review items and inspect the official PDF document on the dashboard.{materials_table_md}"
+                )
         elif context.get("registered_item"):
             reg = context["registered_item"]
             summary = f"Product '{reg.get('name')}' (SKU: {reg.get('item_id')}) successfully registered exclusively into {reg.get('tenant_id')} inventory."

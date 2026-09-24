@@ -607,8 +607,8 @@ class MultiChannelDispatcher:
             </div>
 
             <div style="margin: 28px 0 16px 0; text-align: center;">
-                <a href="{approve_link}" style="display: inline-block; padding: 12px 22px; font-size: 13px; font-weight: 700; color: #FFFFFF !important; background-color: #15803D; border: 1px solid #166534; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">&#10003; Setujui (Approve)</a>
-                <a href="{reject_link}" style="display: inline-block; padding: 12px 22px; font-size: 13px; font-weight: 700; color: #B91C1C !important; background-color: #FFFFFF; border: 1px solid #F87171; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">&#10007; Tolak (Reject)</a>
+                <a href="{approve_link}" style="display: inline-block; padding: 13px 26px; font-size: 13.5px; font-weight: 700; color: #FFFFFF !important; background-color: #15803D; border: 1px solid #166534; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">&#10004; SETUJUI PENGAJUAN (ACCEPT)</a>
+                <a href="{reject_link}" style="display: inline-block; padding: 13px 26px; font-size: 13.5px; font-weight: 700; color: #B91C1C !important; background-color: #FFFFFF; border: 1px solid #F87171; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">&#10006; TOLAK PENGAJUAN (REJECT)</a>
             </div>
             <div style="text-align: center; margin-top: 10px;">
                 <a href="{pdf_link}" style="display: inline-block; padding: 10px 18px; font-size: 12px; font-weight: 600; color: #2563EB !important; background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 6px; text-decoration: none; margin: 4px 6px;" target="_blank">&#128196; Unduh Dokumen PDF Resmi (Typst)</a>
