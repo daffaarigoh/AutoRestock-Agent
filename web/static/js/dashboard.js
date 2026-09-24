@@ -1620,6 +1620,12 @@ function openPdfModal(prNumber, supplierName, grandTotal, status) {
     downloadBtn.setAttribute('download', `${prNumber}.pdf`);
   }
 
+  const downloadTypstBtn = document.getElementById('modalDownloadTypstBtn');
+  if (downloadTypstBtn) {
+    downloadTypstBtn.href = `/api/documents/pr/${prNumber}/download-typst?t=${Date.now()}`;
+    downloadTypstBtn.setAttribute('download', `${prNumber}.typ`);
+  }
+
   const openTabBtn = document.getElementById('modalOpenTabBtn');
   if (openTabBtn) {
     openTabBtn.href = `/api/documents/pr/${prNumber}/download?inline=true&t=${Date.now()}`;
@@ -2687,9 +2693,17 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
               </div>
             </div>
             `}
-            <div style="display: flex; justify-content: flex-end;">
-              <button class="btn btn-secondary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplier)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
+            <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+              <a href="/api/documents/pr/${encodeURIComponent(pr.pr_number)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm" download="${escapeHtml(pr.pr_number)}.pdf">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Unduh PDF (Typst)</span>
+              </a>
+              <a href="/api/documents/pr/${encodeURIComponent(pr.pr_number)}/download-typst" target="_blank" class="btn btn-secondary btn-sm" download="${escapeHtml(pr.pr_number)}.typ">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>Unduh Source Typst (.typ)</span>
+              </a>
+              <button class="btn btn-primary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplier)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                 <span>View PDF Document</span>
               </button>
             </div>
@@ -3499,9 +3513,17 @@ function appendAgentResponseCard(data) {
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             <span>Official PR document has been compiled (PDF) and approval notification has been automatically dispatched to the manager's email.</span>
           </div>
-          <div style="display: flex; justify-content: flex-end;">
-            <button class="btn btn-secondary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplier)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
+          <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+            <a href="/api/documents/pr/${encodeURIComponent(pr.pr_number)}/download?download=true" target="_blank" class="btn btn-secondary btn-sm" download="${escapeHtml(pr.pr_number)}.pdf">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>Unduh PDF (Typst)</span>
+            </a>
+            <a href="/api/documents/pr/${encodeURIComponent(pr.pr_number)}/download-typst" target="_blank" class="btn btn-secondary btn-sm" download="${escapeHtml(pr.pr_number)}.typ">
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Unduh Source Typst (.typ)</span>
+            </a>
+            <button class="btn btn-primary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplier)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
               <span>View PDF Document</span>
             </button>
           </div>
@@ -3758,6 +3780,8 @@ function useCopilotSuggestion(promptText) {
   if (input) {
     input.value = promptText;
     autoResizePromptInput();
+    handlePromptInputChange();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
     input.focus();
     input.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -4160,8 +4184,18 @@ function renderHelpPolicyTab(bodyEl) {
 }
 
 function selectExamplePromptAndClose(promptText) {
-  selectExamplePrompt(promptText);
-  closeFlowHelpModal();
+  const input = document.getElementById('promptInput');
+  if (input) {
+    input.value = promptText;
+    autoResizePromptInput();
+    handlePromptInputChange();
+    closeFlowHelpModal();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus();
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    closeFlowHelpModal();
+  }
 }
 
 function closeFlowHelpModal() {
@@ -4554,10 +4588,20 @@ function initDashboardEventDelegation() {
     }
   });
 
-  // 7. Help modal catalog flow prompts
-  document.getElementById('helpModalCatalogList')?.addEventListener('click', (e) => {
+  // 7. Help modal catalog flow prompts & document-level delegation
+  document.getElementById('flowHelpModalBody')?.addEventListener('click', (e) => {
     const btn = e.target.closest('.flow-prompt-item') || e.target.closest('button[data-action="try-prompt"]');
     if (btn && btn.dataset.prompt) {
+      e.preventDefault();
+      e.stopPropagation();
+      selectExamplePromptAndClose(btn.dataset.prompt);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.flow-prompt-item') || e.target.closest('button[data-action="try-prompt"]');
+    if (btn && btn.dataset.prompt) {
+      e.preventDefault();
       selectExamplePromptAndClose(btn.dataset.prompt);
     }
   });

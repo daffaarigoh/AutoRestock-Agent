@@ -130,26 +130,48 @@ def generate_pr_pdf(pr: PurchaseRequisition | dict, output_path: str | Path | No
         .replace("{{ITEMS_TABLE_ROWS}}", items_table_block)
     )
 
-    # Write temporary rendered typst file and compile to PDF
-    temp_typ_file = STORAGE_DIR / f"{clean_pr_num}_{pr.status}_rendered.typ"
-    with open(temp_typ_file, "w", encoding="utf-8") as f:
+    # Save rendered typst source to target directory and compile to PDF
+    output_typ_file = output_file.with_suffix(".typ")
+    target_dir = output_file.parent
+    target_dir.mkdir(parents=True, exist_ok=True)
+    with open(output_typ_file, "w", encoding="utf-8") as f:
         f.write(rendered_typst)
 
-    try:
-        output_file_str = str(output_file.resolve().as_posix())
-        typst.compile(
-            input=str(temp_typ_file.resolve().as_posix()),
-            output=output_file_str
-        )
-        print(f"[DOCGEN] Successfully saved ({pr.status}) PDF to: {output_file_str}")
-    finally:
-        if temp_typ_file.exists():
-            try:
-                temp_typ_file.unlink()
-            except Exception:
-                pass
+    canonical_typ_file = target_dir / f"{clean_pr_num}.typ"
+    if canonical_typ_file != output_typ_file:
+        with open(canonical_typ_file, "w", encoding="utf-8") as f:
+            f.write(rendered_typst)
+
+    output_file_str = str(output_file.resolve().as_posix())
+    typst.compile(
+        input=str(output_typ_file.resolve().as_posix()),
+        output=output_file_str
+    )
+    print(f"[DOCGEN] Successfully saved ({pr.status}) PDF to: {output_file_str}")
+    print(f"[DOCGEN] Successfully saved Typst source to: {output_typ_file.resolve().as_posix()}")
 
     return str(output_file.resolve().as_posix())
+
+
+def get_pr_typ_path(pr_number: str, status: str = "PENDING") -> Path | None:
+    """Finds existing .typ file for a given PR number across storage locations."""
+    clean_pr_num = pr_number.replace("/", "_").replace("\\", "_")
+    clean_filename = f"{pr_number.replace('-', '_')}.typ"
+    target_dir = get_target_directory(status)
+    candidates = [
+        target_dir / f"{clean_pr_num}.typ",
+        target_dir / clean_filename,
+        STORAGE_DIR / "documents" / f"{clean_pr_num}.typ",
+        STORAGE_DIR / "documents" / clean_filename,
+        STORAGE_DIR / "pending" / f"{clean_pr_num}.typ",
+        STORAGE_DIR / "approved" / f"{clean_pr_num}.typ",
+        STORAGE_DIR / "rejected" / f"{clean_pr_num}.typ",
+        STORAGE_DIR / f"{clean_pr_num}.typ",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
 
 
 def angka_ke_terbilang(bilangan: int | float) -> str:

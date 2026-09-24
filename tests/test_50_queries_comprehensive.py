@@ -17,7 +17,7 @@ import requests
 from pathlib import Path
 
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent
-BASE_URL = "http://127.0.0.1:8050"
+BASE_URL = "http://127.0.0.1:8060"
 TOKENS = {}
 
 def get_token(username: str, password: str = "user123") -> str:

@@ -307,14 +307,14 @@ python database/seed_data.py
 ```
 
 ### 4. Running the Application Server
-Start the FastAPI server on port `8050`:
+Start the FastAPI server on port `8060`:
 ```bash
-python -m uvicorn api.main:app --host 0.0.0.0 --port 8050 --reload
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8060 --reload
 ```
 
-- **Operations Dashboard**: [http://localhost:8050](http://localhost:8050)
-- **Interactive Swagger Docs**: [http://localhost:8050/docs](http://localhost:8050/docs)
-- **Admin Workflow Studio**: [http://localhost:8050/admin](http://localhost:8050/admin)
+- **Operations Dashboard**: [http://localhost:8060](http://localhost:8060)
+- **Interactive Swagger Docs**: [http://localhost:8060/docs](http://localhost:8060/docs)
+- **Admin Workflow Studio**: [http://localhost:8060/admin](http://localhost:8060/admin)
 
 ### 5. Demo Credentials (Local Development Only)
 

@@ -1,22 +1,14 @@
 # Agent Workflow & Operating Guidelines
 
-## Roles & Dual-Agent Collaboration
+## Working role
 
-- **Codex (Planner)**: Berperan sebagai perencana (*planner*), arsitek solusi, dan pemberi arahan teknis serta instruksi implementasi.
-- **Antigravity (Executor)**: Berperan sebagai pelaksana (*executor*), yang mengeksekusi setiap instruksi, perubahan kode, konfigurasi, dan verifikasi persis sesuai arahan dari Codex yang diberikan oleh pengguna.
+- Codex works directly with the user as the project's implementation and review partner.
+- Implement changes the user requests in the project, inspect the affected code, and report what changed and what was checked.
+- Do not hand off work to Antigravity. Use another executor only when the user explicitly requests it.
 
-## Prinsip Eksekusi (Executor Mandate)
+## Execution principles
 
-1. **Eksekusi Presisi & Taat Instruksi**:
-   - Jalankan setiap instruksi dan langkah dari Codex secara akurat, presisi, dan menyeluruh tanpa mengubah esensi rancangan Codex.
-   - Hindari over-engineering atau melakukan perubahan di luar cakupan yang diinstruksikan oleh Codex.
-
-2. **Proaktif & Tuntas**:
-   - Lakukan pembuatan/pembaruan berkas, perintah terminal, pengujian, atau konfigurasi sistem secara langsung dan tuntas.
-   - Segera tangani detail teknis (seperti path, dependensi, syntax) agar hasil sesuai standar codebase.
-
-3. **Verifikasi Hasil**:
-   - Setelah instruksi dieksekusi, selalu validasi keberhasilan hasilnya (misalnya menjalankan test suite, memvalidasi endpoint/database, atau memeriksa status servis).
-
-4. **Laporan Ringkas & Terstruktur**:
-   - Laporkan hasil eksekusi secara padat, jelas, dan faktual dengan menyertakan perubahan yang telah dilakukan dan status verifikasinya.
+1. Follow the user's requested scope and avoid unrelated changes.
+2. Make authorized code, configuration, and documentation changes directly.
+3. Validate the changed files and run checks when the user requests verification or when a check is necessary to safely complete the task.
+4. Summarize changed files, behavior, and verification clearly.

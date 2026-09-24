@@ -2820,6 +2820,247 @@ body.sidebar-collapsed .sidebar-resizer {
   padding-top: 10px;
 }
 
+/* ==========================================================================
+   Chat Output Markdown Tables & Typst Actions (Modern Enterprise Styling)
+   ========================================================================== */
+
+.chat-table-wrapper,
+.table-responsive-wrapper {
+  overflow-x: auto;
+  margin: 12px 0;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chat-markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.chat-markdown-table thead th {
+  background: #0F172A;
+  color: #F8FAFC;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  border-bottom: 2px solid #0F172A;
+  white-space: nowrap;
+}
+
+.chat-markdown-table tbody tr {
+  border-bottom: 1px solid #E2E8F0;
+  transition: background-color 0.15s ease;
+}
+
+/* Zebra striping */
+.chat-markdown-table tbody tr:nth-child(even) {
+  background-color: #F8FAFC;
+}
+
+.chat-markdown-table tbody tr:hover {
+  background-color: #F1F5F9;
+}
+
+.chat-markdown-table td {
+  padding: 9px 14px;
+  color: #1E293B;
+  vertical-align: middle;
+  font-size: 12px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.chat-markdown-table td.text-right,
+.chat-markdown-table th.text-right {
+  text-align: right;
+}
+
+.chat-markdown-table td.text-center,
+.chat-markdown-table th.text-center {
+  text-align: center;
+}
+
+/* Badges for SKU and Status */
+.table-badge-sku {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-weight: 600;
+  font-size: 11px;
+  color: #1E40AF;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.table-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2.5px 8px;
+  border-radius: 9999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table-badge.table-badge-critical {
+  background: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+.table-badge.table-badge-warning {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+
+.table-badge.table-badge-success {
+  background: #DCFCE7;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.table-badge.table-badge-info {
+  background: #E0F2FE;
+  color: #075985;
+  border: 1px solid #BAE6FD;
+}
+
+.table-cell-currency {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-weight: 600;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+/* PR Code with Quick Typst Download Pills in Tables */
+.table-pr-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.table-badge-pr {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-weight: 700;
+  font-size: 11px;
+  color: #1D4ED8;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.table-doc-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.table-doc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #F1F5F9;
+  color: #334155;
+  border: 1px solid #CBD5E1;
+  text-decoration: none;
+  line-height: 1.2;
+  transition: all 0.15s ease;
+}
+
+.table-doc-pill:hover {
+  background: #0A4D9C;
+  color: #FFFFFF;
+  border-color: #0A4D9C;
+}
+
+.table-doc-pill-typst {
+  background: #FAF5FF;
+  color: #7E22CE;
+  border-color: #E9D5FF;
+}
+
+.table-doc-pill-typst:hover {
+  background: #7E22CE;
+  color: #FFFFFF;
+  border-color: #7E22CE;
+}
+
+/* Inline PR Mention in Chat Text */
+.chat-pr-inline-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+.chat-pr-code {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-weight: 700;
+  font-size: 11.5px;
+  color: #1D4ED8;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.chat-pr-doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+  text-decoration: none;
+  line-height: 1.2;
+  transition: all 0.15s ease;
+}
+
+.chat-pr-doc-link:hover {
+  background: #0A4D9C;
+  color: #FFFFFF;
+  border-color: #0A4D9C;
+}
+
+.chat-pr-doc-link-typ {
+  background: #FAF5FF;
+  color: #7E22CE;
+  border-color: #E9D5FF;
+}
+
+.chat-pr-doc-link-typ:hover {
+  background: #7E22CE;
+  color: #FFFFFF;
+  border-color: #7E22CE;
+}
+
+
 
 
 

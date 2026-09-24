@@ -20,10 +20,10 @@ except ImportError:
 class Settings(_BaseSettings):
 
     # General
-    APP_NAME: str = "AutoRestock-Agent"
+    APP_NAME: str = "AutoRestock-Agent-Dap"
     APP_ENV: str = "development"
     API_HOST: str = "127.0.0.1"
-    API_PORT: int = 8050
+    API_PORT: int = 8060
     DEBUG: bool = True
     PUBLIC_URL: str | None = None
     SECRET_KEY: str = "super-secret-enterprise-key-for-autorestock-agent"
@@ -34,8 +34,6 @@ class Settings(_BaseSettings):
         "http://localhost:8060",
         "http://127.0.0.1:8060",
         "http://10.17.101.232:8060",
-        "http://localhost:8050",
-        "http://127.0.0.1:8050",
         "http://localhost:3000",
         "http://127.0.0.1:3000"
     ]

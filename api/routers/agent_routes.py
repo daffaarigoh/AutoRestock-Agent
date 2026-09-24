@@ -91,7 +91,7 @@ def run_agent_cycle(current_user: TokenData = Depends(require_inventory_access))
             
             clean_filename = f"{pr_document.pr_number.replace('-', '_')}.pdf"
             PR_STORE[pr_document.pr_number] = pr_document
-            generate_pr_pdf(pr_document, output_path=f"storage/documents/{clean_filename}")
+            generate_pr_pdf(pr_document, output_path=STORAGE_DIR / "documents" / clean_filename)
         return pr_document
     except Exception as e:
         raise HTTPException(
@@ -102,12 +102,16 @@ def run_agent_cycle(current_user: TokenData = Depends(require_inventory_access))
 
 
 @router.get("/api/documents/pr/{pr_number}/download")
-def download_pr_document(pr_number: str, inline: bool = False, current_user: TokenData = Depends(get_document_user)):
+def download_pr_document(pr_number: str, inline: bool = False, format: str | None = None, current_user: TokenData = Depends(get_document_user)):
     """
     Downloads or previews the generated Typst Purchase Requisition PDF.
     Use ?inline=true to display in-browser (for iframe previews).
+    Use ?format=typst to download the rendered Typst source (.typ).
     Checks status-specific folders first to ensure the served PDF matches true PR status.
     """
+    if format and format.lower() == "typst":
+        return download_pr_typst(pr_number=pr_number, inline=inline, current_user=current_user)
+
     _safe_document_id(pr_number)
     _require_document_domain(current_user, "INVENTORY", "TENANT_A")
     clean_pr_num = pr_number.replace("/", "_").replace("\\", "_")
@@ -171,6 +175,78 @@ def download_pr_document(pr_number: str, inline: bool = False, current_user: Tok
         path=str(found_path),
         media_type="application/pdf",
         filename=f"{clean_pr_num}.pdf",
+        content_disposition_type="inline" if inline else "attachment"
+    )
+
+
+@router.get("/api/documents/pr/{pr_number}/download-typst")
+def download_pr_typst(pr_number: str, inline: bool = False, current_user: TokenData = Depends(get_document_user)):
+    """
+    Downloads or previews the rendered Typst source (.typ) for a Purchase Requisition.
+    Returned as attachment with filename {clean_pr_num}.typ and media type text/plain.
+    """
+    _safe_document_id(pr_number)
+    _require_document_domain(current_user, "INVENTORY", "TENANT_A")
+    clean_pr_num = pr_number.replace("/", "_").replace("\\", "_")
+    clean_filename = f"{pr_number.replace('-', '_')}.typ"
+    
+    from api.routers.approval_routes import _ensure_pr_in_store, _regenerate_pdf
+    pr_doc = _ensure_pr_in_store(pr_number)
+    if pr_doc and current_user.role != "ADMIN" and pr_doc.tenant_id not in {current_user.tenant_id, "ALL"}:
+        raise HTTPException(status_code=403, detail="Access denied")
+    current_status = (pr_doc.status if pr_doc else "PENDING").upper()
+    
+    candidate_paths = []
+    if "APPROV" in current_status:
+        candidate_paths = [
+            STORAGE_DIR / "approved" / f"{clean_pr_num}.typ",
+            STORAGE_DIR / "approved" / clean_filename,
+            STORAGE_DIR / "documents" / clean_filename,
+            STORAGE_DIR / "documents" / f"{clean_pr_num}.typ",
+        ]
+    elif "REJECT" in current_status:
+        candidate_paths = [
+            STORAGE_DIR / "rejected" / f"{clean_pr_num}.typ",
+            STORAGE_DIR / "rejected" / clean_filename,
+            STORAGE_DIR / "documents" / clean_filename,
+            STORAGE_DIR / "documents" / f"{clean_pr_num}.typ",
+        ]
+    else:
+        candidate_paths = [
+            STORAGE_DIR / "pending" / f"{clean_pr_num}.typ",
+            STORAGE_DIR / "pending" / clean_filename,
+            STORAGE_DIR / "documents" / clean_filename,
+            STORAGE_DIR / "documents" / f"{clean_pr_num}.typ",
+            STORAGE_DIR / f"{clean_pr_num}.typ"
+        ]
+    
+    found_path = None
+    for path in candidate_paths:
+        if path.exists():
+            found_path = path
+            break
+            
+    # If not found or if the document needs regeneration for its current status
+    if found_path is None and pr_doc:
+        try:
+            _regenerate_pdf(pr_doc)
+            for path in candidate_paths:
+                if path.exists():
+                    found_path = path
+                    break
+        except Exception as e:
+            print(f"[download_pr_typst] Typst generation on-the-fly failed: {e}")
+
+    if found_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Purchase Requisition Typst source '{pr_number}' not found in storage."
+        )
+            
+    return FileResponse(
+        path=str(found_path),
+        media_type="text/plain; charset=utf-8",
+        filename=f"{clean_pr_num}.typ",
         content_disposition_type="inline" if inline else "attachment"
     )
 

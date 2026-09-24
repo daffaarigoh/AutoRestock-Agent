@@ -1076,21 +1076,36 @@ class JSONExecutionEngine:
                         default_subj = f"Pengajuan Cuti Karyawan: {leave_id} - {applicant}"
                         default_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "muhammaddaffaarigoh@gmail.com"
                     elif pr_number:
-                        msg = f"Dokumen Purchase Requisition **{pr_number}** telah diterbitkan untuk **{items_len} barang menipis** dengan estimasi anggaran **Rp {context.get('total_budget', 0.0):,.2f}**.\n\n"
                         p_items = context.get("planned_items") or []
+                        if not p_items:
+                            from api.routers.approval_routes import PR_STORE, _ensure_pr_in_store
+                            stored_pr = PR_STORE.get(pr_number) or _ensure_pr_in_store(pr_number)
+                            if stored_pr and hasattr(stored_pr, "items") and stored_pr.items:
+                                p_items = stored_pr.items
+
+                        items_len = len(p_items)
+                        tot_budget = context.get("total_budget") or sum(float(getattr(it, "total_price", 0.0) if hasattr(it, "total_price") else it.get("total_price", 0.0)) for it in p_items)
+                        tot_budget_fmt = f"Rp {float(tot_budget):,.0f}".replace(",", ".")
+
+                        msg = (
+                            f"Dokumen resmi Purchase Requisition (PR) **{pr_number}** telah disusun otomatis oleh sistem "
+                            f"untuk pengadaan **{items_len} material menara** dengan total estimasi anggaran **{tot_budget_fmt}**.\n\n"
+                            f"### Rincian Kebutuhan Pengadaan Material\n\n"
+                        )
                         if p_items:
-                            msg += "| SKU | Nama Material | Rekanan Vendor | Kuantitas | Harga Satuan | Subtotal |\n"
-                            msg += "| :--- | :--- | :--- | :---: | :---: | :---: |\n"
+                            msg += "| SKU | Nama | Vendor | Kuantitas | Satuan | Estimasi Biaya |\n"
+                            msg += "| :--- | :--- | :--- | :---: | :---: | ---: |\n"
                             for it in p_items:
                                 it_sku = getattr(it, "item_id", "") if hasattr(it, "item_id") else it.get("item_id", "")
                                 it_name = getattr(it, "name", "") if hasattr(it, "name") else it.get("name", "")
                                 it_vend = getattr(it, "vendor_name", "") if hasattr(it, "vendor_name") else it.get("vendor_name", "")
                                 it_qty = getattr(it, "reorder_qty", 0) if hasattr(it, "reorder_qty") else it.get("reorder_qty", 0)
                                 it_unit = getattr(it, "unit", "pcs") if hasattr(it, "unit") else it.get("unit", "pcs")
-                                it_price = getattr(it, "unit_price", 0.0) if hasattr(it, "unit_price") else it.get("unit_price", 0.0)
                                 it_total = getattr(it, "total_price", 0.0) if hasattr(it, "total_price") else it.get("total_price", 0.0)
-                                msg += f"| `{it_sku}` | {it_name} | {it_vend} | **{it_qty:,} {it_unit}** | Rp {it_price:,.2f} | Rp {it_total:,.2f} |\n"
-                        msg += "\nMohon tinjau rincian barang di atas dan berikan otorisasi pengesahan melalui tombol di bawah."
+                                line_total_fmt = f"Rp {float(it_total):,.0f}".replace(",", ".")
+                                msg += f"| `{it_sku}` | **{it_name}** | {it_vend} | **{it_qty:,}** | {it_unit} | **{line_total_fmt}** |\n"
+                            msg += f"\n**Total Estimasi Anggaran Pengadaan: {tot_budget_fmt}**\n\n"
+                        msg += "Silakan periksa rincian material di atas dan tentukan otorisasi persetujuan pengadaan melalui tombol tindakan resmi di bawah:"
                         default_subj = f"Permintaan Persetujuan Restock: {pr_number}"
                         default_recip = None
                     elif registered:
@@ -1216,6 +1231,7 @@ class JSONExecutionEngine:
                             content_text=msg,
                             html_content=custom_html,
                             attachment_path=context.get("pdf_path"),
+                            typ_path=context.get("typ_path"),
                             pr_number=pr_number,
                             leave_id=leave_id,
                             leave_data=context
@@ -1403,6 +1419,9 @@ class JSONExecutionEngine:
                             pdf_path = generate_pr_pdf(pr_doc)
                             context["pr_number"] = pr_number
                             context["pdf_path"] = str(pdf_path)
+                            typ_p = Path(pdf_path).with_suffix(".typ")
+                            if typ_p.exists():
+                                context["typ_path"] = str(typ_p)
                             execution_results.append({
                                 "step_number": i,
                                 "title": "Generate Document / PR Draft",
@@ -2231,7 +2250,34 @@ class JSONExecutionEngine:
                 elif ob_id:
                     msg = f"Tower lease authorization request {ob_id} has been issued and is awaiting approval."
                 elif pr_num:
-                    msg = f"Purchase Requisition #{pr_num} has been issued and is awaiting approval."
+                    p_items = context.get("planned_items") or []
+                    if not p_items:
+                        from api.routers.approval_routes import PR_STORE, _ensure_pr_in_store
+                        stored_pr = PR_STORE.get(pr_num) or _ensure_pr_in_store(pr_num)
+                        if stored_pr and hasattr(stored_pr, "items") and stored_pr.items:
+                            p_items = stored_pr.items
+                    items_len = len(p_items)
+                    tot_budget = context.get("total_budget") or sum(float(getattr(it, "total_price", 0.0) if hasattr(it, "total_price") else it.get("total_price", 0.0)) for it in p_items)
+                    tot_budget_fmt = f"Rp {float(tot_budget):,.0f}".replace(",", ".")
+                    msg = (
+                        f"Dokumen resmi Purchase Requisition (PR) **{pr_num}** telah disusun otomatis oleh sistem "
+                        f"untuk pengadaan **{items_len} material menara** dengan total estimasi anggaran **{tot_budget_fmt}**.\n\n"
+                        f"### Rincian Kebutuhan Pengadaan Material\n\n"
+                    )
+                    if p_items:
+                        msg += "| SKU | Nama | Vendor | Kuantitas | Satuan | Estimasi Biaya |\n"
+                        msg += "| :--- | :--- | :--- | :---: | :---: | ---: |\n"
+                        for it in p_items:
+                            it_sku = getattr(it, "item_id", "") if hasattr(it, "item_id") else it.get("item_id", "")
+                            it_name = getattr(it, "name", "") if hasattr(it, "name") else it.get("name", "")
+                            it_vend = getattr(it, "vendor_name", "") if hasattr(it, "vendor_name") else it.get("vendor_name", "")
+                            it_qty = getattr(it, "reorder_qty", 0) if hasattr(it, "reorder_qty") else it.get("reorder_qty", 0)
+                            it_unit = getattr(it, "unit", "pcs") if hasattr(it, "unit") else it.get("unit", "pcs")
+                            it_total = getattr(it, "total_price", 0.0) if hasattr(it, "total_price") else it.get("total_price", 0.0)
+                            line_total_fmt = f"Rp {float(it_total):,.0f}".replace(",", ".")
+                            msg += f"| `{it_sku}` | **{it_name}** | {it_vend} | **{it_qty:,}** | {it_unit} | **{line_total_fmt}** |\n"
+                        msg += f"\n**Total Estimasi Anggaran Pengadaan: {tot_budget_fmt}**\n\n"
+                    msg += "Silakan periksa rincian material di atas dan tentukan otorisasi persetujuan pengadaan melalui tombol tindakan resmi di bawah:"
                 from core.config import settings
                 default_env_recip = settings.DEFAULT_RECIPIENT_EMAIL or settings.SMTP_EMAIL or "manager@balitower.co.id"
                 dispatch_res = await dispatcher.dispatch_email(
@@ -2239,6 +2285,7 @@ class JSONExecutionEngine:
                     subject=f"Employee Leave Request: {lv_id}" if lv_id else (f"Tower Lease Authorization: {ob_id}" if ob_id else (f"Restock Approval Request: {pr_num}" if pr_num else "Operations Notification")),
                     content_text=msg,
                     attachment_path=context.get("pdf_path"),
+                    typ_path=context.get("typ_path"),
                     pr_number=pr_num,
                     leave_id=lv_id,
                     leave_data=context

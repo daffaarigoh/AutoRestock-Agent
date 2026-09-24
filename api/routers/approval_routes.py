@@ -621,12 +621,15 @@ def _regenerate_pdf(pr: PurchaseRequisitionDoc):
             generate_pr_pdf(payload, output_path=settings.REJECTED_DIR / clean_filename)
         
         # 3. Clean up old pending files so it won't be served by cache/download
-        for pfile in [settings.PENDING_DIR / f"{clean_pr_num}.pdf", settings.PENDING_DIR / clean_filename]:
+        for pfile in [
+            settings.PENDING_DIR / f"{clean_pr_num}.pdf", settings.PENDING_DIR / clean_filename,
+            settings.PENDING_DIR / f"{clean_pr_num}.typ", settings.PENDING_DIR / f"{clean_pr_num.replace('-', '_')}.typ"
+        ]:
             if pfile.exists():
                 try:
                     pfile.unlink()
                 except Exception as e:
-                    print(f"[REGENERATE PDF WARN] Failed to delete stale pending PDF {pfile}: {e}")
+                    print(f"[REGENERATE PDF WARN] Failed to delete stale pending PDF/TYP {pfile}: {e}")
     except Exception as e:
         print(f"[REGENERATE PDF ERROR] {e}")
 
@@ -1623,28 +1626,59 @@ async def dispatch_pr_email(payload: DispatchEmailPayload, current_user: TokenDa
     target_email = payload.recipient_email or "manager.logistik@balitower.co.id"
 
     from pathlib import Path
+    from core.config import settings
     pdf_path = None
     clean_filename = f"{pr.pr_number.replace('-', '_')}.pdf"
+    clean_pr_num = pr.pr_number.replace("/", "_").replace("\\", "_")
 
     if pr.pdf_path and Path(pr.pdf_path).exists():
         pdf_path = Path(pr.pdf_path)
-    elif (Path("storage/documents") / clean_filename).exists():
-        pdf_path = Path("storage/documents") / clean_filename
-    elif (Path("storage/pending") / clean_filename).exists():
-        pdf_path = Path("storage/pending") / clean_filename
+    elif (settings.DOCUMENTS_DIR / clean_filename).exists():
+        pdf_path = settings.DOCUMENTS_DIR / clean_filename
+    elif (settings.DOCUMENTS_DIR / f"{clean_pr_num}.pdf").exists():
+        pdf_path = settings.DOCUMENTS_DIR / f"{clean_pr_num}.pdf"
+    elif (settings.PENDING_DIR / clean_filename).exists():
+        pdf_path = settings.PENDING_DIR / clean_filename
+    elif (settings.PENDING_DIR / f"{clean_pr_num}.pdf").exists():
+        pdf_path = settings.PENDING_DIR / f"{clean_pr_num}.pdf"
 
     if not pdf_path or not pdf_path.exists():
         _regenerate_pdf(pr)
         if pr.pdf_path and Path(pr.pdf_path).exists():
             pdf_path = Path(pr.pdf_path)
-        elif (Path("storage/documents") / clean_filename).exists():
-            pdf_path = Path("storage/documents") / clean_filename
+        elif (settings.DOCUMENTS_DIR / clean_filename).exists():
+            pdf_path = settings.DOCUMENTS_DIR / clean_filename
+        elif (settings.PENDING_DIR / f"{clean_pr_num}.pdf").exists():
+            pdf_path = settings.PENDING_DIR / f"{clean_pr_num}.pdf"
+
+    items_len = len(pr.items) if hasattr(pr, "items") and pr.items else 0
+    tot_budget_fmt = f"Rp {float(pr.total_budget):,.0f}".replace(",", ".")
+    content_lines = [
+        f"Dokumen resmi Purchase Requisition (PR) **{pr.pr_number}** telah disusun otomatis oleh sistem "
+        f"untuk pengadaan **{items_len} material menara** dengan total estimasi anggaran **{tot_budget_fmt}**.\n",
+        "### Rincian Kebutuhan Pengadaan Material\n",
+        "| SKU | Nama | Vendor | Kuantitas | Satuan | Estimasi Biaya |",
+        "| :--- | :--- | :--- | :---: | :---: | ---: |"
+    ]
+    if hasattr(pr, "items") and pr.items:
+        for it in pr.items:
+            it_sku = getattr(it, "item_id", "") if hasattr(it, "item_id") else it.get("item_id", "")
+            it_name = getattr(it, "name", "") if hasattr(it, "name") else it.get("name", "")
+            it_vend = getattr(it, "vendor_name", "") if hasattr(it, "vendor_name") else it.get("vendor_name", "")
+            it_qty = getattr(it, "reorder_qty", 0) if hasattr(it, "reorder_qty") else it.get("reorder_qty", 0)
+            it_unit = getattr(it, "unit", "pcs") if hasattr(it, "unit") else it.get("unit", "pcs")
+            it_total = getattr(it, "total_price", 0.0) if hasattr(it, "total_price") else it.get("total_price", 0.0)
+            line_total_fmt = f"Rp {float(it_total):,.0f}".replace(",", ".")
+            content_lines.append(f"| `{it_sku}` | **{it_name}** | {it_vend} | **{it_qty:,}** | {it_unit} | **{line_total_fmt}** |")
+    content_lines.append(f"\n**Total Estimasi Anggaran Pengadaan: {tot_budget_fmt}**\n")
+    content_lines.append("Silakan periksa rincian material di atas dan tentukan otorisasi persetujuan pengadaan melalui tombol tindakan resmi di bawah:")
+    formatted_msg = "\n".join(content_lines)
 
     from core.dispatcher import dispatcher
     dispatch_res = await dispatcher.dispatch_email(
         recipient_email=target_email,
         subject=f"Permintaan Persetujuan Pengadaan Material: {pr.pr_number} - PT Bali Towerindo Sentra Tbk",
-        content_text=f"Dokumen pengajuan {pr.pr_number} sebesar Rp {pr.total_budget:,.2f} telah diterbitkan dan menunggu persetujuan Anda.",
+        content_text=formatted_msg,
         attachment_path=str(pdf_path) if pdf_path else None,
         pr_number=pr.pr_number
     )

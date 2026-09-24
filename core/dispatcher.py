@@ -29,23 +29,57 @@ def _format_markdown_to_html(text: str) -> str:
     def flush_table(t_rows):
         if not t_rows:
             return ""
-        tbl_html = ['<div style="overflow-x: auto; margin: 16px 0;"><table style="width: 100%; border-collapse: collapse; font-size: 12.5px; font-family: inherit; border: 1px solid #E2E8F0; background: #FFFFFF;">']
-        for idx, row in enumerate(t_rows):
+        alignments = []
+        parsed_rows = []
+        for r_idx, row in enumerate(t_rows):
             cols = [c.strip() for c in row.split("|")[1:-1]]
-            if not cols or all(re.match(r'^:?-+:?$', c) for c in cols):
+            if not cols:
                 continue
-            if idx == 0:
-                tbl_html.append('<tr style="background: #F8FAFC; color: #334155; font-weight: 700; border-bottom: 2px solid #CBD5E1;">')
+            # Check if this row is the markdown separator row e.g. |:---|:---:|---:|
+            if any(re.match(r'^:?-+:?$', c) for c in cols):
+                alignments = []
                 for c in cols:
-                    tbl_html.append(f'<th style="padding: 10px 12px; border: 1px solid #E2E8F0; text-align: left;">{_format_inline(c)}</th>')
-                tbl_html.append('</tr>')
-            else:
-                bg = "#F8FAFC" if idx % 2 == 1 else "#FFFFFF"
-                tbl_html.append(f'<tr style="background: {bg}; border-bottom: 1px solid #E2E8F0;">')
-                for c in cols:
-                    tbl_html.append(f'<td style="padding: 8px 12px; border: 1px solid #E2E8F0;">{_format_inline(c)}</td>')
-                tbl_html.append('</tr>')
-        tbl_html.append('</table></div>')
+                    if c.startswith(":") and c.endswith(":"):
+                        alignments.append("center")
+                    elif c.endswith(":"):
+                        alignments.append("right")
+                    else:
+                        alignments.append("left")
+                continue
+            parsed_rows.append(cols)
+
+        if not parsed_rows:
+            return ""
+
+        tbl_html = [
+            '<div style="overflow-x: auto; margin: 18px 0; border: 1px solid #CBD5E1; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">'
+            '<table style="width: 100%; border-collapse: collapse; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; background: #FFFFFF;">'
+        ]
+
+        # Header row is parsed_rows[0]
+        header_cols = parsed_rows[0]
+        tbl_html.append('<thead><tr style="background: #F1F5F9; color: #1E293B; font-weight: 700; border-bottom: 2px solid #CBD5E1;">')
+        for c_idx, c in enumerate(header_cols):
+            align = alignments[c_idx] if c_idx < len(alignments) else "left"
+            tbl_html.append(
+                f'<th style="padding: 10px 14px; border: 1px solid #E2E8F0; text-align: {align}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #334155;">'
+                f'{_format_inline(c)}</th>'
+            )
+        tbl_html.append('</tr></thead><tbody>')
+
+        # Data rows
+        for r_idx, row_cols in enumerate(parsed_rows[1:]):
+            bg = "#F8FAFC" if r_idx % 2 == 1 else "#FFFFFF"
+            tbl_html.append(f'<tr style="background: {bg}; border-bottom: 1px solid #E2E8F0;">')
+            for c_idx, c in enumerate(row_cols):
+                align = alignments[c_idx] if c_idx < len(alignments) else "left"
+                tbl_html.append(
+                    f'<td style="padding: 9px 14px; border: 1px solid #E2E8F0; text-align: {align}; vertical-align: middle; color: #0F172A;">'
+                    f'{_format_inline(c)}</td>'
+                )
+            tbl_html.append('</tr>')
+
+        tbl_html.append('</tbody></table></div>')
         return "".join(tbl_html)
 
     def _format_inline(s: str) -> str:
@@ -97,7 +131,8 @@ class MultiChannelDispatcher:
         recipient_email: str | None = None,
         subject: str = "Notifikasi Pengadaan Inventaris",
         content_text: str = "",
-        attachment_path: str | None = None,
+        attachment_path: str | Path | None = None,
+        typ_path: str | Path | None = None,
         html_content: str | None = None,
         pr_number: str | None = None,
         leave_id: str | None = None,
@@ -109,7 +144,7 @@ class MultiChannelDispatcher:
         action_button_url: str | None = None
     ) -> dict[str, Any]:
         """
-        Sends a rich HTML email notification with optional PDF attachment and interactive Approve/Reject action buttons.
+        Sends a rich HTML email notification with optional PDF and .typ attachments and interactive Approve/Reject action buttons.
         Falls back to smart simulation if SMTP credentials are not configured.
         """
         import re
@@ -142,12 +177,63 @@ class MultiChannelDispatcher:
 
         # Auto-detect PR number from subject, attachment_path, or content_text if not explicitly given
         if not pr_number:
-            candidates = [attachment_path or "", subject or "", content_text or ""]
+            candidates = [str(attachment_path or ""), subject or "", content_text or ""]
             for cand in candidates:
                 m = re.search(r'\b(PR[-_]\d{8}[-_]\d{6}|PR[-_]\d{4}[-_]\d{3})\b', cand)
                 if m:
                     pr_number = m.group(1).replace('_', '-')
                     break
+
+        # Resolve compiled PDF and Typst source (.typ) attachments
+        pdf_file: Path | None = None
+        typ_file: Path | None = None
+
+        if attachment_path:
+            p_att = Path(attachment_path)
+            if p_att.exists():
+                if p_att.suffix.lower() == ".pdf":
+                    pdf_file = p_att
+                    candidate_typ = p_att.with_suffix(".typ")
+                    if candidate_typ.exists():
+                        typ_file = candidate_typ
+                elif p_att.suffix.lower() == ".typ":
+                    typ_file = p_att
+                    candidate_pdf = p_att.with_suffix(".pdf")
+                    if candidate_pdf.exists():
+                        pdf_file = candidate_pdf
+
+        if typ_path:
+            t_att = Path(typ_path)
+            if t_att.exists():
+                typ_file = t_att
+
+        if pr_number:
+            clean_pr = pr_number.replace("/", "_").replace("\\", "_")
+            clean_fn_pdf = f"{pr_number.replace('-', '_')}.pdf"
+            clean_fn_typ = f"{pr_number.replace('-', '_')}.typ"
+            storage_root = settings.STORAGE_DIR
+
+            if not pdf_file:
+                for c_dir in [storage_root / "pending", storage_root / "approved", storage_root / "documents", storage_root]:
+                    cand1 = c_dir / f"{clean_pr}.pdf"
+                    cand2 = c_dir / clean_fn_pdf
+                    if cand1.exists():
+                        pdf_file = cand1
+                        break
+                    elif cand2.exists():
+                        pdf_file = cand2
+                        break
+
+            if not typ_file:
+                for c_dir in [storage_root / "pending", storage_root / "approved", storage_root / "documents", storage_root]:
+                    cand1 = c_dir / f"{clean_pr}.typ"
+                    cand2 = c_dir / clean_fn_typ
+                    if cand1.exists():
+                        typ_file = cand1
+                        break
+                    elif cand2.exists():
+                        typ_file = cand2
+                        break
 
         # Build default rich HTML for Leave Request if not provided
         if not html_content and leave_id:
@@ -395,6 +481,7 @@ class MultiChannelDispatcher:
             approve_link = build_action_url(base_url, "pr", pr_number, "APPROVE")
             reject_link = build_action_url(base_url, "pr", pr_number, "REJECT")
             pdf_link = f"{base_url}/api/documents/pr/{pr_number}/download"
+            typst_link = f"{base_url}/api/documents/pr/{pr_number}/download-typst"
             from datetime import datetime
             today_str = datetime.now().strftime("%d %B %Y, %H:%M WIB")
             formatted_body = _format_markdown_to_html(content_text)
@@ -520,11 +607,12 @@ class MultiChannelDispatcher:
             </div>
 
             <div style="margin: 28px 0 16px 0; text-align: center;">
-                <a href="{approve_link}" style="display: inline-block; padding: 12px 24px; font-size: 13px; font-weight: 700; color: #FFFFFF !important; background-color: #15803D; border: 1px solid #166534; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">SETUJUI PENGAJUAN (APPROVE)</a>
-                <a href="{reject_link}" style="display: inline-block; padding: 12px 24px; font-size: 13px; font-weight: 700; color: #B91C1C !important; background-color: #FFFFFF; border: 1px solid #F87171; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">TOLAK PENGAJUAN (REJECT)</a>
+                <a href="{approve_link}" style="display: inline-block; padding: 12px 22px; font-size: 13px; font-weight: 700; color: #FFFFFF !important; background-color: #15803D; border: 1px solid #166534; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">&#10003; Setujui (Approve)</a>
+                <a href="{reject_link}" style="display: inline-block; padding: 12px 22px; font-size: 13px; font-weight: 700; color: #B91C1C !important; background-color: #FFFFFF; border: 1px solid #F87171; border-radius: 6px; text-decoration: none; margin: 4px 6px; letter-spacing: 0.02em;" target="_blank">&#10007; Tolak (Reject)</a>
             </div>
-            <div style="text-align: center; margin-top: 8px;">
-                <a href="{pdf_link}" style="display: inline-block; padding: 10px 20px; font-size: 12px; font-weight: 600; color: #2563EB !important; background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 6px; text-decoration: none; margin: 4px 6px;" target="_blank">Unduh Dokumen Draf Resmi (PDF)</a>
+            <div style="text-align: center; margin-top: 10px;">
+                <a href="{pdf_link}" style="display: inline-block; padding: 10px 18px; font-size: 12px; font-weight: 600; color: #2563EB !important; background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 6px; text-decoration: none; margin: 4px 6px;" target="_blank">&#128196; Unduh Dokumen PDF Resmi (Typst)</a>
+                <a href="{typst_link}" style="display: inline-block; padding: 10px 18px; font-size: 12px; font-weight: 600; color: #475569 !important; background-color: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 6px; text-decoration: none; margin: 4px 6px;" target="_blank">&#128221; Unduh Source Typst (.typ)</a>
             </div>
         </div>
         <div class="corp-footer">
@@ -630,7 +718,15 @@ class MultiChannelDispatcher:
 </html>"""
 
         if not is_smtp_configured:
-            attach_info = f" (dengan lampiran: {Path(attachment_path).name})" if attachment_path and Path(attachment_path).exists() else ""
+            attached_names = []
+            if pdf_file and pdf_file.exists():
+                attached_names.append(pdf_file.name)
+            if typ_file and typ_file.exists() and typ_file.name not in attached_names:
+                attached_names.append(typ_file.name)
+            elif attachment_path and Path(attachment_path).exists() and Path(attachment_path).name not in attached_names:
+                attached_names.append(Path(attachment_path).name)
+
+            attach_info = f" (dengan lampiran: {', '.join(attached_names)})" if attached_names else ""
             msg = f"[EMAIL SIMULASI] Email berhasil disimulasikan ke '{recipient}' | Subjek: '{subject}'{attach_info}."
             logger.info(msg)
             return {
@@ -639,10 +735,12 @@ class MultiChannelDispatcher:
                 "subject": subject,
                 "message": msg,
                 "content_preview": content_text[:150] + "..." if len(content_text) > 150 else content_text,
+                "attachments": attached_names,
                 "interactive_actions": {
                     "approve_url": build_action_url(base_url, "leave", leave_id, "APPROVE") if leave_id else (build_action_url(base_url, "pr", pr_number, "APPROVE") if pr_number else ""),
                     "reject_url": build_action_url(base_url, "leave", leave_id, "REJECT") if leave_id else (build_action_url(base_url, "pr", pr_number, "REJECT") if pr_number else ""),
-                    "pdf_url": f"{base_url}/api/documents/leave/{leave_id}/download" if leave_id else (f"{base_url}/api/documents/pr/{pr_number}/download" if pr_number else "")
+                    "pdf_url": f"{base_url}/api/documents/leave/{leave_id}/download" if leave_id else (f"{base_url}/api/documents/pr/{pr_number}/download" if pr_number else ""),
+                    "typst_url": f"{base_url}/api/documents/pr/{pr_number}/download-typst" if pr_number else ""
                 }
             }
 
@@ -662,8 +760,27 @@ class MultiChannelDispatcher:
                 body_alt.attach(part2)
             outer.attach(body_alt)
 
-            # Physical attachment (Typst PDF / document)
-            if attachment_path and Path(attachment_path).exists():
+            # Physical attachments (Typst PDF and .typ source)
+            attached_count = 0
+            if pdf_file and pdf_file.exists():
+                with open(pdf_file, "rb") as f:
+                    pdf_bytes = f.read()
+                part_pdf = MIMEApplication(pdf_bytes, _subtype="pdf")
+                part_pdf.add_header("Content-Disposition", "attachment", filename=pdf_file.name)
+                outer.attach(part_pdf)
+                attached_count += 1
+                logger.info(f"Attached PDF '{pdf_file.name}' to email for {recipient}")
+
+            if typ_file and typ_file.exists():
+                with open(typ_file, "rb") as f:
+                    typ_bytes = f.read()
+                part_typ = MIMEApplication(typ_bytes, _subtype="octet-stream")
+                part_typ.add_header("Content-Disposition", "attachment", filename=typ_file.name)
+                outer.attach(part_typ)
+                attached_count += 1
+                logger.info(f"Attached Typst source '{typ_file.name}' to email for {recipient}")
+
+            if attached_count == 0 and attachment_path and Path(attachment_path).exists():
                 file_p = Path(attachment_path)
                 with open(file_p, "rb") as f:
                     file_bytes = f.read()
