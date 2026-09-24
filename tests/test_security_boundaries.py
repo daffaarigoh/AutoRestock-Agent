@@ -19,7 +19,8 @@ def test_approval_and_document_routes_reject_anonymous_requests():
     assert client.post("/api/agent/approve", json={"pr_number": "PR-2026-0819-001", "action": "APPROVE"}).status_code in {401, 403}
 
 
-def test_approval_token_is_bound_to_object_action_and_expiry():
+def test_approval_token_is_bound_to_object_action_and_expiry(monkeypatch):
+    monkeypatch.setattr("core.action_links.is_action_token_consumed", lambda token: False)
     token = create_action_token("pr", "PR-001", "APPROVE", now=100)
     assert verify_action_token(token, "pr", "PR-001", "APPROVE", now=101)
     assert not verify_action_token(token, "pr", "PR-002", "APPROVE", now=101)

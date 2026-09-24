@@ -1,5 +1,4 @@
 import logging
-import sys
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -11,8 +10,6 @@ from fastapi.staticfiles import StaticFiles
 
 # Base path resolution
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent
-if str(WORKSPACE_DIR) not in sys.path:
-    sys.path.insert(0, str(WORKSPACE_DIR))
 
 from api.routers.agent_routes import router as agent_router
 from api.routers.approval_routes import PR_STORE

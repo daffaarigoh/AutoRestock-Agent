@@ -16,6 +16,8 @@ import pandas as pd
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 DATA_DIR = BASE_DIR / "data" / "balitower"
 STORAGE_DIR = BASE_DIR / "storage"
 DB_PATH = STORAGE_DIR / "balitower.db"
@@ -677,6 +679,12 @@ if EMPTY_PR_PO:
     conn.execute("DELETE FROM purchase_orders;")
 
 conn.close()
+
+try:
+    from database.migrations import run_migrations
+    run_migrations()
+except Exception as e:
+    print(f">>> [Warning] Migrations could not run: {e}")
 
 print(">>> [6/7] Seluruh Tabel Berhasil Dimuat ke DuckDB!")
 print(f">>> [7/7] Selesai! Semua CSV tersimpan rapi di {DATA_DIR} dan DuckDB di {DB_PATH}")

@@ -70,11 +70,9 @@ class TestTenantSecurity(unittest.TestCase):
             ("/api/balitower/finance/mla-contracts", "mla_contracts"),
             ("/api/balitower/finance/land-leases", "site_land_leases"),
             ("/api/balitower/finance/site-utilities", "site_utilities_cost"),
-            ("/api/balitower/finance/transactions", "financial_transactions"),
-            ("/api/balitower/finance/chart-of-accounts", "chart_of_accounts"),
         ]
 
-        print("\n--- Verifying Admin Access to all 18 Tables ---")
+        print("\n--- Verifying Admin Access to all active data routes ---")
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         for ep, table_name in endpoints_to_test:
             r = client.get(ep, headers=admin_headers)

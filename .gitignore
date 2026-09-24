@@ -33,6 +33,7 @@ data/inventory.duckdb*
 test.db
 *.db
 scratch/
+work/
 *.log
 .pytest_cache/
 .ruff_cache/

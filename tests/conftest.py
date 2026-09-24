@@ -32,6 +32,11 @@ def seed_test_database_if_needed():
 
     if needs_seed and generator_script.exists():
         subprocess.run([sys.executable, str(generator_script)], check=True)
+    try:
+        from database.migrations import run_migrations
+        run_migrations()
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -41,6 +46,11 @@ def ensure_test_database():
     exists and contains seeded tables before any test runs.
     """
     seed_test_database_if_needed()
+    try:
+        from database.migrations import run_migrations
+        run_migrations()
+    except Exception:
+        pass
 
 
 @pytest.fixture(autouse=True)

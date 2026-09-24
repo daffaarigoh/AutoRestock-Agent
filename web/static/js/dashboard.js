@@ -721,10 +721,9 @@ async function loadAllData() {
       loadMlaContracts(),
       loadLandLeases(),
       loadSiteUtilities(),
-      loadCoa()
     ]);
   } else {
-    // Admin / Multi-Tenant: load all 18 tables across all domains!
+    // Admin / Multi-Tenant: load all active domain data.
     await Promise.allSettled([
       loadInventoryItems(),
       loadStockBalances(),
@@ -742,7 +741,6 @@ async function loadAllData() {
       loadMlaContracts(),
       loadLandLeases(),
       loadSiteUtilities(),
-      loadCoa()
     ]);
     await loadCategories();
   }
@@ -988,7 +986,7 @@ function renderEmployeesTable(data) {
       <td>${escapeHtml(e.job_title)}</td>
       <td class="text-center"><span class="badge ${e.employment_status === 'PERMANENT' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(e.employment_status)}</span></td>
       <td class="text-center"><span class="badge ${e.k3_certification !== 'NON_CERTIFIED' ? 'badge-tkpk' : 'badge-pending'}">${escapeHtml(e.k3_certification)}</span></td>
-      <td class="text-center" style="font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${e.leave_balance_days} hari</td>
+      <td class="text-center" style="font-family: var(--font-mono); font-weight: 700; color: #0F172A;">${Number(e.leave_balance_days) || 0} hari</td>
     </tr>
   `).join('');
 }
@@ -1023,8 +1021,8 @@ async function loadJobPostings() {
           <td><strong>${escapeHtml(j.job_title)}</strong></td>
           <td>${escapeHtml(j.department)}</td>
           <td class="text-center"><span class="badge badge-tkpk">${escapeHtml(j.required_k3_cert)}</span></td>
-          <td class="text-center" style="font-family: var(--font-mono);">${j.min_experience_years} th</td>
-          <td class="text-center" style="font-weight: 700; color: #2563EB;">${j.open_positions} org</td>
+          <td class="text-center" style="font-family: var(--font-mono);">${Number(j.min_experience_years) || 0} th</td>
+          <td class="text-center" style="font-weight: 700; color: #2563EB;">${Number(j.open_positions) || 0} org</td>
           <td>${escapeHtml(j.work_location)}</td>
           <td class="text-center"><span class="badge ${j.status === 'OPEN' ? 'badge-approved' : 'badge-rejected'}">${escapeHtml(j.status)}</span></td>
         </tr>
@@ -1056,9 +1054,9 @@ async function loadSites() {
           <td><span style="font-size: 11px; background: #EFF6FF; color: #1E40AF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(s.site_type)}</span></td>
           <td>${escapeHtml(s.region)}</td>
           <td class="text-center" style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);">${Number(s.latitude).toFixed(4)}, ${Number(s.longitude).toFixed(4)}</td>
-          <td class="text-right" style="font-family: var(--font-mono); font-weight: 700;">${s.height_meters} m</td>
+          <td class="text-right" style="font-family: var(--font-mono); font-weight: 700;">${Number(s.height_meters) || 0} m</td>
           <td>${escapeHtml(s.structure_type)}</td>
-          <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${s.tenant_count} Operator</span></td>
+          <td class="text-center"><span class="badge" style="background:#F1F5F9; color:#475569;">${Number(s.tenant_count) || 0} Operator</span></td>
         </tr>
       `).join('');
     }
@@ -1115,10 +1113,10 @@ async function loadHrData() {
       tbodyCand.innerHTML = cands.map(c => `
         <tr>
           <td><strong>${escapeHtml(c.full_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(c.current_city)}</span></td>
-          <td>${escapeHtml(c.job_title)}<br><span style="font-size: 11px; color: var(--text-muted);">${c.years_of_experience} yrs experience</span></td>
+          <td>${escapeHtml(c.job_title)}<br><span style="font-size: 11px; color: var(--text-muted);">${Number(c.years_of_experience) || 0} yrs experience</span></td>
           <td class="text-center"><span class="badge badge-tkpk">${escapeHtml(c.k3_cert_held)}</span></td>
           <td class="text-center"><span class="badge ${c.medical_checkup_status.includes('FIT_FOR_HEIGHT') ? 'badge-paid' : 'badge-unpaid'}">${escapeHtml(c.medical_checkup_status)}</span></td>
-          <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #2563EB;">${c.technical_score}</td>
+          <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #2563EB;">${Number(c.technical_score) || 0}</td>
           <td class="text-center"><span class="badge badge-pending">${escapeHtml(c.recruitment_stage)}</span></td>
         </tr>
       `).join('');
@@ -1134,8 +1132,8 @@ async function loadHrData() {
           <td style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2563EB;">${escapeHtml(l.leave_id)}</td>
           <td><strong>${escapeHtml(l.applicant_name)}</strong><br><span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(l.job_title)}</span></td>
           <td>${escapeHtml(l.leave_type)}</td>
-          <td class="text-center" style="font-weight: 700;">${l.days_requested}</td>
-          <td style="font-size: 11.5px;">${escapeHtml(l.reason)}<br><span style="color: var(--text-muted); font-size: 10.5px;">Start: ${l.start_date}</span></td>
+          <td class="text-center" style="font-weight: 700;">${Number(l.days_requested) || 0}</td>
+          <td style="font-size: 11.5px;">${escapeHtml(l.reason)}<br><span style="color: var(--text-muted); font-size: 10.5px;">Start: ${escapeHtml(l.start_date)}</span></td>
           <td>${escapeHtml(l.substitute_name)}</td>
           <td class="text-center"><span class="badge ${l.approval_status === 'APPROVED' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(l.approval_status)}</span></td>
           <td class="text-center" style="white-space: nowrap;">
@@ -1192,9 +1190,9 @@ async function loadClients() {
           <td><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(c.client_type)}</span></td>
           <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(c.npwp || '-')}</td>
           <td style="font-size: 11px; color: var(--text-muted);">${escapeHtml(c.billing_email || '-')}<br>${escapeHtml(c.phone || '-')}</td>
-          <td class="text-center" style="font-weight: 700; font-family: var(--font-mono);">${c.active_lease_sites} Site</td>
+          <td class="text-center" style="font-weight: 700; font-family: var(--font-mono);">${Number(c.active_lease_sites) || 0} Site</td>
           <td class="text-right" style="font-weight: 700; font-family: var(--font-mono);">${formatCurrency(c.credit_limit_idr)}</td>
-          <td class="text-center" style="font-family: var(--font-mono);">${c.payment_terms_days} hari</td>
+          <td class="text-center" style="font-family: var(--font-mono);">${Number(c.payment_terms_days) || 0} hari</td>
         </tr>
       `).join('');
     }
@@ -1252,7 +1250,7 @@ async function loadLandLeases() {
           <td>${escapeHtml(l.region)}</td>
           <td>${escapeHtml(l.landowner_name)}</td>
           <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: #DC2626;">${formatCurrency(l.annual_lease_cost)}</td>
-          <td class="text-center" style="font-family: var(--font-mono);">${l.lease_duration_years} th</td>
+          <td class="text-center" style="font-family: var(--font-mono);">${Number(l.lease_duration_years) || 0} th</td>
           <td class="text-center" style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(l.end_date)}</td>
           <td class="text-center"><span class="badge ${isPaidActive ? 'badge-active_paid' : 'badge-pending'}">${escapeHtml(l.status)}</span></td>
         </tr>
@@ -1293,32 +1291,6 @@ async function loadSiteUtilities() {
   }
 }
 
-async function loadCoa() {
-  const tbody = document.getElementById('finCoaTableBody');
-  if (!tbody) return;
-  try {
-    const res = await fetch(`/api/balitower/finance/chart-of-accounts?t=${Date.now()}`, { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada bagan akun COA.</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = data.map(a => `
-        <tr>
-          <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 800; color: #2563EB;">${escapeHtml(a.account_code)}</td>
-          <td><strong>${escapeHtml(a.account_name)}</strong></td>
-          <td class="text-center"><span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(a.account_type)}</span></td>
-          <td class="text-center"><span class="badge ${a.normal_balance === 'DEBIT' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(a.normal_balance)}</span></td>
-          <td style="font-size: 11.5px; color: #334155;">${escapeHtml(a.description || '-')}</td>
-        </tr>
-      `).join('');
-    }
-  } catch (e) {
-    console.error("Failed to load COA:", e);
-  }
-}
-
 // --- Finance & Accounting Data Loader ---
 async function loadFinanceData() {
   try {
@@ -1344,28 +1316,6 @@ async function loadFinanceData() {
       filterInvoicesTable();
     }
 
-    // 3. Transactions / General Ledger (if table element is present)
-    const tbodyTrx = document.getElementById('finTrxTableBody');
-    if (tbodyTrx) {
-      const trxRes = await fetch(`/api/balitower/finance/transactions?limit=25&t=${Date.now()}`, { cache: 'no-store' });
-      if (trxRes.ok) {
-        const trxs = await trxRes.json();
-        if (!trxs || trxs.length === 0) {
-          tbodyTrx.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 20px; color: var(--text-muted);">Belum ada transaksi jurnal kas.</td></tr>`;
-        } else {
-          tbodyTrx.innerHTML = trxs.map(t => `
-            <tr>
-              <td style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(t.trx_id)}</td>
-              <td style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(t.trx_date)}</td>
-              <td><span style="font-weight: 600;">${escapeHtml(t.account_name)}</span></td>
-              <td class="text-center"><span class="${t.trx_type === 'INFLOW' ? 'badge-inflow' : 'badge-outflow'}">${t.trx_type === 'INFLOW' ? '+ INFLOW' : '- OUTFLOW'}</span></td>
-              <td class="text-right" style="font-weight: 800; font-family: var(--font-mono); color: ${t.trx_type === 'INFLOW' ? '#059669' : '#DC2626'};">Rp ${Number(t.amount).toLocaleString('id-ID')}</td>
-              <td style="font-size: 11.5px; color: #334155;">${escapeHtml(t.description || '-')}</td>
-            </tr>
-          `).join('');
-        }
-      }
-    }
   } catch (e) {
     console.error("Failed to load Finance data:", e);
   }
@@ -1496,7 +1446,7 @@ function renderCatalogTable(items) {
     return `
       <tr>
         <td>
-          <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 11.5px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${it.sku}</span>
+          <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 11.5px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(it.sku)}</span>
         </td>
         <td>
           <div style="font-weight: 600; color: #0F172A;">${escapeHtml(it.name)}</div>
@@ -1504,7 +1454,7 @@ function renderCatalogTable(items) {
         <td>
           <span style="font-size: 11px; background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; padding: 2px 6px; border-radius: 4px;">${escapeHtml(it.category)}</span>
         </td>
-        <td class="text-right" style="font-weight: 700; color: #0F172A;">${it.current_stock.toLocaleString('id-ID')} <span style="font-size: 10px; font-weight: 500; color: var(--text-muted);">${it.unit}</span></td>
+        <td class="text-right" style="font-weight: 700; color: #0F172A;">${it.current_stock.toLocaleString('id-ID')} <span style="font-size: 10px; font-weight: 500; color: var(--text-muted);">${escapeHtml(it.unit)}</span></td>
         <td class="text-right" style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${it.min_stock.toLocaleString('id-ID')} / ${it.max_stock.toLocaleString('id-ID')}</td>
         <td class="text-right" style="font-weight: 600; color: #0F172A;">${formatCurrency(it.unit_price)}</td>
         <td class="text-center"><span class="badge ${badgeClass}">${statusLabel}</span></td>
@@ -1585,20 +1535,20 @@ function renderPrsTable(prs) {
     const isAdmin = sessionStorage.getItem('role') === 'ADMIN';
 
     return `
-      <tr id="row-pr-${pr.pr_number}">
+      <tr id="row-pr-${escapeHtml(pr.pr_number)}">
         <td style="white-space: nowrap;">
-          <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 11.5px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${pr.pr_number}</span>
+          <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 11.5px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(pr.pr_number)}</span>
         </td>
         <td style="font-weight: 600; color: #0F172A; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(supplierName)}">
           ${escapeHtml(supplierName)}
         </td>
         <td class="text-center" style="color: var(--text-secondary); white-space: nowrap;">${pr.items?.length || 0} items</td>
         <td class="text-right" style="font-weight: 700; color: #0F172A; white-space: nowrap;">${formatCurrency(grandTotal)}</td>
-        <td class="text-center" id="badge-container-${pr.pr_number}" style="white-space: nowrap;">
+        <td class="text-center" id="badge-container-${escapeHtml(pr.pr_number)}" style="white-space: nowrap;">
           <span class="badge ${badgeClass}">${statusLabel}</span>
         </td>
         <td class="text-center" style="white-space: nowrap;">
-          <div style="display: inline-flex; gap: 4px;" id="actions-container-${pr.pr_number}">
+          <div style="display: inline-flex; gap: 4px;" id="actions-container-${escapeHtml(pr.pr_number)}">
             <button class="btn btn-secondary btn-sm" data-action="open-pr-pdf" data-pr="${escapeHtml(pr.pr_number)}" data-supplier="${escapeHtml(supplierName)}" data-total="${grandTotal}" data-status="${escapeHtml(rawStatus)}">
               View PDF
             </button>
@@ -2688,7 +2638,7 @@ function finalizeStreamBubble(streamBubble, payload, streamedText) {
           <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-top: 8px; box-shadow: var(--shadow-xs);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <div>
-                <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 12px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${pr.pr_number}</span>
+                <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 12px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(pr.pr_number)}</span>
                 <span style="font-size: 12.5px; margin-left: 6px; color: #334155; font-weight: 600;">${escapeHtml(supplier)}</span>
               </div>
               <span style="font-weight: 800; font-size: 14px; color: #0F172A;">${formatCurrency(grandTotal)}</span>
@@ -3370,79 +3320,6 @@ function appendAgentErrorMessage(errorText) {
   scrollChatToBottom();
 }
 
-function formatMarkdownResponse(text) {
-  if (!text) return '';
-
-  // Strip emojis across the board
-  const stripEmojis = (str) => (str || '').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F900}-\u{1F9FF}\u{1F004}\u{1F0CF}\u{1F170}-\u{1F251}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{2934}\u{2935}\u{2B05}\u{2B06}\u{2B07}]/gu, '').trim();
-
-  const lines = text.split('\n');
-  let inTable = false;
-  let html = '';
-  let tableRows = [];
-
-  const cleanText = (str) => stripEmojis(str || '').replace(/\*\*/g, '').replace(/`/g, '').trim();
-
-  for (let line of lines) {
-    let trimmed = line.trim();
-
-    // Skip code block fences if any
-    if (trimmed.startsWith('```')) continue;
-
-    // Parse markdown table rows
-    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-      if (trimmed.includes('---')) continue; // skip header separator
-      inTable = true;
-      const cells = trimmed.split('|').slice(1, -1).map(c => cleanText(c));
-      tableRows.push(cells);
-    } else {
-      if (inTable && tableRows.length > 0) {
-        html += `<div style="overflow-x:auto; margin: 10px 0;"><table class="data-table" style="font-size: 11.5px; width: 100%;"><thead><tr>` +
-          tableRows[0].map(c => `<th style="padding: 6px 8px;">${c}</th>`).join('') +
-          `</tr></thead><tbody>` +
-          tableRows.slice(1).map(row => `<tr>` + row.map(c => `<td style="padding: 6px 8px;">${c}</td>`).join('') + `</tr>`).join('') +
-          `</tbody></table></div>`;
-        inTable = false;
-        tableRows = [];
-      }
-
-      // Clean header lines (### or ## or #)
-      if (trimmed.startsWith('#')) {
-        const hTitle = cleanText(trimmed.replace(/^#+\s*/, ''));
-        if (hTitle) {
-          html += `<div style="font-size: 13.5px; font-weight: 700; color: #0F172A; margin: 8px 0 4px 0;">${hTitle}</div>`;
-        }
-        continue;
-      }
-
-      // Clean blockquote lines (> ...)
-      if (trimmed.startsWith('>')) {
-        const bQuote = cleanText(trimmed.replace(/^>\s*/, ''));
-        if (bQuote) {
-          html += `<div style="background: #F8FAFC; border-left: 3px solid #CBD5E1; padding: 7px 10px; margin: 6px 0; font-size: 12px; color: #475569; border-radius: 0 6px 6px 0; line-height: 1.5;">${bQuote}</div>`;
-        }
-        continue;
-      }
-
-      const cLine = cleanText(trimmed);
-      if (cLine.startsWith('- ')) {
-        html += `<div style="margin: 3px 0 3px 12px; font-size: 12.5px;">- ${cLine.substring(2)}</div>`;
-      } else if (cLine.length > 0) {
-        html += `<div style="margin: 4px 0; font-size: 13px; line-height: 1.5;">${cLine}</div>`;
-      }
-    }
-  }
-  if (inTable && tableRows.length > 0) {
-    html += `<div style="overflow-x:auto; margin: 10px 0;"><table class="data-table" style="font-size: 11.5px; width: 100%;"><thead><tr>` +
-      tableRows[0].map(c => `<th style="padding: 6px 8px;">${c}</th>`).join('') +
-      `</tr></thead><tbody>` +
-      tableRows.slice(1).map(row => `<tr>` + row.map(c => `<td style="padding: 6px 8px;">${c}</td>`).join('') + `</tr>`).join('') +
-      `</tbody></table></div>`;
-  }
-
-  return html;
-}
-
 function appendAgentResponseCard(data) {
   const feed = document.getElementById('copilotFeed');
   if (!feed) return;
@@ -3610,7 +3487,7 @@ function appendAgentResponseCard(data) {
         <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-top: 8px; box-shadow: var(--shadow-xs);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <div>
-              <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 12px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${pr.pr_number}</span>
+              <span style="font-family: var(--font-mono); font-weight: 700; color: #2563EB; font-size: 12px; background: #EFF6FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BFDBFE;">${escapeHtml(pr.pr_number)}</span>
               <span style="font-size: 12.5px; margin-left: 6px; color: #334155; font-weight: 600;">${escapeHtml(supplier)}</span>
             </div>
             <span style="font-weight: 800; font-size: 14px; color: #0F172A;">${formatCurrency(grandTotal)}</span>
@@ -3695,7 +3572,7 @@ function appendAgentResponseCard(data) {
               <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed ${isError ? '#FCA5A5' : '#BBF7D0'}; display: flex; flex-wrap: wrap; gap: 6px;">
                 ${items.map(it => `
                   <span class="badge badge-normal">
-                    ${escapeHtml(it.name)}: ${it.current_stock} ${it.unit} (Min: ${it.min_stock})
+                    ${escapeHtml(it.name)}: ${it.current_stock} ${escapeHtml(it.unit)} (Min: ${it.min_stock})
                   </span>
                 `).join('')}
               </div>
@@ -3728,7 +3605,7 @@ function appendAgentResponseCard(data) {
               <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #BBF7D0; display: flex; flex-wrap: wrap; gap: 6px;">
                 ${items.map(it => `
                   <span class="badge ${it.current_stock <= 0 ? 'badge-out_of_stock' : (it.current_stock <= it.min_stock ? 'badge-low_stock' : 'badge-approved')}">
-                    ${escapeHtml(it.name)}: ${it.current_stock} ${it.unit}
+                    ${escapeHtml(it.name)}: ${it.current_stock} ${escapeHtml(it.unit)}
                   </span>
                 `).join('')}
               </div>
@@ -3757,7 +3634,7 @@ function appendAgentResponseCard(data) {
             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #E2E8F0; display: flex; flex-wrap: wrap; gap: 6px;">
               ${items.map(it => `
                 <span class="badge ${it.current_stock <= 0 ? 'badge-out_of_stock' : (it.current_stock <= it.min_stock ? 'badge-low_stock' : 'badge-approved')}">
-                  ${escapeHtml(it.name)}: ${it.current_stock} ${it.unit}
+                  ${escapeHtml(it.name)}: ${it.current_stock} ${escapeHtml(it.unit)}
                 </span>
               `).join('')}
             </div>
@@ -3785,7 +3662,7 @@ function appendTerminalLog(log) {
   if (log.status === 'error') msgClass = 'terminal-msg-error';
 
   line.innerHTML = `
-    <span class="terminal-time">[${log.timestamp || '00:00:00'}]</span>
+    <span class="terminal-time">[${escapeHtml(log.timestamp || '00:00:00')}]</span>
     <span class="terminal-agent">[${escapeHtml(log.agent_name || 'Agent')}]</span>
     <span class="terminal-step">${escapeHtml(log.step_name || 'Step')}:</span>
     <span class="${msgClass}">${escapeHtml(log.message || '')}</span>
@@ -3811,17 +3688,6 @@ function formatCurrency(num) {
     currency: 'IDR',
     maximumFractionDigits: 0
   }).format(n);
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-    .replace(/\n/g, '<br>');
 }
 
 function showToast(message, type = 'info') {

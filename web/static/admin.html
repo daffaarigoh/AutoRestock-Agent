@@ -2595,7 +2595,7 @@
                 <tr>
                   <td><span class="doc-badge-pill">FINANCE</span></td>
                   <td><strong>userc</strong> (Keuangan)</td>
-                  <td><code>mla_contracts</code> (Sewa menara), <code>revenue_invoices</code>, <code>site_utilities_cost</code> (PLN & genset), <code>financial_transactions</code></td>
+                  <td><code>mla_contracts</code> (Sewa menara), <code>revenue_invoices</code>, <code>site_utilities_cost</code> (PLN & genset)</td>
                 </tr>
                 <tr>
                   <td><span class="doc-badge-pill">ALL</span></td>
@@ -3584,7 +3584,7 @@
                 tableList = '<code>employees</code>, <code>attendances</code> (GPS geofencing), <code>leave_requests</code>, <code>candidates</code> (Rigger K3), <code>job_postings</code>';
               } else if (['TENANT_C', 'FINANCE'].includes(u.tenant_id) || u.username === 'userc') {
                 domainPill = 'FINANCE';
-                tableList = '<code>mla_contracts</code> (Sewa menara), <code>revenue_invoices</code>, <code>site_utilities_cost</code> (PLN & genset), <code>financial_transactions</code>';
+                tableList = '<code>mla_contracts</code> (Sewa menara), <code>revenue_invoices</code>, <code>site_utilities_cost</code> (PLN & genset)';
               }
 
               return `
@@ -3868,10 +3868,6 @@
         `;
 
         group.flows.forEach(f => {
-          const safeName = escapeHtml(f.name).replace(/'/g, "\\'");
-          const safeTenant = escapeHtml(group.category === 'SUPERADMIN' ? 'ALL' : group.category);
-          const safeDesc = escapeHtml(f.desc || '').replace(/'/g, "\\'");
-          const safeInst = escapeHtml(f.instruction || '').replace(/'/g, "\\'");
 
           allHelpFlowsMap[f.id] = f;
           html += `
@@ -4732,7 +4728,7 @@
       triggerUniversalDelete(
         `Hapus Usulan ${reqId}`,
         'Usulan alur kerja ini akan dihapus secara permanen.',
-        `Apakah Anda yakin ingin menghapus usulan <strong>${escapeHtml(reqId)}</strong>?`,
+        `Apakah Anda yakin ingin menghapus usulan ${reqId}?`,
         async () => {
           const token = getAdminToken();
           if (!token) return;
@@ -5080,7 +5076,7 @@
                 <td><span style="font-family: var(--font-mono); font-weight: 700; color: #1E40AF;">${escapeHtml(u.user_id)}</span></td>
                 <td>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="user-avatar-circle">${initial}</div>
+                    <div class="user-avatar-circle">${escapeHtml(initial)}</div>
                     <span style="font-weight: 700; color: var(--text-main);">${escapeHtml(u.username)}</span>
                   </div>
                 </td>
@@ -5573,7 +5569,7 @@
           } else {
             selWh.innerHTML = currentMaterialBalances.map((b, idx) => `
               <option value="${escapeHtml(b.warehouse_id)}" ${idx === 0 ? 'selected' : ''}>
-                ${escapeHtml(b.warehouse_name)} (Stok: ${Number(b.quantity_on_hand).toLocaleString('id-ID')} ${b.unit}, ROP: ${b.reorder_point})
+                ${escapeHtml(b.warehouse_name)} (Stok: ${Number(b.quantity_on_hand).toLocaleString('id-ID')} ${escapeHtml(b.unit)}, ROP: ${Number(b.reorder_point) || 0})
               </option>
             `).join('');
             onAdminStockWarehouseChange();
@@ -5689,7 +5685,7 @@
     function triggerUniversalDelete(title, sub, msg, onConfirm) {
       document.getElementById('delConfirmTitle').textContent = title || 'Konfirmasi Hapus Data';
       document.getElementById('delConfirmSub').textContent = sub || 'Tindakan ini tidak dapat dibatalkan.';
-      document.getElementById('delConfirmMsg').innerHTML = msg || 'Apakah Anda yakin ingin menghapus data ini dari basis data?';
+      document.getElementById('delConfirmMsg').textContent = (msg || 'Apakah Anda yakin ingin menghapus data ini dari basis data?').replace(/<[^>]*>/g, '');
       pendingDeleteAction = onConfirm;
       document.getElementById('modalUniversalDelete').style.display = 'flex';
     }
@@ -5794,7 +5790,7 @@
       triggerUniversalDelete(
         'Hapus Akun Pengguna',
         'Akun tidak akan dapat login lagi',
-        `Apakah Anda yakin ingin menghapus akun pengguna <strong>${escapeHtml(username)}</strong> (${escapeHtml(userId)})?`,
+        `Apakah Anda yakin ingin menghapus akun pengguna ${username} (${userId})?`,
         async () => {
           try {
             const res = await fetch(`/api/auth/admin/users/${userId}`, {
@@ -5914,7 +5910,7 @@
       triggerUniversalDelete(
         'Hapus Data Material',
         'Data master material dan saldo stok gudangnya akan dihapus',
-        `Apakah Anda yakin ingin menghapus material <strong>${escapeHtml(name)}</strong> (${escapeHtml(itemId)})?`,
+        `Apakah Anda yakin ingin menghapus material ${name} (${itemId})?`,
         async () => {
           try {
             const res = await fetch(`/api/auth/admin/inventory/items?item_id=${encodeURIComponent(itemId)}`, {
@@ -6032,7 +6028,7 @@
       triggerUniversalDelete(
         'Hapus Data Karyawan',
         'Data personel dan riwayat cuti terkait akan dihapus',
-        `Apakah Anda yakin ingin menghapus data karyawan <strong>${escapeHtml(fullName)}</strong> (${escapeHtml(empId)})?`,
+        `Apakah Anda yakin ingin menghapus data karyawan ${fullName} (${empId})?`,
         async () => {
           try {
             const res = await fetch(`/api/auth/admin/hr/employees?employee_id=${encodeURIComponent(empId)}`, {
@@ -6145,7 +6141,7 @@
       triggerUniversalDelete(
         'Hapus Data Invoice',
         'Data tagihan sewa menara ini akan dihapus dari sistem keuangan',
-        `Apakah Anda yakin ingin menghapus invoice <strong>${escapeHtml(invNumber)}</strong>?`,
+        `Apakah Anda yakin ingin menghapus invoice ${invNumber}?`,
         async () => {
           try {
             const res = await fetch(`/api/auth/admin/finance/invoices?invoice_id=${encodeURIComponent(invId)}`, {

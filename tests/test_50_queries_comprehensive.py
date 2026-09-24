@@ -12,6 +12,7 @@ Executes all 50 enterprise queries across 6 domains:
 import sys
 import time
 import json
+import tempfile
 import requests
 from pathlib import Path
 
@@ -212,7 +213,7 @@ def main():
         print(f"  • {d:35}: {st['passed']}/{st['total']} ({pct:.1f}%)", flush=True)
 
     # Save to JSON
-    report_file = WORKSPACE_DIR / "tests" / "audit_results_50_queries.json"
+    report_file = Path(tempfile.gettempdir()) / "autorestock-audit-results-50-queries.json"
     with open(report_file, "w") as f:
         json.dump({
             "summary": {

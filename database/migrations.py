@@ -108,6 +108,38 @@ def _migration_006_purchase_orders_pr_number(conn):
             logger.info("[Migration 006] Added 'pr_number' column to purchase_orders.")
 
 
+def _migration_007_normalize_consumed_action_token_columns(conn):
+    """Normalize the one-time approval token schema created by early Wave 2 builds."""
+    tables = {row[0] for row in conn.execute("SHOW TABLES;").fetchall()}
+    if "consumed_action_tokens" not in tables:
+        _migration_004_consumed_action_tokens(conn)
+        return
+
+    columns = {row[0] for row in conn.execute("DESCRIBE consumed_action_tokens;").fetchall()}
+    aliases = (("token_signature", "token_sig"), ("action_type", "kind"), ("target_id", "object_id"))
+    for canonical, legacy in aliases:
+        if canonical in columns and legacy in columns:
+            raise RuntimeError(
+                f"Cannot safely migrate consumed_action_tokens: both {canonical} and {legacy} exist"
+            )
+        if canonical not in columns and legacy in columns:
+            conn.execute(
+                f"ALTER TABLE consumed_action_tokens RENAME COLUMN {legacy} TO {canonical};"
+            )
+            columns.remove(legacy)
+            columns.add(canonical)
+
+    if "token_signature" not in columns:
+        raise RuntimeError("Cannot safely migrate consumed_action_tokens: token signature column is missing")
+    for column in ("action_type", "target_id", "action"):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE consumed_action_tokens ADD COLUMN {column} VARCHAR;")
+    if "consumed_at" not in columns:
+        conn.execute(
+            "ALTER TABLE consumed_action_tokens ADD COLUMN consumed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
+        )
+    logger.info("[Migration 007] Normalized consumed_action_tokens columns while preserving records.")
+
 MIGRATIONS: list[tuple[int, str, Callable]] = [
     (1, "workflow_columns", _migration_001_workflow_columns),
     (2, "workflow_requests_table", _migration_002_workflow_requests_table),
@@ -115,6 +147,7 @@ MIGRATIONS: list[tuple[int, str, Callable]] = [
     (4, "consumed_action_tokens", _migration_004_consumed_action_tokens),
     (5, "purchase_requests_schema", _migration_005_purchase_requests_schema),
     (6, "purchase_orders_pr_number", _migration_006_purchase_orders_pr_number),
+    (7, "normalize_consumed_action_token_columns", _migration_007_normalize_consumed_action_token_columns),
 ]
 
 

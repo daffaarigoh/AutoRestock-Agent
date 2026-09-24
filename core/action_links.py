@@ -32,13 +32,17 @@ def is_action_token_consumed(token: str | None) -> bool:
         try:
             tables = [t[0] for t in conn.execute("SHOW TABLES;").fetchall()]
             if "consumed_action_tokens" not in tables:
-                return False
-            row = conn.execute("SELECT 1 FROM consumed_action_tokens WHERE token_sig = ?", [signature]).fetchone()
+                # Approval links must fail closed until schema migrations have run.
+                return True
+            row = conn.execute(
+                "SELECT 1 FROM consumed_action_tokens WHERE token_signature = ?", [signature]
+            ).fetchone()
             return row is not None
         finally:
             conn.close()
     except Exception:
-        return False
+        # Database errors must not make a used approval token valid.
+        return True
 
 
 def consume_action_token(token: str | None, kind: str, object_id: str, action: str) -> bool:
@@ -50,20 +54,15 @@ def consume_action_token(token: str | None, kind: str, object_id: str, action: s
         from database.db import get_db_connection
         conn = get_db_connection(read_only=False)
         try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS consumed_action_tokens (
-                    token_sig VARCHAR PRIMARY KEY,
-                    kind VARCHAR NOT NULL,
-                    object_id VARCHAR NOT NULL,
-                    action VARCHAR NOT NULL,
-                    consumed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-            existing = conn.execute("SELECT 1 FROM consumed_action_tokens WHERE token_sig = ?", [signature]).fetchone()
+            existing = conn.execute(
+                "SELECT 1 FROM consumed_action_tokens WHERE token_signature = ?", [signature]
+            ).fetchone()
             if existing:
                 return False
             conn.execute(
-                "INSERT INTO consumed_action_tokens (token_sig, kind, object_id, action) VALUES (?, ?, ?, ?)",
+                """INSERT INTO consumed_action_tokens
+                   (token_signature, action_type, target_id, action)
+                   VALUES (?, ?, ?, ?)""",
                 [signature, kind, object_id, action.upper()]
             )
             conn.commit()

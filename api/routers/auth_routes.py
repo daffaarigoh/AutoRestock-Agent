@@ -201,7 +201,7 @@ def _ensure_workflow_tenant_column(conn):
             conn.execute("ALTER TABLE workflows ADD COLUMN tenant_id VARCHAR DEFAULT 'ALL';")
         if "example_prompts" not in cols:
             conn.execute("ALTER TABLE workflows ADD COLUMN example_prompts TEXT DEFAULT '[]';")
-            
+
         _sync_workflows_from_json_if_empty(conn)
 
         # Migrate and populate example_prompts from workflows.json if rows have empty example_prompts
@@ -213,8 +213,8 @@ def _ensure_workflow_tenant_column(conn):
                 if ex_list:
                     ex_str = json.dumps(ex_list, ensure_ascii=False)
                     conn.execute("""
-                        UPDATE workflows 
-                        SET example_prompts = ? 
+                        UPDATE workflows
+                        SET example_prompts = ?
                         WHERE id = ? AND (example_prompts IS NULL OR example_prompts = '[]' OR example_prompts = '')
                     """, [ex_str, wf["id"]])
     except Exception as e:
@@ -307,19 +307,19 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
 
     from agents.workflow_compiler import WorkflowCompiler
     import uuid
-    
+
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
     ex_prompts = req.example_prompts or compiled_json.get("example_prompts") or WorkflowCompiler.generate_heuristic_examples(req.name, req.business_instruction)
     ex_prompts_json = json.dumps(ex_prompts, ensure_ascii=False)
-    
+
     wf_id = f"WF-{uuid.uuid4().hex[:6].upper()}"
     tenant_val = _normalize_tenant_id(req.tenant_id)
-    
+
     conn = get_db_connection(read_only=False)
     _ensure_workflow_tenant_column(conn)
     _ensure_workflow_requests_table(conn)
     conn.execute(
-        "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+        "INSERT INTO workflows (id, name, description, business_instruction, compiled_json, tenant_id, example_prompts) VALUES (?, ?, ?, ?, ?, ?, ?)",
         [wf_id, req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val, ex_prompts_json]
     )
     if req.resolving_request_id:
@@ -329,11 +329,11 @@ async def create_workflow(req: CreateWorkflowRequest, admin: TokenData = Depends
         )
     _sync_workflows_to_json(conn)
     conn.close()
-    
+
     return {
-        "status": "success", 
-        "workflow_id": wf_id, 
-        "compiled_json": compiled_json, 
+        "status": "success",
+        "workflow_id": wf_id,
+        "compiled_json": compiled_json,
         "tenant_id": tenant_val,
         "example_prompts": ex_prompts
     }
@@ -349,7 +349,7 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
         columns = [desc[0] for desc in conn.description]
     finally:
         conn.close()
-    
+
     workflows = []
     for r in rows:
         wf = dict(zip(columns, r))
@@ -370,7 +370,7 @@ async def get_workflows(response: Response, admin: TokenData = Depends(get_curre
             from agents.workflow_compiler import WorkflowCompiler
             wf["example_prompts"] = WorkflowCompiler.generate_heuristic_examples(wf.get("name", ""), wf.get("business_instruction", "") or wf.get("description", ""))
         workflows.append(wf)
-        
+
     return workflows
 
 @router.delete("/admin/workflows/{wf_id}")
@@ -384,25 +384,25 @@ async def delete_workflow(wf_id: str, admin: TokenData = Depends(get_current_adm
 @router.put("/admin/workflows/{wf_id}")
 async def edit_workflow(wf_id: str, req: CreateWorkflowRequest, admin: TokenData = Depends(get_current_admin)):
     from agents.workflow_compiler import WorkflowCompiler
-    
+
     compiled_json = await WorkflowCompiler.compile_business_instruction(req.name, req.business_instruction)
     ex_prompts = req.example_prompts or compiled_json.get("example_prompts") or WorkflowCompiler.generate_heuristic_examples(req.name, req.business_instruction)
     ex_prompts_json = json.dumps(ex_prompts, ensure_ascii=False)
     tenant_val = _normalize_tenant_id(req.tenant_id)
-    
+
     conn = get_db_connection(read_only=False)
     _ensure_workflow_tenant_column(conn)
     conn.execute(
-        "UPDATE workflows SET name = ?, description = ?, business_instruction = ?, compiled_json = ?, tenant_id = ?, example_prompts = ? WHERE id = ?", 
+        "UPDATE workflows SET name = ?, description = ?, business_instruction = ?, compiled_json = ?, tenant_id = ?, example_prompts = ? WHERE id = ?",
         [req.name, req.description, req.business_instruction, json.dumps(compiled_json), tenant_val, ex_prompts_json, wf_id]
     )
     _sync_workflows_to_json(conn)
     conn.close()
-    
+
     return {
-        "status": "success", 
-        "workflow_id": wf_id, 
-        "compiled_json": compiled_json, 
+        "status": "success",
+        "workflow_id": wf_id,
+        "compiled_json": compiled_json,
         "tenant_id": tenant_val,
         "example_prompts": ex_prompts
     }
@@ -418,16 +418,16 @@ async def get_help_catalog(
     rows = conn.execute("SELECT id, name, description, tenant_id, example_prompts FROM workflows ORDER BY id ASC").fetchall()
     columns = [desc[0] for desc in conn.description]
     conn.close()
-    
+
     user_tenant = (current_user.tenant_id or "").upper()
     is_admin = (current_user.role or "").upper() in ["ADMIN", "SUPERADMIN"]
-    
+
     workflows = []
     for r in rows:
         wf = dict(zip(columns, r))
         t = wf.get("tenant_id") or "ALL"
         wf["tenant_id"] = t
-        
+
         # Enforce tenant isolation: non-admins can only see their tenant's workflows or global (ALL)
         if not is_admin:
             if t not in [user_tenant, "ALL"]:
@@ -436,7 +436,7 @@ async def get_help_catalog(
             norm_t = _normalize_tenant_id(tenant)
             if norm_t != "ALL" and t not in [norm_t, "ALL"]:
                 continue
-                
+
         if isinstance(wf.get("example_prompts"), str):
             try:
                 wf["example_prompts"] = json.loads(wf["example_prompts"])
@@ -444,17 +444,17 @@ async def get_help_catalog(
                 wf["example_prompts"] = []
         elif not wf.get("example_prompts"):
             wf["example_prompts"] = []
-            
+
         if not wf["example_prompts"]:
             from agents.workflow_compiler import WorkflowCompiler
             wf["example_prompts"] = WorkflowCompiler.generate_heuristic_examples(
                 wf.get("name", ""), wf.get("description", "")
             )
-        
+
         # Enforce exactly one example prompt per workflow
         if wf.get("example_prompts"):
             wf["example_prompts"] = wf["example_prompts"][:1]
-        
+
         # Provide concise UI-only response (NO business_instruction, NO compiled_json)
         safe_wf = {
             "id": wf["id"],
@@ -464,7 +464,7 @@ async def get_help_catalog(
             "example_prompts": wf["example_prompts"]
         }
         workflows.append(safe_wf)
-        
+
     return {"status": "success", "workflows": workflows}
 
 
@@ -484,14 +484,14 @@ async def submit_workflow_request(req: WorkflowRequestPayload, current_user: Tok
     """User submits a new workflow request to the Administrator."""
     if not req.prompt or not req.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt instruksi tidak boleh kosong")
-    
+
     clean_prompt = req.prompt.strip()
     clean_title = (req.title or "").strip() or None
     clean_notes = (req.notes or "").strip()
     req_id = f"REQ-{uuid.uuid4().hex[:6].upper()}"
     u_name = current_user.username or "user"
     u_tenant = _normalize_tenant_id(req.tenant_id or current_user.tenant_id)
-    
+
     conn = get_db_connection(read_only=False)
     try:
         _ensure_workflow_requests_table(conn)
@@ -501,7 +501,7 @@ async def submit_workflow_request(req: WorkflowRequestPayload, current_user: Tok
         )
     finally:
         conn.close()
-        
+
     return {
         "status": "success",
         "request_id": req_id,
@@ -520,11 +520,11 @@ async def get_workflow_requests(response: Response, admin: TokenData = Depends(g
     conn = get_db_connection(read_only=True)
     try:
         rows = conn.execute("""
-            SELECT id, username, tenant_id, prompt, notes, status, 
+            SELECT id, username, tenant_id, prompt, notes, status,
                    strftime(created_at, '%d %b %Y, %H:%M') as created_at_str,
                    reviewed_by, resolved_workflow_id, title
-            FROM workflow_requests 
-            ORDER BY 
+            FROM workflow_requests
+            ORDER BY
                 CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END,
                 created_at DESC
             LIMIT 100
@@ -544,8 +544,8 @@ async def get_workflow_requests(response: Response, admin: TokenData = Depends(g
 
 @router.post("/admin/workflow-requests/{req_id}/status")
 async def update_workflow_request_status(
-    req_id: str, 
-    payload: WorkflowRequestStatusPayload, 
+    req_id: str,
+    payload: WorkflowRequestStatusPayload,
     admin: TokenData = Depends(get_current_admin)
 ):
     """Admin endpoint to update workflow request status (COMPLETED, REJECTED, PENDING)."""
@@ -553,24 +553,24 @@ async def update_workflow_request_status(
     st = payload.status.strip().upper()
     if st not in valid_statuses:
         raise HTTPException(status_code=400, detail="Status tidak valid. Gunakan PENDING, COMPLETED, atau REJECTED.")
-        
+
     conn = get_db_connection(read_only=False)
     _ensure_workflow_requests_table(conn)
     try:
         conn.execute("""
-            UPDATE workflow_requests 
+            UPDATE workflow_requests
             SET status = ?, reviewed_by = ?, resolved_workflow_id = ?
             WHERE id = ?
         """, [st, admin.username, payload.resolved_workflow_id, req_id])
     finally:
         conn.close()
-        
+
     return {"status": "success", "request_id": req_id, "updated_status": st}
 
 
 @router.delete("/admin/workflow-requests/{req_id}")
 async def delete_workflow_request(
-    req_id: str, 
+    req_id: str,
     admin: TokenData = Depends(get_current_admin)
 ):
     """Admin endpoint to delete a specific workflow request."""
@@ -613,8 +613,8 @@ async def clear_workflow_requests(
 @router.post("/admin/workflows/reset-defaults")
 async def reset_workflows_to_defaults(admin: TokenData = Depends(get_current_admin)):
     """Admin endpoint to restore any missing base seed workflows from workflows.json.
-    
-    SAFE: This does NOT delete any existing custom workflows. It only re-adds 
+
+    SAFE: This does NOT delete any existing custom workflows. It only re-adds
     workflows from data/balitower/workflows.json that are currently missing from the DB.
     """
     conn = get_db_connection(read_only=False)
@@ -650,25 +650,25 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    
+
     conn = get_db_connection(read_only=True)
     users_rows = conn.execute("SELECT user_id, username, role, tenant_id FROM users ORDER BY user_id ASC").fetchall()
 
     # Scope 1: Inventory Items (for usera)
     inv_rows = conn.execute("""
-        SELECT 
+        SELECT
             i.item_id,
             i.item_code,
             i.item_name,
             i.category,
             COALESCE(SUM(sb.quantity_on_hand), 0) AS current_stock,
-            CASE 
-                WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point) AS BIGINT) 
-                ELSE i.min_stock 
+            CASE
+                WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point) AS BIGINT)
+                ELSE i.min_stock
             END AS min_threshold,
-            CASE 
-                WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point * 3) AS BIGINT) 
-                ELSE i.min_stock * 3 
+            CASE
+                WHEN COUNT(sb.warehouse_id) > 0 THEN CAST(SUM(sb.reorder_point * 3) AS BIGINT)
+                ELSE i.min_stock * 3
             END AS max_threshold,
             i.unit,
             i.unit_price,
@@ -698,7 +698,7 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
 
     # Build items_list for multi-tenant table view
     items_list = []
-    
+
     # 1. usera - Material Inventory (14 items)
     usera_total_stock = 0
     usera_low_stock = 0
@@ -709,7 +709,7 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
         usera_total_stock += stock_val
         if stock_val <= min_val:
             usera_low_stock += 1
-        
+
         if stock_val == 0:
             calc_status = "Habis"
         elif stock_val <= min_val * 0.5:
@@ -812,7 +812,7 @@ async def get_all_users(response: Response, admin: TokenData = Depends(get_curre
             "tenant_id": t_id,
             "stats": st
         })
-        
+
     return {
         "total_users": len(users_list),
         "users": users_list,
@@ -1020,7 +1020,7 @@ async def get_table_data(
         where_clause = "WHERE " + " OR ".join(search_terms)
 
     total_cnt = conn.execute(f'SELECT COUNT(*) FROM "{table_name}" {where_clause};', params).fetchone()[0]
-    
+
     col_select = ", ".join([f'"{c}"' for c in columns])
     query = f'SELECT {col_select} FROM "{table_name}" {where_clause} LIMIT ? OFFSET ?;'
     rows = conn.execute(query, params + [limit, offset]).fetchall()
@@ -1226,7 +1226,7 @@ async def update_inventory_material(req: AdminMaterialRequest, item_id: str | No
 
     try:
         conn.execute("""
-            UPDATE inventory_items 
+            UPDATE inventory_items
             SET item_name = ?, category = ?, unit = ?, unit_price = ?, min_stock = ?, safety_stock = ?, supplier_id = ?
             WHERE item_id = ?;
         """, [item_name, category, req.unit, unit_price, min_stock, safety_stock, req.supplier_id, target_id])
@@ -1346,7 +1346,7 @@ async def create_finance_invoice(req: AdminInvoiceRequest, admin: TokenData = De
     total_billed = int(req.total_billed)
     subtotal = int(req.amount_subtotal) if req.amount_subtotal is not None else int(total_billed / 1.11)
     ppn = int(req.tax_ppn) if req.tax_ppn is not None else (total_billed - subtotal)
-    
+
     try:
         conn.execute("""
             INSERT INTO revenue_invoices (invoice_id, invoice_number, contract_id, client_id, period_covered, amount_subtotal, tax_ppn, total_billed, invoice_date, due_date, payment_status, payment_date)
@@ -1370,7 +1370,7 @@ async def update_finance_invoice(req: AdminInvoiceRequest, invoice_id: str | Non
     total_billed = int(req.total_billed)
     subtotal = int(req.amount_subtotal) if req.amount_subtotal is not None else int(total_billed / 1.11)
     ppn = int(req.tax_ppn) if req.tax_ppn is not None else (total_billed - subtotal)
-    
+
     try:
         p_date = "CAST(CURRENT_DATE AS VARCHAR)" if req.payment_status == "PAID" else "NULL"
         conn.execute(f"""

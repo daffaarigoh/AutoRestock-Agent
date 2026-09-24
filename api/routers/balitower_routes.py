@@ -1103,22 +1103,6 @@ def get_site_utilities(current_user: TokenData = Depends(require_finance_access)
         conn.close()
 
 
-@router.get("/api/balitower/finance/transactions")
-def get_transactions(
-    trx_type: str | None = None,
-    limit: int = 100,
-    current_user: TokenData = Depends(require_finance_access)
-):
-    """Tabel 17: financial_transactions - Decommissioned (mengembalikan list kosong demi kompatibilitas)."""
-    return []
-
-
-@router.get("/api/balitower/finance/chart-of-accounts")
-def get_chart_of_accounts(current_user: TokenData = Depends(require_finance_access)):
-    """Tabel 18: chart_of_accounts - Decommissioned (mengembalikan list kosong demi kompatibilitas)."""
-    return []
-
-
 @router.get("/api/balitower/finance/revenue-breakdown")
 def get_revenue_breakdown(current_user: TokenData = Depends(require_finance_access)):
     """Rekapitulasi pendapatan sewa per operator telekomunikasi."""
