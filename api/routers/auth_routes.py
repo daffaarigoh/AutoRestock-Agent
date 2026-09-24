@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 _login_failures: dict[tuple[str, str], list[float]] = {}
 _login_lock = asyncio.Lock()
 _MAX_LOGIN_FAILURES = 1000
-_DEMO_HASH = "$2b$12$reziVbiqV1qNNnELI.rGjeE7dJOMBhtT3C6/J3oP4foGl8JaE7ujm"
+_DEMO_HASH = "$2b$12$Ubytbe.F/uS5xBq4QQhW8uxSCAnfdInGJcsIVNsKfvvvY9k5fH1L6"
 
 def _get_client_ip(request: Request) -> str:
     """Extract client IP, inspecting X-Forwarded-For if present, otherwise direct peer."""

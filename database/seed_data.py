@@ -132,8 +132,8 @@ def init_db(db_path: Path = DB_PATH):
 
 def seed_data(conn: duckdb.DuckDBPyConnection):
     """Seed base users, system prompts, workflows, and multi-tenant assets."""
-    admin_hash = "$2b$12$reziVbiqV1qNNnELI.rGjeE7dJOMBhtT3C6/J3oP4foGl8JaE7ujm" # admin123
-    user_hash = "$2b$12$/GHm/zDxQu4BNJ0DX0VBB.Msd3hWRvLEOl.6eo20LIFxXTiYBoLX." # user123
+    admin_hash = "$2b$12$Ubytbe.F/uS5xBq4QQhW8uxSCAnfdInGJcsIVNsKfvvvY9k5fH1L6" # admin123
+    user_hash = "$2b$12$/GtLEzvMF6TwK3ieFoFTJuHJ9DSbwfY6pep/A.YrAUGcWekmyi8Xa" # user123
 
     # Seed Users
     user_count = conn.execute("SELECT COUNT(*) FROM users;").fetchone()[0]
